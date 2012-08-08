@@ -1,0 +1,22 @@
+{
+	"name": "webpack-dev-middleware",
+	"version": "0.5.0",
+	"author": "Tobias Koppers @sokra",
+	"description": "Offers a dev middleware for webpack, which arguments a live bundle to a directory",
+	"dependencies": {
+		"webpack": "0.5.x"
+	},
+	"licenses": [
+		{
+			"type": "MIT",
+			"url": "http://www.opensource.org/licenses/mit-license.php"
+		}
+	],
+	"engines": {
+		"node":  ">=0.1.30"
+	},
+	"homepage": "http://github.com/webpack/webpack-dev-middleware",
+	"main": "middleware.js",
+	"bin": "./webpack-dev-server.js",
+	"license": "MIT"
+}
