@@ -56,9 +56,11 @@ module.exports = function(context, module, options) {
 		state = false;
 	});
 
-	// state webpack
+	// start webpack
 	var args = Array.prototype.slice.call(arguments);
-	args.push(function() {});
+	args.push(function(err) {
+		if(err) throw err;
+	});
 	webpack.apply(null, args);
 
 	// store our files in memory
