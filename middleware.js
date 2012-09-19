@@ -50,7 +50,7 @@ module.exports = function(context, module, options) {
 
 	// on bundle invalidated
 	opt.events.on("bundle-invalid", function() {
-		if(state);
+		if(state)
 			console.info("webpack: bundle is now invalid.");
 		// We are now in invalid state
 		state = false;
