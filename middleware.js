@@ -97,6 +97,7 @@ module.exports = function(context, module, options) {
 
 			// server content
 			var content = files[filename];
+			res.setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
 			res.end(content);
 		}, req);
 	}
