@@ -58,7 +58,7 @@ module.exports = function(context, module, options) {
 
 	// on bundle invalidated
 	opt.events.on("bundle-invalid", function() {
-		if(state && (!opt.middleware || !opt.middleware.noInfo))
+		if(state && (!opt.middleware || (!opt.middleware.noInfo && !opt.middleware.quiet)))
 			console.info("webpack: bundle is now invalid.");
 		// We are now in invalid state
 		state = false;
@@ -83,7 +83,8 @@ module.exports = function(context, module, options) {
 	// wait for bundle valid
 	function ready(fn, req) {
 		if(state) return fn();
-		console.log("webpack: wait until bundle finished: " + req.url);
+		if(!opt.middleware || (!opt.middleware.noInfo && !opt.middleware.quiet))
+			console.log("webpack: wait until bundle finished: " + req.url);
 		callbacks.push(fn);
 	}
 
