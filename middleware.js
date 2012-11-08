@@ -32,12 +32,20 @@ module.exports = function(context, module, options) {
 			// check if still in valid state
 			if(!state) return;
 			// print webpack output
-			console.log(formatOutput(stats, {
-				context: opt.context || context || process.cwd(),
-				colors: true,
-				verbose: opt.verbose
-			}));
-			console.info("webpack: bundle is now VALID.");
+			var displayStats = !opt.middleware || !opt.middleware.quiet;
+			if(displayStats &&
+				!(stats.errors && stats.errors.length > 0 || stats.warnings && stats.warnings.length > 0) &&
+				opt.middleware && opt.middleware.noInfo)
+				displayStats = false;
+			if(displayStats) {
+				console.log(formatOutput(stats, {
+					context: opt.context || context || process.cwd(),
+					colors: true,
+					verbose: opt.verbose
+				}));
+			}
+			if(!opt.middleware || (!opt.middleware.noInfo && !opt.middleware.quiet))
+				console.info("webpack: bundle is now VALID.");
 
 			// execute callback that are delayed
 			var cbs = callbacks;
@@ -50,7 +58,7 @@ module.exports = function(context, module, options) {
 
 	// on bundle invalidated
 	opt.events.on("bundle-invalid", function() {
-		if(state)
+		if(state && (!opt.middleware || !opt.middleware.noInfo))
 			console.info("webpack: bundle is now invalid.");
 		// We are now in invalid state
 		state = false;
