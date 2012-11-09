@@ -107,6 +107,7 @@ module.exports = function(context, module, options) {
 			// server content
 			var content = files[filename];
 			res.setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
+			res.setHeader("Content-Type", "text/javascript"); // No warning in Chrome.
 			res.end(content);
 		}, req);
 	}
