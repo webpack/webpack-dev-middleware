@@ -21,34 +21,44 @@ var webpackMiddleware = require("webpack-dev-middleware");
 app.use(webpackMiddleware(...));
 ```
 
-Use the `webpackMiddleware` function like the webpack function, but without callback.
 Example usage:
 
 ``` javascript
-app.use(webpackMiddleware(__dirname, "./lib/file", {
-	watch: true,
-	debug: true,
-	publicPrefix: "http://localhost:8080/assets/",
-	output: "bundle.js",
-	outputPostfix: ".bundle.js",
-	// ... more webpack config options
+app.use(webpackMiddleware(/* context = */ __dirname, /* module = */ "./lib/file", {
+	// all options optional, but options object not
+
+	noInfo: false,
+	// display no info to console (only warnings and errors)
+
+	quiet: false,
+	// display nothing to the console
+
+	colors: true,
+	// colorful webpack stats
+
+	verbose: false,
+	// verbose webpack stats
+
+	context: "/home/user",
+	// context for webpack stats
+
+	headers: { "X-Custom-Header": "yes" },
+	// custom headers
+
+	// webpack options
+	webpack: {
+		watch: true,
+		// This is not required, but recommendated to get the best out of the middleware.
+
+		publicPrefix: "http://localhost:8080/assets/",
+		// The prefix for request that should be handled.
+
+		output: "bundle.js",
+		// The filename for the bundle.
+
+		// ... more webpack config options
+		debug: true,
+		outputPostfix: ".bundle.js",
+	}
 }));
 ```
-
-### options.watch = true
-
-This is not required, but recommendated to get the best out of the middleware.
-
-### options.publicPrefix
-
-The prefix for request that should be handled.
-
-### options.output, options.outputPostfix
-
-The filename for the bundle.
-
-### options.verbose
-
-Verbose output of the statistics.
-
-### All other options like webpack

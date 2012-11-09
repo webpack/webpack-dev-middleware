@@ -6,24 +6,31 @@ var webpack = require("webpack");
 var formatOutput = require("webpack/lib/formatOutput");
 
 // constructor for the middleware
-module.exports = function(context, module, options) {
-	// get to options, we may have 2 function prototypes
+module.exports = function() {
+	var args = Array.prototype.slice.call(arguments);
+	// get options, we may have 2 function prototypes
 	// (absoluteModule, options) and (context, module, options)
-	var opt = options || module;
+	var opt = args.pop();
+	var wpOpt = opt.webpack = opt.webpack || {
+		watch: true,
+		debug: true
+	};
+	var context = null;
+	if(args.length == 2) context = args[0];
 
 	// We do the stuff in memory, so don't write
-	opt.noWrite = true;
+	wpOpt.noWrite = true;
 
 	// We need you own events to bind some stuff
-	opt.events = opt.events || new (require("events").EventEmitter)();
+	wpOpt.events = wpOpt.events || new (require("events").EventEmitter)();
 
 	// Grap files from webpack
-	opt.emitFile = function(filename, content) {
+	wpOpt.emitFile = function(filename, content) {
 		files[filename] = content;
 	}
 
 	// on bundle
-	opt.events.on("bundle", function(stats) {
+	wpOpt.events.on("bundle", function(stats) {
 		// We are now on valid state
 		state = true;
 		// Do the stuff in nextTick, because bundle may be invalidated
@@ -32,19 +39,19 @@ module.exports = function(context, module, options) {
 			// check if still in valid state
 			if(!state) return;
 			// print webpack output
-			var displayStats = !opt.middleware || !opt.middleware.quiet;
+			var displayStats = !opt.quiet;
 			if(displayStats &&
 				!(stats.errors && stats.errors.length > 0 || stats.warnings && stats.warnings.length > 0) &&
-				opt.middleware && opt.middleware.noInfo)
+				opt.noInfo)
 				displayStats = false;
 			if(displayStats) {
 				console.log(formatOutput(stats, {
-					context: opt.context || context || process.cwd(),
-					colors: true,
-					verbose: opt.verbose
+					context: opt.context || wpOpt.context || context || process.cwd(),
+					colors: opt.colors !== false,
+					verbose: opt.verbose || false
 				}));
 			}
-			if(!opt.middleware || (!opt.middleware.noInfo && !opt.middleware.quiet))
+			if(!opt.noInfo && !opt.quiet)
 				console.info("webpack: bundle is now VALID.");
 
 			// execute callback that are delayed
@@ -57,15 +64,15 @@ module.exports = function(context, module, options) {
 	});
 
 	// on bundle invalidated
-	opt.events.on("bundle-invalid", function() {
-		if(state && (!opt.middleware || (!opt.middleware.noInfo && !opt.middleware.quiet)))
+	wpOpt.events.on("bundle-invalid", function() {
+		if(state && (!opt.noInfo && !opt.quiet))
 			console.info("webpack: bundle is now invalid.");
 		// We are now in invalid state
 		state = false;
 	});
 
 	// start webpack
-	var args = Array.prototype.slice.call(arguments);
+	args.push(wpOpt);
 	args.push(function(err) {
 		if(err) throw err;
 	});
@@ -83,7 +90,7 @@ module.exports = function(context, module, options) {
 	// wait for bundle valid
 	function ready(fn, req) {
 		if(state) return fn();
-		if(!opt.middleware || (!opt.middleware.noInfo && !opt.middleware.quiet))
+		if(!opt.noInfo && !opt.quiet)
 			console.log("webpack: wait until bundle finished: " + req.url);
 		callbacks.push(fn);
 	}
@@ -91,7 +98,7 @@ module.exports = function(context, module, options) {
 	// The middleware function
 	return function webpackDevMiddleware(req, res, next) {
 		// publicPrefix ist the folder our bundle should be in
-		var localPrefix = opt.publicPrefix || "";
+		var localPrefix = wpOpt.publicPrefix || "";
 		if(/^https?:\/\//.test(localPrefix)) {
 			localPrefix = localPrefix.replace(/^https?:\/\/[^\/]+\//, "");
 		}
@@ -108,6 +115,11 @@ module.exports = function(context, module, options) {
 			var content = files[filename];
 			res.setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
 			res.setHeader("Content-Type", "text/javascript"); // No warning in Chrome.
+			if(opt.headers) {
+				for(var name in opt.headers) {
+					res.setHeader(name, opt.headers[name]);
+				}
+			}
 			res.end(content);
 		}, req);
 	}
