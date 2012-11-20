@@ -100,14 +100,14 @@ module.exports = function() {
 		// publicPrefix ist the folder our bundle should be in
 		var localPrefix = wpOpt.publicPrefix || "";
 		if(/^https?:\/\//.test(localPrefix)) {
-			localPrefix = localPrefix.replace(/^https?:\/\/[^\/]+\//, "");
+			localPrefix = "/" + localPrefix.replace(/^https?:\/\/[^\/]+\//, "");
 		}
 		// fast exit if another directory requested
-		if(req.url.indexOf("/" + localPrefix) != 0) return next();
+		if(req.url.indexOf(localPrefix) != 0) return next();
 		// else delay the request until we have a vaild bundle
 		ready(function() {
 			// get filename from request
-			var filename = req.url.substr(localPrefix.length + 1);
+			var filename = req.url.substr(localPrefix.length);
 			// check if it is a generated file
 			if(!(filename in files)) return next();
 
