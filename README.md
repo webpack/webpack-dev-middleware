@@ -49,6 +49,8 @@ app.use(webpackMiddleware(/* context = */ __dirname, /* module = */ "./lib/file"
 	webpack: {
 		watch: true,
 		// This is not required, but recommendated to get the best out of the middleware.
+		// If you pass false, the middleware switch to lazy mode, which means rebundling
+		// every request. A cache is automatically attached in lazy mode.
 
 		publicPrefix: "http://localhost:8080/assets/",
 		// The prefix for request that should be handled.

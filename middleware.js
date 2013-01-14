@@ -24,6 +24,9 @@ module.exports = function() {
 	// We need you own events to bind some stuff
 	wpOpt.events = wpOpt.events || new (require("events").EventEmitter)();
 
+	// We need a cache to cache also in lazy mode
+	wpOpt.cache = wpOpt.cache || new (require("webpack/lib/Cache"))();
+
 	// Grap files from webpack
 	wpOpt.emitFile = function(filename, content) {
 		files[filename] = content;
@@ -61,6 +64,12 @@ module.exports = function() {
 				cb();
 			});
 		});
+
+		// In lazy mode, we may issue another rebuild
+		if(forceRebuild) {
+			forceRebuild = false;
+			rebuild();
+		}
 	});
 
 	// on bundle invalidated
@@ -78,11 +87,23 @@ module.exports = function() {
 	});
 	webpack.apply(null, args);
 
+	function rebuild() {
+		if(state) {
+			state = false;
+			webpack.apply(null, args);
+		} else {
+			forceRebuild = true;
+		}
+	}
+
 	// store our files in memory
 	var files = {};
 
 	// the state, false: bundle invalid, true: bundle valid
 	var state = false;
+
+	// in lazy mode, rebuild automatically
+	var forceRebuild = false;
 
 	// delayed callback
 	var callbacks = [];
@@ -104,10 +125,13 @@ module.exports = function() {
 		}
 		// fast exit if another directory requested
 		if(req.url.indexOf(localPrefix) != 0) return next();
-		// else delay the request until we have a vaild bundle
+		// get filename from request
+		var filename = req.url.substr(localPrefix.length);
+		// in lazy mode, rebuild on bundle request
+		if(filename === wpOpt.output && !wpOpt.watch)
+			rebuild();
+		// delay the request until we have a vaild bundle
 		ready(function() {
-			// get filename from request
-			var filename = req.url.substr(localPrefix.length);
 			// check if it is a generated file
 			if(!(filename in files)) return next();
 
