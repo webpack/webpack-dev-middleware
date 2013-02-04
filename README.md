@@ -50,7 +50,7 @@ app.use(webpackMiddleware(webpack({
 	watchDelay: 300,
 	// delay after change (only lazy: false)
 
-	publicPath: "/assets",
+	publicPath: "/assets/",
 	// public path to bind the middleware to
 	// use the same as in webpack
 
