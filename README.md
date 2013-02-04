@@ -24,8 +24,18 @@ app.use(webpackMiddleware(...));
 Example usage:
 
 ``` javascript
-app.use(webpackMiddleware(/* context = */ __dirname, /* module = */ "./lib/file", {
-	// all options optional, but options object not
+app.use(webpackMiddleware(webpack({
+	// webpack options
+	// webpackMiddleware takes a Compiler object as first parameter
+	// which is returned by webpack(...) without callback.
+	entry: "...",
+	output: {
+		path: "/"
+		// no real path is required, just pass "/"
+		// but it will work with other paths too.
+	}
+}), {
+	// all options optional
 
 	noInfo: false,
 	// display no info to console (only warnings and errors)
@@ -33,34 +43,23 @@ app.use(webpackMiddleware(/* context = */ __dirname, /* module = */ "./lib/file"
 	quiet: false,
 	// display nothing to the console
 
-	colors: true,
-	// colorful webpack stats
+	lazy: true,
+	// switch into lazy mode
+	// that means no watching, but recompilation on every request
 
-	verbose: false,
-	// verbose webpack stats
+	watchDelay: 300,
+	// delay after change (only lazy: false)
 
-	context: "/home/user",
-	// context for webpack stats
+	publicPath: "/assets",
+	// public path to bind the middleware to
+	// use the same as in webpack
 
 	headers: { "X-Custom-Header": "yes" },
 	// custom headers
 
-	// webpack options
-	webpack: {
-		watch: true,
-		// This is not required, but recommendated to get the best out of the middleware.
-		// If you pass false, the middleware switch to lazy mode, which means rebundling
-		// every request. A cache is automatically attached in lazy mode.
-
-		publicPrefix: "http://localhost:8080/assets/",
-		// The prefix for request that should be handled.
-
-		output: "bundle.js",
-		// The filename for the bundle.
-
-		// ... more webpack config options
-		debug: true,
-		outputPostfix: ".bundle.js",
+	stats: {
+		colors: true
 	}
+	// options for formating the statistics
 }));
 ```

@@ -2,38 +2,22 @@
 	MIT License http://www.opensource.org/licenses/mit-license.php
 	Author Tobias Koppers @sokra
 */
-var webpack = require("webpack");
-var formatOutput = require("webpack/lib/formatOutput");
+var MemoryOutputFileSystem = require("webpack/lib/MemoryOutputFileSystem");
+var MemoryInputFileSystem = require("enhanced-resolve/lib/MemoryInputFileSystem");
 
 // constructor for the middleware
-module.exports = function() {
-	var args = Array.prototype.slice.call(arguments);
-	// get options, we may have 2 function prototypes
-	// (absoluteModule, options) and (context, module, options)
-	var opt = args.pop();
-	var wpOpt = opt.webpack = opt.webpack || {
-		watch: true,
-		debug: true
-	};
-	var context = null;
-	if(args.length == 2) context = args[0];
+module.exports = function(compiler, options) {
+	if(!options) options = {};
+	if(options.watchDelay === undefined) options.watchDelay = 200;
+	if(!options.stats) options.stats = {};
+	if(!options.stats.context === undefined) options.stats.context = process.cwd();
 
-	// We do the stuff in memory, so don't write
-	wpOpt.noWrite = true;
+	// store our files in memory
+	var files = {};
+	compiler.outputFileSystem = new MemoryOutputFileSystem(files);
+	var fs = new MemoryInputFileSystem(files);
 
-	// We need you own events to bind some stuff
-	wpOpt.events = wpOpt.events || new (require("events").EventEmitter)();
-
-	// We need a cache to cache also in lazy mode
-	wpOpt.cache = wpOpt.cache || new (require("webpack/lib/Cache"))();
-
-	// Grap files from webpack
-	wpOpt.emitFile = function(filename, content) {
-		files[filename] = content;
-	}
-
-	// on bundle
-	wpOpt.events.on("bundle", function(stats) {
+	compiler.plugin("done", function(stats) {
 		// We are now on valid state
 		state = true;
 		// Do the stuff in nextTick, because bundle may be invalidated
@@ -42,19 +26,15 @@ module.exports = function() {
 			// check if still in valid state
 			if(!state) return;
 			// print webpack output
-			var displayStats = !opt.quiet;
+			var displayStats = !options.quiet;
 			if(displayStats &&
-				!(stats.errors && stats.errors.length > 0 || stats.warnings && stats.warnings.length > 0) &&
-				opt.noInfo)
+				!(stats.hasErrors() || stats.hasWarnings()) &&
+				options.noInfo)
 				displayStats = false;
 			if(displayStats) {
-				console.log(formatOutput(stats, {
-					context: opt.context || wpOpt.context || context || process.cwd(),
-					colors: opt.colors !== false,
-					verbose: opt.verbose || false
-				}));
+				console.log(stats.toString(options.stats));
 			}
-			if(!opt.noInfo && !opt.quiet)
+			if(!options.noInfo && !options.quiet)
 				console.info("webpack: bundle is now VALID.");
 
 			// execute callback that are delayed
@@ -72,32 +52,15 @@ module.exports = function() {
 		}
 	});
 
-	// on bundle invalidated
-	wpOpt.events.on("bundle-invalid", function() {
-		if(state && (!opt.noInfo && !opt.quiet))
+	// on compiling
+	function invalidPlugin() {
+		if(state && (!options.noInfo && !options.quiet))
 			console.info("webpack: bundle is now invalid.");
 		// We are now in invalid state
 		state = false;
-	});
-
-	// start webpack
-	args.push(wpOpt);
-	args.push(function(err) {
-		if(err) throw err;
-	});
-	webpack.apply(null, args);
-
-	function rebuild() {
-		if(state) {
-			state = false;
-			webpack.apply(null, args);
-		} else {
-			forceRebuild = true;
-		}
 	}
-
-	// store our files in memory
-	var files = {};
+	compiler.plugin("invalid", invalidPlugin);
+	compiler.plugin("compile", invalidPlugin);
 
 	// the state, false: bundle invalid, true: bundle valid
 	var state = false;
@@ -111,15 +74,35 @@ module.exports = function() {
 	// wait for bundle valid
 	function ready(fn, req) {
 		if(state) return fn();
-		if(!opt.noInfo && !opt.quiet)
+		if(!options.noInfo && !options.quiet)
 			console.log("webpack: wait until bundle finished: " + req.url);
 		callbacks.push(fn);
+	}
+
+	// start watching
+	if(!options.lazy) {
+		compiler.watch(options.watchDelay, function(err) {
+			if(err) throw err;
+		});
+	} else {
+		state = true;
+	}
+
+	function rebuild() {
+		if(state) {
+			state = false;
+			compiler.run(function(err) {
+				if(err) throw err;
+			});
+		} else {
+			forceRebuild = true;
+		}
 	}
 
 	// The middleware function
 	return function webpackDevMiddleware(req, res, next) {
 		// publicPrefix ist the folder our bundle should be in
-		var localPrefix = wpOpt.publicPrefix || "";
+		var localPrefix = options.publicPath || "/";
 		if(/^https?:\/\//.test(localPrefix)) {
 			localPrefix = "/" + localPrefix.replace(/^https?:\/\/[^\/]+\//, "");
 		}
@@ -128,20 +111,27 @@ module.exports = function() {
 		// get filename from request
 		var filename = req.url.substr(localPrefix.length);
 		// in lazy mode, rebuild on bundle request
-		if(filename === wpOpt.output && !wpOpt.watch)
+		if(options.lazy && filename === options.filename)
 			rebuild();
 		// delay the request until we have a vaild bundle
 		ready(function() {
 			// check if it is a generated file
-			if(!(filename in files)) return next();
+			var fsPath = compiler.outputPath == "/" ? "/" + filename : (compiler.outputPath||"") + "/" + filename;
+			try {
+				var stat = fs.statSync(fsPath);
+				if(!stat.isFile()) throw "next";
+			} catch(e) {
+				return next();
+			}
 
 			// server content
-			var content = files[filename];
+			var content = fs.readFileSync(fsPath);
 			res.setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
-			res.setHeader("Content-Type", "text/javascript"); // No warning in Chrome.
-			if(opt.headers) {
-				for(var name in opt.headers) {
-					res.setHeader(name, opt.headers[name]);
+			if(/\.js$/.test(filename))
+				res.setHeader("Content-Type", "text/javascript"); // No warning in Chrome.
+			if(options.headers) {
+				for(var name in options.headers) {
+					res.setHeader(name, options.headers[name]);
 				}
 			}
 			res.end(content);
