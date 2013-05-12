@@ -4,6 +4,7 @@
 */
 var MemoryOutputFileSystem = require("webpack/lib/MemoryOutputFileSystem");
 var MemoryInputFileSystem = require("enhanced-resolve/lib/MemoryInputFileSystem");
+var mime = require("mime");
 
 // constructor for the middleware
 module.exports = function(compiler, options) {
@@ -127,8 +128,7 @@ module.exports = function(compiler, options) {
 			// server content
 			var content = fs.readFileSync(fsPath);
 			res.setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
-			if(/\.js$/.test(filename))
-				res.setHeader("Content-Type", "text/javascript"); // No warning in Chrome.
+			res.setHeader("Content-Type", mime.lookup(fsPath));
 			if(options.headers) {
 				for(var name in options.headers) {
 					res.setHeader(name, options.headers[name]);
