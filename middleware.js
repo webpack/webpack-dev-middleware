@@ -84,6 +84,7 @@ module.exports = function(compiler, options) {
 		state = true;
 	} else {
 		// start watching
+		options.watch = true;
 		compiler.watch(options.watchDelay, function(err) {
 			if(err) throw err;
 		});
