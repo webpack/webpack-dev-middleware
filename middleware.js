@@ -80,13 +80,13 @@ module.exports = function(compiler, options) {
 		callbacks.push(fn);
 	}
 
-	// start watching
-	if(!options.lazy) {
+	if(options.lazy) {
+		state = true;
+	} else {
+		// start watching
 		compiler.watch(options.watchDelay, function(err) {
 			if(err) throw err;
 		});
-	} else {
-		state = true;
 	}
 
 	function rebuild() {
