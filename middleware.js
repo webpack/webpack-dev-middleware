@@ -22,7 +22,7 @@ module.exports = function(compiler, options) {
 		// We are now on valid state
 		state = true;
 		// Do the stuff in nextTick, because bundle may be invalidated
-		//  if a change happend while compiling
+		//  if a change happened while compiling
 		process.nextTick(function() {
 			// check if still in valid state
 			if(!state) return;
@@ -41,7 +41,7 @@ module.exports = function(compiler, options) {
 			// execute callback that are delayed
 			var cbs = callbacks;
 			callbacks = [];
-			cbs.forEach(function continueBecauseBundleAvailible(cb) {
+			cbs.forEach(function continueBecauseBundleAvailable(cb) {
 				cb();
 			});
 		});
@@ -80,13 +80,14 @@ module.exports = function(compiler, options) {
 		callbacks.push(fn);
 	}
 
-	// start watching
-	if(!options.lazy) {
+	if(options.lazy) {
+		state = true;
+	} else {
+		// start watching
+		options.watch = true;
 		compiler.watch(options.watchDelay, function(err) {
 			if(err) throw err;
 		});
-	} else {
-		state = true;
 	}
 
 	function rebuild() {
