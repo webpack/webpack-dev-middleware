@@ -82,7 +82,7 @@ module.exports = function(compiler, options) {
 
 	// start watching
 	if(!options.lazy) {
-		compiler.watch(options.watchDelay, function(err) {
+		var watching = compiler.watch(options.watchDelay, function(err) {
 			if(err) throw err;
 		});
 	} else {
@@ -101,7 +101,7 @@ module.exports = function(compiler, options) {
 	}
 
 	// The middleware function
-	return function webpackDevMiddleware(req, res, next) {
+	function webpackDevMiddleware(req, res, next) {
 		// publicPrefix ist the folder our bundle should be in
 		var localPrefix = options.publicPath || "/";
 		if(/^https?:\/\//.test(localPrefix)) {
@@ -137,4 +137,12 @@ module.exports = function(compiler, options) {
 			res.end(content);
 		}, req);
 	}
+	
+	webpackDevMiddleware.invalidate = function() {
+		if(watching) watching.invalidate();
+	};
+	
+	webpackDevMiddleware.fileSystem = fs;
+	
+	return webpackDevMiddleware;
 }
