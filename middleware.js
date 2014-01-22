@@ -100,35 +100,42 @@ module.exports = function(compiler, options) {
 		}
 	}
 
-	// The middleware function
-	function webpackDevMiddleware(req, res, next) {
-		// publicPrefix ist the folder our bundle should be in
+	function pathJoin(a, b) {
+		return a == "/" ? "/" + b : (a||"") + "/" + b
+	}
+
+	function getFilenameFromUrl(url) {
+		// publicPrefix is the folder our bundle should be in
 		var localPrefix = options.publicPath || "/";
 		if(/^https?:\/\//.test(localPrefix)) {
 			localPrefix = "/" + localPrefix.replace(/^https?:\/\/[^\/]+\//, "");
 		}
 		// fast exit if another directory requested
-		if(req.url.indexOf(localPrefix) != 0) return next();
+		if(url.indexOf(localPrefix) != 0) return next();
 		// get filename from request
-		var filename = req.url.substr(localPrefix.length);
+		var filename = url.substr(localPrefix.length);
+		return pathJoin(compiler.outputPath, filename);
+	}
+
+	// The middleware function
+	function webpackDevMiddleware(req, res, next) {
+		var filename = getFilenameFromUrl(req.url);
 		// in lazy mode, rebuild on bundle request
-		if(options.lazy && filename === options.filename)
+		if(options.lazy && filename === pathJoin(compiler.outputPath, options.filename))
 			rebuild();
 		// delay the request until we have a vaild bundle
 		ready(function() {
-			// check if it is a generated file
-			var fsPath = compiler.outputPath == "/" ? "/" + filename : (compiler.outputPath||"") + "/" + filename;
 			try {
-				var stat = fs.statSync(fsPath);
+				var stat = fs.statSync(filename);
 				if(!stat.isFile()) throw "next";
 			} catch(e) {
 				return next();
 			}
 
 			// server content
-			var content = fs.readFileSync(fsPath);
+			var content = fs.readFileSync(filename);
 			res.setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
-			res.setHeader("Content-Type", mime.lookup(fsPath));
+			res.setHeader("Content-Type", mime.lookup(filename));
 			if(options.headers) {
 				for(var name in options.headers) {
 					res.setHeader(name, options.headers[name]);
@@ -137,12 +144,14 @@ module.exports = function(compiler, options) {
 			res.end(content);
 		}, req);
 	}
-	
+
+	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl;
+
 	webpackDevMiddleware.invalidate = function() {
 		if(watching) watching.invalidate();
 	};
-	
+
 	webpackDevMiddleware.fileSystem = fs;
-	
+
 	return webpackDevMiddleware;
 }
