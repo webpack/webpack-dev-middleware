@@ -11,7 +11,7 @@ module.exports = function(compiler, options) {
 	if(!options) options = {};
 	if(options.watchDelay === undefined) options.watchDelay = 200;
 	if(!options.stats) options.stats = {};
-	if(options.stats.context !== undefined) options.stats.context = process.cwd();
+	if(!options.stats.context) options.stats.context = process.cwd();
 
 	// store our files in memory
 	var files = {};
