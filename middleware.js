@@ -11,7 +11,7 @@ module.exports = function(compiler, options) {
 	if(!options) options = {};
 	if(options.watchDelay === undefined) options.watchDelay = 200;
 	if(!options.stats) options.stats = {};
-	if(!options.stats.context === undefined) options.stats.context = process.cwd();
+	if(options.stats.context !== undefined) options.stats.context = process.cwd();
 
 	// store our files in memory
 	var files = {};
@@ -111,7 +111,7 @@ module.exports = function(compiler, options) {
 			localPrefix = "/" + localPrefix.replace(/^https?:\/\/[^\/]+\//, "");
 		}
 		// fast exit if another directory requested
-		if(url.indexOf(localPrefix) != 0) return next();
+		if(url.indexOf(localPrefix) !== 0) return false;
 		// get filename from request
 		var filename = url.substr(localPrefix.length);
 		return pathJoin(compiler.outputPath, filename);
@@ -120,6 +120,8 @@ module.exports = function(compiler, options) {
 	// The middleware function
 	function webpackDevMiddleware(req, res, next) {
 		var filename = getFilenameFromUrl(req.url);
+		if (filename === false) return next();
+		
 		// in lazy mode, rebuild on bundle request
 		if(options.lazy && filename === pathJoin(compiler.outputPath, options.filename))
 			rebuild();
