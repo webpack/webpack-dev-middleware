@@ -114,6 +114,9 @@ module.exports = function(compiler, options) {
 		if(url.indexOf(localPrefix) !== 0) return false;
 		// get filename from request
 		var filename = url.substr(localPrefix.length);
+		if(filename.indexOf("?") >= 0) {
+			filename = filename.substr(0, filename.indexOf("?"));
+		}
 		return pathJoin(compiler.outputPath, filename);
 	}
 
