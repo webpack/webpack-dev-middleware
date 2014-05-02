@@ -82,7 +82,8 @@ module.exports = function(compiler, options) {
 
 	// start watching
 	if(!options.lazy) {
-		var watching = compiler.watch(options.watchDelay, function(err) {
+		var watching = compiler.watch(options.watchDelay, function(err, stats) {
+			if(options.onBuild) options.onBuild(err, stats);
 			if(err) throw err;
 		});
 	} else {
@@ -92,7 +93,8 @@ module.exports = function(compiler, options) {
 	function rebuild() {
 		if(state) {
 			state = false;
-			compiler.run(function(err) {
+			compiler.run(function(err, stats) {
+				if(options.onBuild) options.onBuild(err, stats);
 				if(err) throw err;
 			});
 		} else {
