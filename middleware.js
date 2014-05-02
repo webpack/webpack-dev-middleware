@@ -92,7 +92,8 @@ module.exports = function(compiler, options) {
 	function rebuild() {
 		if(state) {
 			state = false;
-			compiler.run(function(err) {
+			compiler.run(function(err, stats) {
+				if(options.onBuild) options.onBuild(err, stats);
 				if(err) throw err;
 			});
 		} else {
