@@ -155,6 +155,11 @@ module.exports = function(compiler, options) {
 	webpackDevMiddleware.invalidate = function() {
 		if(watching) watching.invalidate();
 	};
+	webpackDevMiddleware.close = function(callback) {
+		callback = callback || function(){};
+		if(watching) watching.close(callback);
+		else callback();
+	};
 
 	webpackDevMiddleware.fileSystem = fs;
 
