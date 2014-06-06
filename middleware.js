@@ -27,7 +27,7 @@ module.exports = function(compiler, options) {
 			// check if still in valid state
 			if(!state) return;
 			// print webpack output
-			var displayStats = !options.quiet;
+			var displayStats = (!options.quiet && !options.minimalOutput);
 			if(displayStats &&
 				!(stats.hasErrors() || stats.hasWarnings()) &&
 				options.noInfo)
@@ -35,7 +35,7 @@ module.exports = function(compiler, options) {
 			if(displayStats) {
 				console.log(stats.toString(options.stats));
 			}
-			if(!options.noInfo && !options.quiet)
+			if ((!options.noInfo && !options.quiet) || options.minimalOutput)
 				console.info("webpack: bundle is now VALID.");
 
 			// execute callback that are delayed
@@ -55,8 +55,8 @@ module.exports = function(compiler, options) {
 
 	// on compiling
 	function invalidPlugin() {
-		if(state && (!options.noInfo && !options.quiet))
-			console.info("webpack: bundle is now invalid.");
+		if(state && ((!options.noInfo && !options.quiet) || options.minimalOutput))
+			console.info("webpack: bundle is now INVALID.");
 		// We are now in invalid state
 		state = false;
 	}
