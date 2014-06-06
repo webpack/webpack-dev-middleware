@@ -10,7 +10,7 @@ var mime = require("mime");
 module.exports = function(compiler, options) {
 	if(!options) options = {};
 	if(options.watchDelay === undefined) options.watchDelay = 200;
-	if(!options.stats) options.stats = {};
+	if(typeof options.stats === "undefined") options.stats = {};
 	if(!options.stats.context) options.stats.context = process.cwd();
 
 	// store our files in memory
@@ -27,7 +27,7 @@ module.exports = function(compiler, options) {
 			// check if still in valid state
 			if(!state) return;
 			// print webpack output
-			var displayStats = (!options.quiet && !options.minimalOutput);
+			var displayStats = (!options.quiet && options.stats !== false);
 			if(displayStats &&
 				!(stats.hasErrors() || stats.hasWarnings()) &&
 				options.noInfo)
@@ -35,7 +35,7 @@ module.exports = function(compiler, options) {
 			if(displayStats) {
 				console.log(stats.toString(options.stats));
 			}
-			if ((!options.noInfo && !options.quiet) || options.minimalOutput)
+			if (!options.noInfo && !options.quiet)
 				console.info("webpack: bundle is now VALID.");
 
 			// execute callback that are delayed
@@ -55,7 +55,7 @@ module.exports = function(compiler, options) {
 
 	// on compiling
 	function invalidPlugin() {
-		if(state && ((!options.noInfo && !options.quiet) || options.minimalOutput))
+		if(state && (!options.noInfo && !options.quiet))
 			console.info("webpack: bundle is now INVALID.");
 		// We are now in invalid state
 		state = false;
