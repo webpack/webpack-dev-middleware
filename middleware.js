@@ -107,17 +107,19 @@ module.exports = function(compiler, options) {
 	function getFilenameFromUrl(url) {
 		// publicPrefix is the folder our bundle should be in
 		var localPrefix = options.publicPath || "/";
-		if(/^https?:\/\//.test(localPrefix)) {
-			localPrefix = "/" + localPrefix.replace(/^https?:\/\/[^\/]+\//, "");
+		if(url.indexOf(localPrefix) !== 0) {
+			if(/^https?:\/\//.test(localPrefix)) {
+				localPrefix = "/" + localPrefix.replace(/^https?:\/\/[^\/]+\//, "");
+				// fast exit if another directory requested
+				if(url.indexOf(localPrefix) !== 0) return false;
+			} else return false;
 		}
-		// fast exit if another directory requested
-		if(url.indexOf(localPrefix) !== 0) return false;
 		// get filename from request
 		var filename = url.substr(localPrefix.length);
 		if(filename.indexOf("?") >= 0) {
 			filename = filename.substr(0, filename.indexOf("?"));
 		}
-		return pathJoin(compiler.outputPath, filename);
+		return filename ? pathJoin(compiler.outputPath, filename) : compiler.outputPath;
 	}
 
 	// The middleware function
