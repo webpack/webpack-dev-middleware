@@ -8,6 +8,7 @@
 	},
 	"dependencies": {
 		"enhanced-resolve": "~0.7.5",
+		"memory-fs": "~0.1.0",
 		"mime": "1.x"
 	},
 	"licenses": [

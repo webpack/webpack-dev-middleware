@@ -2,8 +2,7 @@
 	MIT License http://www.opensource.org/licenses/mit-license.php
 	Author Tobias Koppers @sokra
 */
-var MemoryOutputFileSystem = require("webpack/lib/MemoryOutputFileSystem");
-var MemoryInputFileSystem = require("enhanced-resolve/lib/MemoryInputFileSystem");
+var MemoryFileSystem = require("memory-fs");
 var mime = require("mime");
 
 // constructor for the middleware
@@ -15,8 +14,7 @@ module.exports = function(compiler, options) {
 
 	// store our files in memory
 	var files = {};
-	compiler.outputFileSystem = new MemoryOutputFileSystem(files);
-	var fs = new MemoryInputFileSystem(files);
+	var fs = compiler.outputFileSystem = new MemoryFileSystem();
 
 	compiler.plugin("done", function(stats) {
 		// We are now on valid state
