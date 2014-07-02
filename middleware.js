@@ -120,14 +120,38 @@ module.exports = function(compiler, options) {
 		return filename ? pathJoin(compiler.outputPath, filename) : compiler.outputPath;
 	}
 
+	// Generate list of possible output files
+	var outputFiles = [];
+	if (options.lazy) {
+		if (options.filename.indexOf("[name]") > -1) {
+			var entries = compiler.options.entry;
+			for (var entry in entries) {
+				if (entries.hasOwnProperty(entry)) {
+					var outputFile = pathJoin(compiler.outputPath, options.filename.replace("[name]", entry));
+					outputFiles.push(outputFile);
+				}
+			}
+		}
+		if (outputFiles.length === 0) {
+			outputFiles.push(pathJoin(compiler.outputPath, options.filename));
+		}
+	}
+
 	// The middleware function
 	function webpackDevMiddleware(req, res, next) {
 		var filename = getFilenameFromUrl(req.url);
 		if (filename === false) return next();
 		
 		// in lazy mode, rebuild on bundle request
-		if(options.lazy && filename === pathJoin(compiler.outputPath, options.filename))
-			rebuild();
+		if (options.lazy) {
+			for (var i = 0, len = outputFiles.length; i < len; i++) {
+				if (filename === outputFiles[i]) {
+					rebuild();
+					break;
+				}
+			}
+		}
+
 		// delay the request until we have a vaild bundle
 		ready(function() {
 			try {
