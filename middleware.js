@@ -12,6 +12,14 @@ module.exports = function(compiler, options) {
 	if(options.watchDelay === undefined) options.watchDelay = 200;
 	if(typeof options.stats === "undefined") options.stats = {};
 	if(!options.stats.context) options.stats.context = process.cwd();
+	if(options.lazy) {
+		if(typeof options.filename === "string") {
+			var str = options.filename
+				.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&")
+				.replace(/\\\[[a-z]+\\\]/ig, ".+");
+			options.filename = new RegExp("^" + str + "$");
+		}
+	}
 
 	// store our files in memory
 	var files = {};
@@ -127,7 +135,7 @@ module.exports = function(compiler, options) {
 		if (filename === false) return next();
 
 		// in lazy mode, rebuild on bundle request
-		if(options.lazy && filename === pathJoin(compiler.outputPath, options.filename))
+		if(options.lazy && (!options.filename || options.filename.test(filename)))
 			rebuild();
 		// delay the request until we have a vaild bundle
 		ready(function() {
