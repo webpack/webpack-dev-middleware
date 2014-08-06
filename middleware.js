@@ -106,8 +106,8 @@ module.exports = function(compiler, options) {
 		// publicPrefix is the folder our bundle should be in
 		var localPrefix = options.publicPath || "/";
 		if(url.indexOf(localPrefix) !== 0) {
-			if(/^https?:\/\//.test(localPrefix)) {
-				localPrefix = "/" + localPrefix.replace(/^https?:\/\/[^\/]+\//, "");
+			if(/^(https?:)?\/\//.test(localPrefix)) {
+				localPrefix = "/" + localPrefix.replace(/^(https?:)?\/\/[^\/]+\//, "");
 				// fast exit if another directory requested
 				if(url.indexOf(localPrefix) !== 0) return false;
 			} else return false;
