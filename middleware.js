@@ -2,6 +2,7 @@
 	MIT License http://www.opensource.org/licenses/mit-license.php
 	Author Tobias Koppers @sokra
 */
+var path = require("path");
 var MemoryFileSystem = require("memory-fs");
 var mime = require("mime");
 
@@ -124,7 +125,7 @@ module.exports = function(compiler, options) {
 	function webpackDevMiddleware(req, res, next) {
 		var filename = getFilenameFromUrl(req.url);
 		if (filename === false) return next();
-		
+
 		// in lazy mode, rebuild on bundle request
 		if(options.lazy && filename === pathJoin(compiler.outputPath, options.filename))
 			rebuild();
@@ -132,7 +133,15 @@ module.exports = function(compiler, options) {
 		ready(function() {
 			try {
 				var stat = fs.statSync(filename);
-				if(!stat.isFile()) throw "next";
+				if(!stat.isFile()) {
+					if (stat.isDirectory()) {
+						filename = path.join(filename, "index.html");
+						stat = fs.statSync(filename);
+						if(!stat.isFile()) throw "next";
+					} else {
+						throw "next";
+					}
+				}
 			} catch(e) {
 				return next();
 			}
