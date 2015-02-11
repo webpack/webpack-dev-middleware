@@ -150,6 +150,7 @@ module.exports = function(compiler, options) {
 			var content = fs.readFileSync(filename);
 			res.setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
 			res.setHeader("Content-Type", mime.lookup(filename));
+			res.setHeader("Content-Length", content.length);
 			if(options.headers) {
 				for(var name in options.headers) {
 					res.setHeader(name, options.headers[name]);
