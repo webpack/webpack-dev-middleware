@@ -15,7 +15,7 @@ module.exports = function(compiler, options) {
 
 	// store our files in memory
 	var files = {};
-	var fs = compiler.outputFileSystem = new MemoryFileSystem();
+	var fs = compiler.outputFileSystem = (options.useRealFileSystem && compiler.outputFileSystem) || new MemoryFileSystem();
 
 	compiler.plugin("done", function(stats) {
 		// We are now on valid state
