@@ -47,8 +47,11 @@ app.use(webpackMiddleware(webpack({
 	// switch into lazy mode
 	// that means no watching, but recompilation on every request
 
-	watchDelay: 300,
-	// delay after change (only lazy: false)
+	watchOptions: {
+		aggregateTimeout: 300,
+		poll: true
+	},
+	// watch options (only lazy: false)
 
 	publicPath: "/assets/",
 	// public path to bind the middleware to
