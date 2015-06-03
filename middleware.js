@@ -81,7 +81,7 @@ module.exports = function(compiler, options) {
 
 	// start watching
 	if(!options.lazy) {
-		var watching = compiler.watch(options.watchDelay, function(err) {
+		var watching = compiler.watch(options.watchOptions, function(err) {
 			if(err) throw err;
 		});
 	} else {
