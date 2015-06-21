@@ -67,8 +67,13 @@ module.exports = function(compiler, options) {
 		// We are now in invalid state
 		state = false;
 	}
+	function invalidAsyncPlugin(compiler, callback) {
+		invalidPlugin();
+		callback();
+	}
 	compiler.plugin("invalid", invalidPlugin);
-	compiler.plugin("compile", invalidPlugin);
+	compiler.plugin("watch-run", invalidAsyncPlugin);
+	compiler.plugin("run", invalidAsyncPlugin);
 
 	// the state, false: bundle invalid, true: bundle valid
 	var state = false;
@@ -137,6 +142,7 @@ module.exports = function(compiler, options) {
 		// in lazy mode, rebuild on bundle request
 		if(options.lazy && (!options.filename || options.filename.test(filename)))
 			rebuild();
+
 		// delay the request until we have a vaild bundle
 		ready(function() {
 			try {
