@@ -47,12 +47,20 @@ app.use(webpackMiddleware(webpack({
 	// switch into lazy mode
 	// that means no watching, but recompilation on every request
 
+	watch: true,
+	// disable to turn off watching and only compile
+	// when the server is started (only lazy: false)
+
 	watchDelay: 300,
-	// delay after change (only lazy: false)
+	// delay after change (only lazy: false && watch: true)
 
 	publicPath: "/assets/",
 	// public path to bind the middleware to
 	// use the same as in webpack
+
+	filename: "app.js",
+	// public filename to bind the middleware to
+	// use the same as in webpack (required for lazy mode)
 
 	headers: { "X-Custom-Header": "yes" },
 	// custom headers

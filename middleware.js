@@ -92,13 +92,15 @@ module.exports = function(compiler, options) {
 		callbacks.push(fn);
 	}
 
-	// start watching
-	if(!options.lazy) {
+	if(options.lazy) { // Lazy mode
+		state = true;
+	} else if (options.watch === false) { // Just compile once
+		state = true;
+		rebuild();
+	} else { // Start watching
 		var watching = compiler.watch(options.watchDelay, function(err) {
 			if(err) throw err;
 		});
-	} else {
-		state = true;
 	}
 
 	function rebuild() {
