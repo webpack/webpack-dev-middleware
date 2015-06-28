@@ -9,7 +9,13 @@ var mime = require("mime");
 // constructor for the middleware
 module.exports = function(compiler, options) {
 	if(!options) options = {};
-	if(options.watchDelay === undefined) options.watchDelay = 200;
+	if(typeof options.watchOptions === "undefined") options.watchOptions = {};
+	if(typeof options.watchDelay !== "undefined") {
+		// TODO remove this in next major version
+		console.warn("options.watchDelay is deprecated: Use 'options.watchOptions.aggregateTimeout' instead");
+		options.watchOptions.aggregateTimeout = options.watchDelay;
+	}
+	if(typeof options.watchOptions.aggregateTimeout === "undefined") options.watchOptions.aggregateTimeout = 200;
 	if(typeof options.stats === "undefined") options.stats = {};
 	if(!options.stats.context) options.stats.context = process.cwd();
 	if(options.lazy) {
@@ -94,7 +100,7 @@ module.exports = function(compiler, options) {
 
 	// start watching
 	if(!options.lazy) {
-		var watching = compiler.watch(options.watchDelay, function(err) {
+		var watching = compiler.watch(options.watchOptions, function(err) {
 			if(err) throw err;
 		});
 	} else {
