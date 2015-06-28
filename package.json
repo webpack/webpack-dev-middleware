@@ -4,12 +4,11 @@
   "author": "Tobias Koppers @sokra",
   "description": "Offers a dev middleware for webpack, which arguments a live bundle to a directory",
   "peerDependencies": {
-    "webpack": "1.x"
+    "webpack": "^1.0.0"
   },
   "dependencies": {
-    "enhanced-resolve": "~0.7.5",
-    "memory-fs": "~0.1.0",
-    "mime": "1.x"
+    "memory-fs": "~0.2.0",
+    "mime": "^1.3.4"
   },
   "licenses": [
     {
