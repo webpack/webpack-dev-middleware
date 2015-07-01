@@ -43,6 +43,9 @@ app.use(webpackMiddleware(webpack({
 	quiet: false,
 	// display nothing to the console
 
+	progress: false,
+  // show bundle build progress
+
 	lazy: true,
 	// switch into lazy mode
 	// that means no watching, but recompilation on every request

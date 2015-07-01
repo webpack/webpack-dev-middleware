@@ -5,6 +5,7 @@
 var path = require("path");
 var MemoryFileSystem = require("memory-fs");
 var mime = require("mime");
+var ProgressPlugin = require("webpack/lib/ProgressPlugin");
 
 // constructor for the middleware
 module.exports = function(compiler, options) {
@@ -65,6 +66,19 @@ module.exports = function(compiler, options) {
 			rebuild();
 		}
 	});
+
+	if (options.progress) {
+		compiler.apply(new ProgressPlugin(function(percentage, msg) {
+			var stream = process.stderr;
+			if (stream.isTTY && percentage < 0.71) {
+				stream.cursorTo(0);
+				stream.write(msg);
+				stream.clearLine(1);
+			} else if (percentage === 1) {
+				console.log('\nwebpack: bundle build is now finished.');
+			}
+		}));
+	}
 
 	// on compiling
 	function invalidPlugin() {
