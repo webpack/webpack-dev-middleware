@@ -66,3 +66,17 @@ app.use(webpackMiddleware(webpack({
 	// options for formating the statistics
 }));
 ```
+
+## FAQ
+
+### How do I use it with the HTML5 History API?
+
+webpack-dev-middleware has an API which exposes the in-memory filesystem, which can be used to serve webpack-generated files.
+
+```js
+const middleware = require('webpack-dev-middleware')(compiler)
+// normal middleware code here
+app.get('*', (req, res) => res.end(middleware.fileSystem.readFileSync(path.join(config.output.path, 'index.html')))
+```
+
+See more in this [gist](https://gist.github.com/frederickfogerty/df921f21a83b479b2056). For a more simple version, see [here](https://gist.github.com/maman/8e91e6cb4ca9feaa4290). Also see [issue #39](https://github.com/webpack/webpack-dev-middleware/issues/39) for discussion.
