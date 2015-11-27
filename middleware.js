@@ -29,7 +29,32 @@ module.exports = function(compiler, options) {
 
 	// store our files in memory
 	var files = {};
-	var fs = compiler.outputFileSystem = new MemoryFileSystem();
+	var fs = new MemoryFileSystem();
+
+	// the base output path for web and webworker bundles
+	var outputPath;
+
+	if (typeof compiler.compilers === "undefined") {
+		compiler.outputFileSystem = fs;
+		outputPath = compiler.outputPath;
+	} else {
+		// when there is a mix of web and non-web compilers
+		// set the base outputPath and in-memory file stream
+		// only for the web and webwoker compilers
+		outputPath = compiler.compilers[0].outputPath;
+		compiler.compilers[0].outputFileSystem = fs;
+		for(var i = 1; i < compiler.compilers.length; i++) {
+			var currentCompiler = compiler.compilers[i];
+			if (typeof currentCompiler.options.target !== "undefined" &&
+				["web", "webwoker"].indexOf(currentCompiler.options.target) === -1) {
+				continue;
+			}
+			currentCompiler.outputFileSystem = fs;
+			while (currentCompiler.outputPath.indexOf(outputPath) !== 0 && /[\/\\]/.test(outputPath)) {
+				outputPath = outputPath.replace(/[\/\\][^\/\\]*$/, "");
+			}
+		}
+	}
 
 	compiler.plugin("done", function(stats) {
 		// We are now on valid state
@@ -137,7 +162,7 @@ module.exports = function(compiler, options) {
 		if(filename.indexOf("?") >= 0) {
 			filename = filename.substr(0, filename.indexOf("?"));
 		}
-		return filename ? pathJoin(compiler.outputPath, filename) : compiler.outputPath;
+		return filename ? pathJoin(outputPath, filename) : outputPath;
 	}
 
 	// The middleware function
