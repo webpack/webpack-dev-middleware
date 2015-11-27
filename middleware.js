@@ -30,6 +30,7 @@ module.exports = function(compiler, options) {
 	// store our files in memory
 	var files = {};
 	var fs = compiler.outputFileSystem = new MemoryFileSystem();
+	var outputPath = typeof options.outputPath === "undefined" ? compiler.outputPath : options.outputPath;
 
 	compiler.plugin("done", function(stats) {
 		// We are now on valid state
@@ -137,7 +138,7 @@ module.exports = function(compiler, options) {
 		if(filename.indexOf("?") >= 0) {
 			filename = filename.substr(0, filename.indexOf("?"));
 		}
-		return filename ? pathJoin(compiler.outputPath, filename) : compiler.outputPath;
+		return filename ? pathJoin(outputPath, filename) : outputPath;
 	}
 
 	// The middleware function
