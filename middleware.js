@@ -175,7 +175,7 @@ module.exports = function(compiler, options) {
 					res.setHeader(name, options.headers[name]);
 				}
 			}
-			res.end(content);
+			res.send(content);
 		}, req);
 	}
 
