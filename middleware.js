@@ -2,7 +2,6 @@
 	MIT License http://www.opensource.org/licenses/mit-license.php
 	Author Tobias Koppers @sokra
 */
-var path = require("path");
 var MemoryFileSystem = require("memory-fs");
 var mime = require("mime");
 
@@ -155,7 +154,7 @@ module.exports = function(compiler, options) {
 				var stat = fs.statSync(filename);
 				if(!stat.isFile()) {
 					if (stat.isDirectory()) {
-						filename = path.join(filename, "index.html");
+						filename = pathJoin(filename, "index.html");
 						stat = fs.statSync(filename);
 						if(!stat.isFile()) throw "next";
 					} else {
