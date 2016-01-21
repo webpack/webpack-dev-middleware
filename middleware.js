@@ -5,6 +5,8 @@
 var MemoryFileSystem = require("memory-fs");
 var mime = require("mime");
 
+var HASH_REGEXP = /[0-9a-f]{10,}/;
+
 // constructor for the middleware
 module.exports = function(compiler, options) {
 	if(!options) options = {};
@@ -148,8 +150,17 @@ module.exports = function(compiler, options) {
 		if(options.lazy && (!options.filename || options.filename.test(filename)))
 			rebuild();
 
+		if(HASH_REGEXP.test(filename)) {
+			try {
+				if(fs.statSync(filename).isFile()) {
+					processRequest();
+					return;
+				}
+			} catch(e) {}
+		}
 		// delay the request until we have a vaild bundle
-		ready(function() {
+		ready(processRequest, req);
+		function processRequest() {
 			try {
 				var stat = fs.statSync(filename);
 				if(!stat.isFile()) {
@@ -176,7 +187,7 @@ module.exports = function(compiler, options) {
 				}
 			}
 			res.send(content);
-		}, req);
+		}
 	}
 
 	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl;
