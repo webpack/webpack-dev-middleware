@@ -186,7 +186,8 @@ module.exports = function(compiler, options) {
 					res.setHeader(name, options.headers[name]);
 				}
 			}
-			res.send(content);
+			if (res.send) res.send(content);
+			else res.end(content);
 		}
 	}
 
