@@ -40,6 +40,10 @@ module.exports = function(compiler, options) {
 		process.nextTick(function() {
 			// check if still in valid state
 			if(!state) return;
+
+            // make a callback with stats
+			if(typeof options.onUpdate === 'function') options.onUpdate(stats);
+
 			// print webpack output
 			var displayStats = (!options.quiet && options.stats !== false);
 			if(displayStats &&
