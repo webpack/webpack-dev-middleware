@@ -24,7 +24,7 @@ module.exports = function(compiler, options) {
 			var str = options.filename
 				.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&")
 				.replace(/\\\[[a-z]+\\\]/ig, ".+");
-			options.filename = new RegExp("^" + str + "$");
+			options.filename = new RegExp("^[\/]{0,1}" + str + "$");
 		}
 	}
 
