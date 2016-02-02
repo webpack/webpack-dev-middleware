@@ -193,9 +193,22 @@ module.exports = function(compiler, options) {
 
 	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl;
 
-	webpackDevMiddleware.invalidate = function() {
-		if(watching) watching.invalidate();
+	webpackDevMiddleware.waitUntilValid = function(callback) {
+		callback = callback || function(){};
+		if (!watching || !watching.running) callback();
+		else callbacks.push(callback);
 	};
+
+	webpackDevMiddleware.invalidate = function(callback) {
+		callback = callback || function(){};
+		if(watching) {
+			callbacks.push(callback);
+			watching.invalidate();
+		} else {
+			callback();
+		}
+	};
+
 	webpackDevMiddleware.close = function(callback) {
 		callback = callback || function(){};
 		if(watching) watching.close(callback);
