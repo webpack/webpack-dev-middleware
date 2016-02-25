@@ -95,7 +95,7 @@ module.exports = function(compiler, options) {
 	function ready(fn, req) {
 		if(state) return fn();
 		if(!options.noInfo && !options.quiet)
-			console.log("webpack: wait until bundle finished: " + req.url);
+			console.log("webpack: wait until bundle finished: " + (req.url || fn.name));
 		callbacks.push(fn);
 	}
 
@@ -193,9 +193,22 @@ module.exports = function(compiler, options) {
 
 	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl;
 
-	webpackDevMiddleware.invalidate = function() {
-		if(watching) watching.invalidate();
+	webpackDevMiddleware.waitUntilValid = function(callback) {
+		callback = callback || function(){};
+		if (!watching || !watching.running) callback();
+		else ready(callback, {});
 	};
+
+	webpackDevMiddleware.invalidate = function(callback) {
+		callback = callback || function(){};
+		if(watching) {
+			ready(callback, {});
+			watching.invalidate();
+		} else {
+			callback();
+		}
+	};
+
 	webpackDevMiddleware.close = function(callback) {
 		callback = callback || function(){};
 		if(watching) watching.close(callback);
