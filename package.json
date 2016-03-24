@@ -4,7 +4,7 @@
   "author": "Tobias Koppers @sokra",
   "description": "Offers a dev middleware for webpack, which arguments a live bundle to a directory",
   "peerDependencies": {
-    "webpack": ">=1.0.0 <3"
+    "webpack": "1 || ^2.1.0-beta"
   },
   "dependencies": {
     "memory-fs": "~0.3.0",
