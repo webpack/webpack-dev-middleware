@@ -129,18 +129,20 @@ module.exports = function(compiler, options) {
 		// localPrefix is the folder our bundle should be in
 		var localPrefix = urlParse(options.publicPath || "/");
 		var urlObject = urlParse(url);
-		if(localPrefix.hostname !== null && localPrefix.hostname !== urlObject.hostname) {
-			// publicPath has hostname and is not the same as request url's
-			return false;
-		}
-		// strip localPrefix from the start of url
+		if(localPrefix.hostname !== null &&
+		   urlObject.hostname !== null &&
+		   localPrefix.hostname !== urlObject.hostname) {
+			   // publicPath has hostname and is not the same as request url's
+			   return false;
+		   }
+		   // strip localPrefix from the start of url
 		if(urlObject.pathname.indexOf(localPrefix.pathname) === 0) {
 			filename = urlObject.pathname.substr(localPrefix.pathname.length);
 		}
 		// and if not match, use outputPath as filename
 		return filename ? pathJoin(compiler.outputPath, filename) : compiler.outputPath;
 	}
-	
+
 	// The middleware function
 	function webpackDevMiddleware(req, res, next) {
 		var filename = getFilenameFromUrl(req.url);
