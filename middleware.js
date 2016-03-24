@@ -171,7 +171,7 @@ module.exports = function(compiler, options) {
 
 	// The middleware function
 	function webpackDevMiddleware(req, res, next) {
-		var filename = getFilenameFromUrl(req.url);
+		var filename = getFilenameFromUrl(req.path);
 		if (filename === false) return next();
 
 		// in lazy mode, rebuild on bundle request
