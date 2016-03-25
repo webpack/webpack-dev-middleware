@@ -4,6 +4,7 @@
 */
 var MemoryFileSystem = require("memory-fs");
 var mime = require("mime");
+var parseRange = require("range-parser");
 
 var HASH_REGEXP = /[0-9a-f]{10,}/;
 
