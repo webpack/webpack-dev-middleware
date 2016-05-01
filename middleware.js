@@ -8,6 +8,28 @@ var parseRange = require("range-parser");
 
 var HASH_REGEXP = /[0-9a-f]{10,}/;
 
+var defaultReporter = function (reporterOptions) {
+	var state = reporterOptions.state;
+	var stats = reporterOptions.stats;
+	var options = reporterOptions.options;
+
+	if(state) {
+		var displayStats = (!options.quiet && options.stats !== false);
+		if(displayStats &&
+			!(stats.hasErrors() || stats.hasWarnings()) &&
+			options.noInfo)
+			displayStats = false;
+		if(displayStats) {
+			console.log(stats.toString(options.stats))
+		}
+		if(!options.noInfo && !options.quiet) {
+			console.info("webpack: bundle is now VALID.");
+		}
+	} else {
+		console.info("webpack: bundle is now INVALID.");
+	}
+}
+
 // constructor for the middleware
 module.exports = function(compiler, options) {
 	if(!options) options = {};
@@ -28,6 +50,7 @@ module.exports = function(compiler, options) {
 			options.filename = new RegExp("^[\/]{0,1}" + str + "$");
 		}
 	}
+	if(typeof options.reporter !== "function") options.reporter = defaultReporter;
 
 	// store our files in memory
 	var files = {};
@@ -42,21 +65,7 @@ module.exports = function(compiler, options) {
 			// check if still in valid state
 			if(!state) return;
 			// print webpack output
-			if(options.reporter) {
-				options.reporter({ state: true, stats: stats, options: options });
-			} else {
-				var displayStats = (!options.quiet && options.stats !== false);
-				if(displayStats &&
-					!(stats.hasErrors() || stats.hasWarnings()) &&
-					options.noInfo)
-					displayStats = false;
-				if(displayStats) {
-					console.log(stats.toString(options.stats))
-				}
-				if(!options.noInfo && !options.quiet) {
-					console.info("webpack: bundle is now VALID.");
-				}
-			}
+			options.reporter({ state: true, stats: stats, options: options });
 
 			// execute callback that are delayed
 			var cbs = callbacks;
@@ -75,13 +84,8 @@ module.exports = function(compiler, options) {
 
 	// on compiling
 	function invalidPlugin() {
-		if(state && (!options.noInfo && !options.quiet)) {
-			if(options.reporter) {
-				options.reporter({ state: false, options: options })
-			} else {
-				console.info("webpack: bundle is now INVALID.");
-			}
-		}
+		if(state && (!options.noInfo && !options.quiet))
+			options.reporter({ state: false, options: options })
 		// We are now in invalid state
 		state = false;
 	}
