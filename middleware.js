@@ -42,16 +42,21 @@ module.exports = function(compiler, options) {
 			// check if still in valid state
 			if(!state) return;
 			// print webpack output
-			var displayStats = (!options.quiet && options.stats !== false);
-			if(displayStats &&
-				!(stats.hasErrors() || stats.hasWarnings()) &&
-				options.noInfo)
-				displayStats = false;
-			if(displayStats) {
-				console.log(stats.toString(options.stats));
+			if(options.reporter) {
+				options.reporter({ state: true, stats: stats, options: options });
+			} else {
+				var displayStats = (!options.quiet && options.stats !== false);
+				if(displayStats &&
+					!(stats.hasErrors() || stats.hasWarnings()) &&
+					options.noInfo)
+					displayStats = false;
+				if(displayStats) {
+					console.log(stats.toString(options.stats))
+				}
+				if(!options.noInfo && !options.quiet) {
+					console.info("webpack: bundle is now VALID.");
+				}
 			}
-			if (!options.noInfo && !options.quiet)
-				console.info("webpack: bundle is now VALID.");
 
 			// execute callback that are delayed
 			var cbs = callbacks;
@@ -70,8 +75,13 @@ module.exports = function(compiler, options) {
 
 	// on compiling
 	function invalidPlugin() {
-		if(state && (!options.noInfo && !options.quiet))
-			console.info("webpack: bundle is now INVALID.");
+		if(state && (!options.noInfo && !options.quiet)) {
+			if(options.reporter) {
+				options.reporter({ state: false, options: options })
+			} else {
+				console.info("webpack: bundle is now INVALID.");
+			}
+		}
 		// We are now in invalid state
 		state = false;
 	}
