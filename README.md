@@ -99,7 +99,7 @@ This part shows how you might interact with the middleware during runtime:
 	```js
 	var webpackDevMiddlewareInstance = webpackMiddleware(/* see example usage */);
 	app.use(webpackDevMiddlewareInstance);
-	webpackDevMiddleware.waitUntilValid(function(){
+	webpackDevMiddlewareInstance.waitUntilValid(function(){
 	  console.log('Package is in a valid state');
 	});
 	```
