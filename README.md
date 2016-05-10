@@ -62,8 +62,14 @@ app.use(webpackMiddleware(webpack({
 
 	stats: {
 		colors: true
-	}
+	},
 	// options for formating the statistics
+
+	encodingOptions: {
+		charset: 'UTF-8',
+		include: /.*/
+	}
+	// change encoding if you need something different than UTF-8
 }));
 ```
 
