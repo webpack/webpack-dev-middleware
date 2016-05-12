@@ -216,6 +216,7 @@ module.exports = function(compiler, options) {
 					res.setHeader(name, options.headers[name]);
 				}
 			}
+			res.statusCode = 200;
 			if (res.send) res.send(content);
 			else res.end(content);
 		}
