@@ -11,10 +11,11 @@ var HASH_REGEXP = /[0-9a-f]{10,}/;
 // constructor for the middleware
 module.exports = function(compiler, options) {
 	if(!options) options = {};
+	var log = options.log || console;
 	if(typeof options.watchOptions === "undefined") options.watchOptions = {};
 	if(typeof options.watchDelay !== "undefined") {
 		// TODO remove this in next major version
-		console.warn("options.watchDelay is deprecated: Use 'options.watchOptions.aggregateTimeout' instead");
+		log.warn("options.watchDelay is deprecated: Use 'options.watchOptions.aggregateTimeout' instead");
 		options.watchOptions.aggregateTimeout = options.watchDelay;
 	}
 	if(typeof options.watchOptions.aggregateTimeout === "undefined") options.watchOptions.aggregateTimeout = 200;
@@ -48,10 +49,10 @@ module.exports = function(compiler, options) {
 				options.noInfo)
 				displayStats = false;
 			if(displayStats) {
-				console.log(stats.toString(options.stats));
+				log.log(stats.toString(options.stats));
 			}
 			if (!options.noInfo && !options.quiet)
-				console.info("webpack: bundle is now VALID.");
+				log.info("webpack: bundle is now VALID.");
 
 			// execute callback that are delayed
 			var cbs = callbacks;
@@ -71,7 +72,7 @@ module.exports = function(compiler, options) {
 	// on compiling
 	function invalidPlugin() {
 		if(state && (!options.noInfo && !options.quiet))
-			console.info("webpack: bundle is now INVALID.");
+			log.info("webpack: bundle is now INVALID.");
 		// We are now in invalid state
 		state = false;
 	}
@@ -96,7 +97,7 @@ module.exports = function(compiler, options) {
 	function ready(fn, req) {
 		if(state) return fn();
 		if(!options.noInfo && !options.quiet)
-			console.log("webpack: wait until bundle finished: " + (req.url || fn.name));
+			log.log("webpack: wait until bundle finished: " + (req.url || fn.name));
 		callbacks.push(fn);
 	}
 
