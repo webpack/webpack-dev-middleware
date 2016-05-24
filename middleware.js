@@ -202,7 +202,12 @@ module.exports = function(compiler, options) {
 					}
 				}
 			} catch(e) {
-				return next();
+				if (options.historyApiFallback && options.historyApiFallback.index) {
+					filename = pathJoin(getFilenameFromUrl(options.historyApiFallback.index), 'index.html');
+				}
+				else {
+					return next();
+				}
 			}
 
 			// server content
