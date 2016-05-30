@@ -265,8 +265,7 @@ module.exports = function(compiler, options) {
 
 	webpackDevMiddleware.waitUntilValid = function(callback) {
 		callback = callback || function() {};
-		if(!watching || !watching.running) callback();
-		else ready(callback, {});
+		ready(callback, {});
 	};
 
 	webpackDevMiddleware.invalidate = function(callback) {
