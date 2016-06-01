@@ -5,6 +5,7 @@
 var MemoryFileSystem = require("memory-fs");
 var mime = require("mime");
 var parseRange = require("range-parser");
+var urlParse = require("url").parse;
 
 var HASH_REGEXP = /[0-9a-f]{10,}/;
 
@@ -125,20 +126,21 @@ module.exports = function(compiler, options) {
 	}
 
 	function getFilenameFromUrl(url) {
-		// publicPrefix is the folder our bundle should be in
-		var localPrefix = options.publicPath || "/";
-		if(url.indexOf(localPrefix) !== 0) {
-			if(/^(https?:)?\/\//.test(localPrefix)) {
-				localPrefix = "/" + localPrefix.replace(/^(https?:)?\/\/[^\/]+\//, "");
-				// fast exit if another directory requested
-				if(url.indexOf(localPrefix) !== 0) return false;
-			} else return false;
+		var filename;
+		// localPrefix is the folder our bundle should be in
+		var localPrefix = urlParse(options.publicPath || "/");
+		var urlObject = urlParse(url);
+		if(localPrefix.hostname !== null &&
+		   urlObject.hostname !== null &&
+		   localPrefix.hostname !== urlObject.hostname) {
+			   // publicPath has hostname and is not the same as request url's
+			   return false;
+		   }
+		   // strip localPrefix from the start of url
+		if(urlObject.pathname.indexOf(localPrefix.pathname) === 0) {
+			filename = urlObject.pathname.substr(localPrefix.pathname.length);
 		}
-		// get filename from request
-		var filename = url.substr(localPrefix.length);
-		if(filename.indexOf("?") >= 0) {
-			filename = filename.substr(0, filename.indexOf("?"));
-		}
+		// and if not match, use outputPath as filename
 		return filename ? pathJoin(compiler.outputPath, filename) : compiler.outputPath;
 	}
 
