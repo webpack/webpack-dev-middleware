@@ -194,7 +194,7 @@ module.exports = function(compiler, options) {
 				var stat = fs.statSync(filename);
 				if(!stat.isFile()) {
 					if (stat.isDirectory()) {
-						filename = pathJoin(filename, "index.html");
+						filename = pathJoin(filename, options.index || "index.html");
 						stat = fs.statSync(filename);
 						if(!stat.isFile()) throw "next";
 					} else {
