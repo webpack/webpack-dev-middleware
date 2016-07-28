@@ -57,6 +57,10 @@ app.use(webpackMiddleware(webpack({
 	// public path to bind the middleware to
 	// use the same as in webpack
 
+	outputPath: __dirname + "/build/public",
+	// output path, in case it differs from the
+	// base output path set by MultiCompiler
+
 	headers: { "X-Custom-Header": "yes" },
 	// custom headers
 
