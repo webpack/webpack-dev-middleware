@@ -35,7 +35,7 @@ app.use(webpackMiddleware(webpack({
 		// but it will work with other paths too.
 	}
 }), {
-	// all options optional
+	// publicPath is required, whereas all other options are optional 
 
 	noInfo: false,
 	// display no info to console (only warnings and errors)
