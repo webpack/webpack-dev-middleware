@@ -2,6 +2,7 @@
 	MIT License http://www.opensource.org/licenses/mit-license.php
 	Author Tobias Koppers @sokra
 */
+'use strict';
 var MemoryFileSystem = require("memory-fs");
 var mime = require("mime");
 var parseRange = require("range-parser");
@@ -170,56 +171,88 @@ module.exports = function(compiler, options) {
 		return content;
 	}
 
-	// The middleware function
-	function webpackDevMiddleware(req, res, next) {
-		var filename = getFilenameFromUrl(req.url);
-		if (filename === false) return next();
+	function processRequest(filename, res) {
+		var setHeader = options.koa ? this.set.bind(this) : res.setHeader.bind(res);
 
-		// in lazy mode, rebuild on bundle request
-		if(options.lazy && (!options.filename || options.filename.test(filename)))
-			rebuild();
-
-		if(HASH_REGEXP.test(filename)) {
-			try {
-				if(fs.statSync(filename).isFile()) {
-					processRequest();
-					return;
-				}
-			} catch(e) {}
+		var stat = fs.statSync(filename);
+		if(!stat.isFile()) {
+			if (stat.isDirectory()) {
+				filename = pathJoin(filename, "index.html");
+				stat = fs.statSync(filename);
+				if(!stat.isFile()) throw "next";
+			} else {
+				throw "next";
+			}
 		}
-		// delay the request until we have a vaild bundle
-		ready(processRequest, req);
-		function processRequest() {
-			try {
-				var stat = fs.statSync(filename);
-				if(!stat.isFile()) {
-					if (stat.isDirectory()) {
-						filename = pathJoin(filename, "index.html");
-						stat = fs.statSync(filename);
-						if(!stat.isFile()) throw "next";
-					} else {
-						throw "next";
-					}
-				}
-			} catch(e) {
-				return next();
+		// server content
+		var content = fs.readFileSync(filename);
+		content = handleRangeHeaders(content, this.req, this.res);
+		setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
+		setHeader("Content-Type", mime.lookup(filename));
+		setHeader("Content-Length", content.length);
+		if(options.headers) {
+			for(var name in options.headers) {
+				setHeader(name, options.headers[name]);
 			}
+		}
+		if (options.koa) return this.body = content;
 
-			// server content
-			var content = fs.readFileSync(filename);
-			content = handleRangeHeaders(content, req, res);
-			res.setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
-			res.setHeader("Content-Type", mime.lookup(filename));
-			res.setHeader("Content-Length", content.length);
-			if(options.headers) {
-				for(var name in options.headers) {
-					res.setHeader(name, options.headers[name]);
-				}
-			}
-			if (res.send) res.send(content);
-			else res.end(content);
+		if (res.send) res.send(content);
+		else res.end(content);
+
+	}
+	
+	function checkLazyMode(filename) {
+		return options.lazy && (!options.filename || options.filename.test(filename));
+	}
+
+	function checkFileName(filename) {
+		if(!HASH_REGEXP.test(filename)) return false;
+		try {
+			return fs.statSync(filename).isFile();
+		} catch(e) {}
+	}
+	// The middleware function
+	function expressWebpackDevMiddleware(req, res, next) {
+		var filename = getFilenameFromUrl(req.url);
+		var requestHandler = processRequest.bind(null, filename, res);
+		
+		if (filename === false) return next();
+		// in lazy mode, rebuild on bundle request
+		if(checkLazyMode(filename)) rebuild();
+
+		if(checkFileName(filename)) return requestHandler();
+		// delay the request until we have a vaild bundle
+		try {
+			ready(requestHandler, req);
+		}
+		catch(err) {
+			if (err == 'next') return next();
+			console.log(err);
 		}
 	}
+
+	function* koaWebpackDevMiddleware(next) {
+		var filename = getFilenameFromUrl(this.url);
+		var requestHandler = processRequest.bind(this, filename);
+		
+		if (filename === false) return yield next;
+
+		// in lazy mode, rebuild on bundle request
+		if(checkLazyMode(filename)) rebuild();
+
+		if(checkFileName(filename)) return requestHandler();
+		// delay the request until we have a vaild bundle
+		try {
+			ready(requestHandler, this.req);
+		}
+		catch(err) {
+			if (err == 'next') return yield next;
+			console.log(err);
+		}
+	}
+
+	var webpackDevMiddleware = !options.koa ? expressWebpackDevMiddleware : koaWebpackDevMiddleware;
 
 	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl;
 
@@ -248,4 +281,5 @@ module.exports = function(compiler, options) {
 	webpackDevMiddleware.fileSystem = fs;
 
 	return webpackDevMiddleware;
+
 }
