@@ -5,12 +5,20 @@
 var MemoryFileSystem = require("memory-fs");
 var mime = require("mime");
 var parseRange = require("range-parser");
+var encoding = require("encoding");
 
 var HASH_REGEXP = /[0-9a-f]{10,}/;
 
 // constructor for the middleware
 module.exports = function(compiler, options) {
 	if(!options) options = {};
+	if(typeof options.encodingOptions === "undefined") options.encodingOptions = {};
+	if(typeof options.encodingOptions.charset === "undefined") {
+		options.encodingOptions.charset = 'UTF-8';
+	}
+	if(typeof options.encodingOptions.include === "undefined") {
+		options.encodingOptions.include = /.*/;
+	}
 	if(typeof options.watchOptions === "undefined") options.watchOptions = {};
 	if(typeof options.watchDelay !== "undefined") {
 		// TODO remove this in next major version
@@ -208,6 +216,13 @@ module.exports = function(compiler, options) {
 			// server content
 			var content = fs.readFileSync(filename);
 			content = handleRangeHeaders(content, req, res);
+
+			if (options.encodingOptions.charset &&
+				options.encodingOptions.charset.toUpperCase() !== 'UTF-8' &&
+				options.encodingOptions.include.test(filename)) {
+				content = encoding.convert(content, options.encodingOptions.charset);
+			}
+
 			res.setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
 			res.setHeader("Content-Type", mime.lookup(filename));
 			res.setHeader("Content-Length", content.length);
