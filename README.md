@@ -14,6 +14,12 @@ It has a few advantages over bundling it as files:
 * If files changed in watch mode, the middleware no longer serves the old bundle, but delays requests until the compiling has finished. You don't have to wait before refreshing the page after a file modification.
 * I may add some specific optimization in future releases.
 
+## Installation
+
+```
+npm install webpack-dev-middleware --save-dev
+```
+
 ## Usage
 
 ``` javascript
