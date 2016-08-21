@@ -67,6 +67,28 @@ app.use(webpackMiddleware(webpack({
 }));
 ```
 
+Or use with native HTTP server:
+
+``` javascript
+var http = require('http')
+var webpackDevMiddleware = require('webpack-dev-middleware')
+
+var webpackConfig = require('./webpack.config')
+var compiler = require('webpack')(webpackConfig)
+
+var webpackRoute = webpackDevMiddleware(compiler,{
+  publicPath: webpackConfig.output.publicPath
+})
+
+var server = http.createServer(function(req, res) {
+  if (req.url.indexOf(webpackConfig.output.publicPath) === 0) {
+    return webpackRoute(req, res)
+  }
+})
+
+server.listen(8000)
+```
+
 ## Advanced API
 
 This part shows how you might interact with the middleware during runtime:

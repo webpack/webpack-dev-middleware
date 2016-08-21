@@ -139,6 +139,7 @@ module.exports = function(compiler, options) {
 		if(filename.indexOf("?") >= 0) {
 			filename = filename.substr(0, filename.indexOf("?"));
 		}
+
 		return filename ? pathJoin(compiler.outputPath, filename) : compiler.outputPath;
 	}
 
@@ -173,7 +174,8 @@ module.exports = function(compiler, options) {
 	// The middleware function
 	function webpackDevMiddleware(req, res, next) {
 		var filename = getFilenameFromUrl(req.url);
-		if (filename === false) return next();
+
+		if (filename === false) return next && next();
 
 		// in lazy mode, rebuild on bundle request
 		if(options.lazy && (!options.filename || options.filename.test(filename)))
@@ -192,6 +194,7 @@ module.exports = function(compiler, options) {
 		function processRequest() {
 			try {
 				var stat = fs.statSync(filename);
+
 				if(!stat.isFile()) {
 					if (stat.isDirectory()) {
 						filename = pathJoin(filename, "index.html");
@@ -202,7 +205,7 @@ module.exports = function(compiler, options) {
 					}
 				}
 			} catch(e) {
-				return next();
+				return next && next();
 			}
 
 			// server content
