@@ -70,6 +70,9 @@ app.use(webpackMiddleware(webpack({
 		colors: true
 	}
 	// options for formating the statistics
+
+	log: console
+	// Custom logger object
 }));
 ```
 
