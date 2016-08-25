@@ -8,7 +8,7 @@ var parseRange = require("range-parser");
 
 var HASH_REGEXP = /[0-9a-f]{10,}/;
 
-var defaultReporter = function (reporterOptions) {
+var defaultReporter = function(reporterOptions) {
 	var state = reporterOptions.state;
 	var stats = reporterOptions.stats;
 	var options = reporterOptions.options;
@@ -60,12 +60,16 @@ module.exports = function(compiler, options) {
 		// We are now on valid state
 		state = true;
 		// Do the stuff in nextTick, because bundle may be invalidated
-		//  if a change happend while compiling
+		// if a change happened while compiling
 		process.nextTick(function() {
 			// check if still in valid state
 			if(!state) return;
 			// print webpack output
-			options.reporter({ state: true, stats: stats, options: options });
+			options.reporter({
+				state: true,
+				stats: stats,
+				options: options
+			});
 
 			// execute callback that are delayed
 			var cbs = callbacks;
@@ -85,10 +89,15 @@ module.exports = function(compiler, options) {
 	// on compiling
 	function invalidPlugin() {
 		if(state && (!options.noInfo && !options.quiet))
-			options.reporter({ state: false, options: options })
+			options.reporter({
+				state: false,
+				options: options
+			})
+
 		// We are now in invalid state
 		state = false;
 	}
+
 	function invalidAsyncPlugin(compiler, callback) {
 		invalidPlugin();
 		callback();
@@ -135,7 +144,7 @@ module.exports = function(compiler, options) {
 	}
 
 	function pathJoin(a, b) {
-		return a == "/" ? "/" + b : (a||"") + "/" + b
+		return a == "/" ? "/" + b : (a || "") + "/" + b
 	}
 
 	function getFilenameFromUrl(url) {
@@ -157,19 +166,19 @@ module.exports = function(compiler, options) {
 	}
 
 	function handleRangeHeaders(content, req, res) {
-		if (req.headers['Accept-Ranges']) res.setHeader('Accept-Ranges', 'bytes');
-		if (req.headers.range) {
+		if(req.headers['Accept-Ranges']) res.setHeader('Accept-Ranges', 'bytes');
+		if(req.headers.range) {
 			var ranges = parseRange(content.length, req.headers.range);
 
 			// unsatisfiable
-			if (-1 == ranges) {
+			if(-1 == ranges) {
 				res.setHeader('Content-Range', 'bytes */' + content.length);
 				res.statusCode = 416;
 				return content;
 			}
 
 			// valid (syntactically invalid/multiple ranges are treated as a regular response)
-			if (-2 != ranges && ranges.length === 1) {
+			if(-2 != ranges && ranges.length === 1) {
 				// Content-Range
 				res.statusCode = 206;
 				var length = content.length;
@@ -187,7 +196,7 @@ module.exports = function(compiler, options) {
 	// The middleware function
 	function webpackDevMiddleware(req, res, next) {
 		var filename = getFilenameFromUrl(req.url);
-		if (filename === false) return next();
+		if(filename === false) return next();
 
 		// in lazy mode, rebuild on bundle request
 		if(options.lazy && (!options.filename || options.filename.test(filename)))
@@ -203,11 +212,12 @@ module.exports = function(compiler, options) {
 		}
 		// delay the request until we have a vaild bundle
 		ready(processRequest, req);
+
 		function processRequest() {
 			try {
 				var stat = fs.statSync(filename);
 				if(!stat.isFile()) {
-					if (stat.isDirectory()) {
+					if(stat.isDirectory()) {
 						filename = pathJoin(filename, "index.html");
 						stat = fs.statSync(filename);
 						if(!stat.isFile()) throw "next";
@@ -231,7 +241,7 @@ module.exports = function(compiler, options) {
 				}
 			}
 			res.statusCode = 200;
-			if (res.send) res.send(content);
+			if(res.send) res.send(content);
 			else res.end(content);
 		}
 	}
@@ -239,13 +249,13 @@ module.exports = function(compiler, options) {
 	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl;
 
 	webpackDevMiddleware.waitUntilValid = function(callback) {
-		callback = callback || function(){};
-		if (!watching || !watching.running) callback();
+		callback = callback || function() {};
+		if(!watching || !watching.running) callback();
 		else ready(callback, {});
 	};
 
 	webpackDevMiddleware.invalidate = function(callback) {
-		callback = callback || function(){};
+		callback = callback || function() {};
 		if(watching) {
 			ready(callback, {});
 			watching.invalidate();
@@ -255,7 +265,7 @@ module.exports = function(compiler, options) {
 	};
 
 	webpackDevMiddleware.close = function(callback) {
-		callback = callback || function(){};
+		callback = callback || function() {};
 		if(watching) watching.close(callback);
 		else callback();
 	};
