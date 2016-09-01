@@ -53,7 +53,6 @@ module.exports = function(compiler, options) {
 	if(typeof options.reporter !== "function") options.reporter = defaultReporter;
 
 	// store our files in memory
-	var files = {};
 	var fs = compiler.outputFileSystem = new MemoryFileSystem();
 
 	compiler.plugin("done", function(stats) {
