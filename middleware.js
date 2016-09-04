@@ -194,6 +194,10 @@ module.exports = function(compiler, options) {
 
 	// The middleware function
 	function webpackDevMiddleware(req, res, next) {
+		if(req.method !== 'GET') {
+			return next();
+		}
+		
 		var filename = getFilenameFromUrl(req.url);
 		if(filename === false) return next();
 
