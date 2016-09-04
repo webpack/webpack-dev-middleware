@@ -59,6 +59,7 @@ module.exports = function(compiler, options) {
 		// We are now on valid state
 		state = true;
 		webpackStats = stats
+
 		// Do the stuff in nextTick, because bundle may be invalidated
 		// if a change happened while compiling
 		process.nextTick(function() {
@@ -197,8 +198,8 @@ module.exports = function(compiler, options) {
 
 	// The middleware function
 	function webpackDevMiddleware(req, res, next) {
-		var goNext = function() {
-			if (!options.serverSideRender) return next()
+		function goNext() {
+			if(!options.serverSideRender) return next()
 			ready(function() {
 				res.locals.webpackStats = webpackStats
 				next()
