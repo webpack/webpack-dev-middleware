@@ -200,7 +200,7 @@ module.exports = function(compiler, options) {
 		var goNext = function() {
 			if (!options.serverSideRender) return next()
 			ready(function() {
-				res.webpackStats = webpackStats
+				res.locals.webpackStats = webpackStats
 				next()
 			}, req)
 		}
