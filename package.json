@@ -12,9 +12,7 @@
     "range-parser": "^1.0.3"
   },
   "devDependencies": {
-    "eslint": "^2.10.1",
-    "beautify-lint": "^1.0.4",
-    "js-beautify": "^1.6.3"
+    "eslint": "^3.4.0"
   },
   "licenses": [
     {
@@ -33,8 +31,7 @@
   },
   "scripts": {
     "lint": "eslint *.js",
-    "beautify-lint": "beautify-lint *.js",
-    "beautify": "beautify-rewrite *.js",
-    "travis": "npm run lint && npm run beautify-lint && node middleware.js"
+    "beautify": "npm run lint -- --fix",
+    "travis": "npm run lint && node middleware.js"
   }
 }
