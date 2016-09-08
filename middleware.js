@@ -58,6 +58,8 @@ module.exports = function(compiler, options) {
 	compiler.plugin("done", function(stats) {
 		// We are now on valid state
 		state = true;
+		webpackStats = stats
+
 		// Do the stuff in nextTick, because bundle may be invalidated
 		// if a change happened while compiling
 		process.nextTick(function() {
@@ -107,6 +109,8 @@ module.exports = function(compiler, options) {
 
 	// the state, false: bundle invalid, true: bundle valid
 	var state = false;
+
+	var webpackStats;
 
 	// in lazy mode, rebuild automatically
 	var forceRebuild = false;
@@ -194,12 +198,20 @@ module.exports = function(compiler, options) {
 
 	// The middleware function
 	function webpackDevMiddleware(req, res, next) {
+		function goNext() {
+			if(!options.serverSideRender) return next()
+			ready(function() {
+				res.locals.webpackStats = webpackStats
+				next()
+			}, req)
+		}
+
 		if(req.method !== 'GET') {
-			return next();
+			return goNext();
 		}
 
 		var filename = getFilenameFromUrl(req.url);
-		if(filename === false) return next();
+		if(filename === false) return goNext();
 
 		// in lazy mode, rebuild on bundle request
 		if(options.lazy && (!options.filename || options.filename.test(filename)))
@@ -229,7 +241,7 @@ module.exports = function(compiler, options) {
 					}
 				}
 			} catch(e) {
-				return next();
+				return goNext();
 			}
 
 			// server content

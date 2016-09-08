@@ -41,7 +41,7 @@ app.use(webpackMiddleware(webpack({
 		// but it will work with other paths too.
 	}
 }), {
-	// publicPath is required, whereas all other options are optional 
+	// publicPath is required, whereas all other options are optional
 
 	noInfo: false,
 	// display no info to console (only warnings and errors)
@@ -70,6 +70,9 @@ app.use(webpackMiddleware(webpack({
 		colors: true
 	}
 	// options for formating the statistics
+
+	serverSideRender: false,
+	// Turn off the server-side rendering mode. See Server-Side Rendering part for more info.
 }));
 ```
 
@@ -109,3 +112,18 @@ This part shows how you might interact with the middleware during runtime:
 	  console.log('Package is in a valid state');
 	});
 	```
+
+## Server-Side Rendering
+In order to develop a server-side rendering application, we need access to the [`stats`](https://github.com/webpack/docs/wiki/node.js-api#stats), which is generated with the latest build.
+
+In the server-side rendering mode, __webpack-dev-middleware__ sets the `stat` to `res.locals.webpackStats`, then call `next()` to trigger the next middleware, where we can render pages and response to clients. During the webpack building process, all requests will be pending until the build is finished and the `stat` is available.
+
+```JavaScript
+app.use(webpackMiddleware(compiler, { serverSideRender: true })
+
+// The following middleware would not be invoked until the latest build is finished.
+app.use((req, res) => {
+  const  assetsByChunkName = res.locals.webpackStats.toJson().assetsByChunkName
+  // then use `assetsByChunkName` for server-sider rendering
+})
+```
