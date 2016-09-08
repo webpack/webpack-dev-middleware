@@ -54,13 +54,13 @@ module.exports = function(compiler, options) {
 
 	// store our files in memory
 	var fs;
-	if (options.fileSystem) {
+	if(options.fileSystem) {
 		fs = compiler.outputFileSystem = options.fileSystem;
 	} else {
 		// TODO: Probably have a config for this as well, e.g. something like:
 		// options.reuseMemoryFs
 		var isMemoryFs = compiler.outputFileSystem instanceof MemoryFileSystem;
-		if (isMemoryFs) {
+		if(isMemoryFs) {
 			fs = compiler.outputFileSystem;
 		} else {
 			fs = compiler.outputFileSystem = new MemoryFileSystem();
