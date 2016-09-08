@@ -206,6 +206,10 @@ module.exports = function(compiler, options) {
 			}, req)
 		}
 
+		if(req.method !== 'GET') {
+			return goNext();
+		}
+
 		var filename = getFilenameFromUrl(req.url);
 		if(filename === false) return goNext();
 
