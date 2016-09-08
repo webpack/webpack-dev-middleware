@@ -57,6 +57,8 @@ module.exports = function(compiler, options) {
 	if (options.fileSystem) {
 		fs = compiler.outputFileSystem = options.fileSystem;
 	} else {
+		// TODO: Probably have a config for this as well, e.g. something like:
+		// options.reuseMemoryFs
 		var isMemoryFs = compiler.outputFileSystem instanceof MemoryFileSystem;
 		if (isMemoryFs) {
 			fs = compiler.outputFileSystem;
