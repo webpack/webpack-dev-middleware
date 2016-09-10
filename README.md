@@ -71,6 +71,9 @@ app.use(webpackMiddleware(webpack({
 	}
 	// options for formating the statistics
 
+	reporter: null,
+	// Provide a custom reporter to change the way how logs are shown.
+
 	serverSideRender: false,
 	// Turn off the server-side rendering mode. See Server-Side Rendering part for more info.
 }));
