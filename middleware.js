@@ -20,7 +20,7 @@ var defaultReporter = function(reporterOptions) {
 			options.noInfo)
 			displayStats = false;
 		if(displayStats) {
-			console.log(stats.toString(options.stats))
+			console.log(stats.toString(options.stats));
 		}
 		if(!options.noInfo && !options.quiet) {
 			console.info("webpack: bundle is now VALID.");
@@ -28,7 +28,7 @@ var defaultReporter = function(reporterOptions) {
 	} else {
 		console.info("webpack: bundle is now INVALID.");
 	}
-}
+};
 
 // constructor for the middleware
 module.exports = function(compiler, options) {
@@ -58,7 +58,7 @@ module.exports = function(compiler, options) {
 	compiler.plugin("done", function(stats) {
 		// We are now on valid state
 		state = true;
-		webpackStats = stats
+		webpackStats = stats;
 
 		// Do the stuff in nextTick, because bundle may be invalidated
 		// if a change happened while compiling
@@ -93,7 +93,7 @@ module.exports = function(compiler, options) {
 			options.reporter({
 				state: false,
 				options: options
-			})
+			});
 
 		// We are now in invalid state
 		state = false;
@@ -147,7 +147,7 @@ module.exports = function(compiler, options) {
 	}
 
 	function pathJoin(a, b) {
-		return a == "/" ? "/" + b : (a || "") + "/" + b
+		return a == "/" ? "/" + b : (a || "") + "/" + b;
 	}
 
 	function getFilenameFromUrl(url) {
@@ -199,11 +199,11 @@ module.exports = function(compiler, options) {
 	// The middleware function
 	function webpackDevMiddleware(req, res, next) {
 		function goNext() {
-			if(!options.serverSideRender) return next()
+			if(!options.serverSideRender) return next();
 			ready(function() {
-				res.locals.webpackStats = webpackStats
-				next()
-			}, req)
+				res.locals.webpackStats = webpackStats;
+				next();
+			}, req);
 		}
 
 		if(req.method !== 'GET') {
@@ -287,4 +287,4 @@ module.exports = function(compiler, options) {
 	webpackDevMiddleware.fileSystem = fs;
 
 	return webpackDevMiddleware;
-}
+};

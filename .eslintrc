@@ -5,6 +5,7 @@
     "rules": {
         "indent": [2, "tab", { "SwitchCase": 1 }],
         "brace-style": ["error", "1tbs"],
+        "semi": "error",
         "no-eval": "error",
         "eol-last": "error",
         "no-redeclare": "error",
