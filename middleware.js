@@ -5,6 +5,8 @@
 var MemoryFileSystem = require("memory-fs");
 var mime = require("mime");
 var parseRange = require("range-parser");
+var getFilenameFromUrl = require("./lib/GetFilenameFromUrl");
+var pathJoin = require("./lib/PathJoin");
 
 var HASH_REGEXP = /[0-9a-f]{10,}/;
 
@@ -146,28 +148,6 @@ module.exports = function(compiler, options) {
 		}
 	}
 
-	function pathJoin(a, b) {
-		return a == "/" ? "/" + b : (a || "") + "/" + b;
-	}
-
-	function getFilenameFromUrl(url) {
-		// publicPrefix is the folder our bundle should be in
-		var localPrefix = options.publicPath || "/";
-		if(url.indexOf(localPrefix) !== 0) {
-			if(/^(https?:)?\/\//.test(localPrefix)) {
-				localPrefix = "/" + localPrefix.replace(/^(https?:)?\/\/[^\/]+\//, "");
-				// fast exit if another directory requested
-				if(url.indexOf(localPrefix) !== 0) return false;
-			} else return false;
-		}
-		// get filename from request
-		var filename = url.substr(localPrefix.length);
-		if(filename.indexOf("?") >= 0) {
-			filename = filename.substr(0, filename.indexOf("?"));
-		}
-		return filename ? pathJoin(compiler.outputPath, filename) : compiler.outputPath;
-	}
-
 	function handleRangeHeaders(content, req, res) {
 		res.setHeader('Accept-Ranges', 'bytes');
 		if(req.headers.range) {
@@ -210,7 +190,7 @@ module.exports = function(compiler, options) {
 			return goNext();
 		}
 
-		var filename = getFilenameFromUrl(req.url);
+		var filename = getFilenameFromUrl(options.publicPath, compiler.outputPath, req.url);
 		if(filename === false) return goNext();
 
 		// in lazy mode, rebuild on bundle request
@@ -261,7 +241,7 @@ module.exports = function(compiler, options) {
 		}
 	}
 
-	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl;
+	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl.bind(this, options.publicPath, compiler.outputPath);
 
 	webpackDevMiddleware.waitUntilValid = function(callback) {
 		callback = callback || function() {};

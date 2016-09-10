@@ -12,7 +12,9 @@
     "range-parser": "^1.0.3"
   },
   "devDependencies": {
-    "eslint": "^3.4.0"
+    "eslint": "^3.4.0",
+    "mocha": "^3.0.2",
+    "should": "^11.1.0"
   },
   "license": "MIT",
   "engines": {
@@ -24,9 +26,15 @@
     "type": "git",
     "url": "https://github.com/webpack/webpack-dev-middleware.git"
   },
+  "files": [
+    "middleware.js",
+    "lib/"
+  ],
   "scripts": {
-    "lint": "eslint *.js",
+    "lint": "eslint *.js test",
+    "pretest": "npm run -s lint",
+    "test": "mocha --harmony --full-trace --check-leaks",
     "beautify": "npm run lint -- --fix",
-    "travis": "npm run lint && node middleware.js"
+    "travis": "npm test && node middleware.js"
   }
 }

@@ -1,6 +1,7 @@
 {
     "env": {
-        "node": true
+        "node": true,
+        "mocha": true
     },
     "rules": {
         "indent": [2, "tab", { "SwitchCase": 1 }],
