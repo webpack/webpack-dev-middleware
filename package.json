@@ -14,12 +14,7 @@
   "devDependencies": {
     "eslint": "^3.4.0"
   },
-  "licenses": [
-    {
-      "type": "MIT",
-      "url": "http://www.opensource.org/licenses/mit-license.php"
-    }
-  ],
+  "license": "MIT",
   "engines": {
     "node": ">=0.6"
   },
