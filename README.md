@@ -53,6 +53,10 @@ app.use(webpackMiddleware(webpack({
 	// switch into lazy mode
 	// that means no watching, but recompilation on every request
 
+	onUpdate: function(stats) { doWhateverWithStats(stats); },
+	// manually handle the stats from the last compilation
+	// can be combined with quiet and noInfo for full control over output
+
 	watchOptions: {
 		aggregateTimeout: 300,
 		poll: true
