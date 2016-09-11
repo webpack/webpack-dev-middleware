@@ -40,10 +40,10 @@ describe("GetFilenameFromUrl", function() {
 				publicPath: undefined,
 				expected: "/b.js",
 			}, {
-				url: "/b.js",
+				url: "/c.js",
 				outputPath: undefined,
 				publicPath: undefined,
-				expected: "/b.js",
+				expected: "/c.js",
 			}, {
 				url: "/more/complex/path.js",
 				outputPath: "/a",

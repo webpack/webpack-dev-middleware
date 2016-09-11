@@ -1,0 +1,88 @@
+var middleware = require("../middleware");
+var express = require("express");
+var webpack = require("webpack");
+var request = require("supertest");
+var webpackConfig = require("./fixtures/server-test/webpack.config");
+
+
+describe("Server", function() {
+	var listen;
+	var app;
+
+	function listenShorthand(done) {
+		return app.listen(8000, '127.0.0.1', function(err) {
+			if(err) done(err);
+			done();
+		});
+	}
+
+	function close(done) {
+		if(listen) {
+			listen.close(done);
+		} else {
+			done();
+		}
+	}
+
+	describe("requests", function() {
+		before(function(done) {
+			app = express();
+			var compiler = webpack(webpackConfig);
+			app.use(middleware(compiler, {
+				stats: "errors-only",
+				quiet: true,
+				publicPath: "/",
+			}));
+			listen = listenShorthand(done);
+		});
+		after(close);
+
+		it("GET request to bundle file", function(done) {
+			request(app).get("/bundle.js")
+			.expect("Content-Type", "application/javascript")
+			// .expect("Content-Length", "2657")
+			.expect("Access-Control-Allow-Origin", "*")
+			.expect(200, /console\.log\("Hey\."\)/, done);
+		});
+
+		it("POST request to bundle file", function(done) {
+			request(app).post("/bundle.js")
+			.expect(404, done);
+		});
+
+		it("request to image", function(done) {
+			request(app).get("/svg.svg")
+			.expect("Content-Type", "image/svg+xml")
+			.expect("Content-Length", "4778")
+			.expect("Access-Control-Allow-Origin", "*")
+			.expect(200, done);
+		});
+
+		it("request to non existing file", function(done) {
+			request(app).get("/nope")
+			.expect("Content-Type", "text/html; charset=utf-8")
+			.expect(404, done);
+		});
+	});
+
+	describe("custom headers", function() {
+		before(function(done) {
+			app = express();
+			var compiler = webpack(webpackConfig);
+			app.use(middleware(compiler, {
+				stats: "errors-only",
+				quiet: true,
+				headers: { "X-nonsense-1": "yes", "X-nonsense-2": "no" }
+			}));
+			listen = listenShorthand(done);
+		});
+		after(close);
+
+		it("request to bundle file", function(done) {
+			request(app).get("/bundle.js")
+			.expect("X-nonsense-1", "yes")
+			.expect("X-nonsense-2", "no")
+			.expect(200, done);
+		});
+	});
+});

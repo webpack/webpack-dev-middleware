@@ -13,8 +13,12 @@
   },
   "devDependencies": {
     "eslint": "^3.4.0",
+    "express": "^4.14.0",
+    "file-loader": "^0.9.0",
     "mocha": "^3.0.2",
-    "should": "^11.1.0"
+    "should": "^11.1.0",
+    "supertest": "^2.0.0",
+    "webpack": "^2.1.0-beta.22"
   },
   "license": "MIT",
   "engines": {
@@ -33,7 +37,7 @@
   "scripts": {
     "lint": "eslint *.js test",
     "pretest": "npm run -s lint",
-    "test": "mocha --harmony --full-trace --check-leaks",
+    "test": "mocha --full-trace --check-leaks",
     "beautify": "npm run lint -- --fix",
     "travis": "npm test && node middleware.js"
   }
