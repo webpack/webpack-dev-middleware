@@ -1,6 +1,7 @@
 var middleware = require("../middleware");
 var express = require("express");
 var webpack = require("webpack");
+var should = require("should");
 var request = require("supertest");
 var webpackConfig = require("./fixtures/server-test/webpack.config");
 
@@ -83,6 +84,35 @@ describe("Server", function() {
 			.expect("X-nonsense-1", "yes")
 			.expect("X-nonsense-2", "no")
 			.expect(200, done);
+		});
+	});
+
+	describe.only("server side render", function() {
+		var locals;
+		before(function(done) {
+			app = express();
+			var compiler = webpack(webpackConfig);
+			app.use(middleware(compiler, {
+				stats: "errors-only",
+				quiet: true,
+				serverSideRender: true,
+			}));
+			app.use(function(req, res) {
+				locals = res.locals;
+			});
+			listen = listenShorthand(done);
+		});
+		after(close);
+
+		it("request to bundle file", function(done) {
+			this.timeout(5000);
+			request(app).get("/bundle.js")
+			.expect(200, function() {
+				// TODO: I would expect `locals` to be set here.
+				// note that the liner underneath is purely to please the linter
+				should.strictEqual(locals, undefined);
+				done();
+			});
 		});
 	});
 });

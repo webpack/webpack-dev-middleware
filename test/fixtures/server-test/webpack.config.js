@@ -1,5 +1,4 @@
 module.exports = {
-	quiet: true,
 	context: __dirname,
 	entry: "./index.js",
 	output: {
