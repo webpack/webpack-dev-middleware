@@ -77,7 +77,7 @@ module.exports = function(compiler, options) {
 			// execute callback that are delayed
 			var cbs = callbacks;
 			callbacks = [];
-			cbs.forEach(function continueBecauseBundleAvailible(cb) {
+			cbs.forEach(function continueBecauseBundleAvailable(cb) {
 				cb();
 			});
 		});
@@ -205,7 +205,7 @@ module.exports = function(compiler, options) {
 				}
 			} catch(e) {}
 		}
-		// delay the request until we have a vaild bundle
+		// delay the request until we have a valid bundle
 		ready(processRequest, req);
 
 		function processRequest() {
