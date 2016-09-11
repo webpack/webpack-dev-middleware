@@ -87,7 +87,7 @@ describe("Server", function() {
 		});
 	});
 
-	describe.only("server side render", function() {
+	describe("server side render", function() {
 		var locals;
 		before(function(done) {
 			app = express();
@@ -105,7 +105,6 @@ describe("Server", function() {
 		after(close);
 
 		it("request to bundle file", function(done) {
-			this.timeout(5000);
 			request(app).get("/bundle.js")
 			.expect(200, function() {
 				// TODO: I would expect `locals` to be set here.
