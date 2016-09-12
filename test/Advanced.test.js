@@ -6,7 +6,7 @@ var options = {
 	publicPath: "/public/"
 };
 
-describe.only("Advanced API", function() {
+describe("Advanced API", function() {
 
 	var plugins = {};
 	var invalidationCount = 0;
