@@ -119,14 +119,40 @@ This part shows how you might interact with the middleware during runtime:
 ## Server-Side Rendering
 In order to develop a server-side rendering application, we need access to the [`stats`](https://github.com/webpack/docs/wiki/node.js-api#stats), which is generated with the latest build.
 
-In the server-side rendering mode, __webpack-dev-middleware__ sets the `stat` to `res.locals.webpackStats`, then call `next()` to trigger the next middleware, where we can render pages and response to clients. During the webpack building process, all requests will be pending until the build is finished and the `stat` is available.
+In the server-side rendering mode, __webpack-dev-middleware__ would sets the `stat` to `res.locals.webpackStats` before invoking the next middleware, where we can render pages and response to clients.
+
+Notice that requests for bundle files would still be responded by __webpack-dev-middleware__ and all requests will be pending until the building process is finished in the server-side rendering mode.
 
 ```JavaScript
 app.use(webpackMiddleware(compiler, { serverSideRender: true })
 
 // The following middleware would not be invoked until the latest build is finished.
 app.use((req, res) => {
-  const  assetsByChunkName = res.locals.webpackStats.toJson().assetsByChunkName
+  const assetsByChunkName = res.locals.webpackStats.toJson().assetsByChunkName
+
   // then use `assetsByChunkName` for server-sider rendering
+	// For example, if you have only one main chunk:
+
+	res.send(`
+<html>
+  <head>
+    <title>My App</title>
+		${
+			assetsByChunkName.main
+			.filter(path => path.endsWith('.css'))
+			.map(path => `<link rel="stylesheet" href="${path}" />`)
+		}
+  </head>
+  <body>
+    <div id="root"></div>
+		${
+			assetsByChunkName.main
+			.filter(path => path.endsWith('.js'))
+			.map(path => `<script src="${path}" />`)
+		}
+  </body>
+</html>		
+	`)
+
 })
 ```

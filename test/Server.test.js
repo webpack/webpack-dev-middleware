@@ -99,17 +99,16 @@ describe("Server", function() {
 			}));
 			app.use(function(req, res) {
 				locals = res.locals;
+				res.sendStatus(200);
 			});
 			listen = listenShorthand(done);
 		});
 		after(close);
 
 		it("request to bundle file", function(done) {
-			request(app).get("/bundle.js")
+			request(app).get("/foo/bar")
 			.expect(200, function() {
-				// TODO: I would expect `locals` to be set here.
-				// note that the liner underneath is purely to please the linter
-				should.strictEqual(locals, undefined);
+				should.exist(locals.webpackStats);
 				done();
 			});
 		});
