@@ -55,7 +55,13 @@ module.exports = function(compiler, options) {
 	if(typeof options.reporter !== "function") options.reporter = defaultReporter;
 
 	// store our files in memory
-	var fs = compiler.outputFileSystem = new MemoryFileSystem();
+	var fs;
+	var isMemoryFs = compiler.outputFileSystem instanceof MemoryFileSystem;
+	if(isMemoryFs) {
+		fs = compiler.outputFileSystem;
+	} else {
+		fs = compiler.outputFileSystem = new MemoryFileSystem();
+	}
 
 	compiler.plugin("done", function(stats) {
 		// We are now on valid state
