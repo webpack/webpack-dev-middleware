@@ -54,6 +54,16 @@ describe("GetFilenameFromUrl", function() {
 				outputPath: "/dist",
 				publicPath: "/",
 				expected: false, // publicPath is not in url, so it should fail
+			}, {
+				url: "/bar/",
+				outputPath: "/foo",
+				publicPath: "/bar/",
+				expected: "/foo",
+			}, {
+				url: "/bar/",
+				outputPath: "/",
+				publicPath: "http://localhost/foo/",
+				expected: false,
 			}
 		];
 		results.forEach(testUrl);
