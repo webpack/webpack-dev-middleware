@@ -38,11 +38,11 @@
     "lib/"
   ],
   "scripts": {
-    "lint": "eslint *.js test",
+    "lint": "eslint *.js lib test",
     "pretest": "npm run -s lint",
     "test": "mocha --full-trace --check-leaks",
     "beautify": "npm run lint -- --fix",
     "cover": "istanbul cover node_modules/mocha/bin/_mocha",
-    "travis": "npm run cover && npm run -s lint"
+    "travis": "npm run cover && npm run lint"
   }
 }
