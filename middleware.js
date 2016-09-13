@@ -17,7 +17,7 @@ var defaultReporter = function(reporterOptions) {
 
 	if(state) {
 		var displayStats = (!options.quiet && options.stats !== false);
-		if(displayStats &
+		if(displayStats &&
 			!(stats.hasErrors() || stats.hasWarnings()) &&
 			options.noInfo)
 			displayStats = false;
@@ -101,7 +101,7 @@ module.exports = function(compiler, options) {
 		state = false;
 	}
 
-	function invalidAsyncPlugi(compiler, callback) {
+	function invalidAsyncPlugin(compiler, callback) {
 		invalidPlugin();
 		callback();
 	}
