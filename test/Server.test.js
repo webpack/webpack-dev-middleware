@@ -88,6 +88,27 @@ describe("Server", function() {
 		});
 	});
 
+	describe("lazy mode", function() {
+		before(function(done) {
+			app = express();
+			var compiler = webpack(webpackConfig);
+			app.use(middleware(compiler, {
+				stats: "errors-only",
+				quiet: true,
+				lazy: true,
+				publicPath: "/",
+			}));
+			listen = listenShorthand(done);
+		});
+		after(close);
+
+		it("GET request to bundle file", function(done) {
+			request(app).get("/bundle.js")
+			.expect("Content-Length", "2780")
+			.expect(200, /console\.log\("Hey\."\)/, done);
+		});
+	});
+
 	describe("custom headers", function() {
 		before(function(done) {
 			app = express();
