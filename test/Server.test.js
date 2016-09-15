@@ -41,7 +41,7 @@ describe("Server", function() {
 		it("GET request to bundle file", function(done) {
 			request(app).get("/bundle.js")
 			.expect("Content-Type", "application/javascript")
-			// .expect("Content-Length", "2657")
+			.expect("Content-Length", "2780")
 			.expect("Access-Control-Allow-Origin", "*")
 			.expect(200, /console\.log\("Hey\."\)/, done);
 		});
@@ -63,6 +63,28 @@ describe("Server", function() {
 			request(app).get("/nope")
 			.expect("Content-Type", "text/html; charset=utf-8")
 			.expect(404, done);
+		});
+
+		it("request to directory", function(done) {
+			request(app).get("/")
+			.expect("Content-Type", "text/html")
+			.expect("Content-Length", "10")
+			.expect("Access-Control-Allow-Origin", "*")
+			.expect(200, /My\ Index\./, done);
+		});
+
+		it("invalid range header", function(done) {
+			request(app).get("/svg.svg")
+			.set("Range", "bytes=6000-")
+			.expect(416, done);
+		});
+
+		it("valid range header", function(done) {
+			request(app).get("/svg.svg")
+			.set("Range", "bytes=3000-3500")
+			.expect("Content-Length", "501")
+			.expect("Content-Range", "bytes 3000-3500/4778")
+			.expect(206, done);
 		});
 	});
 

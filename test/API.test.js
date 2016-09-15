@@ -67,6 +67,14 @@ describe("Advanced API", function() {
 				instance.waitUntilValid(done);
 			});
 		});
+
+		it("should work without callback", function() {
+			var instance = middleware(compiler, options);
+			plugins.done(doneStats);
+			setTimeout(function() {
+				instance.waitUntilValid();
+			});
+		});
 	});
 
 	describe("invalidate", function() {
@@ -91,6 +99,15 @@ describe("Advanced API", function() {
 				doneCalled = true;
 			});
 		});
+
+		it("should work without callback", function(done) {
+			var instance = middleware(compiler, options);
+			instance.invalidate();
+			setTimeout(function() {
+				should.strictEqual(invalidationCount, 1);
+				done();
+			});
+		});
 	});
 
 	describe("close", function() {
@@ -105,6 +122,12 @@ describe("Advanced API", function() {
 				should.strictEqual(closeCount, 1);
 				done();
 			});
+		});
+
+		it("should call close on watcher without callback", function() {
+			var instance = middleware(compiler, options);
+			instance.close();
+			should.strictEqual(closeCount, 1);
 		});
 	});
 

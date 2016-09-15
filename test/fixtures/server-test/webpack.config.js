@@ -8,7 +8,7 @@ module.exports = {
 	module: {
 		loaders: [
 			{
-				test: /\.svg$/,
+				test: /\.(svg|html)$/,
 				loader: "file",
 				query: { name: "[name].[ext]" }
 			}

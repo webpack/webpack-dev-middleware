@@ -19,7 +19,9 @@ describe("Reporter", function() {
 	var plugins = {};
 	var compiler = {
 		watch: function() {
-			return {};
+			return {
+				invalidate: function() {}
+			};
 		},
 		plugin: function(name, callback) {
 			plugins[name] = callback;
@@ -145,6 +147,42 @@ describe("Reporter", function() {
 			middleware(compiler, { noInfo: true });
 
 			plugins.done(stats);
+			setTimeout(function() {
+				should.strictEqual(console.log.callCount, 0);
+				done();
+			});
+		});
+	});
+
+	describe("wait until bundle valid", function() {
+		it("should print message", function(done) {
+			var instance = middleware(compiler);
+
+			plugins.invalid();
+			instance.invalidate(function myInvalidateFunction() {});
+			setTimeout(function() {
+				should.strictEqual(console.log.callCount, 1);
+				should.strictEqual(console.log.calledWith("webpack: wait until bundle finished: myInvalidateFunction"), true);
+				done();
+			});
+		});
+
+		it("should not print if options.quiet is true", function(done) {
+			var instance = middleware(compiler, { quiet: true });
+
+			plugins.invalid();
+			instance.invalidate();
+			setTimeout(function() {
+				should.strictEqual(console.log.callCount, 0);
+				done();
+			});
+		});
+
+		it("should not print if options.noInfo is true", function(done) {
+			var instance = middleware(compiler, { noInfo: true });
+
+			plugins.invalid();
+			instance.invalidate();
 			setTimeout(function() {
 				should.strictEqual(console.log.callCount, 0);
 				done();
