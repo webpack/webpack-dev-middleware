@@ -163,7 +163,6 @@ module.exports = function(compiler, options) {
 			if(-1 == ranges) {
 				res.setHeader('Content-Range', 'bytes */' + content.length);
 				res.statusCode = 416;
-				return content;
 			}
 
 			// valid (syntactically invalid/multiple ranges are treated as a regular response)
@@ -241,7 +240,8 @@ module.exports = function(compiler, options) {
 					res.setHeader(name, options.headers[name]);
 				}
 			}
-			res.statusCode = 200;
+			// Express automatically sets the statusCode to 200, but not all servers do (Koa).
+			res.statusCode = res.statusCode || 200;
 			if(res.send) res.send(content);
 			else res.end(content);
 		}
