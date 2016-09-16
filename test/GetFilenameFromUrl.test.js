@@ -50,6 +50,11 @@ describe("GetFilenameFromUrl", function() {
 				publicPath: "/",
 				expected: "/a/more/complex/path.js",
 			}, {
+				url: "/more/complex/path.js",
+				outputPath: "/a",
+				publicPath: "/complex",
+				expected: false,
+			}, {
 				url: "c.js",
 				outputPath: "/dist",
 				publicPath: "/",
@@ -64,6 +69,11 @@ describe("GetFilenameFromUrl", function() {
 				outputPath: "/",
 				publicPath: "http://localhost/foo/",
 				expected: false,
+			}, {
+				url: "http://test.domain/test/sample.js",
+				outputPath: "/",
+				publicPath: "/test/",
+				expected: "/sample.js"
 			}
 		];
 		results.forEach(testUrl);
