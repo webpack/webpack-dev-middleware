@@ -22,13 +22,13 @@ var defaultReporter = function(reporterOptions) {
 			options.noInfo)
 			displayStats = false;
 		if(displayStats) {
-			console.log(stats.toString(options.stats));
+			options.log(stats.toString(options.stats));
 		}
 		if(!options.noInfo && !options.quiet) {
-			console.info("webpack: bundle is now VALID.");
+			options.log("webpack: bundle is now VALID.");
 		}
 	} else {
-		console.info("webpack: bundle is now INVALID.");
+		options.log("webpack: bundle is now INVALID.");
 	}
 };
 
@@ -38,7 +38,7 @@ module.exports = function(compiler, options) {
 	if(typeof options.watchOptions === "undefined") options.watchOptions = {};
 	if(typeof options.watchDelay !== "undefined") {
 		// TODO remove this in next major version
-		console.warn("options.watchDelay is deprecated: Use 'options.watchOptions.aggregateTimeout' instead");
+		options.warn("options.watchDelay is deprecated: Use 'options.watchOptions.aggregateTimeout' instead");
 		options.watchOptions.aggregateTimeout = options.watchDelay;
 	}
 	if(typeof options.watchOptions.aggregateTimeout === "undefined") options.watchOptions.aggregateTimeout = 200;
@@ -53,6 +53,8 @@ module.exports = function(compiler, options) {
 		}
 	}
 	if(typeof options.reporter !== "function") options.reporter = defaultReporter;
+	if(typeof options.log !== "function") options.log = console.log.bind(console);
+	if(typeof options.warn !== "function") option.warn = console.warn.bind(console);
 
 	// store our files in memory
 	var fs;
@@ -130,7 +132,7 @@ module.exports = function(compiler, options) {
 	function ready(fn, req) {
 		if(state) return fn();
 		if(!options.noInfo && !options.quiet)
-			console.log("webpack: wait until bundle finished: " + (req.url || fn.name));
+			options.log("webpack: wait until bundle finished: " + (req.url || fn.name));
 		callbacks.push(fn);
 	}
 
