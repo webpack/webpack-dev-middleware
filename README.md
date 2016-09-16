@@ -62,6 +62,9 @@ app.use(webpackMiddleware(webpack({
 	publicPath: "/assets/",
 	// public path to bind the middleware to
 	// use the same as in webpack
+	
+	index: "index.html",
+	// the index path for web server
 
 	headers: { "X-Custom-Header": "yes" },
 	// custom headers
