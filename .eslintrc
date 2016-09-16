@@ -1,0 +1,50 @@
+{
+    "env": {
+        "node": true,
+        "mocha": true
+    },
+    "rules": {
+        "indent": [2, "tab", { "SwitchCase": 1 }],
+        "brace-style": ["error", "1tbs"],
+        "semi": "error",
+        "no-eval": "error",
+        "eol-last": "error",
+        "no-redeclare": "error",
+        "no-extra-bind": "error",
+        "no-process-exit": "error",
+        "no-inner-declarations": "warn",
+        "no-loop-func": "warn",
+        "no-undef": "error",
+        "no-trailing-spaces": "error",
+        "space-before-function-paren": ["error", "never"],
+        "no-multi-spaces": "error",
+        "space-in-parens": "error",
+        "space-before-blocks": "error",
+        "no-unused-vars": "error",
+        "no-dupe-keys": "error",
+        "valid-typeof": "error",
+        "space-infix-ops": "error",
+        "no-negated-in-lhs": "error",
+        "no-octal": "error",
+        "no-regex-spaces": "error",
+        "no-self-assign": "error",
+        "no-sparse-arrays": "error",
+        "no-unexpected-multiline": "error",
+        "no-unreachable": "error",
+        "no-extra-semi": "error",
+        "no-func-assign": "error",
+        "no-invalid-regexp": "error",
+        "keyword-spacing": ["error", {
+            "after": false,
+            "overrides": {
+                "try": {"after": true},
+                "else": {"after": true},
+                "throw": {"after": true},
+                "case": {"after": true},
+                "return": {"after": true},
+                "finally": {"after": true},
+                "do": {"after": true}
+            }
+        }]
+    }
+}

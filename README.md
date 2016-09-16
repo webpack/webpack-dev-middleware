@@ -14,6 +14,12 @@ It has a few advantages over bundling it as files:
 * If files changed in watch mode, the middleware no longer serves the old bundle, but delays requests until the compiling has finished. You don't have to wait before refreshing the page after a file modification.
 * I may add some specific optimization in future releases.
 
+## Installation
+
+```
+npm install webpack-dev-middleware --save-dev
+```
+
 ## Usage
 
 ``` javascript
@@ -35,7 +41,7 @@ app.use(webpackMiddleware(webpack({
 		// but it will work with other paths too.
 	}
 }), {
-	// all options optional
+	// publicPath is required, whereas all other options are optional
 
 	noInfo: false,
 	// display no info to console (only warnings and errors)
@@ -64,6 +70,12 @@ app.use(webpackMiddleware(webpack({
 		colors: true
 	}
 	// options for formating the statistics
+
+	reporter: null,
+	// Provide a custom reporter to change the way how logs are shown.
+
+	serverSideRender: false,
+	// Turn off the server-side rendering mode. See Server-Side Rendering part for more info.
 }));
 ```
 
@@ -99,7 +111,48 @@ This part shows how you might interact with the middleware during runtime:
 	```js
 	var webpackDevMiddlewareInstance = webpackMiddleware(/* see example usage */);
 	app.use(webpackDevMiddlewareInstance);
-	webpackDevMiddleware.waitUntilValid(function(){
+	webpackDevMiddlewareInstance.waitUntilValid(function(){
 	  console.log('Package is in a valid state');
 	});
 	```
+
+## Server-Side Rendering
+In order to develop a server-side rendering application, we need access to the [`stats`](https://github.com/webpack/docs/wiki/node.js-api#stats), which is generated with the latest build.
+
+In the server-side rendering mode, __webpack-dev-middleware__ would sets the `stat` to `res.locals.webpackStats` before invoking the next middleware, where we can render pages and response to clients.
+
+Notice that requests for bundle files would still be responded by __webpack-dev-middleware__ and all requests will be pending until the building process is finished in the server-side rendering mode.
+
+```JavaScript
+app.use(webpackMiddleware(compiler, { serverSideRender: true })
+
+// The following middleware would not be invoked until the latest build is finished.
+app.use((req, res) => {
+  const assetsByChunkName = res.locals.webpackStats.toJson().assetsByChunkName
+
+  // then use `assetsByChunkName` for server-sider rendering
+	// For example, if you have only one main chunk:
+
+	res.send(`
+<html>
+  <head>
+    <title>My App</title>
+		${
+			assetsByChunkName.main
+			.filter(path => path.endsWith('.css'))
+			.map(path => `<link rel="stylesheet" href="${path}" />`)
+		}
+  </head>
+  <body>
+    <div id="root"></div>
+		${
+			assetsByChunkName.main
+			.filter(path => path.endsWith('.js'))
+			.map(path => `<script src="${path}" />`)
+		}
+  </body>
+</html>		
+	`)
+
+})
+```

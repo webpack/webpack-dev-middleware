@@ -5,9 +5,32 @@
 var MemoryFileSystem = require("memory-fs");
 var mime = require("mime");
 var parseRange = require("range-parser");
-var urlParse = require("url").parse;
+var getFilenameFromUrl = require("./lib/GetFilenameFromUrl");
+var pathJoin = require("./lib/PathJoin");
 
 var HASH_REGEXP = /[0-9a-f]{10,}/;
+
+var defaultReporter = function(reporterOptions) {
+	var state = reporterOptions.state;
+	var stats = reporterOptions.stats;
+	var options = reporterOptions.options;
+
+	if(state) {
+		var displayStats = (!options.quiet && options.stats !== false);
+		if(displayStats &&
+			!(stats.hasErrors() || stats.hasWarnings()) &&
+			options.noInfo)
+			displayStats = false;
+		if(displayStats) {
+			console.log(stats.toString(options.stats));
+		}
+		if(!options.noInfo && !options.quiet) {
+			console.info("webpack: bundle is now VALID.");
+		}
+	} else {
+		console.info("webpack: bundle is now INVALID.");
+	}
+};
 
 // constructor for the middleware
 module.exports = function(compiler, options) {
@@ -29,35 +52,38 @@ module.exports = function(compiler, options) {
 			options.filename = new RegExp("^[\/]{0,1}" + str + "$");
 		}
 	}
+	if(typeof options.reporter !== "function") options.reporter = defaultReporter;
 
 	// store our files in memory
-	var files = {};
-	var fs = compiler.outputFileSystem = new MemoryFileSystem();
+	var fs;
+	var isMemoryFs = compiler.outputFileSystem instanceof MemoryFileSystem;
+	if(isMemoryFs) {
+		fs = compiler.outputFileSystem;
+	} else {
+		fs = compiler.outputFileSystem = new MemoryFileSystem();
+	}
 
 	compiler.plugin("done", function(stats) {
 		// We are now on valid state
 		state = true;
+		webpackStats = stats;
+
 		// Do the stuff in nextTick, because bundle may be invalidated
-		//  if a change happend while compiling
+		// if a change happened while compiling
 		process.nextTick(function() {
 			// check if still in valid state
 			if(!state) return;
 			// print webpack output
-			var displayStats = (!options.quiet && options.stats !== false);
-			if(displayStats &&
-				!(stats.hasErrors() || stats.hasWarnings()) &&
-				options.noInfo)
-				displayStats = false;
-			if(displayStats) {
-				console.log(stats.toString(options.stats));
-			}
-			if (!options.noInfo && !options.quiet)
-				console.info("webpack: bundle is now VALID.");
+			options.reporter({
+				state: true,
+				stats: stats,
+				options: options
+			});
 
 			// execute callback that are delayed
 			var cbs = callbacks;
 			callbacks = [];
-			cbs.forEach(function continueBecauseBundleAvailible(cb) {
+			cbs.forEach(function continueBecauseBundleAvailable(cb) {
 				cb();
 			});
 		});
@@ -72,10 +98,15 @@ module.exports = function(compiler, options) {
 	// on compiling
 	function invalidPlugin() {
 		if(state && (!options.noInfo && !options.quiet))
-			console.info("webpack: bundle is now INVALID.");
+			options.reporter({
+				state: false,
+				options: options
+			});
+
 		// We are now in invalid state
 		state = false;
 	}
+
 	function invalidAsyncPlugin(compiler, callback) {
 		invalidPlugin();
 		callback();
@@ -86,6 +117,8 @@ module.exports = function(compiler, options) {
 
 	// the state, false: bundle invalid, true: bundle valid
 	var state = false;
+
+	var webpackStats;
 
 	// in lazy mode, rebuild automatically
 	var forceRebuild = false;
@@ -121,43 +154,19 @@ module.exports = function(compiler, options) {
 		}
 	}
 
-	function pathJoin(a, b) {
-		return a == "/" ? "/" + b : (a||"") + "/" + b
-	}
-
-	function getFilenameFromUrl(url) {
-		var filename;
-		// localPrefix is the folder our bundle should be in
-		var localPrefix = urlParse(options.publicPath || "/");
-		var urlObject = urlParse(url);
-		if(localPrefix.hostname !== null &&
-		   urlObject.hostname !== null &&
-		   localPrefix.hostname !== urlObject.hostname) {
-			   // publicPath has hostname and is not the same as request url's
-			   return false;
-		   }
-		   // strip localPrefix from the start of url
-		if(urlObject.pathname.indexOf(localPrefix.pathname) === 0) {
-			filename = urlObject.pathname.substr(localPrefix.pathname.length);
-		}
-		// and if not match, use outputPath as filename
-		return filename ? pathJoin(compiler.outputPath, filename) : compiler.outputPath;
-	}
-
 	function handleRangeHeaders(content, req, res) {
-		if (req.headers['Accept-Ranges']) res.setHeader('Accept-Ranges', 'bytes');
-		if (req.headers.range) {
+		res.setHeader('Accept-Ranges', 'bytes');
+		if(req.headers.range) {
 			var ranges = parseRange(content.length, req.headers.range);
 
 			// unsatisfiable
-			if (-1 == ranges) {
+			if(-1 == ranges) {
 				res.setHeader('Content-Range', 'bytes */' + content.length);
 				res.statusCode = 416;
-				return content;
 			}
 
 			// valid (syntactically invalid/multiple ranges are treated as a regular response)
-			if (-2 != ranges && ranges.length === 1) {
+			if(-2 != ranges && ranges.length === 1) {
 				// Content-Range
 				res.statusCode = 206;
 				var length = content.length;
@@ -174,8 +183,20 @@ module.exports = function(compiler, options) {
 
 	// The middleware function
 	function webpackDevMiddleware(req, res, next) {
-		var filename = getFilenameFromUrl(req.url);
-		if (filename === false) return next();
+		function goNext() {
+			if(!options.serverSideRender) return next();
+			ready(function() {
+				res.locals.webpackStats = webpackStats;
+				next();
+			}, req);
+		}
+
+		if(req.method !== 'GET') {
+			return goNext();
+		}
+
+		var filename = getFilenameFromUrl(options.publicPath, compiler.outputPath, req.url);
+		if(filename === false) return goNext();
 
 		// in lazy mode, rebuild on bundle request
 		if(options.lazy && (!options.filename || options.filename.test(filename)))
@@ -189,13 +210,14 @@ module.exports = function(compiler, options) {
 				}
 			} catch(e) {}
 		}
-		// delay the request until we have a vaild bundle
+		// delay the request until we have a valid bundle
 		ready(processRequest, req);
+
 		function processRequest() {
 			try {
 				var stat = fs.statSync(filename);
 				if(!stat.isFile()) {
-					if (stat.isDirectory()) {
+					if(stat.isDirectory()) {
 						filename = pathJoin(filename, "index.html");
 						stat = fs.statSync(filename);
 						if(!stat.isFile()) throw "next";
@@ -204,7 +226,7 @@ module.exports = function(compiler, options) {
 					}
 				}
 			} catch(e) {
-				return next();
+				return goNext();
 			}
 
 			// server content
@@ -218,21 +240,22 @@ module.exports = function(compiler, options) {
 					res.setHeader(name, options.headers[name]);
 				}
 			}
-			if (res.send) res.send(content);
+			// Express automatically sets the statusCode to 200, but not all servers do (Koa).
+			res.statusCode = res.statusCode || 200;
+			if(res.send) res.send(content);
 			else res.end(content);
 		}
 	}
 
-	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl;
+	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl.bind(this, options.publicPath, compiler.outputPath);
 
 	webpackDevMiddleware.waitUntilValid = function(callback) {
-		callback = callback || function(){};
-		if (!watching || !watching.running) callback();
-		else ready(callback, {});
+		callback = callback || function() {};
+		ready(callback, {});
 	};
 
 	webpackDevMiddleware.invalidate = function(callback) {
-		callback = callback || function(){};
+		callback = callback || function() {};
 		if(watching) {
 			ready(callback, {});
 			watching.invalidate();
@@ -242,7 +265,7 @@ module.exports = function(compiler, options) {
 	};
 
 	webpackDevMiddleware.close = function(callback) {
-		callback = callback || function(){};
+		callback = callback || function() {};
 		if(watching) watching.close(callback);
 		else callback();
 	};
@@ -250,4 +273,4 @@ module.exports = function(compiler, options) {
 	webpackDevMiddleware.fileSystem = fs;
 
 	return webpackDevMiddleware;
-}
+};
