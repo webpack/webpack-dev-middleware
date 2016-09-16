@@ -66,14 +66,6 @@ describe("GetFilenameFromUrl", function() {
 				expected: false,
 			}
 		];
-		// results.forEach(testUrl);
-		results.pop();
-
-		testUrl({
-			url: "c.js",
-			outputPath: "/dist",
-			publicPath: "/",
-			expected: false, // publicPath is not in url, so it should fail
-		});
+		results.forEach(testUrl);
 	});
 });
