@@ -50,6 +50,11 @@ describe("GetFilenameFromUrl", function() {
 				publicPath: "/",
 				expected: "/a/more/complex/path.js",
 			}, {
+				url: "/more/complex/path.js",
+				outputPath: "/a",
+				publicPath: "/complex",
+				expected: false,
+			}, {
 				url: "c.js",
 				outputPath: "/dist",
 				publicPath: "/",
