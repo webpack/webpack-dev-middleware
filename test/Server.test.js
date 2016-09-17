@@ -29,12 +29,15 @@ describe("Server", function() {
 		before(function(done) {
 			app = express();
 			var compiler = webpack(webpackConfig);
-			app.use(middleware(compiler, {
+			var instance = middleware(compiler, {
 				stats: "errors-only",
 				quiet: true,
 				publicPath: "/",
-			}));
+			});
+			app.use(instance);
 			listen = listenShorthand(done);
+			// Hack to add a mock HMR json file to the in-memory filesystem.
+			instance.fileSystem.writeFileSync("/123a123412.hot-update.json", "[\"hi\"]");
 		});
 		after(close);
 
@@ -63,6 +66,12 @@ describe("Server", function() {
 			request(app).get("/nope")
 			.expect("Content-Type", "text/html; charset=utf-8")
 			.expect(404, done);
+		});
+
+		it("request to HMR json", function(done) {
+			request(app).get("/123a123412.hot-update.json")
+			.expect("Content-Type", "application/json")
+			.expect(200, /\[\"hi\"\]/, done);
 		});
 
 		it("request to directory", function(done) {
