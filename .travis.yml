@@ -3,3 +3,6 @@ language: node_js
 node_js:
   - node
 script: npm run travis
+after_success:
+  - cat ./coverage/coverage.json | node_modules/codecov.io/bin/codecov.io.js
+  - rm -rf ./coverage
