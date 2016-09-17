@@ -32,7 +32,7 @@ describe("Server", function() {
 			var instance = middleware(compiler, {
 				stats: "errors-only",
 				quiet: true,
-				publicPath: "/",
+				publicPath: "/public/",
 			});
 			app.use(instance);
 			listen = listenShorthand(done);
@@ -42,7 +42,7 @@ describe("Server", function() {
 		after(close);
 
 		it("GET request to bundle file", function(done) {
-			request(app).get("/bundle.js")
+			request(app).get("/public/bundle.js")
 			.expect("Content-Type", "application/javascript")
 			.expect("Content-Length", "2780")
 			.expect("Access-Control-Allow-Origin", "*")
@@ -50,12 +50,12 @@ describe("Server", function() {
 		});
 
 		it("POST request to bundle file", function(done) {
-			request(app).post("/bundle.js")
+			request(app).post("/public/bundle.js")
 			.expect(404, done);
 		});
 
 		it("request to image", function(done) {
-			request(app).get("/svg.svg")
+			request(app).get("/public/svg.svg")
 			.expect("Content-Type", "image/svg+xml")
 			.expect("Content-Length", "4778")
 			.expect("Access-Control-Allow-Origin", "*")
@@ -63,19 +63,19 @@ describe("Server", function() {
 		});
 
 		it("request to non existing file", function(done) {
-			request(app).get("/nope")
+			request(app).get("/public/nope")
 			.expect("Content-Type", "text/html; charset=utf-8")
 			.expect(404, done);
 		});
 
 		it("request to HMR json", function(done) {
-			request(app).get("/123a123412.hot-update.json")
+			request(app).get("/public/123a123412.hot-update.json")
 			.expect("Content-Type", "application/json")
 			.expect(200, /\[\"hi\"\]/, done);
 		});
 
 		it("request to directory", function(done) {
-			request(app).get("/")
+			request(app).get("/public/")
 			.expect("Content-Type", "text/html")
 			.expect("Content-Length", "10")
 			.expect("Access-Control-Allow-Origin", "*")
@@ -83,17 +83,23 @@ describe("Server", function() {
 		});
 
 		it("invalid range header", function(done) {
-			request(app).get("/svg.svg")
+			request(app).get("/public/svg.svg")
 			.set("Range", "bytes=6000-")
 			.expect(416, done);
 		});
 
 		it("valid range header", function(done) {
-			request(app).get("/svg.svg")
+			request(app).get("/public/svg.svg")
 			.set("Range", "bytes=3000-3500")
 			.expect("Content-Length", "501")
 			.expect("Content-Range", "bytes 3000-3500/4778")
 			.expect(206, done);
+		});
+
+		it("request to non-public path", function(done) {
+			request(app).get("/nonpublic/")
+			.expect("Content-Type", "text/html; charset=utf-8")
+			.expect(404, done);
 		});
 	});
 
