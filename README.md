@@ -1,5 +1,10 @@
 # webpack-dev-middleware
 
+[![npm][npm]][npm-url]
+[![deps][deps]][deps-url]
+[![test][test]][test-url]
+[![coverage][cover]][cover-url]
+
 **THIS MIDDLEWARE SHOULD ONLY USED FOR DEVELOPMENT!**
 
 **DO NOT USE IT IN PRODUCTION!**
@@ -159,3 +164,15 @@ app.use((req, res) => {
 
 })
 ```
+
+[npm]: https://img.shields.io/npm/v/webpack-dev-middleware.svg
+[npm-url]: https://npmjs.com/package/webpack-dev-middleware
+
+[deps]: https://david-dm.org/webpack/webpack-dev-middleware.svg
+[deps-url]: https://david-dm.org/webpack/webpack-dev-middleware
+
+[test]: http://img.shields.io/travis/webpack/webpack-dev-middleware.svg
+[test-url]: https://travis-ci.org/webpack/webpack-dev-middleware
+
+[cover]: https://codecov.io/gh/webpack/webpack-dev-middleware/branch/master/graph/badge.svg
+[cover-url]: https://codecov.io/gh/webpack/webpack-dev-middleware
