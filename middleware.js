@@ -56,7 +56,7 @@ module.exports = function(compiler, options) {
 
 	// store our files in memory
 	var fs;
-	var isMemoryFs = compiler.outputFileSystem instanceof MemoryFileSystem;
+	var isMemoryFs = !compiler.compilers && compiler.outputFileSystem instanceof MemoryFileSystem;
 	if(isMemoryFs) {
 		fs = compiler.outputFileSystem;
 	} else {

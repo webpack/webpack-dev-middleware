@@ -4,6 +4,7 @@ var webpack = require("webpack");
 var should = require("should");
 var request = require("supertest");
 var webpackConfig = require("./fixtures/server-test/webpack.config");
+var webpackMultiConfig = require("./fixtures/server-test/webpack.array.config");
 
 
 describe("Server", function() {
@@ -144,6 +145,30 @@ describe("Server", function() {
 			.expect(200, done);
 		});
 	});
+
+	describe("MultiCompiler", function() {
+		before(function(done) {
+			app = express();
+			var compiler = webpack(webpackMultiConfig);
+			var instance = middleware(compiler, {
+				stats: "errors-only",
+				quiet: true,
+				publicPath: "/",
+			});
+			app.use(instance);
+			listen = listenShorthand(done);
+		});
+		after(close);
+
+		it("request to both bundle files", function(done) {
+			request(app).get("/foo.js")
+			.expect(200, function() {
+				request(app).get("/bar.js")
+				.expect(200, done);
+			});
+		});
+	});
+
 
 	describe("server side render", function() {
 		var locals;
