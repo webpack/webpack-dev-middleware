@@ -1,3 +1,7 @@
+# 1.8.1 (2016-09-18)
+
+- Fix exception thrown when using webpack array config ([#125](https://github.com/webpack/webpack-dev-middleware/issues/125)).
+
 # 1.8.0 (2016-09-17)
 
 - Add tests for everything ([#121](https://github.com/webpack/webpack-dev-middleware/issues/121))!
