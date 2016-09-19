@@ -86,7 +86,7 @@ module.exports = function(compiler, options) {
 			var cbs = callbacks;
 			callbacks = [];
 			cbs.forEach(function continueBecauseBundleAvailable(cb) {
-				cb();
+				cb(stats);
 			});
 		});
 
