@@ -54,7 +54,7 @@ module.exports = function(compiler, options) {
 	}
 	if(typeof options.reporter !== "function") options.reporter = defaultReporter;
 	if(typeof options.log !== "function") options.log = console.log.bind(console);
-	if(typeof options.warn !== "function") option.warn = console.warn.bind(console);
+	if(typeof options.warn !== "function") options.warn = console.warn.bind(console);
 
 	// store our files in memory
 	var fs;
