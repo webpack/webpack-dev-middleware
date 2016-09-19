@@ -30,7 +30,6 @@ describe("Reporter", function() {
 	beforeEach(function() {
 		plugins = {};
 		this.sinon.stub(console, 'log');
-		this.sinon.stub(console, 'info');
 	});
 
 	describe("valid/invalid messages", function() {
@@ -39,8 +38,8 @@ describe("Reporter", function() {
 
 			plugins.done(simpleStats);
 			setTimeout(function() {
-				should.strictEqual(console.info.callCount, 1);
-				should.strictEqual(console.info.calledWith("webpack: bundle is now VALID."), true);
+				should.strictEqual(console.log.callCount, 2);
+				should.strictEqual(console.log.calledWith("webpack: bundle is now VALID."), true);
 				done();
 			});
 		});
@@ -50,7 +49,7 @@ describe("Reporter", function() {
 
 			plugins.done(simpleStats);
 			setTimeout(function() {
-				should.strictEqual(console.info.callCount, 0);
+				should.strictEqual(console.log.callCount, 0);
 				done();
 			});
 		});
@@ -60,7 +59,7 @@ describe("Reporter", function() {
 
 			plugins.done(simpleStats);
 			setTimeout(function() {
-				should.strictEqual(console.info.callCount, 0);
+				should.strictEqual(console.log.callCount, 0);
 				done();
 			});
 		});
@@ -70,8 +69,8 @@ describe("Reporter", function() {
 			plugins.done(simpleStats);
 			plugins.invalid();
 			setTimeout(function() {
-				should.strictEqual(console.info.callCount, 1);
-				should.strictEqual(console.info.calledWith("webpack: bundle is now INVALID."), true);
+				should.strictEqual(console.log.callCount, 1);
+				should.strictEqual(console.log.calledWith("webpack: bundle is now INVALID."), true);
 				done();
 			});
 		});
@@ -82,7 +81,7 @@ describe("Reporter", function() {
 			plugins.done(simpleStats);
 			plugins.invalid();
 			setTimeout(function() {
-				should.strictEqual(console.info.callCount, 0);
+				should.strictEqual(console.log.callCount, 0);
 				done();
 			});
 		});
@@ -93,7 +92,7 @@ describe("Reporter", function() {
 			plugins.done(simpleStats);
 			plugins.invalid();
 			setTimeout(function() {
-				should.strictEqual(console.info.callCount, 0);
+				should.strictEqual(console.log.callCount, 0);
 				done();
 			});
 		});
@@ -117,7 +116,7 @@ describe("Reporter", function() {
 
 			plugins.done(stats);
 			setTimeout(function() {
-				should.strictEqual(console.log.callCount, 1);
+				should.strictEqual(console.log.callCount, 2);
 				should.strictEqual(console.log.calledWith(stats.toString()), true);
 				done();
 			});
@@ -128,7 +127,7 @@ describe("Reporter", function() {
 
 			plugins.done(stats);
 			setTimeout(function() {
-				should.strictEqual(console.log.callCount, 0);
+				should.strictEqual(console.log.callCount, 1);
 				done();
 			});
 		});
