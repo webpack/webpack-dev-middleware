@@ -29,7 +29,7 @@ describe("Reporter", function() {
 	};
 	beforeEach(function() {
 		plugins = {};
-		this.sinon.stub(console, 'log', console.log.bind(console));
+		this.sinon.stub(console, 'log');
 	});
 
 	describe("valid/invalid messages", function() {
