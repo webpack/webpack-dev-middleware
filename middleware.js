@@ -56,7 +56,7 @@ module.exports = function(compiler, options) {
 	if(typeof options.log !== "function") options.log = console.log.bind(console);
 	if(typeof options.warn !== "function") options.warn = console.warn.bind(console);
 	if(typeof compiler.outputPath === "string" && compiler.outputPath.lastIndexOf("/", 0) !== 0) {
-		throw new Error('`output.path` needs to be an absolute path or "/".');
+		throw new Error("`output.path` needs to be an absolute path or `/`.");
 	}
 
 	// store our files in memory
@@ -160,13 +160,13 @@ module.exports = function(compiler, options) {
 	}
 
 	function handleRangeHeaders(content, req, res) {
-		res.setHeader('Accept-Ranges', 'bytes');
+		res.setHeader("Accept-Ranges", "bytes");
 		if(req.headers.range) {
 			var ranges = parseRange(content.length, req.headers.range);
 
 			// unsatisfiable
 			if(-1 == ranges) {
-				res.setHeader('Content-Range', 'bytes */' + content.length);
+				res.setHeader("Content-Range", "bytes */" + content.length);
 				res.statusCode = 416;
 			}
 
@@ -176,8 +176,8 @@ module.exports = function(compiler, options) {
 				res.statusCode = 206;
 				var length = content.length;
 				res.setHeader(
-					'Content-Range',
-					'bytes ' + ranges[0].start + '-' + ranges[0].end + '/' + length
+					"Content-Range",
+					"bytes " + ranges[0].start + "-" + ranges[0].end + "/" + length
 				);
 
 				content = content.slice(ranges[0].start, ranges[0].end + 1);
@@ -196,7 +196,7 @@ module.exports = function(compiler, options) {
 			}, req);
 		}
 
-		if(req.method !== 'GET') {
+		if(req.method !== "GET") {
 			return goNext();
 		}
 

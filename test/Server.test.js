@@ -12,7 +12,7 @@ describe("Server", function() {
 	var app;
 
 	function listenShorthand(done) {
-		return app.listen(8000, '127.0.0.1', function(err) {
+		return app.listen(8000, "127.0.0.1", function(err) {
 			if(err) done(err);
 			done();
 		});

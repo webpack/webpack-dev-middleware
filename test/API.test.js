@@ -51,7 +51,7 @@ describe("Advanced API", function() {
 				if(doneCalled) {
 					done();
 				} else {
-					done(new Error('`waitUntilValid` called before bundle was done'));
+					done(new Error("`waitUntilValid` called before bundle was done"));
 				}
 			});
 			setTimeout(function() {
@@ -83,7 +83,7 @@ describe("Advanced API", function() {
 			plugins.done(doneStats);
 			setTimeout(function() {
 				instance.waitUntilValid(function(stats) {
-					should(stats).have.keys('hasErrors', 'hasWarnings');
+					should(stats).have.keys("hasErrors", "hasWarnings");
 					done();
 				});
 			});
@@ -104,7 +104,7 @@ describe("Advanced API", function() {
 					should.strictEqual(invalidationCount, 1);
 					done();
 				} else {
-					done(new Error('`invalid` called before bundle was done'));
+					done(new Error("`invalid` called before bundle was done"));
 				}
 			});
 			setTimeout(function() {

@@ -4,7 +4,7 @@ var fs = require("fs");
 var path = require("path");
 require("mocha-sinon");
 
-var extendedStats = fs.readFileSync(path.join(__dirname, 'fixtures', 'stats.txt'), 'utf8');
+var extendedStats = fs.readFileSync(path.join(__dirname, "fixtures", "stats.txt"), "utf8");
 
 var simpleStats = {
 	hasErrors: function() {
@@ -29,7 +29,7 @@ describe("Reporter", function() {
 	};
 	beforeEach(function() {
 		plugins = {};
-		this.sinon.stub(console, 'log');
+		this.sinon.stub(console, "log");
 	});
 
 	describe("valid/invalid messages", function() {
