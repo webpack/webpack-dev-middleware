@@ -86,7 +86,7 @@ module.exports = function(compiler, options) {
 			var cbs = callbacks;
 			callbacks = [];
 			cbs.forEach(function continueBecauseBundleAvailable(cb) {
-				cb();
+				cb(stats);
 			});
 		});
 
@@ -130,7 +130,7 @@ module.exports = function(compiler, options) {
 
 	// wait for bundle valid
 	function ready(fn, req) {
-		if(state) return fn();
+		if(state) return fn(webpackStats);
 		if(!options.noInfo && !options.quiet)
 			options.log("webpack: wait until bundle finished: " + (req.url || fn.name));
 		callbacks.push(fn);
