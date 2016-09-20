@@ -64,7 +64,9 @@ describe("Advanced API", function() {
 			var instance = middleware(compiler, options);
 			plugins.done(doneStats);
 			setTimeout(function() {
-				instance.waitUntilValid(done);
+				instance.waitUntilValid(function() {
+					done();
+				});
 			});
 		});
 
@@ -73,6 +75,17 @@ describe("Advanced API", function() {
 			plugins.done(doneStats);
 			setTimeout(function() {
 				instance.waitUntilValid();
+			});
+		});
+
+		it("callback should have stats argument", function(done) {
+			var instance = middleware(compiler, options);
+			plugins.done(doneStats);
+			setTimeout(function() {
+				instance.waitUntilValid(function(stats) {
+					should(stats).have.keys('hasErrors', 'hasWarnings');
+					done();
+				});
 			});
 		});
 	});
