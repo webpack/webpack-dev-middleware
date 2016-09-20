@@ -55,6 +55,9 @@ module.exports = function(compiler, options) {
 	if(typeof options.reporter !== "function") options.reporter = defaultReporter;
 	if(typeof options.log !== "function") options.log = console.log.bind(console);
 	if(typeof options.warn !== "function") options.warn = console.warn.bind(console);
+	if(typeof compiler.outputPath === "string" && compiler.outputPath.lastIndexOf("/", 0) !== 0) {
+		throw new Error('`output.path` needs to be an absolute path or "/".');
+	}
 
 	// store our files in memory
 	var fs;

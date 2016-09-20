@@ -26,4 +26,12 @@ describe("FileSystem", function() {
 
 		should.strictEqual(firstFs, secondFs);
 	});
+
+	it("should throw on invalid outputPath config", function() {
+		var compiler = fakeWebpack();
+		compiler.outputPath = "./dist";
+		should.throws(function() {
+			middleware(compiler);
+		}, /output\.path/);
+	});
 });
