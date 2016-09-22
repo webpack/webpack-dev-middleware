@@ -5,6 +5,7 @@
 var MemoryFileSystem = require("memory-fs");
 var mime = require("mime");
 var parseRange = require("range-parser");
+var path = require("path");
 var getFilenameFromUrl = require("./lib/GetFilenameFromUrl");
 var pathJoin = require("./lib/PathJoin");
 
@@ -55,7 +56,7 @@ module.exports = function(compiler, options) {
 	if(typeof options.reporter !== "function") options.reporter = defaultReporter;
 	if(typeof options.log !== "function") options.log = console.log.bind(console);
 	if(typeof options.warn !== "function") options.warn = console.warn.bind(console);
-	if(typeof compiler.outputPath === "string" && compiler.outputPath.lastIndexOf("/", 0) !== 0) {
+	if(typeof compiler.outputPath === "string" && !path.isAbsolute(compiler.outputPath)) {
 		throw new Error("`output.path` needs to be an absolute path or `/`.");
 	}
 
