@@ -1,3 +1,10 @@
+# 1.8.2 (2016-09-23)
+
+- Add a nice error message when `output.path` in the webpack config is relative.
+- Expose stats when using the advanced API ([#127](https://github.com/webpack/webpack-dev-middleware/pull/127)).
+- Make log & warn functions replaceable ([#124](https://github.com/webpack/webpack-dev-middleware/pull/124)).
+- Fix protocol-relative urls with `publicPath` ([#129](https://github.com/webpack/webpack-dev-middleware/pull/129)).
+
 # 1.8.1 (2016-09-18)
 
 - Fix exception thrown when using webpack array config ([#125](https://github.com/webpack/webpack-dev-middleware/issues/125)).
