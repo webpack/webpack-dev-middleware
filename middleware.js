@@ -37,6 +37,9 @@ var defaultReporter = function(reporterOptions) {
 module.exports = function(compiler, options) {
 	if(!options) options = {};
 	if(typeof options.watchOptions === "undefined") options.watchOptions = {};
+	if(typeof options.reporter !== "function") options.reporter = defaultReporter;
+	if(typeof options.log !== "function") options.log = console.log.bind(console);
+	if(typeof options.warn !== "function") options.warn = console.warn.bind(console);
 	if(typeof options.watchDelay !== "undefined") {
 		// TODO remove this in next major version
 		options.warn("options.watchDelay is deprecated: Use 'options.watchOptions.aggregateTimeout' instead");
@@ -53,9 +56,6 @@ module.exports = function(compiler, options) {
 			options.filename = new RegExp("^[\/]{0,1}" + str + "$");
 		}
 	}
-	if(typeof options.reporter !== "function") options.reporter = defaultReporter;
-	if(typeof options.log !== "function") options.log = console.log.bind(console);
-	if(typeof options.warn !== "function") options.warn = console.warn.bind(console);
 	if(typeof compiler.outputPath === "string" && !path.isAbsolute(compiler.outputPath)) {
 		throw new Error("`output.path` needs to be an absolute path or `/`.");
 	}
