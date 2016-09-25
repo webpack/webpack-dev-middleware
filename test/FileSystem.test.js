@@ -34,4 +34,10 @@ describe("FileSystem", function() {
 			middleware(compiler);
 		}, /output\.path/);
 	});
+
+	it("should not throw on valid outputPath config for Windows", function() {
+		var compiler = fakeWebpack();
+		compiler.outputPath = "C:/my/path";
+		middleware(compiler);
+	});
 });
