@@ -4,6 +4,7 @@ The last few releases had a few bugs in them that shouldn't have reached stable.
 
 - Fix for `output.path` check with node < `0.12` ([`38ff513`](https://github.com/webpack/webpack-dev-middleware/commit/38ff513cf6a5e5a909134db0fc6614a1831fbdd1)).
 - Fix for `output.path` check on Windows with node < `5.0` ([`38ff513`](https://github.com/webpack/webpack-dev-middleware/commit/38ff513cf6a5e5a909134db0fc6614a1831fbdd1)).
+- Fix exception when using the deprecated `watchDelay` option ([#131](https://github.com/webpack/webpack-dev-middleware/pull/131)).
 
 # 1.8.2 (2016-09-23)
 
