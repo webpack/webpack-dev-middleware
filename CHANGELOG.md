@@ -1,3 +1,10 @@
+# 1.8.3 (2016-09-26)
+
+The last few releases had a few bugs in them that shouldn't have reached stable. We're working hard on adding enough tests to prevent these kind of failures.
+
+- Fix for `output.path` check with node < `0.12` ([`38ff513`](https://github.com/webpack/webpack-dev-middleware/commit/38ff513cf6a5e5a909134db0fc6614a1831fbdd1)).
+- Fix for `output.path` check on Windows with node < `5.0` ([`38ff513`](https://github.com/webpack/webpack-dev-middleware/commit/38ff513cf6a5e5a909134db0fc6614a1831fbdd1)).
+
 # 1.8.2 (2016-09-23)
 
 - Add a nice error message when `output.path` in the webpack config is relative.
