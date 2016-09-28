@@ -233,7 +233,11 @@ module.exports = function(compiler, options) {
 					}
 				}
 			} catch(e) {
-				return goNext();
+				if(options.pushState) {
+					filename = getFilenameFromUrl(options.publicPath, compiler.outputPath, "/index.html");
+				} else {
+					return goNext();
+				}
 			}
 
 			// server content
