@@ -44,7 +44,7 @@ describe("Server", function() {
 
 		it("GET request to bundle file", function(done) {
 			request(app).get("/public/bundle.js")
-			.expect("Content-Type", "application/javascript")
+			.expect("Content-Type", "application/javascript; charset=UTF-8")
 			.expect("Content-Length", "2780")
 			.expect("Access-Control-Allow-Origin", "*")
 			.expect(200, /console\.log\("Hey\."\)/, done);
@@ -57,7 +57,7 @@ describe("Server", function() {
 
 		it("request to image", function(done) {
 			request(app).get("/public/svg.svg")
-			.expect("Content-Type", "image/svg+xml")
+			.expect("Content-Type", "image/svg+xml; charset=UTF-8")
 			.expect("Content-Length", "4778")
 			.expect("Access-Control-Allow-Origin", "*")
 			.expect(200, done);
@@ -71,13 +71,13 @@ describe("Server", function() {
 
 		it("request to HMR json", function(done) {
 			request(app).get("/public/123a123412.hot-update.json")
-			.expect("Content-Type", "application/json")
+			.expect("Content-Type", "application/json; charset=UTF-8")
 			.expect(200, /\[\"hi\"\]/, done);
 		});
 
 		it("request to directory", function(done) {
 			request(app).get("/public/")
-			.expect("Content-Type", "text/html")
+			.expect("Content-Type", "text/html; charset=UTF-8")
 			.expect("Content-Length", "10")
 			.expect("Access-Control-Allow-Origin", "*")
 			.expect(200, /My\ Index\./, done);
