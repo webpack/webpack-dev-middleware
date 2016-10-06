@@ -5,7 +5,7 @@
 [![test][test]][test-url]
 [![coverage][cover]][cover-url]
 
-**THIS MIDDLEWARE SHOULD ONLY USED FOR DEVELOPMENT!**
+**THIS MIDDLEWARE SHOULD ONLY BE USED FOR DEVELOPMENT!**
 
 **DO NOT USE IT IN PRODUCTION!**
 
