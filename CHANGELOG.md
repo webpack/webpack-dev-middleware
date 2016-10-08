@@ -1,3 +1,7 @@
+# 1.8.4 (2016-10-08)
+
+- Enforce UTF-8 in requests. This fixes a lot of issues with special characters ([#136](https://github.com/webpack/webpack-dev-middleware/pull/136)).
+
 # 1.8.3 (2016-09-26)
 
 The last few releases had a few bugs in them that shouldn't have reached stable. We're working hard on adding enough tests to prevent these kind of failures.
