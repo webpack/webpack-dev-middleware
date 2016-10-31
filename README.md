@@ -125,6 +125,9 @@ This part shows how you might interact with the middleware during runtime:
 	```
 
 ## Server-Side Rendering
+
+**Note: this feature is experimental and may be removed or changed completely in the future.**
+
 In order to develop a server-side rendering application, we need access to the [`stats`](https://github.com/webpack/docs/wiki/node.js-api#stats), which is generated with the latest build.
 
 In the server-side rendering mode, __webpack-dev-middleware__ would sets the `stat` to `res.locals.webpackStats` before invoking the next middleware, where we can render pages and response to clients.
