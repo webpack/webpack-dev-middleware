@@ -21,6 +21,9 @@ module.exports = function(compiler, options) {
 	};
 	var shared = Shared(context);
 
+	if(options.mimeTypes) {
+		mime.define(options.mimeTypes);
+	}
 
 	// The middleware function
 	function webpackDevMiddleware(req, res, next) {
