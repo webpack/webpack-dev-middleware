@@ -153,7 +153,7 @@ describe("Server", function() {
 			var instance = middleware(compiler, {
 				stats: "errors-only",
 				quiet: true,
-				publicPath: "/",
+				publicPath: "/"
 			});
 			app.use(instance);
 			listen = listenShorthand(done);
@@ -161,9 +161,9 @@ describe("Server", function() {
 		after(close);
 
 		it("request to both bundle files", function(done) {
-			request(app).get("/foo.js")
+			request(app).get("/js1/foo.js")
 			.expect(200, function() {
-				request(app).get("/bar.js")
+				request(app).get("/js2/bar.js")
 				.expect(200, done);
 			});
 		});
