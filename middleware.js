@@ -40,9 +40,11 @@ function getFilenameFromUrl(publicPath, compiler, url) {
 	if(Array.isArray(compilers)) {
 		var compilerPublicPath;
 		for(var i = 0; i < compilers.length; i++) {
-			compilerPublicPath = compiler.options && compiler.options.output && compiler.options.output.publicPath;
+			compilerPublicPath = compilers[i].options
+				&& compilers[i].options.output
+				&& compilers[i].options.output.publicPath;
 			if(url.indexOf(compilerPublicPath) === 0) {
-				return _getFilenameFromUrl(compilerPublicPath, compiler.outputPath, url);
+				return _getFilenameFromUrl(compilerPublicPath, compilers[i].outputPath, url);
 			}
 		}
 	}
