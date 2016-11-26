@@ -118,7 +118,7 @@ describe("GetFilenameFromUrl", function() {
 					{ outputPath: "/bar", options: { output: { publicPath: "/css/" } } }
 				],
 				outputPath: "/root",
-				publicPath: "/test",
+				publicPath: "/test/",
 				expected: "/foo/sample.js"
 			}, {
 				url: "/css/sample.css",
@@ -127,7 +127,7 @@ describe("GetFilenameFromUrl", function() {
 					{ outputPath: "/bar", options: { output: { publicPath: "/css/" } } }
 				],
 				outputPath: "/root",
-				publicPath: "/test",
+				publicPath: "/test/",
 				expected: "/bar/sample.css"
 			}, {
 				url: "/other/sample.txt",
@@ -136,7 +136,7 @@ describe("GetFilenameFromUrl", function() {
 					{ outputPath: "/bar", options: { output: { publicPath: "/css/" } } }
 				],
 				outputPath: "/root",
-				publicPath: "/test",
+				publicPath: "/test/",
 				expected: false
 			}, {
 				url: "/test/sample.txt",
