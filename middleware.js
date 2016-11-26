@@ -6,7 +6,7 @@ var MemoryFileSystem = require("memory-fs");
 var mime = require("mime");
 var parseRange = require("range-parser");
 var pathIsAbsolute = require("path-is-absolute");
-var getFilenameFromUrl = require("./lib/GetFilenameFromUrl");
+var _getFilenameFromUrl = require("./lib/GetFilenameFromUrl");
 var pathJoin = require("./lib/PathJoin");
 
 var HASH_REGEXP = /[0-9a-f]{10,}/;
@@ -32,6 +32,22 @@ var defaultReporter = function(reporterOptions) {
 		options.log("webpack: bundle is now INVALID.");
 	}
 };
+
+// support for multi-compiler configuration
+// see: https://github.com/webpack/webpack-dev-server/issues/641
+function getFilenameFromUrl(publicPath, compiler, url) {
+	var compilers = compiler && compiler.compilers;
+	if(Array.isArray(compilers)) {
+		var compilerPublicPath;
+		for(var i = 0; i < compilers.length; i++) {
+			compilerPublicPath = compiler.options && compiler.options.output && compiler.options.output.publicPath;
+			if(url.indexOf(compilerPublicPath) === 0) {
+				return _getFilenameFromUrl(compilerPublicPath, compiler.outputPath, url);
+			}
+		}
+	}
+	return _getFilenameFromUrl(publicPath, compiler.outputPath, url);
+}
 
 // constructor for the middleware
 module.exports = function(compiler, options) {
@@ -202,7 +218,7 @@ module.exports = function(compiler, options) {
 			return goNext();
 		}
 
-		var filename = getFilenameFromUrl(options.publicPath, compiler.outputPath, req.url);
+		var filename = getFilenameFromUrl(options.publicPath, compiler, req.url);
 		if(filename === false) return goNext();
 
 		// in lazy mode, rebuild on bundle request
@@ -254,7 +270,7 @@ module.exports = function(compiler, options) {
 		}
 	}
 
-	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl.bind(this, options.publicPath, compiler.outputPath);
+	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl.bind(this, options.publicPath, compiler);
 
 	webpackDevMiddleware.waitUntilValid = function(callback) {
 		callback = callback || function() {};
