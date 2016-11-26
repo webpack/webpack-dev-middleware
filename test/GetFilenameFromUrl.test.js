@@ -111,6 +111,42 @@ describe("GetFilenameFromUrl", function() {
 				outputPath: "/root",
 				publicPath: "/",
 				expected: "/root/other/sample.txt"
+			}, {
+				url: "/js/sample.js",
+				compilers: [
+					{ outputPath: "/foo", options: { output: { publicPath: "/js/" } } },
+					{ outputPath: "/bar", options: { output: { publicPath: "/css/" } } }
+				],
+				outputPath: "/root",
+				publicPath: "/test",
+				expected: "/foo/sample.js"
+			}, {
+				url: "/css/sample.css",
+				compilers: [
+					{ outputPath: "/foo", options: { output: { publicPath: "/js/" } } },
+					{ outputPath: "/bar", options: { output: { publicPath: "/css/" } } }
+				],
+				outputPath: "/root",
+				publicPath: "/test",
+				expected: "/bar/sample.css"
+			}, {
+				url: "/other/sample.txt",
+				compilers: [
+					{ outputPath: "/foo", options: { output: { publicPath: "/js/" } } },
+					{ outputPath: "/bar", options: { output: { publicPath: "/css/" } } }
+				],
+				outputPath: "/root",
+				publicPath: "/test",
+				expected: false
+			}, {
+				url: "/test/sample.txt",
+				compilers: [
+					{ outputPath: "/foo", options: { output: { publicPath: "/js/" } } },
+					{ outputPath: "/bar", options: { output: { publicPath: "/css/" } } }
+				],
+				outputPath: "/root",
+				publicPath: "/test/",
+				expected: "/root/sample.txt"
 			}
 		];
 		results.forEach(testUrl);
