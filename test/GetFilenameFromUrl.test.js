@@ -2,7 +2,7 @@ var should = require("should");
 var getFilenameFromUrl = require("../lib/GetFilenameFromUrl");
 
 function testUrl(options) {
-	var url = getFilenameFromUrl(options.publicPath, options.outputPath, options.url);
+	var url = getFilenameFromUrl(options.publicPath, options, options.url);
 	should.strictEqual(url, options.expected);
 }
 
