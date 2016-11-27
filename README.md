@@ -76,7 +76,7 @@ app.use(webpackMiddleware(webpack({
 
 	stats: {
 		colors: true
-	}
+	},
 	// options for formating the statistics
 
 	reporter: null,
