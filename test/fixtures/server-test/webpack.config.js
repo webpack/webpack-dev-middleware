@@ -9,7 +9,7 @@ module.exports = {
 		loaders: [
 			{
 				test: /\.(svg|html)$/,
-				loader: "file",
+				loader: "file-loader",
 				query: { name: "[name].[ext]" }
 			}
 		]
