@@ -47,7 +47,15 @@ module.exports = function(compiler, options) {
 					var stat = context.fs.statSync(filename);
 					if(!stat.isFile()) {
 						if(stat.isDirectory()) {
-							filename = pathJoin(filename, context.options.index || "index.html");
+							var index = context.options.index;
+
+							if(index === undefined || index === true) {
+								index = "index.html";
+							} else if(!index) {
+								throw "next";
+							}
+
+							filename = pathJoin(filename, index);
 							stat = context.fs.statSync(filename);
 							if(!stat.isFile()) throw "next";
 						} else {
