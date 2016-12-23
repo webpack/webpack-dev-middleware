@@ -24,6 +24,15 @@ var errorStats = {
 	}
 };
 
+var warningStats = {
+	hasErrors: function() {
+		return false;
+	},
+	hasWarnings: function() {
+		return true;
+	}
+};
+
 describe("Reporter", function() {
 	var plugins = {};
 	var compiler = {
@@ -58,8 +67,17 @@ describe("Reporter", function() {
 
 			plugins.done(errorStats);
 			setTimeout(function() {
-				should.strictEqual(console.log.callCount, 2);
 				should.strictEqual(console.log.calledWith("webpack: Failed to compile."), true);
+				done();
+			});
+		});
+
+		it("should show compiled with warnings message", function(done) {
+			middleware(compiler);
+
+			plugins.done(warningStats);
+			setTimeout(function() {
+				should.strictEqual(console.log.calledWith("webpack: Compiled with warnings."), true);
 				done();
 			});
 		});
