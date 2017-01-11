@@ -1,15 +1,17 @@
-# webpack-dev-middleware
-
 [![npm][npm]][npm-url]
+[![node][node]][node-url]
 [![deps][deps]][deps-url]
-[![test][test]][test-url]
+[![tests][tests]][tests-url]
 [![coverage][cover]][cover-url]
+[![chat][chat]][chat-url]
 
-**THIS MIDDLEWARE SHOULD ONLY BE USED FOR DEVELOPMENT!**
-
-**DO NOT USE IT IN PRODUCTION!**
-
-## What is it?
+<div align="center">
+  <a href="https://github.com/webpack/webpack">
+    <img width="200" height="200"
+      src="https://webpack.js.org/assets/icon-square-big.svg">
+  </a>
+  <h1>Webpack Dev Middleware</h1>
+</div>
 
 It's a simple wrapper middleware for webpack. It serves the files emitted from webpack over a connect server.
 
@@ -19,13 +21,13 @@ It has a few advantages over bundling it as files:
 * If files changed in watch mode, the middleware no longer serves the old bundle, but delays requests until the compiling has finished. You don't have to wait before refreshing the page after a file modification.
 * I may add some specific optimization in future releases.
 
-## Installation
+<h2 align="center">Install</h2>
 
 ```
 npm install webpack-dev-middleware --save-dev
 ```
 
-## Usage
+<h2 align="center">Usage</h2>
 
 ``` javascript
 var webpackMiddleware = require("webpack-dev-middleware");
@@ -168,14 +170,50 @@ app.use((req, res) => {
 })
 ```
 
+<h2 align="center">Contributing</h2>
+
+Don't hesitate to create a pull request. Every contribution is appreciated. In development you can start the tests by calling `npm test`.
+
+<h2 align="center">Maintainers</h2>
+
+<table>
+  <tbody>
+    <tr>
+      <td align="center">
+        <img width="150 height="150"
+        src="https://avatars.githubusercontent.com/sokra?v=3">
+        <br />
+        <a href="https://github.com/">Tobias Koppers</a>
+      </td>
+      <td align="center">
+        <img width="150 height="150"
+        src="https://avatars.githubusercontent.com/SpaceK33z?v=3">
+        <br />
+        <a href="https://github.com/">Kees Kluskens</a>
+      </td>
+    <tr>
+  <tbody>
+</table>
+
+
+<h2 align="center">LICENSE</h2>
+
+#### [MIT](./LICENSE)
+
 [npm]: https://img.shields.io/npm/v/webpack-dev-middleware.svg
 [npm-url]: https://npmjs.com/package/webpack-dev-middleware
+
+[node]: https://img.shields.io/node/v/webpack-dev-middleware.svg
+[node-url]: https://nodejs.org
 
 [deps]: https://david-dm.org/webpack/webpack-dev-middleware.svg
 [deps-url]: https://david-dm.org/webpack/webpack-dev-middleware
 
-[test]: http://img.shields.io/travis/webpack/webpack-dev-middleware.svg
-[test-url]: https://travis-ci.org/webpack/webpack-dev-middleware
+[tests]: http://img.shields.io/travis/webpack/webpack-dev-middleware.svg
+[tests-url]: https://travis-ci.org/webpack/webpack-dev-middleware
 
 [cover]: https://codecov.io/gh/webpack/webpack-dev-middleware/branch/master/graph/badge.svg
 [cover-url]: https://codecov.io/gh/webpack/webpack-dev-middleware
+
+[chat]: https://badges.gitter.im/webpack/webpack.svg
+[chat-url]: https://gitter.im/webpack/webpack
