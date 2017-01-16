@@ -10,10 +10,10 @@
     <img width="200" height="200"
       src="https://webpack.js.org/assets/icon-square-big.svg">
   </a>
-  <h1>Webpack Dev Middleware</h1>
+  <h1>webpack Dev Middleware</h1>
 </div>
 
-It's a simple wrapper middleware for webpack. It serves the files emitted from webpack over a connect server.
+It's a simple wrapper middleware for webpack. It serves the files emitted from webpack over a connect server. This should be used for **development only**.
 
 It has a few advantages over bundling it as files:
 
@@ -136,7 +136,7 @@ In the server-side rendering mode, __webpack-dev-middleware__ would sets the `st
 
 Notice that requests for bundle files would still be responded by __webpack-dev-middleware__ and all requests will be pending until the building process is finished in the server-side rendering mode.
 
-```JavaScript
+```javascript
 app.use(webpackMiddleware(compiler, { serverSideRender: true })
 
 // The following middleware would not be invoked until the latest build is finished.
@@ -179,12 +179,6 @@ Don't hesitate to create a pull request. Every contribution is appreciated. In d
 <table>
   <tbody>
     <tr>
-      <td align="center">
-        <img width="150 height="150"
-        src="https://avatars.githubusercontent.com/sokra?v=3">
-        <br />
-        <a href="https://github.com/">Tobias Koppers</a>
-      </td>
       <td align="center">
         <img width="150 height="150"
         src="https://avatars.githubusercontent.com/SpaceK33z?v=3">
