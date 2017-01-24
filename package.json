@@ -3,6 +3,12 @@
   "version": "1.9.0",
   "author": "Tobias Koppers @sokra",
   "description": "Offers a dev middleware for webpack, which arguments a live bundle to a directory",
+  "keywords": [
+  "html",
+  "webpack",
+  "Advance-API",
+  "Server-Side",
+   ],
   "peerDependencies": {
     "webpack": "1 || ^2.1.0-beta || ^2.2.0-rc.0"
   },
