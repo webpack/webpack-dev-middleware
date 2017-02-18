@@ -15,6 +15,11 @@ describe("GetFilenameFromUrl", function() {
 				publicPath: "/",
 				expected: "/foo.js"
 			}, {
+				url: "/f%C3%B6%C3%B6.js", // Express encodes the URI component, so we do the same
+				outputPath: "/",
+				publicPath: "/",
+				expected: "/föö.js"
+			}, {
 				url: "/0.19dc5d417382d73dd190.hot-update.js",
 				outputPath: "/",
 				publicPath: "http://localhost:8080/",
