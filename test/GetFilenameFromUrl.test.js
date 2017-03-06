@@ -89,7 +89,12 @@ describe("GetFilenameFromUrl", function() {
 				outputPath: "/",
 				publicPath: "//test.domain/protocol/relative/",
 				expected: "/sample.js"
-			}
+			}, {
+				url: "/pathname%20with%20spaces.js",
+				outputPath: "/",
+				publicPath: "/",
+				expected: "/pathname with spaces.js"
+			},
 		];
 		results.forEach(testUrl);
 	});
