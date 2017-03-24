@@ -183,7 +183,7 @@ Don't hesitate to create a pull request. Every contribution is appreciated. In d
         <img width="150 height="150"
         src="https://avatars.githubusercontent.com/SpaceK33z?v=3">
         <br />
-        <a href="https://github.com/">Kees Kluskens</a>
+        <a href="https://github.com/SpaceK33z">Kees Kluskens</a>
       </td>
     <tr>
   <tbody>
