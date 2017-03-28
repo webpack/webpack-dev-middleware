@@ -39,41 +39,43 @@ module.exports = function(compiler, options) {
 		var filename = getFilenameFromUrl(context.options.publicPath, context.compiler.outputPath, req.url);
 		if(filename === false) return goNext();
 
+		return new Promise(function(resolve) {
+			shared.handleRequest(filename, processRequest, req);
+			function processRequest() {
+				try {
+					var stat = context.fs.statSync(filename);
+					if(!stat.isFile()) {
+						if(stat.isDirectory()) {
+							filename = pathJoin(filename, context.options.index || "index.html");
+							stat = context.fs.statSync(filename);
+							if(!stat.isFile()) throw "next";
+						} else {
+							throw "next";
+						}
+					}
+				} catch(e) {
+					return resolve(goNext());
+				}
 
-		shared.handleRequest(filename, processRequest, req);
-
-		function processRequest() {
-			try {
-				var stat = context.fs.statSync(filename);
-				if(!stat.isFile()) {
-					if(stat.isDirectory()) {
-						filename = pathJoin(filename, context.options.index || "index.html");
-						stat = context.fs.statSync(filename);
-						if(!stat.isFile()) throw "next";
-					} else {
-						throw "next";
+				// server content
+				var content = context.fs.readFileSync(filename);
+				content = shared.handleRangeHeaders(content, req, res);
+				res.setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
+				res.setHeader("Content-Type", mime.lookup(filename) + "; charset=UTF-8");
+				res.setHeader("Content-Length", content.length);
+				if(context.options.headers) {
+					for(var name in context.options.headers) {
+						res.setHeader(name, context.options.headers[name]);
 					}
 				}
-			} catch(e) {
-				return goNext();
+				// Express automatically sets the statusCode to 200, but not all servers do (Koa).
+				res.statusCode = res.statusCode || 200;
+				if(res.send) res.send(content);
+				else res.end(content);
+				resolve();
 			}
+		});
 
-			// server content
-			var content = context.fs.readFileSync(filename);
-			content = shared.handleRangeHeaders(content, req, res);
-			res.setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
-			res.setHeader("Content-Type", mime.lookup(filename) + "; charset=UTF-8");
-			res.setHeader("Content-Length", content.length);
-			if(context.options.headers) {
-				for(var name in context.options.headers) {
-					res.setHeader(name, context.options.headers[name]);
-				}
-			}
-			// Express automatically sets the statusCode to 200, but not all servers do (Koa).
-			res.statusCode = res.statusCode || 200;
-			if(res.send) res.send(content);
-			else res.end(content);
-		}
 	}
 
 	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl.bind(this, context.options.publicPath, context.compiler.outputPath);
