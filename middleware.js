@@ -1,7 +1,7 @@
 /*
- MIT License http://www.opensource.org/licenses/mit-license.php
- Author Tobias Koppers @sokra
- */
+   MIT License http://www.opensource.org/licenses/mit-license.php
+   Author Tobias Koppers @sokra
+   */
 var mime = require("mime");
 var getFilenameFromUrl = require("./lib/GetFilenameFromUrl");
 var Shared = require("./lib/Shared");
@@ -22,7 +22,7 @@ module.exports = function(compiler, options) {
 	var shared = Shared(context);
 
 
-	// The middleware function
+  // The middleware function
 	function webpackDevMiddleware(req, res, next) {
 		function goNext() {
 			if(!context.options.serverSideRender) return next();
@@ -40,6 +40,9 @@ module.exports = function(compiler, options) {
 		if(filename === false) return goNext();
 
 
+		if(!context.fs.existsSync(filename) && context.options.fallBack) {
+			filename = getFilenameFromUrl(context.options.publicPath, context.compiler.outputPath,context.options.publicPath);
+		}
 		shared.handleRequest(filename, processRequest, req);
 
 		function processRequest() {
@@ -58,7 +61,7 @@ module.exports = function(compiler, options) {
 				return goNext();
 			}
 
-			// server content
+      // server content
 			var content = context.fs.readFileSync(filename);
 			content = shared.handleRangeHeaders(content, req, res);
 			res.setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
@@ -69,7 +72,8 @@ module.exports = function(compiler, options) {
 					res.setHeader(name, context.options.headers[name]);
 				}
 			}
-
+      // Express automatically sets the statusCode to 200, but not all servers do (Koa).
+			res.statusCode = res.statusCode || 200;
 			if(res.send) res.send(content);
 			else res.end(content);
 		}
