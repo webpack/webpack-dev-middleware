@@ -48,36 +48,46 @@ describe("Reporter", function() {
 	beforeEach(function() {
 		plugins = {};
 		this.sinon.stub(console, "log");
+		this.sinon.stub(console, "warn");
+		this.sinon.stub(console, "error");
 	});
 
-	describe("valid/invalid messages", function() {
-		it("should show compiled successfully message", function(done) {
+	describe("compilation messages", function() {
+		it("should show 'compiled successfully' message", function(done) {
 			middleware(compiler);
 
 			plugins.done(simpleStats);
 			setTimeout(function() {
 				should.strictEqual(console.log.callCount, 2);
+				should.strictEqual(console.warn.callCount, 0);
+				should.strictEqual(console.error.callCount, 0);
 				should.strictEqual(console.log.calledWith("webpack: Compiled successfully."), true);
 				done();
 			});
 		});
 
-		it("should show compiled successfully message", function(done) {
+		it("should show 'Failed to compile' message in console.error", function(done) {
 			middleware(compiler);
 
 			plugins.done(errorStats);
 			setTimeout(function() {
-				should.strictEqual(console.log.calledWith("webpack: Failed to compile."), true);
+				should.strictEqual(console.log.callCount, 0);
+				should.strictEqual(console.warn.callCount, 0);
+				should.strictEqual(console.error.callCount, 2);
+				should.strictEqual(console.error.calledWith("webpack: Failed to compile."), true);
 				done();
 			});
 		});
 
-		it("should show compiled with warnings message", function(done) {
+		it("should show 'Compiled with warnings' message in console.warn", function(done) {
 			middleware(compiler);
 
 			plugins.done(warningStats);
 			setTimeout(function() {
-				should.strictEqual(console.log.calledWith("webpack: Compiled with warnings."), true);
+				should.strictEqual(console.log.callCount, 0);
+				should.strictEqual(console.warn.callCount, 2);
+				should.strictEqual(console.error.callCount, 0);
+				should.strictEqual(console.warn.calledWith("webpack: Compiled with warnings."), true);
 				done();
 			});
 		});
