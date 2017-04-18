@@ -75,7 +75,6 @@ module.exports = function(compiler, options) {
 				resolve();
 			}
 		});
-
 	}
 
 	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl.bind(this, context.options.publicPath, context.compiler.outputPath);
