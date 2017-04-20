@@ -1,6 +1,6 @@
 {
   "name": "webpack-dev-middleware",
-  "version": "1.10.2",
+  "version": "1.10.1",
   "author": "Tobias Koppers @sokra",
   "description": "Offers a dev middleware for webpack, which arguments a live bundle to a directory",
   "peerDependencies": {

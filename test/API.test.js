@@ -1,6 +1,7 @@
+require("mocha-sinon");
+
 var middleware = require("../middleware");
 var should = require("should");
-require("mocha-sinon");
 
 var options = {
 	quiet: true,

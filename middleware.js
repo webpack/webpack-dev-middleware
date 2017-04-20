@@ -22,7 +22,7 @@ module.exports = function(compiler, options) {
 	var shared = Shared(context);
 
 
-  // The middleware function
+        // The middleware function
 	function webpackDevMiddleware(req, res, next) {
 		function goNext() {
 			if(!context.options.serverSideRender) return next();
@@ -61,7 +61,7 @@ module.exports = function(compiler, options) {
 				return goNext();
 			}
 
-      // server content
+                        // server content
 			var content = context.fs.readFileSync(filename);
 			content = shared.handleRangeHeaders(content, req, res);
 			res.setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
@@ -72,7 +72,7 @@ module.exports = function(compiler, options) {
 					res.setHeader(name, context.options.headers[name]);
 				}
 			}
-      // Express automatically sets the statusCode to 200, but not all servers do (Koa).
+                        // Express automatically sets the statusCode to 200, but not all servers do (Koa).
 			res.statusCode = res.statusCode || 200;
 			if(res.send) res.send(content);
 			else res.end(content);
