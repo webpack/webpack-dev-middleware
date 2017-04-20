@@ -153,7 +153,7 @@ describe("Server", function() {
 			var instance = middleware(compiler, {
 				stats: "errors-only",
 				quiet: true,
-				publicPath: "/",
+				publicPath: "/"
 			});
 			app.use(instance);
 			listen = listenShorthand(done);

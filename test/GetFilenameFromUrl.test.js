@@ -33,47 +33,47 @@ describe("GetFilenameFromUrl", function() {
 				url: "/test.html?foo=bar",
 				outputPath: "/",
 				publicPath: "/",
-				expected: "/test.html",
+				expected: "/test.html"
 			}, {
 				url: "/a.js",
 				outputPath: "/dist",
 				publicPath: "/",
-				expected: "/dist/a.js",
+				expected: "/dist/a.js"
 			}, {
 				url: "/b.js",
 				outputPath: "/",
 				publicPath: undefined,
-				expected: "/b.js",
+				expected: "/b.js"
 			}, {
 				url: "/c.js",
 				outputPath: undefined,
 				publicPath: undefined,
-				expected: "/c.js",
+				expected: "/c.js"
 			}, {
 				url: "/more/complex/path.js",
 				outputPath: "/a",
 				publicPath: "/",
-				expected: "/a/more/complex/path.js",
+				expected: "/a/more/complex/path.js"
 			}, {
 				url: "/more/complex/path.js",
 				outputPath: "/a",
 				publicPath: "/complex",
-				expected: false,
+				expected: false
 			}, {
 				url: "c.js",
 				outputPath: "/dist",
 				publicPath: "/",
-				expected: false, // publicPath is not in url, so it should fail
+				expected: false // publicPath is not in url, so it should fail
 			}, {
 				url: "/bar/",
 				outputPath: "/foo",
 				publicPath: "/bar/",
-				expected: "/foo",
+				expected: "/foo"
 			}, {
 				url: "/bar/",
 				outputPath: "/",
 				publicPath: "http://localhost/foo/",
-				expected: false,
+				expected: false
 			}, {
 				url: "http://test.domain/test/sample.js",
 				outputPath: "/",
