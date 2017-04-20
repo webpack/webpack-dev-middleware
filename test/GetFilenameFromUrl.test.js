@@ -2,7 +2,7 @@ var should = require("should");
 var getFilenameFromUrl = require("../lib/GetFilenameFromUrl");
 
 function testUrl(options) {
-	var url = getFilenameFromUrl(options.publicPath, options.outputPath, options.url);
+	var url = getFilenameFromUrl(options.publicPath, options, options.url);
 	should.strictEqual(url, options.expected);
 }
 
@@ -94,7 +94,70 @@ describe("GetFilenameFromUrl", function() {
 				outputPath: "/",
 				publicPath: "/",
 				expected: "/pathname with spaces.js"
-			},
+			}, {
+				url: "/js/sample.js",
+				compilers: [
+					{ outputPath: "/foo", options: { output: { publicPath: "/js/" } } },
+					{ outputPath: "/bar", options: { output: { publicPath: "/css/" } } }
+				],
+				outputPath: "/root",
+				publicPath: "/",
+				expected: "/foo/sample.js"
+			}, {
+				url: "/css/sample.css",
+				compilers: [
+					{ outputPath: "/foo", options: { output: { publicPath: "/js/" } } },
+					{ outputPath: "/bar", options: { output: { publicPath: "/css/" } } }
+				],
+				outputPath: "/root",
+				publicPath: "/",
+				expected: "/bar/sample.css"
+			}, {
+				url: "/other/sample.txt",
+				compilers: [
+					{ outputPath: "/foo", options: { output: { publicPath: "/js/" } } },
+					{ outputPath: "/bar", options: { output: { publicPath: "/css/" } } }
+				],
+				outputPath: "/root",
+				publicPath: "/",
+				expected: "/root/other/sample.txt"
+			}, {
+				url: "/js/sample.js",
+				compilers: [
+					{ outputPath: "/foo", options: { output: { publicPath: "/js/" } } },
+					{ outputPath: "/bar", options: { output: { publicPath: "/css/" } } }
+				],
+				outputPath: "/root",
+				publicPath: "/test/",
+				expected: "/foo/sample.js"
+			}, {
+				url: "/css/sample.css",
+				compilers: [
+					{ outputPath: "/foo", options: { output: { publicPath: "/js/" } } },
+					{ outputPath: "/bar", options: { output: { publicPath: "/css/" } } }
+				],
+				outputPath: "/root",
+				publicPath: "/test/",
+				expected: "/bar/sample.css"
+			}, {
+				url: "/other/sample.txt",
+				compilers: [
+					{ outputPath: "/foo", options: { output: { publicPath: "/js/" } } },
+					{ outputPath: "/bar", options: { output: { publicPath: "/css/" } } }
+				],
+				outputPath: "/root",
+				publicPath: "/test/",
+				expected: false
+			}, {
+				url: "/test/sample.txt",
+				compilers: [
+					{ outputPath: "/foo", options: { output: { publicPath: "/js/" } } },
+					{ outputPath: "/bar", options: { output: { publicPath: "/css/" } } }
+				],
+				outputPath: "/root",
+				publicPath: "/test/",
+				expected: "/root/sample.txt"
+			}
 		];
 		results.forEach(testUrl);
 	});

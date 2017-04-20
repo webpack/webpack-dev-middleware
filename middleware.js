@@ -36,7 +36,7 @@ module.exports = function(compiler, options) {
 			return goNext();
 		}
 
-		var filename = getFilenameFromUrl(context.options.publicPath, context.compiler.outputPath, req.url);
+		var filename = getFilenameFromUrl(context.options.publicPath, context.compiler, req.url);
 		if(filename === false) return goNext();
 
 
@@ -75,7 +75,7 @@ module.exports = function(compiler, options) {
 		}
 	}
 
-	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl.bind(this, context.options.publicPath, context.compiler.outputPath);
+	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl.bind(this, context.options.publicPath, context.compiler);
 	webpackDevMiddleware.waitUntilValid = shared.waitUntilValid;
 	webpackDevMiddleware.invalidate = shared.invalidate;
 	webpackDevMiddleware.close = shared.close;
