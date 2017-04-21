@@ -146,6 +146,32 @@ describe("Server", function() {
 		});
 	});
 
+	describe("custom mimeTypes", function() {
+		before(function(done) {
+			app = express();
+			var compiler = webpack(webpackConfig);
+			var instance = middleware(compiler, {
+				stats: "errors-only",
+				quiet: true,
+				index: "Index.phtml",
+				mimeTypes: {
+					"text/html": ["phtml"]
+				}
+			});
+			app.use(instance);
+			listen = listenShorthand(done);
+			instance.fileSystem.writeFileSync("/Index.phtml", "welcome");
+		});
+		after(close);
+
+		it("request to Index.phtml", function(done) {
+			request(app).get("/")
+				.expect("welcome")
+				.expect("Content-Type", /text\/html/)
+				.expect(200, done);
+		});
+	});
+
 	describe("MultiCompiler", function() {
 		before(function(done) {
 			app = express();
