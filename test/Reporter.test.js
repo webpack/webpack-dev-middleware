@@ -15,6 +15,24 @@ var simpleStats = {
 	}
 };
 
+var errorStats = {
+	hasErrors: function() {
+		return true;
+	},
+	hasWarnings: function() {
+		return false;
+	}
+};
+
+var warningStats = {
+	hasErrors: function() {
+		return false;
+	},
+	hasWarnings: function() {
+		return true;
+	}
+};
+
 describe("Reporter", function() {
 	var plugins = {};
 	var compiler = {
@@ -33,13 +51,33 @@ describe("Reporter", function() {
 	});
 
 	describe("valid/invalid messages", function() {
-		it("should show valid message", function(done) {
+		it("should show compiled successfully message", function(done) {
 			middleware(compiler);
 
 			plugins.done(simpleStats);
 			setTimeout(function() {
 				should.strictEqual(console.log.callCount, 2);
-				should.strictEqual(console.log.calledWith("webpack: bundle is now VALID."), true);
+				should.strictEqual(console.log.calledWith("webpack: Compiled successfully."), true);
+				done();
+			});
+		});
+
+		it("should show compiled successfully message", function(done) {
+			middleware(compiler);
+
+			plugins.done(errorStats);
+			setTimeout(function() {
+				should.strictEqual(console.log.calledWith("webpack: Failed to compile."), true);
+				done();
+			});
+		});
+
+		it("should show compiled with warnings message", function(done) {
+			middleware(compiler);
+
+			plugins.done(warningStats);
+			setTimeout(function() {
+				should.strictEqual(console.log.calledWith("webpack: Compiled with warnings."), true);
 				done();
 			});
 		});
@@ -70,7 +108,7 @@ describe("Reporter", function() {
 			plugins.invalid();
 			setTimeout(function() {
 				should.strictEqual(console.log.callCount, 1);
-				should.strictEqual(console.log.calledWith("webpack: bundle is now INVALID."), true);
+				should.strictEqual(console.log.calledWith("webpack: Compiling..."), true);
 				done();
 			});
 		});

@@ -1,5 +1,6 @@
 var should = require("should");
 var middleware = require("../middleware");
+require("mocha-sinon");
 
 var doneStats = {
 	hasErrors: function() {
@@ -30,6 +31,7 @@ describe("Lazy mode", function() {
 	describe("builds", function() {
 		var req = { method: "GET", url: "/bundle.js" };
 		beforeEach(function() {
+			this.sinon.stub(console, "error");
 			instance = middleware(compiler, { lazy: true, quiet: true });
 		});
 		it("should trigger build", function(done) {
@@ -54,11 +56,13 @@ describe("Lazy mode", function() {
 			});
 		});
 
-		it("should pass through compiler error", function() {
-			compiler.run.callsArgWith(0, new Error("MyCompilerError"));
-			should.throws(function() {
-				instance(req, res, next);
-			}, "MyCompilerError");
+		it("should pass through compiler error", function(done) {
+			var error = new Error("MyCompilerError");
+			compiler.run.callsArgWith(0, error);
+			instance(req, res, next);
+			should.strictEqual(console.error.callCount, 1);
+			should.strictEqual(console.error.calledWith(error.stack), true);
+			done();
 		});
 	});
 
