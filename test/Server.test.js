@@ -46,7 +46,6 @@ describe("Server", function() {
 			request(app).get("/public/bundle.js")
 			.expect("Content-Type", "application/javascript; charset=UTF-8")
 			.expect("Content-Length", "2985")
-			.expect("Access-Control-Allow-Origin", "*")
 			.expect(200, /console\.log\("Hey\."\)/, done);
 		});
 
@@ -59,7 +58,6 @@ describe("Server", function() {
 			request(app).get("/public/svg.svg")
 			.expect("Content-Type", "image/svg+xml; charset=UTF-8")
 			.expect("Content-Length", "4778")
-			.expect("Access-Control-Allow-Origin", "*")
 			.expect(200, done);
 		});
 
@@ -79,7 +77,6 @@ describe("Server", function() {
 			request(app).get("/public/")
 			.expect("Content-Type", "text/html; charset=UTF-8")
 			.expect("Content-Length", "10")
-			.expect("Access-Control-Allow-Origin", "*")
 			.expect(200, /My\ Index\./, done);
 		});
 
