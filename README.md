@@ -13,6 +13,8 @@
   <h1>webpack Dev Middleware</h1>
 </div>
 
+**NOTE: This is a temporary package that adds support for multiple compilers with a pending PR that likely will be merged soon: https://github.com/webpack/webpack-dev-middleware/pull/187 ...don't sweat it.**
+
 It's a simple wrapper middleware for webpack. It serves the files emitted from webpack over a connect server. This should be used for **development only**.
 
 It has a few advantages over bundling it as files:
