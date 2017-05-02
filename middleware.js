@@ -1,7 +1,7 @@
 /*
-   MIT License http://www.opensource.org/licenses/mit-license.php
-   Author Tobias Koppers @sokra
-   */
+ MIT License http://www.opensource.org/licenses/mit-license.php
+ Author Tobias Koppers @sokra
+ */
 var mime = require("mime");
 var getFilenameFromUrl = require("./lib/GetFilenameFromUrl");
 var Shared = require("./lib/Shared");
@@ -22,7 +22,7 @@ module.exports = function(compiler, options) {
 	var shared = Shared(context);
 
 
-        // The middleware function
+	// The middleware function
 	function webpackDevMiddleware(req, res, next) {
 		function goNext() {
 			if(!context.options.serverSideRender) return next();
@@ -61,7 +61,7 @@ module.exports = function(compiler, options) {
 				return goNext();
 			}
 
-                        // server content
+			// server content
 			var content = context.fs.readFileSync(filename);
 			content = shared.handleRangeHeaders(content, req, res);
 			res.setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
