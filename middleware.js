@@ -36,7 +36,7 @@ module.exports = function(compiler, options) {
 			return goNext();
 		}
 
-		var filename = getFilenameFromUrl(context.options.publicPath, context.compiler.outputPath, req.url);
+		var filename = getFilenameFromUrl(context.options.publicPath, context.compiler, req.url);
 		if(filename === false) return goNext();
 
 		return new Promise(function(resolve) {
@@ -57,16 +57,14 @@ module.exports = function(compiler, options) {
 					return resolve(goNext());
 				}
 
-				// server content
-				var content = context.fs.readFileSync(filename);
-				content = shared.handleRangeHeaders(content, req, res);
-				res.setHeader("Access-Control-Allow-Origin", "*"); // To support XHR, etc.
-				res.setHeader("Content-Type", mime.lookup(filename) + "; charset=UTF-8");
-				res.setHeader("Content-Length", content.length);
-				if(context.options.headers) {
-					for(var name in context.options.headers) {
-						res.setHeader(name, context.options.headers[name]);
-					}
+			// server content
+			var content = context.fs.readFileSync(filename);
+			content = shared.handleRangeHeaders(content, req, res);
+			res.setHeader("Content-Type", mime.lookup(filename) + "; charset=UTF-8");
+			res.setHeader("Content-Length", content.length);
+			if(context.options.headers) {
+				for(var name in context.options.headers) {
+					res.setHeader(name, context.options.headers[name]);
 				}
 				// Express automatically sets the statusCode to 200, but not all servers do (Koa).
 				res.statusCode = res.statusCode || 200;
@@ -77,7 +75,7 @@ module.exports = function(compiler, options) {
 		});
 	}
 
-	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl.bind(this, context.options.publicPath, context.compiler.outputPath);
+	webpackDevMiddleware.getFilenameFromUrl = getFilenameFromUrl.bind(this, context.options.publicPath, context.compiler);
 	webpackDevMiddleware.waitUntilValid = shared.waitUntilValid;
 	webpackDevMiddleware.invalidate = shared.invalidate;
 	webpackDevMiddleware.close = shared.close;
