@@ -26,7 +26,7 @@ module.exports = function(compiler, options) {
 	function webpackDevMiddleware(req, res, next) {
 		function goNext() {
 			if(!context.options.serverSideRender) return next();
-			return new Promise((resolve) => {
+			return new Promise(function (resolve) {
 				shared.ready(function() {
 					res.locals.webpackStats = context.webpackStats;
 					resolve(next());
