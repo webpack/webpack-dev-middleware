@@ -26,10 +26,12 @@ module.exports = function(compiler, options) {
 	function webpackDevMiddleware(req, res, next) {
 		function goNext() {
 			if(!context.options.serverSideRender) return next();
-			shared.ready(function() {
-				res.locals.webpackStats = context.webpackStats;
-				next();
-			}, req);
+			return new Promise((resolve) => {
+				shared.ready(function() {
+					res.locals.webpackStats = context.webpackStats;
+					resolve(next());
+				}, req);
+			});
 		}
 
 		if(req.method !== "GET") {
