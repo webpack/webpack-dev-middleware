@@ -59,14 +59,15 @@ module.exports = function(compiler, options) {
 					return resolve(goNext());
 				}
 
-			// server content
-			var content = context.fs.readFileSync(filename);
-			content = shared.handleRangeHeaders(content, req, res);
-			res.setHeader("Content-Type", mime.lookup(filename) + "; charset=UTF-8");
-			res.setHeader("Content-Length", content.length);
-			if(context.options.headers) {
-				for(var name in context.options.headers) {
-					res.setHeader(name, context.options.headers[name]);
+				// server content
+				var content = context.fs.readFileSync(filename);
+				content = shared.handleRangeHeaders(content, req, res);
+				res.setHeader("Content-Type", mime.lookup(filename) + "; charset=UTF-8");
+				res.setHeader("Content-Length", content.length);
+				if(context.options.headers) {
+					for(var name in context.options.headers) {
+						res.setHeader(name, context.options.headers[name]);
+					}
 				}
 				// Express automatically sets the statusCode to 200, but not all servers do (Koa).
 				res.statusCode = res.statusCode || 200;
