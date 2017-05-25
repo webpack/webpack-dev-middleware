@@ -7,6 +7,8 @@ var getFilenameFromUrl = require("./lib/GetFilenameFromUrl");
 var Shared = require("./lib/Shared");
 var pathJoin = require("./lib/PathJoin");
 
+var parseUrl = require('parseurl');
+
 // constructor for the middleware
 module.exports = function(compiler, options) {
 
@@ -36,7 +38,7 @@ module.exports = function(compiler, options) {
 			return goNext();
 		}
 
-		var filename = getFilenameFromUrl(context.options.publicPath, context.compiler, req.url);
+		var filename = getFilenameFromUrl(context.options.publicPath, context.compiler, parseUrl.original(req).pathname);
 		if(filename === false) return goNext();
 
 
