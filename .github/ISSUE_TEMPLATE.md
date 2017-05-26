@@ -1,20 +1,33 @@
+> The Issues page for this repository is not a support forum. **Please ask questions on StackOverflow or the webpack Gitter (https://gitter.im/webpack/webpack). Questions will be closed.** If you proceed with this form, please fill out **_all_** fields, or your issue may be closed as "invalid." Please do not delete this template from a new issue. Please remove this header to acknowledge this message.
+
 <!-- Before creating an issue please make sure you are using the latest version of webpack-dev-middleware and webpack. -->
 
-**Do you want to request a *feature* or report a *bug*?**
+* Operating System:
+* Node Version:
+* NPM Version:
+* webpack version:
+* webpack-dev-middleware Version:
 
-<!-- Please ask questions on StackOverflow or the webpack Gitter (https://gitter.im/webpack/webpack). Questions will be closed. -->
+- [ ] This is a **feature** reqeust
+- [ ] This is a **bug**
 
-**What is the current behavior?**
+### Code
 
+If you have a large amount of code to share which demonstrates the problem you're experiencing, please provide a link to your
+repository rather than pasting code. Otherwise, please paste relevant short snippets below.
 
-**If the current behavior is a bug, please provide the steps to reproduce.**
+```js
+// please provide your webpack.config.js for bug reports
+```
 
-<!-- A great way to do this is to provide your configuration via a GitHub gist. -->
+```js
+// additional code
+```
 
-**What is the expected behavior?**
+### Expected Behavior
 
+### Actual Behavior
 
-**If this is a feature request, what is motivation or use case for changing the behavior?**
+### For Bugs; How can we reproduce the behavior?
 
-
-**Please mention your webpack and Operating System version.**
+### For Features; What is the motivation and/or use-case for the feature?
