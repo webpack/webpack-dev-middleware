@@ -8,7 +8,7 @@
 * webpack version:
 * webpack-dev-middleware Version:
 
-- [ ] This is a **feature** reqeust
+- [ ] This is a **feature** request
 - [ ] This is a **bug**
 
 ### Code
