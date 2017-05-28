@@ -1,3 +1,5 @@
+require("mocha-sinon");
+
 var middleware = require("../middleware");
 var should = require("should");
 
@@ -150,6 +152,40 @@ describe("Advanced API", function() {
 			var filename = instance.getFilenameFromUrl("/public/index.html");
 			should.strictEqual(filename, "/output/index.html");
 			done();
+		});
+	});
+	describe("Handle the case when url is not reachable", function() {
+		var next;
+		beforeEach(function() {
+			next = this.sinon.stub();
+		});
+
+		it("Should jump out when fallBack is not set", function(done) {
+			var instance = middleware(compiler, options);
+			var req = { method: "GET", url: "/unreachable.html" };
+			var res = {};
+			should.strictEqual(next.callCount, 0);
+			instance(req,res,next);
+			setTimeout(function() {
+				should.strictEqual(next.callCount, 1);
+				done();
+			});
+		});
+		it("Should serve the / when fallBack is set", function(done) {
+			var options = {
+				quiet: true,
+				publicPath: "/public/",
+				fallBack: true
+			};
+			var instance = middleware(compiler, options);
+			var req = { method: "GET", url: "/public/" };
+			var res = {};
+			should.strictEqual(next.callCount, 0);
+			instance(req,res,next);
+			setTimeout(function() {
+				should.strictEqual(next.callCount, 0);
+				done();
+			});
 		});
 	});
 });

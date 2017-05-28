@@ -40,6 +40,9 @@ module.exports = function(compiler, options) {
 		if(filename === false) return goNext();
 
 
+		if(!context.fs.existsSync(filename) && context.options.fallBack) {
+			filename = getFilenameFromUrl(context.options.publicPath, context.compiler.outputPath,context.options.publicPath);
+		}
 		shared.handleRequest(filename, processRequest, req);
 
 		function processRequest() {
@@ -68,7 +71,8 @@ module.exports = function(compiler, options) {
 					res.setHeader(name, context.options.headers[name]);
 				}
 			}
-
+                        // Express automatically sets the statusCode to 200, but not all servers do (Koa).
+			res.statusCode = res.statusCode || 200;
 			if(res.send) res.send(content);
 			else res.end(content);
 		}
