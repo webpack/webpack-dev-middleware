@@ -101,6 +101,27 @@ describe("Server", function() {
 		});
 	});
 
+	describe("pushState mode", function() {
+		before(function(done) {
+			app = express();
+			var compiler = webpack(webpackConfig);
+			app.use(middleware(compiler, {
+				stats: "errors-only",
+				quiet: true,
+				pushState: true,
+				publicPath: "/",
+			}));
+			listen = listenShorthand(done);
+		});
+		after(close);
+
+		it("GET request for non-existent file serves index", function(done) {
+			request(app).get("/this_url_doesnt_exist")
+			.expect("Content-Length", "10")
+			.expect(200, /My\ Index\./, done);
+		});
+	});
+
 	describe("lazy mode", function() {
 		before(function(done) {
 			app = express();
