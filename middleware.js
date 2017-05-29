@@ -3,11 +3,10 @@
  Author Tobias Koppers @sokra
  */
 var mime = require("mime");
+var parseUrl = require("parseurl");
 var getFilenameFromUrl = require("./lib/GetFilenameFromUrl");
 var Shared = require("./lib/Shared");
 var pathJoin = require("./lib/PathJoin");
-
-var parseUrl = require('parseurl');
 
 // constructor for the middleware
 module.exports = function(compiler, options) {
