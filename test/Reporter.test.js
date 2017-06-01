@@ -1,4 +1,5 @@
 var middleware = require("../middleware");
+var getTime = require("../lib/GetTime");
 var should = require("should");
 var fs = require("fs");
 var path = require("path");
@@ -56,8 +57,9 @@ describe("Reporter", function() {
 
 			plugins.done(simpleStats);
 			setTimeout(function() {
+
 				should.strictEqual(console.log.callCount, 2);
-				should.strictEqual(console.log.calledWith("webpack: Compiled successfully."), true);
+				should.strictEqual(console.log.calledWith(getTime() + "webpack: Compiled successfully."), true);
 				done();
 			});
 		});
@@ -67,7 +69,7 @@ describe("Reporter", function() {
 
 			plugins.done(errorStats);
 			setTimeout(function() {
-				should.strictEqual(console.log.calledWith("webpack: Failed to compile."), true);
+				should.strictEqual(console.log.calledWith(getTime() + "webpack: Failed to compile."), true);
 				done();
 			});
 		});
@@ -77,7 +79,7 @@ describe("Reporter", function() {
 
 			plugins.done(warningStats);
 			setTimeout(function() {
-				should.strictEqual(console.log.calledWith("webpack: Compiled with warnings."), true);
+				should.strictEqual(console.log.calledWith(getTime() + "webpack: Compiled with warnings."), true);
 				done();
 			});
 		});
@@ -108,7 +110,7 @@ describe("Reporter", function() {
 			plugins.invalid();
 			setTimeout(function() {
 				should.strictEqual(console.log.callCount, 1);
-				should.strictEqual(console.log.calledWith("webpack: Compiling..."), true);
+				should.strictEqual(console.log.calledWith(getTime() + "webpack: Compiling..."), true);
 				done();
 			});
 		});
