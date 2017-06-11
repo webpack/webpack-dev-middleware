@@ -137,21 +137,27 @@ In the server-side rendering mode, __webpack-dev-middleware__ would sets the `st
 Notice that requests for bundle files would still be responded by __webpack-dev-middleware__ and all requests will be pending until the building process is finished in the server-side rendering mode.
 
 ```javascript
+// This function makes server rendering of asset references consistent with different webpack chunk/entry confiugrations
+function normalizeAssets(assets) {
+  return Array.isArray(assets) ? assets : [assets]
+}
+
 app.use(webpackMiddleware(compiler, { serverSideRender: true })
 
 // The following middleware would not be invoked until the latest build is finished.
 app.use((req, res) => {
+  
   const assetsByChunkName = res.locals.webpackStats.toJson().assetsByChunkName
-
+  
   // then use `assetsByChunkName` for server-sider rendering
-	// For example, if you have only one main chunk:
+  // For example, if you have only one main chunk:
 
 	res.send(`
 <html>
   <head>
     <title>My App</title>
 		${
-			assetsByChunkName.main
+			normalizeAssets(assetsByChunkName.main)
 			.filter(path => path.endsWith('.css'))
 			.map(path => `<link rel="stylesheet" href="${path}" />`)
 		}
@@ -159,7 +165,7 @@ app.use((req, res) => {
   <body>
     <div id="root"></div>
 		${
-			assetsByChunkName.main
+			normalizeAssets(assetsByChunkName.main)
 			.filter(path => path.endsWith('.js'))
 			.map(path => `<script src="${path}" />`)
 		}
