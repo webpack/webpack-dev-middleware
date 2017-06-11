@@ -168,7 +168,7 @@ app.use((req, res) => {
 		${
 			normalizeAssets(assetsByChunkName.main)
 			.filter(path => path.endsWith('.js'))
-			.map(path => `<script src="${path}" />`)
+			.map(path => `<script src="${path}"></script>`)
 			.join('\n')
 		}
   </body>
