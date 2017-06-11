@@ -160,6 +160,7 @@ app.use((req, res) => {
 			normalizeAssets(assetsByChunkName.main)
 			.filter(path => path.endsWith('.css'))
 			.map(path => `<link rel="stylesheet" href="${path}" />`)
+			.join('\n')
 		}
   </head>
   <body>
@@ -168,6 +169,7 @@ app.use((req, res) => {
 			normalizeAssets(assetsByChunkName.main)
 			.filter(path => path.endsWith('.js'))
 			.map(path => `<script src="${path}" />`)
+			.join('\n')
 		}
   </body>
 </html>		
