@@ -71,10 +71,10 @@ describe("Reporter", function() {
 
 			plugins.done(errorStats);
 			setTimeout(function() {
-				should.strictEqual(console.log.callCount, 0);
+				should.strictEqual(console.log.callCount, 1);
 				should.strictEqual(console.warn.callCount, 0);
-				should.strictEqual(console.error.callCount, 2);
-				should.strictEqual(console.error.calledWith("webpack: Failed to compile."), true);
+				should.strictEqual(console.error.callCount, 1);
+				should.strictEqual(console.log.calledWith("webpack: Failed to compile."), true);
 				done();
 			});
 		});
@@ -84,10 +84,10 @@ describe("Reporter", function() {
 
 			plugins.done(warningStats);
 			setTimeout(function() {
-				should.strictEqual(console.log.callCount, 0);
-				should.strictEqual(console.warn.callCount, 2);
+				should.strictEqual(console.log.callCount, 1);
+				should.strictEqual(console.warn.callCount, 1);
 				should.strictEqual(console.error.callCount, 0);
-				should.strictEqual(console.warn.calledWith("webpack: Compiled with warnings."), true);
+				should.strictEqual(console.log.calledWith("webpack: Compiled with warnings."), true);
 				done();
 			});
 		});
