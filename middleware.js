@@ -21,7 +21,6 @@ module.exports = function(compiler, options) {
 	};
 	var shared = Shared(context);
 
-
 	// The middleware function
 	function webpackDevMiddleware(req, res, next) {
 		function goNext() {

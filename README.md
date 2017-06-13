@@ -76,6 +76,11 @@ app.use(webpackMiddleware(webpack({
 	headers: { "X-Custom-Header": "yes" },
 	// custom headers
 
+	mimeTypes: { "text/html": [ "phtml" ] },
+	// Add custom mime/extension mappings
+	// https://github.com/broofa/node-mime#mimedefine
+	// https://github.com/webpack/webpack-dev-middleware/pull/150
+
 	stats: {
 		colors: true
 	},
