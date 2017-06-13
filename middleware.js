@@ -3,6 +3,7 @@
  Author Tobias Koppers @sokra
  */
 var mime = require("mime");
+var parseUrl = require("parseurl");
 var getFilenameFromUrl = require("./lib/GetFilenameFromUrl");
 var Shared = require("./lib/Shared");
 var pathJoin = require("./lib/PathJoin");
@@ -37,7 +38,7 @@ module.exports = function(compiler, options) {
 			return goNext();
 		}
 
-		var filename = getFilenameFromUrl(context.options.publicPath, context.compiler, req.url);
+		var filename = getFilenameFromUrl(context.options.publicPath, context.compiler, parseUrl.original(req).pathname);
 		if(filename === false) return goNext();
 
 		return new Promise(function(resolve) {
