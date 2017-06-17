@@ -5,6 +5,10 @@ var options = {
 	quiet: true,
 	publicPath: "/public/"
 };
+var multiPublicPathOptions = {
+	quiet: true,
+	publicPath: ["/public-1/", "/public-2/"]
+};
 
 describe("Advanced API", function() {
 
@@ -149,6 +153,17 @@ describe("Advanced API", function() {
 			var instance = middleware(compiler, options);
 			var filename = instance.getFilenameFromUrl("/public/index.html");
 			should.strictEqual(filename, "/output/index.html");
+			done();
+		});
+
+		it("should use the proper publicPath to parse the filename", function(done) {
+			var instance = middleware(compiler, multiPublicPathOptions);
+			var correctFilename1 = instance.getFilenameFromUrl("/public-1/index.html");
+			should.strictEqual(correctFilename1, "/output/index.html");
+			var correctFilename2 = instance.getFilenameFromUrl("/public-2/index.html");
+			should.strictEqual(correctFilename2, "/output/index.html");
+			var incorrectFilename = instance.getFilenameFromUrl("/foo/index.html");
+			should.equal(incorrectFilename, false);
 			done();
 		});
 	});
