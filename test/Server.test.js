@@ -101,6 +101,27 @@ describe("Server", function() {
 		});
 	});
 
+	describe("no index mode", function() {
+		before(function(done) {
+			app = express();
+			var compiler = webpack(webpackConfig);
+			app.use(middleware(compiler, {
+				stats: "errors-only",
+				quiet: true,
+				index: false,
+				publicPath: "/",
+			}));
+			listen = listenShorthand(done);
+		});
+		after(close);
+
+		it("request to directory", function(done) {
+			request(app).get("/")
+				.expect("Content-Type", "text/html; charset=utf-8")
+				.expect(404, done);
+		});
+	});
+
 	describe("lazy mode", function() {
 		before(function(done) {
 			app = express();
