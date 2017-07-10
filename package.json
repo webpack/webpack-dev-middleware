@@ -10,7 +10,8 @@
     "memory-fs": "~0.4.1",
     "mime": "^1.3.4",
     "path-is-absolute": "^1.0.0",
-    "range-parser": "^1.0.3"
+    "range-parser": "^1.0.3",
+    "time-stamp": "^2.0.0"
   },
   "devDependencies": {
     "codecov.io": "^0.1.6",
