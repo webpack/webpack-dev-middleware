@@ -69,9 +69,10 @@ app.use(webpackMiddleware(webpack({
 	publicPath: "/assets/",
 	// public path to bind the middleware to
 	// use the same as in webpack
-	
+
 	index: "index.html",
-	// the index path for web server
+	// The index path for web server, defaults to "index.html".
+	// If falsy (but not undefined), the server will not respond to requests to the root URL.
 
 	headers: { "X-Custom-Header": "yes" },
 	// custom headers

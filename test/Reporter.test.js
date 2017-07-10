@@ -2,6 +2,7 @@ var middleware = require("../middleware");
 var should = require("should");
 var fs = require("fs");
 var path = require("path");
+var timestamp = require("time-stamp");
 require("mocha-sinon");
 
 var extendedStats = fs.readFileSync(path.join(__dirname, "fixtures", "stats.txt"), "utf8");
@@ -58,6 +59,7 @@ describe("Reporter", function() {
 
 			plugins.done(simpleStats);
 			setTimeout(function() {
+
 				should.strictEqual(console.log.callCount, 2);
 				should.strictEqual(console.warn.callCount, 0);
 				should.strictEqual(console.error.callCount, 0);
@@ -79,7 +81,33 @@ describe("Reporter", function() {
 			});
 		});
 
-		it("should show 'Compiled with warnings' message in console.warn", function(done) {
+		it("should show compiled successfully message, with log time", function(done) {
+			middleware(compiler, {
+				reportTime: true
+			});
+
+			plugins.done(simpleStats);
+			setTimeout(function() {
+
+				should.strictEqual(console.log.callCount, 2);
+				should.strictEqual(console.log.calledWith("[" + timestamp("HH:mm:ss") + "] webpack: Compiled successfully."), true);
+				done();
+			});
+		});
+
+		it("should show compiled successfully message, with log time", function(done) {
+			middleware(compiler, {
+				reportTime: true
+			});
+
+			plugins.done(errorStats);
+			setTimeout(function() {
+				should.strictEqual(console.log.calledWith("[" + timestamp("HH:mm:ss") + "] webpack: Failed to compile."), true);
+				done();
+			});
+		});
+
+		it("should show compiled with warnings message", function(done) {
 			middleware(compiler);
 
 			plugins.done(warningStats);
@@ -88,6 +116,18 @@ describe("Reporter", function() {
 				should.strictEqual(console.warn.callCount, 1);
 				should.strictEqual(console.error.callCount, 0);
 				should.strictEqual(console.log.calledWith("webpack: Compiled with warnings."), true);
+				done();
+			});
+		});
+
+		it("should show compiled with warnings message, with log time", function(done) {
+			middleware(compiler, {
+				reportTime: true
+			});
+
+			plugins.done(warningStats);
+			setTimeout(function() {
+				should.strictEqual(console.log.calledWith("[" + timestamp("HH:mm:ss") + "] webpack: Compiled with warnings."), true);
 				done();
 			});
 		});
@@ -119,6 +159,19 @@ describe("Reporter", function() {
 			setTimeout(function() {
 				should.strictEqual(console.log.callCount, 1);
 				should.strictEqual(console.log.calledWith("webpack: Compiling..."), true);
+				done();
+			});
+		});
+
+		it("should show invalid message, with log time", function(done) {
+			middleware(compiler, {
+				reportTime: true
+			});
+			plugins.done(simpleStats);
+			plugins.invalid();
+			setTimeout(function() {
+				should.strictEqual(console.log.callCount, 1);
+				should.strictEqual(console.log.calledWith("[" + timestamp("HH:mm:ss") + "] webpack: Compiling..."), true);
 				done();
 			});
 		});
