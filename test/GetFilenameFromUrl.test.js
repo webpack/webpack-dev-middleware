@@ -20,6 +20,11 @@ describe("GetFilenameFromUrl", function() {
 				publicPath: "/",
 				expected: "/föö.js"
 			}, {
+				url: "/%foo%/%foo%.js", // Filenames can contain characters not allowed in URIs
+				outputPath: "/",
+				publicPath: "/",
+				expected: "/%foo%/%foo%.js"
+			}, {
 				url: "/0.19dc5d417382d73dd190.hot-update.js",
 				outputPath: "/",
 				publicPath: "http://localhost:8080/",
