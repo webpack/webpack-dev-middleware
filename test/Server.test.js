@@ -44,60 +44,60 @@ describe("Server", function() {
 
 		it("GET request to bundle file", function(done) {
 			request(app).get("/public/bundle.js")
-			.expect("Content-Type", "application/javascript; charset=UTF-8")
-			.expect("Content-Length", "2985")
-			.expect(200, /console\.log\("Hey\."\)/, done);
+				.expect("Content-Type", "application/javascript; charset=UTF-8")
+				.expect("Content-Length", "2823")
+				.expect(200, /console\.log\("Hey\."\)/, done);
 		});
 
 		it("POST request to bundle file", function(done) {
 			request(app).post("/public/bundle.js")
-			.expect(404, done);
+				.expect(404, done);
 		});
 
 		it("request to image", function(done) {
 			request(app).get("/public/svg.svg")
-			.expect("Content-Type", "image/svg+xml; charset=UTF-8")
-			.expect("Content-Length", "4778")
-			.expect(200, done);
+				.expect("Content-Type", "image/svg+xml; charset=UTF-8")
+				.expect("Content-Length", "4778")
+				.expect(200, done);
 		});
 
 		it("request to non existing file", function(done) {
 			request(app).get("/public/nope")
-			.expect("Content-Type", "text/html; charset=utf-8")
-			.expect(404, done);
+				.expect("Content-Type", "text/html; charset=utf-8")
+				.expect(404, done);
 		});
 
 		it("request to HMR json", function(done) {
 			request(app).get("/public/123a123412.hot-update.json")
-			.expect("Content-Type", "application/json; charset=UTF-8")
-			.expect(200, /\[\"hi\"\]/, done);
+				.expect("Content-Type", "application/json; charset=UTF-8")
+				.expect(200, /\[\"hi\"\]/, done);
 		});
 
 		it("request to directory", function(done) {
 			request(app).get("/public/")
-			.expect("Content-Type", "text/html; charset=UTF-8")
-			.expect("Content-Length", "10")
-			.expect(200, /My\ Index\./, done);
+				.expect("Content-Type", "text/html; charset=UTF-8")
+				.expect("Content-Length", "10")
+				.expect(200, /My\ Index\./, done);
 		});
 
 		it("invalid range header", function(done) {
 			request(app).get("/public/svg.svg")
-			.set("Range", "bytes=6000-")
-			.expect(416, done);
+				.set("Range", "bytes=6000-")
+				.expect(416, done);
 		});
 
 		it("valid range header", function(done) {
 			request(app).get("/public/svg.svg")
-			.set("Range", "bytes=3000-3500")
-			.expect("Content-Length", "501")
-			.expect("Content-Range", "bytes 3000-3500/4778")
-			.expect(206, done);
+				.set("Range", "bytes=3000-3500")
+				.expect("Content-Length", "501")
+				.expect("Content-Range", "bytes 3000-3500/4778")
+				.expect(206, done);
 		});
 
 		it("request to non-public path", function(done) {
 			request(app).get("/nonpublic/")
-			.expect("Content-Type", "text/html; charset=utf-8")
-			.expect(404, done);
+				.expect("Content-Type", "text/html; charset=utf-8")
+				.expect(404, done);
 		});
 	});
 
@@ -117,8 +117,8 @@ describe("Server", function() {
 
 		it("GET request to bundle file", function(done) {
 			request(app).get("/bundle.js")
-			.expect("Content-Length", "2985")
-			.expect(200, /console\.log\("Hey\."\)/, done);
+				.expect("Content-Length", "2823")
+				.expect(200, /console\.log\("Hey\."\)/, done);
 		});
 	});
 
@@ -137,9 +137,35 @@ describe("Server", function() {
 
 		it("request to bundle file", function(done) {
 			request(app).get("/bundle.js")
-			.expect("X-nonsense-1", "yes")
-			.expect("X-nonsense-2", "no")
-			.expect(200, done);
+				.expect("X-nonsense-1", "yes")
+				.expect("X-nonsense-2", "no")
+				.expect(200, done);
+		});
+	});
+
+	describe("custom mimeTypes", function() {
+		before(function(done) {
+			app = express();
+			var compiler = webpack(webpackConfig);
+			var instance = middleware(compiler, {
+				stats: "errors-only",
+				quiet: true,
+				index: "Index.phtml",
+				mimeTypes: {
+					"text/html": ["phtml"]
+				}
+			});
+			app.use(instance);
+			listen = listenShorthand(done);
+			instance.fileSystem.writeFileSync("/Index.phtml", "welcome");
+		});
+		after(close);
+
+		it("request to Index.phtml", function(done) {
+			request(app).get("/")
+				.expect("welcome")
+				.expect("Content-Type", /text\/html/)
+				.expect(200, done);
 		});
 	});
 
@@ -159,10 +185,10 @@ describe("Server", function() {
 
 		it("request to both bundle files", function(done) {
 			request(app).get("/js1/foo.js")
-			.expect(200, function() {
-				request(app).get("/js2/bar.js")
-				.expect(200, done);
-			});
+				.expect(200, function() {
+					request(app).get("/js2/bar.js")
+						.expect(200, done);
+				});
 		});
 	});
 
@@ -187,10 +213,10 @@ describe("Server", function() {
 
 		it("request to bundle file", function(done) {
 			request(app).get("/foo/bar")
-			.expect(200, function() {
-				should.exist(locals.webpackStats);
-				done();
-			});
+				.expect(200, function() {
+					should.exist(locals.webpackStats);
+					done();
+				});
 		});
 	});
 });
