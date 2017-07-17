@@ -19,6 +19,7 @@
     "express": "^4.14.0",
     "file-loader": "^0.11.2",
     "istanbul": "^0.4.5",
+    "koa": "^2.3.0",
     "mocha": "^3.0.2",
     "mocha-sinon": "^2.0.0",
     "should": "^11.1.0",
