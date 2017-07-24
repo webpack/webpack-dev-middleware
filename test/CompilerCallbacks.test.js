@@ -16,7 +16,7 @@ describe("CompilerCallbacks", function() {
 
 	it("watch error should be reported to console", function(done) {
 		var error = new Error("Oh noes!");
-		this.sinon.stub(compiler, "watch", function(opts, callback) {
+		this.sinon.stub(compiler, "watch").callsFake(function(opts, callback) {
 			callback(error);
 		});
 		this.sinon.stub(console, "error");
@@ -27,7 +27,7 @@ describe("CompilerCallbacks", function() {
 	});
 
 	it("options.error should be used on watch error", function(done) {
-		this.sinon.stub(compiler, "watch", function(opts, callback) {
+		this.sinon.stub(compiler, "watch").callsFake(function(opts, callback) {
 			callback(new Error("Oh noes!"));
 		});
 		middleware(compiler, {
