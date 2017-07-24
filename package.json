@@ -22,7 +22,7 @@
     "mocha": "^3.0.2",
     "mocha-sinon": "^2.0.0",
     "should": "^11.1.0",
-    "sinon": "^2.3.5",
+    "sinon": "^2.3.8",
     "supertest": "^3.0.0",
     "webpack": "^3.0.0"
   },
