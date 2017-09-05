@@ -69,7 +69,11 @@ module.exports = function(compiler, options) {
 				// server content
 				var content = context.fs.readFileSync(filename);
 				content = shared.handleRangeHeaders(content, req, res);
-				res.setHeader("Content-Type", mime.lookup(filename) + "; charset=UTF-8");
+				if(context.options.lookupMime) {
+					res.setHeader("Content-Type", context.options.lookupMime(filename));
+				} else {
+					res.setHeader("Content-Type", mime.lookup(filename) + "; charset=UTF-8");
+				}
 				res.setHeader("Content-Length", content.length);
 				if(context.options.headers) {
 					for(var name in context.options.headers) {
