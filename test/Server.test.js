@@ -240,4 +240,29 @@ describe("Server", function() {
 				});
 		});
 	});
+
+	describe("mime handling", function() {
+		before(function(done) {
+			app = express();
+			var compiler = webpack(webpackConfig);
+			var instance = middleware(compiler, {
+				stats: "errors-only",
+				quiet: true,
+				publicPath: "/public/",
+				lookupMime: function() {
+					return "application/test";
+				}
+			});
+			app.use(instance);
+			listen = listenShorthand(done);
+		});
+		after(close);
+
+		it("allows override of mimeTypes", function(done) {
+			request(app).get("/public/bundle.js")
+				.expect("Content-Type", "application/test")
+				.expect("Content-Length", "2823")
+				.expect(200, /console\.log\("Hey\."\)/, done);
+		});
+	});
 });
