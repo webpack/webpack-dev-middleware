@@ -143,7 +143,7 @@ In the server-side rendering mode, __webpack-dev-middleware__ sets the `stat` to
 Notice that requests for bundle files would still be responded by __webpack-dev-middleware__ and all requests will be pending until the building process is finished in the server-side rendering mode.
 
 ```javascript
-// This function makes server rendering of asset references consistent with different webpack chunk/entry confiugrations
+// This function makes server rendering of asset references consistent with different webpack chunk/entry configurations
 function normalizeAssets(assets) {
   return Array.isArray(assets) ? assets : [assets]
 }
