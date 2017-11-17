@@ -69,7 +69,12 @@ module.exports = function(compiler, options) {
 				// server content
 				var content = context.fs.readFileSync(filename);
 				content = shared.handleRangeHeaders(content, req, res);
-				res.setHeader("Content-Type", mime.lookup(filename) + "; charset=UTF-8");
+				var contentType = mime.lookup(filename);
+				// do not add charset to WebAssembly files, otherwise compileStreaming will fail in the client
+				if(!/\.wasm$/.test(filename)) {
+					contentType += "; charset=UTF-8";
+				}
+				res.setHeader("Content-Type", contentType);
 				res.setHeader("Content-Length", content.length);
 				if(context.options.headers) {
 					for(var name in context.options.headers) {

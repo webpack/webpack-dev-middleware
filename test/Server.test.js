@@ -190,6 +190,28 @@ describe("Server", function() {
 		});
 	});
 
+	describe("WebAssembly", function() {
+		before(function(done) {
+			app = express();
+			var compiler = webpack(webpackConfig);
+			var instance = middleware(compiler, {
+				stats: "errors-only",
+				quiet: true
+			});
+			app.use(instance);
+			listen = listenShorthand(done);
+			instance.fileSystem.writeFileSync("/hello.wasm", "welcome");
+		});
+		after(close);
+
+		it("request to hello.wasm", function(done) {
+			request(app).get("/hello.wasm")
+				.expect("welcome")
+				.expect("Content-Type", "application/wasm")
+				.expect(200, done);
+		});
+	});
+
 	describe("MultiCompiler", function() {
 		before(function(done) {
 			app = express();
