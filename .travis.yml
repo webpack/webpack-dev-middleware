@@ -1,11 +1,14 @@
 sudo: false
 language: node_js
+
 node_js:
-  - "4"
-  - "6"
-  - "7"
-  - "8"
-script: npm run travis
+  - '9'
+  - '8'
+  - '6'
+
+script:
+  npm run ci
+
 after_success:
   - cat ./coverage/coverage.json | node_modules/codecov.io/bin/codecov.io.js
   - rm -rf ./coverage

@@ -1,4 +1,6 @@
-require("./svg.svg");
-require("./index.html");
+'use strict';
 
-console.log("Hey.");
+require('./svg.svg');
+require('./index.html');
+
+console.log('Hey.');

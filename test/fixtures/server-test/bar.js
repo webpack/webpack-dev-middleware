@@ -1,1 +1,3 @@
-console.log("Bar");
+'use strict';
+
+console.log('Bar');
