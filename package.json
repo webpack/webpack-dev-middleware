@@ -6,9 +6,6 @@
   "repository": "webpack/webpack-dev-middleware",
   "author": "Tobias Koppers @sokra",
   "homepage": "http://github.com/webpack/webpack-dev-middleware",
-  "publishConfig": {
-    "tag": "next"
-  },
   "maintainers": [
     {
       "name": "Andrew Powell",
@@ -30,7 +27,7 @@
     "travis": "npm run cover -- --report lcovonly && npm run lint"
   },
   "files": [
-    "middleware.js",
+    "index.js",
     "lib/"
   ],
   "peerDependencies": {
