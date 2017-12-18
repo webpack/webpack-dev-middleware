@@ -7,7 +7,7 @@ that date.
 
 ## Informative Changes
 
-- logging is now handled by `log-level` and follows the same patterns as
+- logging is now handled by [`loglevel`](https://www.npmjs.com/package/loglevel) and follows the same patterns as
 `webpack-dev-server`.
 
 ## Breaking Changes
