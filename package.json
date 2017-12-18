@@ -34,18 +34,13 @@
     "webpack": "^2.2.0 || ^3.0.0 || ^4.0.0-alpha"
   },
   "dependencies": {
-    "chalk": "^2.3.0",
-    "log-symbols": "^2.1.0",
-    "loglevel": "^1.6.0",
-    "loglevel-plugin-prefix": "^0.5.3",
     "loud-rejection": "^1.6.0",
     "memory-fs": "~0.4.1",
     "mime": "^2.0.3",
     "path-is-absolute": "^1.0.0",
     "range-parser": "^1.0.3",
-    "time-stamp": "^2.0.0",
     "url-join": "^2.0.2",
-    "uuid": "^3.1.0"
+    "webpack-log": "^1.0.1"
   },
   "devDependencies": {
     "assert": "^1.4.1",

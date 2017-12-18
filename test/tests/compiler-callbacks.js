@@ -2,13 +2,12 @@
 
 const assert = require('assert');
 const sinon = require('sinon'); // eslint-disable-line import/no-extraneous-dependencies
+const weblog = require('webpack-log');
 const middleware = require('../../');
-const log = require('../../lib/log');
 
 describe('CompilerCallbacks', () => {
   let plugins = {};
-  let sandbox;
-
+  const sandbox = sinon.sandbox.create();
   const compiler = {
     watch() {},
     plugin(name, callback) {
@@ -17,7 +16,6 @@ describe('CompilerCallbacks', () => {
   };
 
   beforeEach(() => {
-    sandbox = sinon.sandbox.create();
     plugins = {};
   });
 
@@ -28,7 +26,7 @@ describe('CompilerCallbacks', () => {
   it('watch error should be reported to console', () => {
     const err = new Error('Oh noes!');
     const stub = sandbox.stub(compiler, 'watch');
-    const logger = log({ logLevel: 'silent' });
+    const logger = weblog({ level: 'silent' });
     const error = sandbox.spy(logger, 'error');
 
     stub.callsFake((opts, callback) => {

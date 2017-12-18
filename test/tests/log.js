@@ -2,6 +2,7 @@
 
 const assert = require('assert');
 const sinon = require('sinon'); // eslint-disable-line import/no-extraneous-dependencies
+const weblog = require('webpack-log');
 const middleware = require('../../');
 
 // @note logLevel testing is handled by the loglevel module
@@ -48,13 +49,17 @@ describe('Logging', () => {
   });
 
   it('should log with a timestamp', () => {
+    // we need to kill this logger as it's cached, and new options won't be
+    // applied. isn't something we're going to do in the module, but needed for
+    // testing
+    weblog.delLogger('wdm');
+
     const sandbox = sinon.sandbox.create();
-    const infoSpy = sandbox.spy(console, 'info');
+    const info = sandbox.spy(console, 'info');
     const instance = middleware(compiler, { logTime: true });
     const { log } = instance.context;
 
     spy(instance, sandbox);
-
 
     log.info('bar');
     log.warn('bar');
@@ -64,7 +69,8 @@ describe('Logging', () => {
     assert.strictEqual(log.warn.callCount, 1);
     assert.strictEqual(log.error.callCount, 1);
     assert(/bar/.test(log.info.firstCall.args[0]));
-    assert(/[\d{2}:\d{2}:\d{2}]/.test(infoSpy.firstCall.args[0]));
+
+    assert(/[\d{2}:\d{2}:\d{2}]/.test(info.firstCall.args[0]));
 
     sandbox.restore();
   });

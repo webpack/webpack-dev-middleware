@@ -15,6 +15,7 @@ const doneStats = {
 
 describe('Lazy mode', () => {
   let plugins = [];
+  const sandbox = sinon.sandbox.create();
   const res = {};
   const compiler = {
     plugin(name, callback) {
@@ -26,8 +27,12 @@ describe('Lazy mode', () => {
 
   beforeEach(() => {
     plugins = {};
-    compiler.run = sinon.stub();
-    next = sinon.stub();
+    compiler.run = sandbox.stub();
+    next = sandbox.stub();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
   });
 
   describe('builds', () => {
@@ -61,7 +66,7 @@ describe('Lazy mode', () => {
     it('should pass through compiler error', (done) => {
       const err = new Error('MyCompilerError');
       const { log } = instance.context;
-      const spy = sinon.spy(log, 'error');
+      const spy = sandbox.spy(log, 'error');
 
       compiler.run.callsArgWith(0, err);
 

@@ -14,7 +14,7 @@ const rawStats = fs.readFileSync(statsPath, 'utf8');
 
 describe('Reporter', () => {
   let plugins = {};
-  let sandbox;
+  const sandbox = sinon.sandbox.create();
   const defaults = { logLevel: 'silent' };
   const compiler = {
     watch() {
@@ -46,7 +46,7 @@ describe('Reporter', () => {
   }
 
   beforeEach(() => {
-    sandbox = sinon.sandbox.create();
+    // sandbox = sinon.sandbox.create();
     plugins = {};
   });
 
