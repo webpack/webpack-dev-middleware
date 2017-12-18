@@ -43,7 +43,7 @@ server that accepts express-style middleware.
 
 ```js
 const webpack = require('webpack');
-const middlware = require('webpack-dev-middleware');
+const middleware = require('webpack-dev-middleware');
 const compiler = webpack({ .. webpack options .. });
 const express = require('express');
 const app = express();
