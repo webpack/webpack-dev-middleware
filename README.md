@@ -22,7 +22,7 @@ Some of the benefits of using this middleware include:
 - No files are written to disk, rather it handles files in memory
 - If files changed in watch mode, the middleware delays requests until compiling
 has completed.
-- Supports hot module reload (HMR).
+- Supports hot module replacement (HMR).
 
 ## Getting Started
 
