@@ -70,7 +70,7 @@ Default: `undefined`
 This property allows a user to pass custom HTTP headers on each request. eg.
 `{ "X-Custom-Header": "yes" }`
 
-index
+### index
 
 Type: `String`
 Default: `undefined`
@@ -128,7 +128,7 @@ console. Setting `logLevel: 'silent'` will hide all console output. The module
 leverages [`loglevel`](https://github.com/pimterry/loglevel#documentation)
 for logging management, and more information can be found on its page.
 
-## logTime
+### logTime
 
 Type: `Boolean`
 Default: `false`
