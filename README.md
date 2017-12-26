@@ -150,7 +150,7 @@ eg. `{ 'text/html': [ 'phtml' ] }`. Please see the documentation for
 Type: `String`
 _Required_
 
-The public path that the middleware is bound to. _Best Prectice: use the same
+The public path that the middleware is bound to. _Best Practice: use the same
 `publicPath` defined in your webpack config._
 
 ### reporter
