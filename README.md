@@ -181,7 +181,7 @@ information and property details, please see the
 ### watchOptions
 
 Type: `Object`
-Default: `{ aggregateTimeout: 200 }``
+Default: `{ aggregateTimeout: 200 }`
 
 The module accepts an `Object` containing options for file watching, which is
 passed directly to the compiler provided. For more information on watch options
