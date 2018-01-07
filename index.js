@@ -15,6 +15,7 @@ const defaults = {
   mimeTypes: null,
   reporter,
   stats: {
+    colors: true,
     context: process.cwd()
   },
   watchOptions: {
