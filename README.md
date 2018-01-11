@@ -91,12 +91,13 @@ recompile when files change, but rather on each request.
 ### logger
 
 Type: `Object`
-Default: [`log`](/webpack/webpack-dev-middleware/blob/master/lib/log.js)
+Default: [`webpack-log`](https://github.com/webpack-contrib/webpack-log/blob/master/index.js)
 
 In the rare event that a user would like to provide a custom logging interface,
 this property allows the user to assign one. The module leverages
-[`loglevel`](https://github.com/pimterry/loglevel#documentation)
-for logging management by default, and any custom logger must adhere to the same
+[`webpack-log`](https://github.com/webpack-contrib/webpack-log#readme)
+for creating the [`loglevelnext`](https://github.com/shellscape/loglevelnext#readme) 
+logging management by default. Any custom logger must adhere to the same
 exports for compatibility. Specifically, all custom loggers must have the
 following exported methods at a minimum:
 
@@ -125,7 +126,7 @@ include:
 
 Setting a log level means that all other levels below it will be visible in the
 console. Setting `logLevel: 'silent'` will hide all console output. The module
-leverages [`loglevel`](https://github.com/pimterry/loglevel#documentation)
+leverages [`webpack-log`](https://github.com/webpack-contrib/webpack-log#readme)
 for logging management, and more information can be found on its page.
 
 ### logTime
@@ -159,7 +160,7 @@ Type: `Object`
 Default: `undefined`
 
 Allows users to provide a custom reporter to handle logging within the module.
-Please see the [default reporter](/webpack/webpack-dev-middleware/blob/master/lib/reporter.js)
+Please see the [default reporter](/lib/reporter.js)
 for an example.
 
 ### serverSideRender
