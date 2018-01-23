@@ -18,6 +18,7 @@ const defaults = {
     colors: true,
     context: process.cwd()
   },
+  watchOffset: 11000,
   watchOptions: {
     aggregateTimeout: 200
   }
