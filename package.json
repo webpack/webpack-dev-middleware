@@ -34,6 +34,7 @@
     "webpack": "^2.2.0 || ^3.0.0 || ^4.0.0-alpha"
   },
   "dependencies": {
+    "detect-content-type": "^1.2.0",
     "loud-rejection": "^1.6.0",
     "memory-fs": "~0.4.1",
     "mime": "^2.1.0",

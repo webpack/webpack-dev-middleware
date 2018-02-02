@@ -52,7 +52,7 @@ describe('Server', () => {
     it('GET request to bundle file', (done) => {
       request(app).get('/public/bundle.js')
         .expect('Content-Type', 'application/javascript; charset=UTF-8')
-        .expect('Content-Length', '2839')
+        .expect('Content-Length', '2993')
         .expect(200, /console\.log\('Hey\.'\)/, done);
     });
 
@@ -67,6 +67,12 @@ describe('Server', () => {
         .expect('Content-Length', '4778')
         .expect(200, done);
     });
+
+    it('request to HTML file with no extension', (done) => {
+      request(app).get('/public/htmlnoext')
+        .expect('Content-Type', 'text/html; charset=utf-8')
+        .expect(200, done);
+    })
 
     it('request to non existing file', (done) => {
       request(app).get('/public/nope')
@@ -147,7 +153,7 @@ describe('Server', () => {
 
     it('GET request to bundle file', (done) => {
       request(app).get('/bundle.js')
-        .expect('Content-Length', '2839')
+        .expect('Content-Length', '2993')
         .expect(200, /console\.log\('Hey\.'\)/, done);
     });
   });
