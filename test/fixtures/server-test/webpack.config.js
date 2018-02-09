@@ -13,6 +13,11 @@ module.exports = {
         test: /\.(svg|html)$/,
         loader: 'file-loader',
         query: { name: '[name].[ext]' }
+      },
+      {
+        test: /htmlnoext/,
+        loader: 'file-loader',
+        query: { name: 'htmlnoext' }
       }
     ]
   }
