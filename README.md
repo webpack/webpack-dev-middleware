@@ -400,7 +400,7 @@ We welcome your contributions! Please have a read of [CONTRIBUTING.md](CONTRIBUT
 [chat]: https://badges.gitter.im/webpack/webpack.svg
 [chat-url]: https://gitter.im/webpack/webpack
 
-[docs-url]: https://webpack.js.org/configuration/dev-middleware/#devmiddleware
+[docs-url]: https://webpack.js.org/guides/development/#using-webpack-dev-middleware
 [hash-url]: https://twitter.com/search?q=webpack
 [middleware-url]: https://github.com/webpack/webpack-dev-middleware
 [stack-url]: https://stackoverflow.com/questions/tagged/webpack-dev-middleware
