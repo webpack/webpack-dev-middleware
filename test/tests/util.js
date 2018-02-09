@@ -132,10 +132,30 @@ describe('GetFilenameFromUrl', () => {
       expected: '/foo/sample.js'
     },
     {
+      url: '/js/sample.js',
+      compilers: [
+        { outputPath: '/foo', options: { output: { publicPath: 'http://localhost/js/' } } },
+        { outputPath: '/bar', options: { output: { publicPath: 'http://localhost/css/' } } }
+      ],
+      outputPath: '/root',
+      publicPath: '/',
+      expected: '/foo/sample.js'
+    },
+    {
       url: '/css/sample.css',
       compilers: [
         { outputPath: '/foo', options: { output: { publicPath: '/js/' } } },
         { outputPath: '/bar', options: { output: { publicPath: '/css/' } } }
+      ],
+      outputPath: '/root',
+      publicPath: '/',
+      expected: '/bar/sample.css'
+    },
+    {
+      url: '/css/sample.css',
+      compilers: [
+        { outputPath: '/foo', options: { output: { publicPath: 'http://localhost/js/' } } },
+        { outputPath: '/bar', options: { output: { publicPath: 'http://localhost/css/' } } }
       ],
       outputPath: '/root',
       publicPath: '/',
@@ -152,10 +172,30 @@ describe('GetFilenameFromUrl', () => {
       expected: '/root/other/sample.txt'
     },
     {
+      url: '/other/sample.txt',
+      compilers: [
+        { outputPath: '/foo', options: { output: { publicPath: 'http://localhost/js/' } } },
+        { outputPath: '/bar', options: { output: { publicPath: 'http://localhost/css/' } } }
+      ],
+      outputPath: '/root',
+      publicPath: '/',
+      expected: '/root/other/sample.txt'
+    },
+    {
       url: '/js/sample.js',
       compilers: [
         { outputPath: '/foo', options: { output: { publicPath: '/js/' } } },
         { outputPath: '/bar', options: { output: { publicPath: '/css/' } } }
+      ],
+      outputPath: '/root',
+      publicPath: '/test/',
+      expected: '/foo/sample.js'
+    },
+    {
+      url: '/js/sample.js',
+      compilers: [
+        { outputPath: '/foo', options: { output: { publicPath: 'http://localhost/js/' } } },
+        { outputPath: '/bar', options: { output: { publicPath: 'http://localhost/css/' } } }
       ],
       outputPath: '/root',
       publicPath: '/test/',
@@ -172,6 +212,16 @@ describe('GetFilenameFromUrl', () => {
       expected: '/bar/sample.css'
     },
     {
+      url: '/css/sample.css',
+      compilers: [
+        { outputPath: '/foo', options: { output: { publicPath: 'http://localhost/js/' } } },
+        { outputPath: '/bar', options: { output: { publicPath: 'http://localhost/css/' } } }
+      ],
+      outputPath: '/root',
+      publicPath: '/test/',
+      expected: '/bar/sample.css'
+    },
+    {
       url: '/other/sample.txt',
       compilers: [
         { outputPath: '/foo', options: { output: { publicPath: '/js/' } } },
@@ -182,10 +232,30 @@ describe('GetFilenameFromUrl', () => {
       expected: false
     },
     {
+      url: '/other/sample.txt',
+      compilers: [
+        { outputPath: '/foo', options: { output: { publicPath: 'http://localhost/js/' } } },
+        { outputPath: '/bar', options: { output: { publicPath: 'http://localhost/css/' } } }
+      ],
+      outputPath: '/root',
+      publicPath: '/test/',
+      expected: false
+    },
+    {
       url: '/test/sample.txt',
       compilers: [
         { outputPath: '/foo', options: { output: { publicPath: '/js/' } } },
         { outputPath: '/bar', options: { output: { publicPath: '/css/' } } }
+      ],
+      outputPath: '/root',
+      publicPath: '/test/',
+      expected: '/root/sample.txt'
+    },
+    {
+      url: '/test/sample.txt',
+      compilers: [
+        { outputPath: '/foo', options: { output: { publicPath: 'http://localhost/js/' } } },
+        { outputPath: '/bar', options: { output: { publicPath: 'http://localhost/css/' } } }
       ],
       outputPath: '/root',
       publicPath: '/test/',
