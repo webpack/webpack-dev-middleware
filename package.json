@@ -31,7 +31,7 @@
     "lib/"
   ],
   "peerDependencies": {
-    "webpack": "^2.2.0 || ^3.0.0 || ^4.0.0-alpha"
+    "webpack": "^2.2.0 || ^3.0.0 || ^4.0.0-alpha || ^4.0.0-beta || ^4.0.0"
   },
   "dependencies": {
     "loud-rejection": "^1.6.0",
