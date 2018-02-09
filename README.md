@@ -64,7 +64,7 @@ _Note: The `publicPath` property is required, whereas all other options are opti
 
 ### headers
 
-Type: `Object`
+Type: `Object`  
 Default: `undefined`
 
 This property allows a user to pass custom HTTP headers on each request. eg.
@@ -72,7 +72,7 @@ This property allows a user to pass custom HTTP headers on each request. eg.
 
 ### index
 
-Type: `String`
+Type: `String`  
 Default: `undefined`
 
 "index.html",
@@ -82,7 +82,7 @@ Default: `undefined`
 
 ### lazy
 
-Type: `Boolean`
+Type: `Boolean`  
 Default: `undefined`
 
 This option instructs the module to operate in 'lazy' mode, meaning that it won't
@@ -90,13 +90,13 @@ recompile when files change, but rather on each request.
 
 ### logger
 
-Type: `Object`
+Type: `Object`  
 Default: [`webpack-log`](https://github.com/webpack-contrib/webpack-log/blob/master/index.js)
 
 In the rare event that a user would like to provide a custom logging interface,
 this property allows the user to assign one. The module leverages
 [`webpack-log`](https://github.com/webpack-contrib/webpack-log#readme)
-for creating the [`loglevelnext`](https://github.com/shellscape/loglevelnext#readme) 
+for creating the [`loglevelnext`](https://github.com/shellscape/loglevelnext#readme)
 logging management by default. Any custom logger must adhere to the same
 exports for compatibility. Specifically, all custom loggers must have the
 following exported methods at a minimum:
@@ -111,7 +111,7 @@ Please see the documentation for `loglevel` for more information.
 
 ### logLevel
 
-Type: `String`
+Type: `String`  
 Default: `'info'`
 
 This property defines the level of messages that the module will log. Valid levels
@@ -131,7 +131,7 @@ for logging management, and more information can be found on its page.
 
 ### logTime
 
-Type: `Boolean`
+Type: `Boolean`  
 Default: `false`
 
 If `true` the log output of the module will be prefixed by a timestamp in the
@@ -139,7 +139,7 @@ If `true` the log output of the module will be prefixed by a timestamp in the
 
 ### mimeTypes
 
-Type: `Object`
+Type: `Object`  
 Default: `null`
 
 This property allows a user to register custom mime types or extension mappings.
@@ -148,7 +148,7 @@ eg. `{ 'text/html': [ 'phtml' ] }`. Please see the documentation for
 
 ### publicPath
 
-Type: `String`
+Type: `String`  
 _Required_
 
 The public path that the middleware is bound to. _Best Practice: use the same
@@ -156,7 +156,7 @@ The public path that the middleware is bound to. _Best Practice: use the same
 
 ### reporter
 
-Type: `Object`
+Type: `Object`  
 Default: `undefined`
 
 Allows users to provide a custom reporter to handle logging within the module.
@@ -165,23 +165,39 @@ for an example.
 
 ### serverSideRender
 
-Type: `Boolean`
+Type: `Boolean`  
 Default: `undefined`
 
 Instructs the module to enable or disable the server-side rendering mode. Please
 see [Server-Side Rendering](#server-side-rendering) for more information.
 
 ### stats
-Type: `Object`
+
+Type: `Object`  
 Default: `{ context: process.cwd() }`
 
 Options for formatting statistics displayed during and after compile. For more
 information and property details, please see the
 [webpack documentation](https://webpack.js.org/configuration/stats/#stats).
 
+### watchOffset
+
+Type: `Number`  
+Default: `11000`
+
+Watching (by means of `lazy: false`) will frequently cause multiple compilations
+as the bundle changes during compilation. This is due in part to cross-platform
+differences in file watchers, so that webpack doesn't loose file changes when
+watched files change rapidly. Since that scenario is more an edge case than not,
+this option serves as a means to prevent multiple needless, identical compilations
+by advancing start-time of a watcher by a number of seconds, which keeps generated
+files from triggering the watch cycle.
+
+_To disable this prevention, set this option to a value of `0`._
+
 ### watchOptions
 
-Type: `Object`
+Type: `Object`  
 Default: `{ aggregateTimeout: 200 }`
 
 The module accepts an `Object` containing options for file watching, which is
