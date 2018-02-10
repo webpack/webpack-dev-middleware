@@ -9,6 +9,7 @@ const request = require('supertest');
 const middleware = require('../../');
 const webpackConfig = require('../fixtures/server-test/webpack.config');
 const webpackMultiConfig = require('../fixtures/server-test/webpack.array.config');
+const webpackClientServerConfig = require('../fixtures/server-test/webpack.client.server.config');
 
 describe('Server', () => {
   let instance;
@@ -242,6 +243,28 @@ describe('Server', () => {
           request(app).get('/js2/bar.js')
             .expect(200, done);
         });
+    });
+  });
+
+  describe('MultiCompiler: One `publicPath`', () => {
+    before((done) => {
+      app = express();
+      const compiler = webpack(webpackClientServerConfig);
+      instance = middleware(compiler, {
+        stats: 'errors-only',
+        logLevel: 'silent'
+      });
+      app.use(instance);
+      listen = listenShorthand(done);
+    });
+    after(close);
+
+    it('request to bundle file', (done) => {
+      request(app).get('/static/foo.js').expect(200, done);
+    });
+
+    it('request to non-public path', (done) => {
+      request(app).get('/').expect(404, done);
     });
   });
 
