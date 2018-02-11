@@ -263,6 +263,10 @@ describe('Server', () => {
       request(app).get('/static/foo.js').expect(200, done);
     });
 
+    it('request to nonexistent file', (done) => {
+      request(app).get('/static/invalid.js').expect(404, done);
+    });
+
     it('request to non-public path', (done) => {
       request(app).get('/').expect(404, done);
     });
