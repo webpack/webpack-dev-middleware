@@ -229,7 +229,7 @@ e.g. after a change to the configuration.
 ```js
 const webpack = require('webpack');
 const compiler = webpack({ ... });
-const middlware = require('webpack-dev-middleware');
+const middleware = require('webpack-dev-middleware');
 const instance = middleware(compiler);
 
 app.use(instance);
@@ -261,7 +261,7 @@ valid at the time of calling, the callback is executed immediately.
 ```js
 const webpack = require('webpack');
 const compiler = webpack({ ... });
-const middlware = require('webpack-dev-middleware');
+const middleware = require('webpack-dev-middleware');
 const instance = middleware(compiler);
 
 app.use(instance);
@@ -292,7 +292,7 @@ Example Implementation:
 ```js
 const webpack = require('webpack');
 const compiler = webpack({ ... });
-const middlware = require('webpack-dev-middleware');
+const middleware = require('webpack-dev-middleware');
 
 // This function makes server rendering of asset references consistent with different webpack chunk/entry configurations
 function normalizeAssets(assets) {
