@@ -53,7 +53,7 @@ describe('Server', () => {
     it('GET request to bundle file', (done) => {
       request(app).get('/public/bundle.js')
         .expect('Content-Type', 'application/javascript; charset=UTF-8')
-        .expect('Content-Length', '2839')
+        .expect('Content-Length', '3451')
         .expect(200, /console\.log\('Hey\.'\)/, done);
     });
 
@@ -148,7 +148,7 @@ describe('Server', () => {
 
     it('GET request to bundle file', (done) => {
       request(app).get('/bundle.js')
-        .expect('Content-Length', '2839')
+        .expect('Content-Length', '3451')
         .expect(200, /console\.log\('Hey\.'\)/, done);
     });
   });
