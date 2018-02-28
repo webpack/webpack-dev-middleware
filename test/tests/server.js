@@ -16,6 +16,8 @@ describe('Server', () => {
   let listen;
   let app;
 
+  const logLevel = 'silent';
+
   function listenShorthand(done) {
     return app.listen(8000, '127.0.0.1', (err) => {
       if (err) done(err);
@@ -39,7 +41,7 @@ describe('Server', () => {
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel: 'silent',
+        logLevel,
         publicPath: '/public/'
       });
       app.use(instance);
@@ -53,7 +55,7 @@ describe('Server', () => {
     it('GET request to bundle file', (done) => {
       request(app).get('/public/bundle.js')
         .expect('Content-Type', 'application/javascript; charset=UTF-8')
-        .expect('Content-Length', '2839')
+        .expect('Content-Length', '3611')
         .expect(200, /console\.log\('Hey\.'\)/, done);
     });
 
@@ -115,7 +117,7 @@ describe('Server', () => {
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel: 'silent',
+        logLevel,
         index: false,
         publicPath: '/'
       });
@@ -137,7 +139,7 @@ describe('Server', () => {
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel: 'silent',
+        logLevel,
         lazy: true,
         publicPath: '/'
       });
@@ -148,7 +150,7 @@ describe('Server', () => {
 
     it('GET request to bundle file', (done) => {
       request(app).get('/bundle.js')
-        .expect('Content-Length', '2839')
+        .expect('Content-Length', '3611')
         .expect(200, /console\.log\('Hey\.'\)/, done);
     });
   });
@@ -159,7 +161,7 @@ describe('Server', () => {
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel: 'silent',
+        logLevel,
         headers: { 'X-nonsense-1': 'yes', 'X-nonsense-2': 'no' }
       });
       app.use(instance);
@@ -181,7 +183,7 @@ describe('Server', () => {
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel: 'silent',
+        logLevel,
         index: 'Index.phtml',
         mimeTypes: {
           'text/html': ['phtml']
@@ -207,7 +209,7 @@ describe('Server', () => {
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel: 'silent'
+        logLevel
       });
       app.use(instance);
       listen = listenShorthand(done);
@@ -229,7 +231,7 @@ describe('Server', () => {
       const compiler = webpack(webpackMultiConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel: 'silent',
+        logLevel,
         publicPath: '/'
       });
       app.use(instance);
@@ -252,7 +254,7 @@ describe('Server', () => {
       const compiler = webpack(webpackClientServerConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel: 'silent'
+        logLevel
       });
       app.use(instance);
       listen = listenShorthand(done);
@@ -279,7 +281,7 @@ describe('Server', () => {
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel: 'silent',
+        logLevel,
         serverSideRender: true
       });
       app.use(instance);

@@ -1,6 +1,7 @@
 'use strict';
 
 module.exports = [{
+  mode: 'development',
   context: __dirname,
   entry: './foo.js',
   output: {
@@ -9,6 +10,7 @@ module.exports = [{
     publicPath: '/static/'
   }
 }, {
+  mode: 'development',
   context: __dirname,
   entry: './bar.js',
   output: {

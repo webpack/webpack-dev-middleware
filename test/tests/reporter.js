@@ -13,7 +13,14 @@ const statsPath = path.join(__dirname, '../fixtures', 'stats.txt');
 const rawStats = fs.readFileSync(statsPath, 'utf8');
 
 describe('Reporter', () => {
-  let plugins = {};
+  let hooks = {};
+  const hook = (name) => {
+    return {
+      tap: (id, callback) => {
+        hooks[name] = callback;
+      }
+    };
+  };
   const sandbox = sinon.sandbox.create();
   const defaults = { logLevel: 'silent' };
   const compiler = {
@@ -22,8 +29,11 @@ describe('Reporter', () => {
         invalidate() {}
       };
     },
-    plugin(name, callback) {
-      plugins[name] = callback;
+    hooks: {
+      done: hook('done'),
+      invalid: hook('invalid'),
+      run: hook('run'),
+      watchRun: hook('watchRun')
     }
   };
   const stats = {
@@ -47,7 +57,7 @@ describe('Reporter', () => {
 
   beforeEach(() => {
     // sandbox = sinon.sandbox.create();
-    plugins = {};
+    hooks = {};
   });
 
   afterEach(() => {
@@ -59,7 +69,7 @@ describe('Reporter', () => {
     const { log } = instance.context;
 
     spy(instance);
-    plugins.done(statOptions.basic);
+    hooks.done(statOptions.basic);
 
     setTimeout(() => {
       assert.strictEqual(log.info.callCount, 2);
@@ -77,7 +87,7 @@ describe('Reporter', () => {
     const { log } = instance.context;
 
     spy(instance);
-    plugins.done(statOptions.error);
+    hooks.done(statOptions.error);
 
     setTimeout(() => {
       assert.strictEqual(log.info.callCount, 1);
@@ -93,7 +103,7 @@ describe('Reporter', () => {
     const { log } = instance.context;
 
     spy(instance);
-    plugins.done(statOptions.warning);
+    hooks.done(statOptions.warning);
 
     setTimeout(() => {
       assert.strictEqual(log.info.callCount, 1);
@@ -109,8 +119,8 @@ describe('Reporter', () => {
     const { log } = instance.context;
 
     spy(instance);
-    plugins.done(statOptions.basic);
-    plugins.invalid();
+    hooks.done(statOptions.basic);
+    hooks.invalid();
 
     setTimeout(() => {
       assert.strictEqual(log.info.callCount, 1);
@@ -124,7 +134,7 @@ describe('Reporter', () => {
     const { log } = instance.context;
 
     spy(instance);
-    plugins.done(stats);
+    hooks.done(stats);
 
     setTimeout(() => {
       assert.strictEqual(log.info.callCount, 2);
@@ -138,7 +148,7 @@ describe('Reporter', () => {
     const { log } = instance.context;
 
     spy(instance);
-    plugins.done(stats);
+    hooks.done(stats);
 
     setTimeout(() => {
       assert.strictEqual(log.info.callCount, 1);
@@ -151,7 +161,7 @@ describe('Reporter', () => {
     const { log } = instance.context;
 
     spy(instance);
-    plugins.invalid();
+    hooks.invalid();
     instance.invalidate(function invalid() {}); // eslint-disable-line prefer-arrow-callback
 
     setTimeout(() => {
@@ -171,6 +181,6 @@ describe('Reporter', () => {
       }
     });
 
-    plugins.done(statOptions.basic);
+    hooks.done(statOptions.basic);
   });
 });

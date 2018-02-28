@@ -64,7 +64,7 @@ describe('GetFilenameFromUrl', () => {
       url: '/c.js',
       outputPath: undefined,
       publicPath: undefined,
-      expected: 'c.js'
+      expected: '/c.js'
     },
     {
       url: '/more/complex/path.js',

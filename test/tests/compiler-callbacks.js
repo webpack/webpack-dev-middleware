@@ -6,18 +6,18 @@ const weblog = require('webpack-log');
 const middleware = require('../../');
 
 describe('CompilerCallbacks', () => {
-  let plugins = {};
+  const hook = { tap: () => {} };
+  const logLevel = 'silent';
   const sandbox = sinon.sandbox.create();
   const compiler = {
     watch() {},
-    plugin(name, callback) {
-      plugins[name] = callback;
+    hooks: {
+      done: hook,
+      invalid: hook,
+      run: hook,
+      watchRun: hook
     }
   };
-
-  beforeEach(() => {
-    plugins = {};
-  });
 
   afterEach(() => {
     sandbox.restore();
@@ -26,7 +26,7 @@ describe('CompilerCallbacks', () => {
   it('watch error should be reported to console', () => {
     const err = new Error('Oh noes!');
     const stub = sandbox.stub(compiler, 'watch');
-    const logger = weblog({ level: 'silent' });
+    const logger = weblog({ level: logLevel });
     const error = sandbox.spy(logger, 'error');
 
     stub.callsFake((opts, callback) => {

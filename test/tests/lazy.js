@@ -14,19 +14,31 @@ const doneStats = {
 };
 
 describe('Lazy mode', () => {
-  let plugins = [];
+  let instance;
+  let next;
+  let hooks = {};
+
+  const hook = (name) => {
+    return {
+      tap: (id, callback) => {
+        hooks[name] = callback;
+      }
+    };
+  };
+  const logLevel = 'silent';
   const sandbox = sinon.sandbox.create();
   const res = {};
   const compiler = {
-    plugin(name, callback) {
-      plugins[name] = callback;
+    hooks: {
+      done: hook('done'),
+      invalid: hook('invalid'),
+      run: hook('run'),
+      watchRun: hook('watchRun')
     }
   };
-  let instance;
-  let next;
 
   beforeEach(() => {
-    plugins = {};
+    hooks = {};
     compiler.run = sandbox.stub();
     next = sandbox.stub();
   });
@@ -38,13 +50,13 @@ describe('Lazy mode', () => {
   describe('builds', () => {
     const req = { method: 'GET', url: '/bundle.js' };
     beforeEach(() => {
-      instance = middleware(compiler, { lazy: true, logLevel: 'silent' });
+      instance = middleware(compiler, { lazy: true, logLevel });
     });
 
     it('should trigger build', (done) => {
       instance(req, res, next);
       assert.equal(compiler.run.callCount, 1);
-      plugins.done(doneStats);
+      hooks.done(doneStats);
       setTimeout(() => {
         assert.equal(next.callCount, 1);
         done();
@@ -52,9 +64,9 @@ describe('Lazy mode', () => {
     });
 
     it('should trigger rebuild when state is invalidated', (done) => {
-      plugins.invalid();
+      hooks.invalid();
       instance(req, res, next);
-      plugins.done(doneStats);
+      hooks.done(doneStats);
 
       assert.equal(compiler.run.callCount, 1);
       setTimeout(() => {
