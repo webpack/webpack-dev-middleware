@@ -180,21 +180,6 @@ Options for formatting statistics displayed during and after compile. For more
 information and property details, please see the
 [webpack documentation](https://webpack.js.org/configuration/stats/#stats).
 
-### watchOffset
-
-Type: `Number`  
-Default: `11000`
-
-Watching (by means of `lazy: false`) will frequently cause multiple compilations
-as the bundle changes during compilation. This is due in part to cross-platform
-differences in file watchers, so that webpack doesn't loose file changes when
-watched files change rapidly. Since that scenario is more an edge case than not,
-this option serves as a means to prevent multiple needless, identical compilations
-by advancing start-time of a watcher by a number of seconds, which keeps generated
-files from triggering the watch cycle.
-
-_To disable this prevention, set this option to a value of `0`._
-
 ### watchOptions
 
 Type: `Object`  
@@ -270,6 +255,15 @@ instance.waitUntilValid(() => {
   console.log('Package is in a valid state');
 });
 ```
+## Known Issues
+
+### Multiple Successive Builds
+
+Watching (by means of `lazy: false`) will frequently cause multiple compilations
+as the bundle changes during compilation. This is due in part to cross-platform
+differences in file watchers, so that webpack doesn't loose file changes when
+watched files change rapidly. If you run into this situation, please make use of
+the [`TimeFixPlugin`](https://github.com/egoist/time-fix-plugin).
 
 ## Server-Side Rendering
 
