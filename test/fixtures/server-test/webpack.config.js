@@ -1,6 +1,7 @@
 'use strict';
 
 module.exports = {
+  mode: 'development',
   context: __dirname,
   entry: './foo.js',
   output: {
@@ -8,7 +9,7 @@ module.exports = {
     path: '/'
   },
   module: {
-    loaders: [
+    rules: [
       {
         test: /\.(svg|html)$/,
         loader: 'file-loader',

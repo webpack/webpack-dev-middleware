@@ -9,11 +9,19 @@ const options = {
 };
 
 describe('API', () => {
-  let plugins = {};
-  let invalidationCount = 0;
   let closeCount = 0;
+  let hooks = {};
+  let invalidationCount = 0;
+
 
   // TODO: Should use sinon or something for this...
+  const hook = (name) => {
+    return {
+      tap: (id, callback) => {
+        hooks[name] = callback;
+      }
+    };
+  };
   const compiler = {
     outputPath: '/output',
     watch() {
@@ -27,13 +35,16 @@ describe('API', () => {
         }
       };
     },
-    plugin(name, callback) {
-      plugins[name] = callback;
+    hooks: {
+      done: hook('done'),
+      invalid: hook('invalid'),
+      run: hook('run'),
+      watchRun: hook('watchRun')
     }
   };
 
   beforeEach(() => {
-    plugins = {};
+    hooks = {};
     invalidationCount = 0;
     closeCount = 0;
   });
@@ -59,14 +70,14 @@ describe('API', () => {
         }
       });
       setTimeout(() => {
-        plugins.done(doneStats);
+        hooks.done(doneStats);
         doneCalled = true;
       });
     });
 
     it('callback should be called when bundle is already done', (done) => {
       const instance = middleware(compiler, options);
-      plugins.done(doneStats);
+      hooks.done(doneStats);
       setTimeout(() => {
         instance.waitUntilValid(() => {
           done();
@@ -76,7 +87,7 @@ describe('API', () => {
 
     it('should work without callback', () => {
       const instance = middleware(compiler, options);
-      plugins.done(doneStats);
+      hooks.done(doneStats);
       setTimeout(() => {
         instance.waitUntilValid();
       });
@@ -84,7 +95,7 @@ describe('API', () => {
 
     it('callback should have stats argument', (done) => {
       const instance = middleware(compiler, options);
-      plugins.done(doneStats);
+      hooks.done(doneStats);
       setTimeout(() => {
         instance.waitUntilValid((stats) => {
           const keys = Object.keys(stats);
@@ -114,7 +125,7 @@ describe('API', () => {
         }
       });
       setTimeout(() => {
-        plugins.done(doneStats);
+        hooks.done(doneStats);
         doneCalled = true;
       });
     });

@@ -8,11 +8,16 @@ const middleware = require('../../');
 // @note logLevel testing is handled by the loglevel module
 
 describe('Logging', () => {
-  const plugins = {};
+  const hook = { tap: () => {} };
+  // mock a compiler, including hooks
   const compiler = {
+    __test: 'mock compiler - log.js',
     watch() {},
-    plugin(name, callback) {
-      plugins[name] = callback;
+    hooks: {
+      done: hook,
+      invalid: hook,
+      run: hook,
+      watchRun: hook
     }
   };
 
