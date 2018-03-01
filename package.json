@@ -13,7 +13,7 @@
       "url": "shellscape.org"
     }
   ],
-  "main": "middleware.js",
+  "main": "index.js",
   "engines": {
     "node": ">=6"
   },
