@@ -122,6 +122,12 @@ describe('GetFilenameFromUrl', () => {
       expected: '/pathname with spaces.js'
     },
     {
+      url: '/test/windows.txt',
+      outputPath: 'c:\\foo',
+      publicPath: '/test',
+      expected: 'c://\\foo/windows.txt' // this is weird, but it's legal-ish, and what URI parsing produces
+    },
+    {
       url: '/js/sample.js',
       compilers: [
         { outputPath: '/foo', options: { output: { publicPath: '/js/' } } },
