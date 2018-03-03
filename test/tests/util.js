@@ -125,7 +125,8 @@ describe('GetFilenameFromUrl', () => {
       url: '/test/windows.txt',
       outputPath: 'c:\\foo',
       publicPath: '/test',
-      expected: 'c://\\foo/windows.txt' // this is weird, but it's legal-ish, and what URI parsing produces
+      // this is weird, but it's legal-ish, and what URI parsing produces
+      expected: 'c://\\foo/windows.txt'
     },
     {
       url: '/js/sample.js',
