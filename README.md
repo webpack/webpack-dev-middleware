@@ -152,7 +152,9 @@ Type: `String`
 _Required_
 
 The public path that the middleware is bound to. _Best Practice: use the same
-`publicPath` defined in your webpack config._
+`publicPath` defined in your webpack config. For more information about
+`publicPath`, please see
+[the webpack documentation](https://webpack.js.org/guides/public-path)._
 
 ### reporter
 
