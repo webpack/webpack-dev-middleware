@@ -8,6 +8,15 @@ module.exports = [{
     filename: 'foo.js',
     path: '/client',
     publicPath: '/static/'
+  },
+  module: {
+    rules: [
+      {
+        test: /\.(svg|html)$/,
+        loader: 'file-loader',
+        query: { name: '[name].[ext]' }
+      }
+    ]
   }
 }, {
   mode: 'development',

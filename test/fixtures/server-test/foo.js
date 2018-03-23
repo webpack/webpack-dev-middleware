@@ -3,4 +3,4 @@
 require('./svg.svg');
 require('./index.html');
 
-console.log('Hey.');
+console.log('Hey.'); // eslint-disable-line no-console
