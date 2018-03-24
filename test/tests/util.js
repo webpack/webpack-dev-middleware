@@ -5,11 +5,12 @@ const { getFilenameFromUrl } = require('../../lib/util');
 
 function testUrl(options) {
   const url = getFilenameFromUrl(options.publicPath, options, options.url);
+  console.log(url);
   assert.equal(url, options.expected);
 }
 
 describe('GetFilenameFromUrl', () => {
-  const tests = [ // eslint-disable-line
+  const tests = [
     {
       url: '/foo.js',
       outputPath: '/',
@@ -270,11 +271,11 @@ describe('GetFilenameFromUrl', () => {
     }
   ];
 
-  // for (const test of tests) {
-  //   it(`should process ${test.url} -> ${test.expected}`, () => {
-  //     testUrl(test);
-  //   });
-  // }
+  for (const test of tests) {
+    it(`should process ${test.url} -> ${test.expected}`, () => {
+      testUrl(test);
+    });
+  }
 
   if (process.platform === 'win32') {
     const test = {
