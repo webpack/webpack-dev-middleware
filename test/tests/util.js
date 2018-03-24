@@ -278,8 +278,8 @@ describe('GetFilenameFromUrl', () => {
 
   if (process.platform === 'win32') {
     const test = {
-      url: 'C:\\My%20Path\\wwwroot\\foo.js',
-      outputPath: '/',
+      url: '\\foo.js',
+      outputPath: 'C:\\My%20Path\\wwwroot\\',
       publicPath: '/',
       expected: 'C:\\My%20Path\\wwwroot\\foo.js'
     };
