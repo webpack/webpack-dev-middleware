@@ -3,6 +3,8 @@
 const assert = require('assert');
 const { getFilenameFromUrl } = require('../../lib/util');
 
+const isWindows = process.platform === 'win32';
+
 function testUrl(options) {
   const url = getFilenameFromUrl(options.publicPath, options, options.url);
   assert.equal(url, options.expected);
@@ -119,7 +121,8 @@ describe('GetFilenameFromUrl', () => {
       url: '/pathname%20with%20spaces.js',
       outputPath: '/',
       publicPath: '/',
-      expected: '/pathname with spaces.js'
+      // ref #284 - windows paths should persist %20
+      expected: isWindows ? '/pathname%20with%20spaces.js' : '/pathname with spaces.js'
     },
     {
       url: '/test/windows.txt',
@@ -272,6 +275,20 @@ describe('GetFilenameFromUrl', () => {
 
   for (const test of tests) {
     it(`should process ${test.url} -> ${test.expected}`, () => {
+      testUrl(test);
+    });
+  }
+
+  if (isWindows) {
+    // explicit test for #284
+    const test = {
+      url: '/test/windows.txt',
+      outputPath: 'C:\\My%20Path\\wwwroot',
+      publicPath: '/test',
+      expected: 'C://\\My%20Path\\wwwroot/windows.txt'
+    };
+
+    it(`windows: should process ${test.url} -> ${test.expected}`, () => {
       testUrl(test);
     });
   }
