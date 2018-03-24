@@ -9,7 +9,7 @@ function testUrl(options) {
 }
 
 describe('GetFilenameFromUrl', () => {
-  const tests = [
+  const tests = [ // eslint-disable-line
     {
       url: '/foo.js',
       outputPath: '/',
