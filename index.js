@@ -4,7 +4,8 @@ const mime = require('mime');
 const createContext = require('./lib/context');
 const middleware = require('./lib/middleware');
 const reporter = require('./lib/reporter');
-const { getFilenameFromUrl, noop, ready, setFs } = require('./lib/util');
+const { setFs, toDisk } = require('./lib/fs');
+const { getFilenameFromUrl, noop, ready } = require('./lib/util');
 
 require('loud-rejection/register');
 
@@ -20,7 +21,8 @@ const defaults = {
   },
   watchOptions: {
     aggregateTimeout: 200
-  }
+  },
+  writeToDisk: false
 };
 
 module.exports = function wdm(compiler, opts) {
@@ -57,6 +59,10 @@ module.exports = function wdm(compiler, opts) {
     context.watching = watching;
   } else {
     context.state = true;
+  }
+
+  if (options.writeToDisk) {
+    toDisk(context);
   }
 
   setFs(context, compiler);

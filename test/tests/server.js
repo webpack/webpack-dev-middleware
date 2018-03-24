@@ -2,6 +2,8 @@
 
 /* eslint import/no-extraneous-dependencies: off */
 
+const fs = require('fs');
+const path = require('path');
 const assert = require('assert');
 const express = require('express');
 const webpack = require('webpack');
@@ -16,7 +18,7 @@ describe('Server', () => {
   let listen;
   let app;
 
-  const logLevel = 'silent';
+  const logLevel = 'error';
 
   function listenShorthand(done) {
     return app.listen(8000, '127.0.0.1', (err) => {
@@ -52,10 +54,19 @@ describe('Server', () => {
 
     after(close);
 
+    it('should not find a bundle file on disk', (done) => {
+      request(app).get('/public/bundle.js')
+        .expect(200, () => {
+          const bundlePath = path.join(__dirname, '../fixtures/server-test/bundle.js');
+          assert(!fs.existsSync(bundlePath));
+          done();
+        });
+    });
+
     it('GET request to bundle file', (done) => {
       request(app).get('/public/bundle.js')
         .expect('Content-Type', 'application/javascript; charset=UTF-8')
-        .expect('Content-Length', '3611')
+        .expect('Content-Length', '3645')
         .expect(200, /console\.log\('Hey\.'\)/, done);
     });
 
@@ -150,7 +161,7 @@ describe('Server', () => {
 
     it('GET request to bundle file', (done) => {
       request(app).get('/bundle.js')
-        .expect('Content-Length', '3611')
+        .expect('Content-Length', '3645')
         .expect(200, /console\.log\('Hey\.'\)/, done);
     });
   });
@@ -297,6 +308,71 @@ describe('Server', () => {
       request(app).get('/foo/bar')
         .expect(200, () => {
           assert(locals.webpackStats);
+          done();
+        });
+    });
+  });
+
+  function writeToDisk(value, done) {
+    app = express();
+    const compiler = webpack(webpackConfig);
+    instance = middleware(compiler, {
+      stats: 'errors-only',
+      logLevel,
+      writeToDisk: value
+    });
+    app.use(instance);
+    app.use((req, res) => {
+      res.sendStatus(200);
+    });
+    listen = listenShorthand(done);
+  }
+
+  describe('write to disk', () => {
+    before((done) => {
+      writeToDisk(true, done);
+    });
+    after(close);
+
+    it('should find the bundle file on disk', (done) => {
+      request(app).get('/foo/bar')
+        .expect(200, () => {
+          const bundlePath = path.join(__dirname, '../fixtures/server-test/bundle.js');
+          assert(fs.existsSync(bundlePath));
+          fs.unlinkSync(bundlePath);
+          done();
+        });
+    });
+  });
+
+  describe('write to disk with filter', () => {
+    before((done) => {
+      writeToDisk(filePath => /bundle\.js$/.test(filePath), done);
+    });
+    after(close);
+
+    it('should find the bundle file on disk', (done) => {
+      request(app).get('/foo/bar')
+        .expect(200, () => {
+          const bundlePath = path.join(__dirname, '../fixtures/server-test/bundle.js');
+          assert(fs.existsSync(bundlePath));
+          fs.unlinkSync(bundlePath);
+          done();
+        });
+    });
+  });
+
+  describe('write to disk with false filter', () => {
+    before((done) => {
+      writeToDisk(filePath => !(/bundle\.js$/.test(filePath)), done);
+    });
+    after(close);
+
+    it('should not find the bundle file on disk', (done) => {
+      request(app).get('/foo/bar')
+        .expect(200, () => {
+          const bundlePath = path.join(__dirname, '../fixtures/server-test/bundle.js');
+          assert(!fs.existsSync(bundlePath));
           done();
         });
     });

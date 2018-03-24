@@ -191,6 +191,32 @@ The module accepts an `Object` containing options for file watching, which is
 passed directly to the compiler provided. For more information on watch options
 please see the [webpack documentation](https://webpack.js.org/configuration/watch/#watchoptions)
 
+### writeToDisk
+
+Type: `Boolean|Function`  
+Default: `false`
+
+If true, the option will instruct the module to write files to the configured
+location on disk as specified in your `webpack` config file. _Setting
+`writeToDisk: true` won't change the behavior of the `webpack-dev-middleware`,
+and bundle files accessed through the browser will still be served from memory._
+This option provides the same capabilities as the
+[`WriteFilePlugin`](https://github.com/gajus/write-file-webpack-plugin/pulls).
+
+This option also accepts a `Function` value, which can be used to filter which
+files are written to disk. The function follows the same premise as
+[`Array#filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter)
+in which a return value of `false` _will not_ write the file, and a return value
+of `true` _will_ write the file to disk. eg.
+
+```js
+{
+  writeToDisk: (filePath) {
+    return /superman\.css$/.test(filePath);
+  }
+}
+```
+
 ## API
 
 `webpack-dev-middleware` also provides convenience methods that can be use to
