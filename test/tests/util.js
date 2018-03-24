@@ -7,7 +7,6 @@ const isWindows = process.platform === 'win32';
 
 function testUrl(options) {
   const url = getFilenameFromUrl(options.publicPath, options, options.url);
-  console.log(url);
   assert.equal(url, options.expected);
 }
 
