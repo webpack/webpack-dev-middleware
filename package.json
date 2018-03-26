@@ -1,6 +1,6 @@
 {
   "name": "webpack-dev-middleware",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "description": "A development middleware for webpack",
   "license": "MIT",
   "repository": "webpack/webpack-dev-middleware",
