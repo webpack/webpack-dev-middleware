@@ -24,6 +24,11 @@ Some of the benefits of using this middleware include:
 has completed.
 - Supports hot module reload (HMR).
 
+## Requirements
+
+This module requires a minimum of Node v6.9.0 and Webpack v4.0.0, and must be used with a
+server that accepts express-style middleware.
+
 ## Getting Started
 
 First thing's first, install the module:
@@ -33,11 +38,6 @@ npm install webpack-dev-middleware --save-dev
 ```
 
 _Note: We do not recommend installing this module globally._
-
-## Requirements
-
-`webpack-dev-middleware` requires Node v6 or higher, and must be used with a
-server that accepts express-style middleware.
 
 ## Usage
 
