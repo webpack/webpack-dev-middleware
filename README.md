@@ -321,7 +321,7 @@ function normalizeAssets(assets) {
   return Array.isArray(assets) ? assets : [assets]
 }
 
-app.use(middleware(compiler, { serverSideRender: true })
+app.use(middleware(compiler, { serverSideRender: true }))
 
 // The following middleware would not be invoked until the latest build is finished.
 app.use((req, res) => {
