@@ -378,7 +378,7 @@ describe('Server', () => {
     });
   });
 
-  function writeToDiskWithMultiCompiler(value, done) {
+  function multiToDisk(value, done) {
     app = express();
     const compiler = webpack(webpackMultiConfig);
     instance = middleware(compiler, {
@@ -395,7 +395,7 @@ describe('Server', () => {
 
   describe('write to disk with MultiCompiler', () => {
     before((done) => {
-      writeToDiskWithMultiCompiler(true, done);
+      multiToDisk(true, done);
     });
     after(close);
 
