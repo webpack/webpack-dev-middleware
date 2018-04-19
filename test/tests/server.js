@@ -377,4 +377,49 @@ describe('Server', () => {
         });
     });
   });
+
+  function writeToDiskWithMultiCompiler(value, done) {
+    app = express();
+    const compiler = webpack(webpackMultiConfig);
+    instance = middleware(compiler, {
+      stats: 'errors-only',
+      logLevel,
+      writeToDisk: value
+    });
+    app.use(instance);
+    app.use((req, res) => {
+      res.sendStatus(200);
+    });
+    listen = listenShorthand(done);
+  }
+
+  describe('write to disk with MultiCompiler', () => {
+    before((done) => {
+      writeToDiskWithMultiCompiler(true, done);
+    });
+    after(close);
+
+    it('should find the bundle files on disk', (done) => {
+      request(app).get('/foo/bar')
+        .expect(200, () => {
+          const bundleFiles = [
+            '../fixtures/server-test/js1/foo.js',
+            '../fixtures/server-test/js1/index.html',
+            '../fixtures/server-test/js1/svg.svg',
+            '../fixtures/server-test/js2/bar.js'
+          ];
+
+          for (const bundleFile of bundleFiles) {
+            const bundlePathFoo = path.join(__dirname, bundleFile);
+            assert(fs.existsSync(bundlePathFoo));
+            fs.unlinkSync(bundlePathFoo);
+          }
+
+          fs.rmdir(path.join(__dirname, '../fixtures/server-test/js1/'));
+          fs.rmdir(path.join(__dirname, '../fixtures/server-test/js2/'));
+
+          done();
+        });
+    });
+  });
 });
