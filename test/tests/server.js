@@ -410,9 +410,9 @@ describe('Server', () => {
           ];
 
           for (const bundleFile of bundleFiles) {
-            const bundlePathFoo = path.join(__dirname, bundleFile);
-            assert(fs.existsSync(bundlePathFoo));
-            fs.unlinkSync(bundlePathFoo);
+            const bundlePath = path.join(__dirname, bundleFile);
+            assert(fs.existsSync(bundlePath));
+            fs.unlinkSync(bundlePath);
           }
 
           fs.rmdirSync(path.join(__dirname, '../fixtures/server-test/js1/'));
