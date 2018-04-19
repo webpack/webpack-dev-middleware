@@ -415,8 +415,8 @@ describe('Server', () => {
             fs.unlinkSync(bundlePathFoo);
           }
 
-          fs.rmdir(path.join(__dirname, '../fixtures/server-test/js1/'));
-          fs.rmdir(path.join(__dirname, '../fixtures/server-test/js2/'));
+          fs.rmdirSync(path.join(__dirname, '../fixtures/server-test/js1/'));
+          fs.rmdirSync(path.join(__dirname, '../fixtures/server-test/js2/'));
 
           done();
         });
