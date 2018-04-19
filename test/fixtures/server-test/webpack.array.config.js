@@ -1,12 +1,14 @@
 'use strict';
 
+const path = require('path');
+
 module.exports = [{
   mode: 'development',
   context: __dirname,
   entry: './foo.js',
   output: {
     filename: 'foo.js',
-    path: '/js1',
+    path: path.resolve(__dirname, 'js1'),
     publicPath: '/js1/'
   },
   module: {
@@ -24,7 +26,7 @@ module.exports = [{
   entry: './bar.js',
   output: {
     filename: 'bar.js',
-    path: '/js2',
+    path: path.resolve(__dirname, 'js2'),
     publicPath: '/js2/'
   }
 }];
