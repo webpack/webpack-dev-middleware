@@ -121,15 +121,7 @@ describe('GetFilenameFromUrl', () => {
       url: '/pathname%20with%20spaces.js',
       outputPath: '/',
       publicPath: '/',
-      // ref #284 - windows paths should persist %20
-      expected: isWindows ? '/pathname%20with%20spaces.js' : '/pathname with spaces.js'
-    },
-    {
-      url: '/test/windows.txt',
-      outputPath: 'c:\\foo',
-      publicPath: '/test',
-      // this is weird, but it's legal-ish, and what URI parsing produces
-      expected: 'c://\\foo/windows.txt'
+      expected: '/pathname with spaces.js'
     },
     {
       url: '/js/sample.js',
@@ -279,17 +271,55 @@ describe('GetFilenameFromUrl', () => {
     });
   }
 
+  // Explicit Tests for Microsoft Windows
   if (isWindows) {
-    // explicit test for #284
-    const test = {
-      url: '/test/windows.txt',
-      outputPath: 'C:\\My%20Path\\wwwroot',
-      publicPath: '/test',
-      expected: 'C://\\My%20Path\\wwwroot/windows.txt'
-    };
+    const windowsTests = [
+      {
+        url: '/test/windows.txt',
+        outputPath: 'c:\\foo',
+        publicPath: '/test',
+        // this is weird, but it's legal-ish, and what URI parsing produces
+        expected: 'c://\\foo/windows.txt'
+      },
+      // Tests for #284
+      {
+        url: '/test/windows.txt',
+        outputPath: 'C:\\My%20Path\\wwwroot',
+        publicPath: '/test',
+        expected: 'C://\\My%20Path\\wwwroot/windows.txt'
+      },
+      {
+        url: '/test/windows%202.txt',
+        outputPath: 'C:\\My%20Path\\wwwroot',
+        publicPath: '/test',
+        expected: 'C://\\My%20Path\\wwwroot/windows 2.txt'
+      },
+      // Tests for #297
+      {
+        url: '/test/windows.txt',
+        outputPath: 'C:\\My Path\\wwwroot',
+        publicPath: '/test',
+        expected: 'C://\\My Path\\wwwroot/windows.txt'
+      },
+      {
+        url: '/test/windows%202.txt',
+        outputPath: 'C:\\My Path\\wwwroot',
+        publicPath: '/test',
+        expected: 'C://\\My Path\\wwwroot/windows 2.txt'
+      },
+      // Tests for #284 & #297
+      {
+        url: '/windows%20test/test%20%26%20test%20%26%20%2520.txt',
+        outputPath: 'C:\\My %20 Path\\wwwroot',
+        publicPath: '/windows%20test',
+        expected: 'C://\\My %20 Path\\wwwroot/test & test & %20.txt'
+      }
+    ];
 
-    it(`windows: should process ${test.url} -> ${test.expected}`, () => {
-      testUrl(test);
-    });
+    for (const test of windowsTests) {
+      it(`windows: should process ${test.url} -> ${test.expected}`, () => {
+        testUrl(test);
+      });
+    }
   }
 });
