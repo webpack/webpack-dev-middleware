@@ -10,7 +10,7 @@ function testUrl(options) {
   assert.equal(url, options.expected);
 }
 
-describe.only('GetFilenameFromUrl', () => {
+describe('GetFilenameFromUrl', () => {
   const tests = [
     {
       url: '/foo.js',
