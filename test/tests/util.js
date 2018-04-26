@@ -10,7 +10,7 @@ function testUrl(options) {
   assert.equal(url, options.expected);
 }
 
-describe('GetFilenameFromUrl', () => {
+describe.only('GetFilenameFromUrl', () => {
   const tests = [
     {
       url: '/foo.js',
@@ -122,13 +122,6 @@ describe('GetFilenameFromUrl', () => {
       outputPath: '/',
       publicPath: '/',
       expected: '/pathname with spaces.js'
-    },
-    {
-      url: '/test/windows.txt',
-      outputPath: 'c:\\foo',
-      publicPath: '/test',
-      // this is weird, but it's legal-ish, and what URI parsing produces
-      expected: 'c://\\foo/windows.txt'
     },
     {
       url: '/js/sample.js',
@@ -281,6 +274,13 @@ describe('GetFilenameFromUrl', () => {
   // Explicit Tests for Microsoft Windows
   if (isWindows) {
     const windowsTests = [
+      {
+        url: '/test/windows.txt',
+        outputPath: 'c:\\foo',
+        publicPath: '/test',
+        // this is weird, but it's legal-ish, and what URI parsing produces
+        expected: 'c://\\foo/windows.txt'
+      },
       // Tests for #284
       {
         url: '/test/windows.txt',
