@@ -318,7 +318,7 @@ const middleware = require('webpack-dev-middleware');
 
 // This function makes server rendering of asset references consistent with different webpack chunk/entry configurations
 function normalizeAssets(assets) {
-  if (typeof assets === 'object') {
+  if (Object.prototype.toString.call(assets) === '[object Object]') {
     return Object.values(assets)
   }
   return Array.isArray(assets) ? assets : [assets]
