@@ -122,6 +122,34 @@ describe('Server', () => {
     });
   });
 
+  describe('accepted methods', () => {
+    before((done) => {
+      app = express();
+      const compiler = webpack(webpackConfig);
+      instance = middleware(compiler, {
+        stats: 'errors-only',
+        acceptedMethods: ['POST'],
+        logLevel,
+        publicPath: '/public/'
+      });
+      app.use(instance);
+      listen = listenShorthand(done);
+    });
+    after(close);
+
+    it('POST request to bundle file with acceptedMethods set to [\'POST\']', (done) => {
+      request(app).post('/public/bundle.js')
+        .expect('Content-Type', 'application/javascript; charset=UTF-8')
+        .expect('Content-Length', '3645')
+        .expect(200, /console\.log\('Hey\.'\)/, done);
+    });
+
+    it('GET request to bundle file with acceptedMethods set to [\'POST\']', (done) => {
+      request(app).get('/public/bundle.js')
+        .expect(404, done);
+    });
+  });
+
   describe('no index mode', () => {
     before((done) => {
       app = express();
