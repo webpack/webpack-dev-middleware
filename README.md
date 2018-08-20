@@ -62,6 +62,13 @@ for the Object.
 
 _Note: The `publicPath` property is required, whereas all other options are optional_
 
+### acceptedMethods
+
+Type: `Array`  
+Default: `[ 'GET' ]`
+
+This property allows a user to pass the list of HTTP request methods accepted by the server. 
+
 ### headers
 
 Type: `Object`  
