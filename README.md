@@ -62,7 +62,7 @@ for the Object.
 
 _Note: The `publicPath` property is required, whereas all other options are optional_
 
-### acceptedMethods
+### methods
 
 Type: `Array`  
 Default: `[ 'GET' ]`
