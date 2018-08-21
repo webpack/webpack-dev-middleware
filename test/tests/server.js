@@ -128,7 +128,7 @@ describe('Server', () => {
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        acceptedMethods: ['POST'],
+        methods: ['POST'],
         logLevel,
         publicPath: '/public/'
       });
@@ -137,14 +137,14 @@ describe('Server', () => {
     });
     after(close);
 
-    it('POST request to bundle file with acceptedMethods set to [\'POST\']', (done) => {
+    it('POST request to bundle file with methods set to [\'POST\']', (done) => {
       request(app).post('/public/bundle.js')
         .expect('Content-Type', 'application/javascript; charset=UTF-8')
         .expect('Content-Length', '3645')
         .expect(200, /console\.log\('Hey\.'\)/, done);
     });
 
-    it('GET request to bundle file with acceptedMethods set to [\'POST\']', (done) => {
+    it('GET request to bundle file with methods set to [\'POST\']', (done) => {
       request(app).get('/public/bundle.js')
         .expect(404, done);
     });
