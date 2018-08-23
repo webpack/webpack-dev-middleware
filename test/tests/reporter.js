@@ -21,7 +21,7 @@ describe('Reporter', () => {
       }
     };
   };
-  const sandbox = sinon.sandbox.create();
+  const sandbox = sinon.createSandbox();
   const defaults = { logLevel: 'silent' };
   const compiler = {
     watch() {

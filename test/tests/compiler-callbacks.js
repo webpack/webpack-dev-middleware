@@ -8,7 +8,7 @@ const middleware = require('../../');
 describe('CompilerCallbacks', () => {
   const hook = { tap: () => {} };
   const logLevel = 'silent';
-  const sandbox = sinon.sandbox.create();
+  const sandbox = sinon.createSandbox();
   const compiler = {
     watch() {},
     hooks: {

@@ -26,7 +26,7 @@ describe('Lazy mode', () => {
     };
   };
   const logLevel = 'silent';
-  const sandbox = sinon.sandbox.create();
+  const sandbox = sinon.createSandbox();
   const res = {};
   const compiler = {
     hooks: {

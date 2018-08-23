@@ -29,7 +29,7 @@ describe('Logging', () => {
   }
 
   it('should log', () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     const infoSpy = sandbox.spy(console, 'info');
     const warnSpy = sandbox.spy(console, 'warn');
     const errorSpy = sandbox.spy(console, 'error');
@@ -59,7 +59,7 @@ describe('Logging', () => {
     // testing
     weblog.delLogger('wdm');
 
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     const info = sandbox.spy(console, 'info');
     const instance = middleware(compiler, { logTime: true });
     const { log } = instance.context;
