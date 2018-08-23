@@ -11,11 +11,8 @@
     "node": ">= 6"
   },
   "scripts": {
-    "ci": "npm run lint && npm run test",
-    "lint": "eslint index.js cli.js bin lib test examples",
-    "test": "nyc npm run mocha",
-    "mocha": "mocha test/test.js --full-trace --check-leaks --exit",
-    "cover": "nyc report --reporter=text-lcov > coverage.lcov && codecov --token=$WDM_CODECOV_TOKEN",
+    "lint": "eslint index.js lib test",
+    "test": "nyc --reporter lcovonly mocha --full-trace --check-leaks --exit",
     "release": "standard-version"
   },
   "dependencies": {
@@ -29,7 +26,6 @@
   },
   "devDependencies": {
     "assert": "^1.4.1",
-    "codecov": "^3.0.4",
     "eslint": "^4.0.0",
     "eslint-config-webpack": "^1.2.5",
     "eslint-plugin-import": "^2.8.0",

@@ -1,13 +1,25 @@
-sudo: false
 language: node_js
 
-node_js:
-  - '9'
-  - '8'
-  - '6'
+jobs:
+  fast_finish: true
+  include:
+    - stage: Lint
+      env: SCRIPT=lint
+      node_js: 'stable'
+    - &test
+      stage: Test
+      env: SCRIPT=test
+      node_js: 'stable'
+    - <<: *test
+      node_js: 'lts/*'
+    - <<: *test
+      node_js: 6
 
-script:
-  npm run ci
+script: npm run $SCRIPT
 
 after_success:
-  npm run cover
+  - npm i codecov
+  - $(npm bin)/codecov
+
+notifications:
+  email: false
