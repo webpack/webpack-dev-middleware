@@ -18,7 +18,7 @@
   "dependencies": {
     "loud-rejection": "^1.6.0",
     "memory-fs": "~0.4.1",
-    "mime": "^2.1.0",
+    "mime": "^2.3.1",
     "path-is-absolute": "^1.0.0",
     "range-parser": "^1.0.3",
     "url-join": "^4.0.0",
@@ -26,17 +26,17 @@
   },
   "devDependencies": {
     "assert": "^1.4.1",
-    "eslint": "^4.0.0",
+    "eslint": "^5.4.0",
     "eslint-config-webpack": "^1.2.5",
-    "eslint-plugin-import": "^2.8.0",
+    "eslint-plugin-import": "^2.14.0",
     "express": "^4.14.0",
-    "file-loader": "^1.1.10",
-    "mocha": "^5.0.1",
-    "nyc": "^11.4.1",
-    "sinon": "^4.1.3",
+    "file-loader": "^2.0.0",
+    "mocha": "^5.2.0",
+    "nyc": "^12.0.2",
+    "sinon": "^6.1.5",
     "standard-version": "^4.4.0",
-    "supertest": "^3.0.0",
-    "webpack": "^4.2.0"
+    "supertest": "^3.1.0",
+    "webpack": "^4.17.1"
   },
   "peerDependencies": {
     "webpack": "^4.0.0"
