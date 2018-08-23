@@ -25,7 +25,7 @@
     "path-is-absolute": "^1.0.0",
     "range-parser": "^1.0.3",
     "url-join": "^4.0.0",
-    "webpack-log": "^1.2.0"
+    "webpack-log": "^2.0.0"
   },
   "devDependencies": {
     "assert": "^1.4.1",
