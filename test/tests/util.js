@@ -262,6 +262,12 @@ describe('GetFilenameFromUrl', () => {
       outputPath: '/root',
       publicPath: '/test/',
       expected: '/root/sample.txt'
+    },
+    {
+      url: '/test/sample.txt',
+      outputPath: '/test/#leadinghash',
+      publicPath: '/',
+      expected: '/test/#leadinghash/test/sample.txt'
     }
   ];
 
