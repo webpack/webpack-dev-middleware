@@ -152,6 +152,42 @@ describe('Server', () => {
     });
   });
 
+  describe('filters', () => {
+    before((done) => {
+      app = express();
+      const compiler = webpack(webpackConfig);
+      instance = middleware(compiler, {
+        stats: 'errors-only',
+        content: {
+          filter(currentRequest) {
+            let result = true;
+            if (/.js$/.test(currentRequest.filename)) {
+              result = false;
+            }
+            return result;
+          }
+        },
+        logLevel,
+        publicPath: '/public/'
+      });
+      app.use(instance);
+      listen = listenShorthand(done);
+    });
+    after(close);
+
+    it('GET request to bundle file with /.js$/ filtered', (done) => {
+      request(app).get('/public/bundle.js')
+        .expect(404, done);
+    });
+
+    it('request to image with /.js$/ filtered', (done) => {
+      request(app).get('/public/svg.svg')
+        .expect('Content-Type', 'image/svg+xml; charset=UTF-8')
+        .expect('Content-Length', '4778')
+        .expect(200, done);
+    });
+  });
+
   describe('no index mode', () => {
     before((done) => {
       app = express();
