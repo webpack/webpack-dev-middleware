@@ -152,6 +152,114 @@ describe('Server', () => {
     });
   });
 
+  describe('filters', () => {
+    before((done) => {
+      app = express();
+      const compiler = webpack(webpackConfig);
+      instance = middleware(compiler, {
+        stats: 'errors-only',
+        content: {
+          filter(currentRequest) {
+            let result = true;
+            if (/.js$/.test(currentRequest.filename)) {
+              result = false;
+            }
+            return result;
+          }
+        },
+        logLevel,
+        publicPath: '/public/'
+      });
+      app.use(instance);
+      listen = listenShorthand(done);
+    });
+    after(close);
+
+    it('GET request to bundle file with /.js$/ filtered', (done) => {
+      request(app).get('/public/bundle.js')
+        .expect(404, done);
+    });
+
+    it('request to image with /.js$/ filtered', (done) => {
+      request(app).get('/public/svg.svg')
+        .expect('Content-Type', 'image/svg+xml; charset=UTF-8')
+        .expect('Content-Length', '4778')
+        .expect(200, done);
+    });
+  });
+
+  describe('content transform', () => {
+    before((done) => {
+      app = express();
+      const compiler = webpack(webpackConfig);
+      instance = middleware(compiler, {
+        stats: 'errors-only',
+        content: {
+          transform(currentRequest, content, memoryFileSystem) {
+            return new Promise((resolve, reject) => {
+              if (currentRequest.url === '/public/') {
+                resolve(Buffer.from(content.toString().replace(/My/, 'Modified')));
+              } else if (currentRequest.url === '/public/001/aliased-bundle.js') {
+                currentRequest.filename = '/bundle.js';
+                currentRequest.notFound = false;
+                memoryFileSystem.readFile(currentRequest.filename, (err, cont) => {
+                  if (err) {
+                    reject();
+                  } else {
+                    resolve(cont);
+                  }
+                });
+              } else {
+                resolve(content);
+              }
+            });
+          }
+        },
+        logLevel,
+        publicPath: '/public/'
+      });
+      app.use(instance);
+      listen = listenShorthand(done);
+    });
+
+    after(close);
+
+    it('GET request to bundle file, with transform rules on the /public/ URL', (done) => {
+      request(app).get('/public/bundle.js')
+        .expect('Content-Type', 'application/javascript; charset=UTF-8')
+        // TODO(michael-ciniawsky) investigate the need for this test
+        .expect('Content-Length', '4631')
+        .expect(200, /console\.log\('Hey\.'\)/, done);
+    });
+
+    it('request to existing image, with transform rules on the /public/ URL', (done) => {
+      request(app).get('/public/svg.svg')
+        .expect('Content-Type', 'image/svg+xml; charset=UTF-8')
+        .expect('Content-Length', '4778')
+        .expect(200, done);
+    });
+
+    it('GET request to bundle file, with transform rules on the /public/ URL', (done) => {
+      request(app).get('/public/001/aliased-bundle.js')
+        .expect('Content-Type', 'application/javascript; charset=UTF-8')
+        .expect('Content-Length', '4631')
+        .expect(200, /console\.log\('Hey\.'\)/, done);
+    });
+
+    it('request to non existing file, with transform rules on the /public/ URL', (done) => {
+      request(app).get('/public/nope')
+        .expect('Content-Type', 'text/html; charset=utf-8')
+        .expect(404, done);
+    });
+
+    it('request to directory', (done) => {
+      request(app).get('/public/')
+        .expect('Content-Type', 'text/html; charset=UTF-8')
+        .expect('Content-Length', '16')
+        .expect(200, /Modified Index\./, done);
+    });
+  });
+
   describe('no index mode', () => {
     before((done) => {
       app = express();
