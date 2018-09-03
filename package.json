@@ -19,7 +19,6 @@
     "loud-rejection": "^1.6.0",
     "memory-fs": "~0.4.1",
     "mime": "^2.3.1",
-    "path-is-absolute": "^1.0.0",
     "range-parser": "^1.0.3",
     "url-join": "^4.0.0",
     "webpack-log": "^2.0.0"
