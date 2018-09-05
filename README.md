@@ -309,7 +309,7 @@ In order to develop an app using server-side rendering, we need access to the
 generated with each build.
 
 With server-side rendering enabled, `webpack-dev-middleware` sets the `stat` to
-`res.locals.webpackStats` before invoking the next middleware, allowing a
+`res.locals.webpackStats` and the memory filesystem to `res.locals.fs` before invoking the next middleware, allowing a
 developer to render the page body and manage the response to clients.
 
 _Note: Requests for bundle files will still be handled by
