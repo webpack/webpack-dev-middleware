@@ -339,6 +339,7 @@ describe('Server', () => {
       request(app).get('/foo/bar')
         .expect(200, () => {
           assert(locals.webpackStats);
+          assert(locals.fs);
           done();
         });
     });

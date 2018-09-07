@@ -309,7 +309,7 @@ In order to develop an app using server-side rendering, we need access to the
 generated with each build.
 
 With server-side rendering enabled, `webpack-dev-middleware` sets the `stat` to
-`res.locals.webpackStats` before invoking the next middleware, allowing a
+`res.locals.webpackStats` and the memory filesystem to `res.locals.fs` before invoking the next middleware, allowing a
 developer to render the page body and manage the response to clients.
 
 _Note: Requests for bundle files will still be handled by
@@ -337,6 +337,8 @@ app.use(middleware(compiler, { serverSideRender: true }))
 // The following middleware would not be invoked until the latest build is finished.
 app.use((req, res) => {
   const assetsByChunkName = res.locals.webpackStats.toJson().assetsByChunkName
+  const fs = res.locals.fs
+  const outputPath = res.locals.webpackStats.toJson().outputPath
 
   // then use `assetsByChunkName` for server-sider rendering
   // For example, if you have only one main chunk:
@@ -344,10 +346,12 @@ app.use((req, res) => {
 <html>
   <head>
     <title>My App</title>
+    <style>
 		${normalizeAssets(assetsByChunkName.main)
 			  .filter(path => path.endsWith('.css'))
-			  .map(path => `<link rel="stylesheet" href="${path}" />`)
+			  .map(path => fs.readFileSync(outputPath + '/' + path))
 			  .join('\n')}
+    </style>
   </head>
   <body>
     <div id="root"></div>
