@@ -262,6 +262,12 @@ describe('GetFilenameFromUrl', () => {
       outputPath: '/root',
       publicPath: '/test/',
       expected: '/root/sample.txt'
+    },
+    {
+      url: '/test/sample.txt',
+      outputPath: '/test/#leadinghash',
+      publicPath: '/',
+      expected: '/test/#leadinghash/test/sample.txt'
     }
   ];
 
@@ -278,41 +284,41 @@ describe('GetFilenameFromUrl', () => {
         url: '/test/windows.txt',
         outputPath: 'c:\\foo',
         publicPath: '/test',
-        // this is weird, but it's legal-ish, and what URI parsing produces
-        expected: 'c://\\foo/windows.txt'
+
+        expected: 'c:\\foo/windows.txt'
       },
       // Tests for #284
       {
         url: '/test/windows.txt',
         outputPath: 'C:\\My%20Path\\wwwroot',
         publicPath: '/test',
-        expected: 'C://\\My%20Path\\wwwroot/windows.txt'
+        expected: 'C:\\My%20Path\\wwwroot/windows.txt'
       },
       {
         url: '/test/windows%202.txt',
         outputPath: 'C:\\My%20Path\\wwwroot',
         publicPath: '/test',
-        expected: 'C://\\My%20Path\\wwwroot/windows 2.txt'
+        expected: 'C:\\My%20Path\\wwwroot/windows 2.txt'
       },
       // Tests for #297
       {
         url: '/test/windows.txt',
         outputPath: 'C:\\My Path\\wwwroot',
         publicPath: '/test',
-        expected: 'C://\\My Path\\wwwroot/windows.txt'
+        expected: 'C:\\My Path\\wwwroot/windows.txt'
       },
       {
         url: '/test/windows%202.txt',
         outputPath: 'C:\\My Path\\wwwroot',
         publicPath: '/test',
-        expected: 'C://\\My Path\\wwwroot/windows 2.txt'
+        expected: 'C:\\My Path\\wwwroot/windows 2.txt'
       },
       // Tests for #284 & #297
       {
         url: '/windows%20test/test%20%26%20test%20%26%20%2520.txt',
         outputPath: 'C:\\My %20 Path\\wwwroot',
         publicPath: '/windows%20test',
-        expected: 'C://\\My %20 Path\\wwwroot/test & test & %20.txt'
+        expected: 'C:\\My %20 Path\\wwwroot/test & test & %20.txt'
       }
     ];
 
