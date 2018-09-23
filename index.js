@@ -7,8 +7,6 @@ const reporter = require('./lib/reporter');
 const { setFs, toDisk } = require('./lib/fs');
 const { getFilenameFromUrl, noop, ready } = require('./lib/util');
 
-require('loud-rejection/register');
-
 const defaults = {
   logLevel: 'info',
   logTime: false,
