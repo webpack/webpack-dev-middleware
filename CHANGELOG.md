@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [3.4.0](https://github.com/webpack/webpack-dev-middleware/compare/v3.3.0...v3.4.0) (2018-09-24)
+
+
+### Bug Fixes
+
+* **index:** don't modify the default behavior for `unhandledRejection` ([#340](https://github.com/webpack/webpack-dev-middleware/issues/340)) ([f0a8e3e](https://github.com/webpack/webpack-dev-middleware/commit/f0a8e3e))
+* **middleware:** replace `url-join` with `path.posix.join` ([#334](https://github.com/webpack/webpack-dev-middleware/issues/334)) ([d75802b](https://github.com/webpack/webpack-dev-middleware/commit/d75802b))
+
+
+
 <a name="3.3.0"></a>
 # [3.3.0](https://github.com/webpack/webpack-dev-middleware/compare/v3.2.0...v3.3.0) (2018-09-10)
 
