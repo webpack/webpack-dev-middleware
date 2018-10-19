@@ -218,7 +218,7 @@ of `true` _will_ write the file to disk. eg.
 
 ```js
 {
-  writeToDisk: (filePath) {
+  writeToDisk: (filePath) => {
     return /superman\.css$/.test(filePath);
   }
 }
