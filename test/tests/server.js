@@ -253,9 +253,9 @@ describe('Server', () => {
         stats: 'errors-only',
         logLevel,
         index: 'Index.phtml',
-        mimeTypesForce: true,
         mimeTypes: {
-          'text/html': ['phtml']
+          typeMap: { 'text/html': ['phtml'] },
+          force: true
         }
       });
       app.use(instance);
