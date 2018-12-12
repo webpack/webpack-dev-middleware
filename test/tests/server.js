@@ -245,6 +245,33 @@ describe('Server', () => {
     });
   });
 
+  describe('force option for custom mimeTypes', () => {
+    before((done) => {
+      app = express();
+      const compiler = webpack(webpackClientServerConfig);
+      instance = middleware(compiler, {
+        stats: 'errors-only',
+        logLevel,
+        index: 'Index.phtml',
+        mimeTypesForce: true,
+        mimeTypes: {
+          'text/html': ['phtml']
+        }
+      });
+      app.use(instance);
+      listen = listenShorthand(done);
+      instance.fileSystem.writeFileSync('/Index.phtml', 'welcome');
+    });
+    after(close);
+
+    it('request to Index.phtml', (done) => {
+      request(app).get('/')
+        .expect('welcome')
+        .expect('Content-Type', /text\/html/)
+        .expect(200, done);
+    });
+  });
+
   describe('WebAssembly', () => {
     before((done) => {
       app = express();
