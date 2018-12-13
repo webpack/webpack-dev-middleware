@@ -38,7 +38,9 @@ module.exports = function wdm(compiler, opts) {
 
   // defining custom MIME type
   if (options.mimeTypes) {
-    mime.define(options.mimeTypes);
+    const typeMap = options.mimeTypes.typeMap || options.mimeTypes;
+    const force = !!options.mimeTypes.force;
+    mime.define(typeMap, force);
   }
 
   const context = createContext(compiler, options);

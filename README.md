@@ -150,8 +150,15 @@ Type: `Object`
 Default: `null`
 
 This property allows a user to register custom mime types or extension mappings.
-eg. `{ 'text/html': [ 'phtml' ] }`. Please see the documentation for
-[`node-mime`](https://github.com/broofa/node-mime#mimedefine) for more information.
+eg. `mimeTypes: { 'text/html': [ 'phtml' ] }`. 
+
+By default node-mime will throw an error if you try to map a type to an extension 
+that is already assigned to another type. Passing `force: true` will suppress this behavior 
+(overriding any previous mapping).
+eg. `mimeTypes: { typeMap: { 'text/html': [ 'phtml' ] } }, force: true }`. 
+
+Please see the documentation for
+[`node-mime`](https://github.com/broofa/node-mime#mimedefinetypemap-force--false) for more information.
 
 ### publicPath
 
