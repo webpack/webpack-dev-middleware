@@ -219,6 +219,29 @@ describe('Server', () => {
     });
   });
 
+  describe('no extension support', () => {
+    before((done) => {
+      app = express();
+      const compiler = webpack(webpackConfig);
+      instance = middleware(compiler, {
+        stats: 'errors-only',
+        logLevel,
+        index: 'noextension'
+      });
+      app.use(instance);
+      listen = listenShorthand(done);
+      instance.fileSystem.writeFileSync('/noextension', 'hello');
+    });
+    after(close);
+
+    it('request to noextension', (done) => {
+      request(app).get('/')
+        .expect('hello')
+        .expect('Content-Type', '; charset=UTF-8')
+        .expect(200, done);
+    });
+  });
+
   describe('custom mimeTypes', () => {
     before((done) => {
       app = express();
