@@ -34,7 +34,8 @@ describe('Lazy mode', () => {
       invalid: hook('invalid'),
       run: hook('run'),
       watchRun: hook('watchRun')
-    }
+    },
+    running: false
   };
 
   beforeEach(() => {
@@ -45,6 +46,7 @@ describe('Lazy mode', () => {
 
   afterEach(() => {
     sandbox.restore();
+    compiler.running = false;
   });
 
   describe('builds', () => {
@@ -90,6 +92,17 @@ describe('Lazy mode', () => {
 
         done();
       }, 1000);
+    });
+
+    it('should not trigger a second compilation if the compiler is already running', (done) => {
+      compiler.running = true;
+      instance(req, res, next);
+      assert.equal(compiler.run.callCount, 0);
+      hooks.done(doneStats);
+      setTimeout(() => {
+        assert.equal(next.callCount, 1);
+        done();
+      });
     });
   });
 
