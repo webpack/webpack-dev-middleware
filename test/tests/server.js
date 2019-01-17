@@ -11,6 +11,7 @@ const request = require('supertest');
 const middleware = require('../../');
 const webpackConfig = require('../fixtures/server-test/webpack.config');
 const webpackMultiConfig = require('../fixtures/server-test/webpack.array.config');
+const webpackQuerystringConfig = require('../fixtures/server-test/webpack.querystring.config');
 const webpackClientServerConfig = require('../fixtures/server-test/webpack.client.server.config');
 
 describe('Server', () => {
@@ -455,6 +456,38 @@ describe('Server', () => {
         .expect(200, () => {
           const bundlePath = path.join(__dirname, '../fixtures/server-test/bundle.js');
           assert(!fs.existsSync(bundlePath));
+          done();
+        });
+    });
+  });
+
+  function querystringToDisk(value, done) {
+    app = express();
+    const compiler = webpack(webpackQuerystringConfig);
+    instance = middleware(compiler, {
+      stats: 'errors-only',
+      logLevel,
+      writeToDisk: value
+    });
+    app.use(instance);
+    app.use((req, res) => {
+      res.sendStatus(200);
+    });
+    listen = listenShorthand(done);
+  }
+
+  describe('write to disk without including querystrings', () => {
+    before((done) => {
+      querystringToDisk(true, done);
+    });
+    after(close);
+
+    it('should find the bundle file on disk with no querystring', (done) => {
+      request(app).get('/foo/bar')
+        .expect(200, () => {
+          const bundlePath = path.join(__dirname, '../fixtures/server-test/bundle.js');
+          assert(fs.existsSync(bundlePath));
+          fs.unlinkSync(bundlePath);
           done();
         });
     });
