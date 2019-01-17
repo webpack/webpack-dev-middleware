@@ -5,6 +5,8 @@ init:
 
 environment:
   matrix:
+    - nodejs_version: '11'
+      webpack_version: latest
     - nodejs_version: '10'
       webpack_version: latest
     - nodejs_version: '8'
