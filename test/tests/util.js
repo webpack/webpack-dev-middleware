@@ -268,7 +268,13 @@ describe('GetFilenameFromUrl', () => {
       outputPath: '/test/#leadinghash',
       publicPath: '/',
       expected: '/test/#leadinghash/test/sample.txt'
-    }
+    },
+    {
+      url: '/folder-name-with-dots/mono-v6.x.x',
+      outputPath: '/',
+      publicPath: '/',
+      expected: '/folder-name-with-dots/mono-v6.x.x'
+    },
   ];
 
   for (const test of tests) {
