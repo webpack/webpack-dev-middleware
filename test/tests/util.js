@@ -274,7 +274,7 @@ describe('GetFilenameFromUrl', () => {
       outputPath: '/',
       publicPath: '/',
       expected: '/folder-name-with-dots/mono-v6.x.x'
-    },
+    }
   ];
 
   for (const test of tests) {

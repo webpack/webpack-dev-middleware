@@ -53,11 +53,11 @@ describe('Server', () => {
       instance.fileSystem.writeFileSync('/123a123412.hot-update.json', '["hi"]');
 
       // Add a nested directory and index.html inside
-      instance.fileSystem.mkdirSync("/reference");
-      instance.fileSystem.mkdirSync("/reference/mono-v6.x.x");
+      instance.fileSystem.mkdirSync('/reference');
+      instance.fileSystem.mkdirSync('/reference/mono-v6.x.x');
       instance.fileSystem.writeFileSync(
-        "/reference/mono-v6.x.x/index.html",
-        "My Index."
+        '/reference/mono-v6.x.x/index.html',
+        'My Index.'
       );
     });
 
@@ -111,9 +111,9 @@ describe('Server', () => {
         .expect(200, /My Index\./, done);
     });
 
-    it("request to subdirectory without trailing slash", done => {
+    it('request to subdirectory without trailing slash', (done) => {
       request(app)
-        .get("/public/reference/mono-v6.x.x")
+        .get('/public/reference/mono-v6.x.x')
         .expect('Content-Type', 'text/html; charset=UTF-8')
         .expect('Content-Length', '9')
         .expect(200, /My Index\./, done);
