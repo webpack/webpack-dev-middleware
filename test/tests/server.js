@@ -51,6 +51,14 @@ describe('Server', () => {
       listen = listenShorthand(done);
       // Hack to add a mock HMR json file to the in-memory filesystem.
       instance.fileSystem.writeFileSync('/123a123412.hot-update.json', '["hi"]');
+
+      // Add a nested directory and index.html inside
+      instance.fileSystem.mkdirSync('/reference');
+      instance.fileSystem.mkdirSync('/reference/mono-v6.x.x');
+      instance.fileSystem.writeFileSync(
+        '/reference/mono-v6.x.x/index.html',
+        'My Index.'
+      );
     });
 
     after(close);
@@ -100,6 +108,14 @@ describe('Server', () => {
       request(app).get('/public/')
         .expect('Content-Type', 'text/html; charset=UTF-8')
         .expect('Content-Length', '10')
+        .expect(200, /My Index\./, done);
+    });
+
+    it('request to subdirectory without trailing slash', (done) => {
+      request(app)
+        .get('/public/reference/mono-v6.x.x')
+        .expect('Content-Type', 'text/html; charset=UTF-8')
+        .expect('Content-Length', '9')
         .expect(200, /My Index\./, done);
     });
 
