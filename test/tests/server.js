@@ -312,17 +312,21 @@ describe('Server', () => {
     });
   });
 
-  describe('WebAssembly', () => {
+  describe('Special file type headers', () => {
     before((done) => {
       app = express();
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel
+        logLevel,
+        mimeTypes: {
+          'model/vnd.pixar.usd': ['usdz']
+        }
       });
       app.use(instance);
       listen = listenShorthand(done);
       instance.fileSystem.writeFileSync('/hello.wasm', 'welcome');
+      instance.fileSystem.writeFileSync('/3dAr.usdz', '010101');
     });
     after(close);
 
@@ -330,6 +334,13 @@ describe('Server', () => {
       request(app).get('/hello.wasm')
         .expect('Content-Type', 'application/wasm')
         .expect('welcome')
+        .expect(200, done);
+    });
+
+    it('request to 3dAr.usdz', (done) => {
+      request(app).get('/3dAr.usdz')
+        .expect('Content-Type', 'model/vnd.pixar.usd')
+        .expect('010101')
         .expect(200, done);
     });
   });
