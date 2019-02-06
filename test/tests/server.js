@@ -11,6 +11,7 @@ const request = require('supertest');
 const middleware = require('../../');
 const webpackConfig = require('../fixtures/server-test/webpack.config');
 const webpackMultiConfig = require('../fixtures/server-test/webpack.array.config');
+const webpackQuerystringConfig = require('../fixtures/server-test/webpack.querystring.config');
 const webpackClientServerConfig = require('../fixtures/server-test/webpack.client.server.config');
 
 describe('Server', () => {
@@ -50,6 +51,14 @@ describe('Server', () => {
       listen = listenShorthand(done);
       // Hack to add a mock HMR json file to the in-memory filesystem.
       instance.fileSystem.writeFileSync('/123a123412.hot-update.json', '["hi"]');
+
+      // Add a nested directory and index.html inside
+      instance.fileSystem.mkdirSync('/reference');
+      instance.fileSystem.mkdirSync('/reference/mono-v6.x.x');
+      instance.fileSystem.writeFileSync(
+        '/reference/mono-v6.x.x/index.html',
+        'My Index.'
+      );
     });
 
     after(close);
@@ -99,6 +108,14 @@ describe('Server', () => {
       request(app).get('/public/')
         .expect('Content-Type', 'text/html; charset=UTF-8')
         .expect('Content-Length', '10')
+        .expect(200, /My Index\./, done);
+    });
+
+    it('request to subdirectory without trailing slash', (done) => {
+      request(app)
+        .get('/public/reference/mono-v6.x.x')
+        .expect('Content-Type', 'text/html; charset=UTF-8')
+        .expect('Content-Length', '9')
         .expect(200, /My Index\./, done);
     });
 
@@ -466,6 +483,38 @@ describe('Server', () => {
         .expect(200, () => {
           const bundlePath = path.join(__dirname, '../fixtures/server-test/bundle.js');
           assert(!fs.existsSync(bundlePath));
+          done();
+        });
+    });
+  });
+
+  function querystringToDisk(value, done) {
+    app = express();
+    const compiler = webpack(webpackQuerystringConfig);
+    instance = middleware(compiler, {
+      stats: 'errors-only',
+      logLevel,
+      writeToDisk: value
+    });
+    app.use(instance);
+    app.use((req, res) => {
+      res.sendStatus(200);
+    });
+    listen = listenShorthand(done);
+  }
+
+  describe('write to disk without including querystrings', () => {
+    before((done) => {
+      querystringToDisk(true, done);
+    });
+    after(close);
+
+    it('should find the bundle file on disk with no querystring', (done) => {
+      request(app).get('/foo/bar')
+        .expect(200, () => {
+          const bundlePath = path.join(__dirname, '../fixtures/server-test/bundle.js');
+          assert(fs.existsSync(bundlePath));
+          fs.unlinkSync(bundlePath);
           done();
         });
     });
