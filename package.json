@@ -1,6 +1,6 @@
 {
   "name": "webpack-dev-middleware",
-  "version": "3.5.1",
+  "version": "3.5.2",
   "description": "A development middleware for webpack",
   "main": "index.js",
   "files": [
