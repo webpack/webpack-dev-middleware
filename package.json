@@ -16,6 +16,7 @@
     "release": "standard-version"
   },
   "dependencies": {
+    "memfs": "^2.15.0",
     "memory-fs": "~0.4.1",
     "mime": "^2.3.1",
     "range-parser": "^1.0.3",
