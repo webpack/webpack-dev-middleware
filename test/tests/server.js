@@ -390,7 +390,7 @@ describe('Server', () => {
     });
 
     it('request to non-public path', (done) => {
-      request(app).get('/nonpublic/').expect(404, done);
+      request(app).get('/').expect(404, done);
     });
   });
 
