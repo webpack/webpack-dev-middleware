@@ -319,6 +319,8 @@ With server-side rendering enabled, `webpack-dev-middleware` sets the `stat` to
 `res.locals.webpackStats` and the memory filesystem to `res.locals.fs` before invoking the next middleware, allowing a
 developer to render the page body and manage the response to clients.
 
+_Note: If you are using this plugin with html-webpack-plugin, you need to set add `index: false` to your config as well. See [#306](https://github.com/webpack/webpack-dev-middleware/issues/306#issuecomment-403208674)._
+
 _Note: Requests for bundle files will still be handled by
 `webpack-dev-middleware` and all requests will be pending until the build
 process is finished with server-side rendering enabled._
