@@ -48,17 +48,14 @@ describe('FileSystem', () => {
 
     const fs = { join() {} };
 
-    it('should provide .join()', (done) => {
-      try {
-        middleware(compiler, { fs });
-      } catch (error) {
-        done(error);
-        return;
-      }
+    it('should throw on invalid fs', (done) => {
+      assert.throws(() => {
+        middleware(compiler, { fs: {} });
+      });
       done();
     });
 
-    it('should be assigned to the compiler.outputFileSystem', (done) => {
+    it('should assign fs to the compiler.outputFileSystem', (done) => {
       const instance = middleware(compiler, { fs });
 
       assert.equal(compiler.outputFileSystem, fs);
