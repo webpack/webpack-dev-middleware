@@ -61,6 +61,7 @@ describe('FileSystem', () => {
       assert.equal(compiler.outputFileSystem, fs);
       instance.close(done);
     });
+
     it('should go safely when compiler.outputFileSystem is assigned by fs externally', (done) => {
       const cmplr = Object.create(compiler);
       cmplr.outputFileSystem = fs;

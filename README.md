@@ -55,7 +55,6 @@ app.use(middleware(compiler, {
 app.listen(3000, () => console.log('Example app listening on port 3000!'))
 ```
 
-
 ## Options
 
 The middleware accepts an `options` Object. The following is a property reference
@@ -238,7 +237,10 @@ Default: `MemoryFileSystem`
 
 Set the default file system which will be used by webpack as primary destination of generated files. Default is set to webpack's default file system: [memory-fs](https://github.com/webpack/memory-fs). This option isn't affected by the [writeToDisk](#writeToDisk) option.
 
-**Note:** As of 3.5.x version of the middleware you have to provide `.join()` method to the `fs` instance. This can be done simply by using `path.join`.
+**Note:** As of 3.5.x version of the middleware you have to provide `.join()` method to the `fs` instance manually. This can be done simply by using `path.join`:
+```js
+  fs.join = path.join // no need to bind
+```
 
 ## API
 
