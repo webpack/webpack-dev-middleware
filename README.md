@@ -210,7 +210,7 @@ please see the [webpack documentation](https://webpack.js.org/configuration/watc
 Type: `Boolean|Function`  
 Default: `false`
 
-If true, the option will instruct the module to write files to the configured
+If `true`, the option will instruct the module to write files to the configured
 location on disk as specified in your `webpack` config file. _Setting
 `writeToDisk: true` won't change the behavior of the `webpack-dev-middleware`,
 and bundle files accessed through the browser will still be served from memory._
@@ -229,6 +229,17 @@ of `true` _will_ write the file to disk. eg.
     return /superman\.css$/.test(filePath);
   }
 }
+```
+
+### fs
+Type: `Object`  
+Default: `MemoryFileSystem`
+
+Set the default file system which will be used by webpack as primary destination of generated files. Default is set to webpack's default file system: [memory-fs](https://github.com/webpack/memory-fs). This option isn't affected by the [writeToDisk](#writeToDisk) option.
+
+**Note:** As of 3.5.x version of the middleware you have to provide `.join()` method to the `fs` instance manually. This can be done simply by using `path.join`:
+```js
+  fs.join = path.join // no need to bind
 ```
 
 ## API
