@@ -1,7 +1,16 @@
 build: 'off'
 
+branches:
+  only:
+    - master
+    - next
+
 init:
   - git config --global core.autocrlf input
+
+cache:
+  - node_modules
+  - '%APPDATA%\npm-cache'
 
 environment:
   matrix:
@@ -20,10 +29,12 @@ matrix:
 install:
   - ps: Install-Product node $env:nodejs_version x64
   - npm i -g npm@latest
-  - npm install
+  - npm ci
 
 before_test:
   - cmd: npm i webpack@%webpack_version%
 
 test_script:
-  - cmd: npm t
+  - node --version
+  - npm --version
+  - cmd: npm test
