@@ -14,13 +14,13 @@ cache:
 
 environment:
   matrix:
-    - nodejs_version: '11'
-      webpack_version: latest
-    - nodejs_version: '10'
+    - nodejs_version: '6'
       webpack_version: latest
     - nodejs_version: '8'
       webpack_version: latest
-    - nodejs_version: '6'
+    - nodejs_version: '10'
+      webpack_version: latest
+    - nodejs_version: '11'
       webpack_version: latest
 
 matrix:
