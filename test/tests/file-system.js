@@ -37,6 +37,41 @@ describe('FileSystem', () => {
     assert.equal(firstFs, secondFs);
   });
 
+  describe('options.fs', () => {
+    // lightweight compiler mock
+    const hook = { tap() {} };
+    const compiler = {
+      outputPath: '/output',
+      watch() {},
+      hooks: { done: hook, invalid: hook, run: hook, watchRun: hook }
+    };
+
+    const fs = { join() {} };
+
+    it('should throw on invalid fs', (done) => {
+      assert.throws(() => {
+        middleware(compiler, { fs: {} });
+      });
+      done();
+    });
+
+    it('should assign fs to the compiler.outputFileSystem', (done) => {
+      const instance = middleware(compiler, { fs });
+
+      assert.equal(compiler.outputFileSystem, fs);
+      instance.close(done);
+    });
+
+    it('should go safely when compiler.outputFileSystem is assigned by fs externally', (done) => {
+      const cmplr = Object.create(compiler);
+      cmplr.outputFileSystem = fs;
+      const instance = middleware(cmplr, { fs });
+
+      assert.equal(cmplr.outputFileSystem, fs);
+      instance.close(done);
+    });
+  });
+
   it('should throw on invalid outputPath config', () => {
     const compiler = fakeWebpack();
     compiler.outputPath = './dist';
