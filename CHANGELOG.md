@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+# [3.6.0](https://github.com/webpack/webpack-dev-middleware/compare/v3.5.2...v3.6.0) (2019-02-19)
+
+
+### Features
+
+* configurable file system via options.fs ([#370](https://github.com/webpack/webpack-dev-middleware/issues/370)) ([1762cb3](https://github.com/webpack/webpack-dev-middleware/commit/1762cb3))
+
+
+
 <a name="3.5.2"></a>
 ## [3.5.2](https://github.com/webpack/webpack-dev-middleware/compare/v3.5.1...v3.5.2) (2019-02-06)
 
