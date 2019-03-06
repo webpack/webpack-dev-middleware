@@ -259,6 +259,27 @@ describe('Server', () => {
     });
   });
 
+  describe('custom Content-Type', () => {
+    before((done) => {
+      app = express();
+      const compiler = webpack(webpackConfig);
+      instance = middleware(compiler, {
+        stats: 'errors-only',
+        logLevel,
+        headers: { 'Content-Type': 'application/octet-stream' }
+      });
+      app.use(instance);
+      listen = listenShorthand(done);
+    });
+    after(close);
+
+    it('Do not guess mime type if Content-Type header is found ', (done) => {
+      request(app).get('/bundle.js')
+        .expect('Content-Type', 'application/octet-stream')
+        .expect(200, done);
+    });
+  });
+
   describe('custom mimeTypes', () => {
     before((done) => {
       app = express();
