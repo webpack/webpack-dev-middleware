@@ -1,13 +1,13 @@
 'use strict';
 
-const assert = require('assert');
-const { getFilenameFromUrl } = require('../../lib/util');
+const { getFilenameFromUrl } = require('../lib/util');
 
 const isWindows = process.platform === 'win32';
 
 function testUrl(options) {
   const url = getFilenameFromUrl(options.publicPath, options, options.url);
-  assert.equal(url, options.expected);
+
+  expect(url).toBe(options.expected);
 }
 
 describe('GetFilenameFromUrl', () => {

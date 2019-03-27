@@ -1,7 +1,6 @@
 'use strict';
 
-const assert = require('assert');
-const middleware = require('../../');
+const middleware = require('../');
 
 const options = {
   logLevel: 'silent',
@@ -99,8 +98,8 @@ describe('API', () => {
       setTimeout(() => {
         instance.waitUntilValid((stats) => {
           const keys = Object.keys(stats);
-          assert(keys.includes('hasErrors'));
-          assert(keys.includes('hasWarnings'));
+          expect(keys.includes('hasErrors')).toBe(true);
+          expect(keys.includes('hasWarnings')).toBe(true);
           done();
         });
       });
@@ -118,7 +117,7 @@ describe('API', () => {
       let doneCalled = false;
       instance.invalidate(() => {
         if (doneCalled) {
-          assert.equal(invalidationCount, 1);
+          expect(invalidationCount).toBe(1);
           done();
         } else {
           done(new Error('`invalid` called before bundle was done'));
@@ -134,7 +133,7 @@ describe('API', () => {
       const instance = middleware(compiler, options);
       instance.invalidate();
       setTimeout(() => {
-        assert.equal(invalidationCount, 1);
+        expect(invalidationCount).toBe(1);
         done();
       });
     });
@@ -149,7 +148,7 @@ describe('API', () => {
     it('should call close on watcher', (done) => {
       const instance = middleware(compiler, options);
       instance.close(() => {
-        assert.equal(closeCount, 1);
+        expect(closeCount).toBe(1);
         done();
       });
     });
@@ -157,7 +156,7 @@ describe('API', () => {
     it('should call close on watcher without callback', () => {
       const instance = middleware(compiler, options);
       instance.close();
-      assert.equal(closeCount, 1);
+      expect(closeCount).toBe(1);
     });
   });
 
@@ -166,7 +165,8 @@ describe('API', () => {
       const instance = middleware(compiler, options);
       const filename = instance.getFilenameFromUrl('/public/index.html');
 
-      assert.equal(filename, '/output/index.html');
+      expect(filename).toBe('/output/index.html');
+
       instance.close(done);
     });
   });
