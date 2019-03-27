@@ -4,12 +4,10 @@
 
 const fs = require('fs');
 const path = require('path');
-const assert = require('assert');
-const sinon = require('sinon'); // eslint-disable-line import/no-extraneous-dependencies
-const middleware = require('../../');
-const statOptions = require('../fixtures/stat-options');
+const middleware = require('..');
+const statOptions = require('./fixtures/stat-options');
 
-const statsPath = path.join(__dirname, '../fixtures', 'stats.txt');
+const statsPath = path.join(__dirname, './fixtures', 'stats.txt');
 const rawStats = fs.readFileSync(statsPath, 'utf8');
 
 describe('Reporter', () => {
@@ -21,7 +19,6 @@ describe('Reporter', () => {
       }
     };
   };
-  const sandbox = sinon.createSandbox();
   const defaults = { logLevel: 'silent' };
   const compiler = {
     watch() {
@@ -50,18 +47,14 @@ describe('Reporter', () => {
 
   function spy(instance) {
     const { log } = instance.context;
-    sandbox.spy(log, 'info');
-    sandbox.spy(log, 'warn');
-    sandbox.spy(log, 'error');
+
+    jest.spyOn(log, 'info');
+    jest.spyOn(log, 'warn');
+    jest.spyOn(log, 'error');
   }
 
   beforeEach(() => {
-    // sandbox = sinon.sandbox.create();
     hooks = {};
-  });
-
-  afterEach(() => {
-    sandbox.restore();
   });
 
   it("should log 'compiled successfully' message", (done) => {
@@ -72,12 +65,13 @@ describe('Reporter', () => {
     hooks.done(statOptions.basic);
 
     setTimeout(() => {
-      assert.strictEqual(log.info.callCount, 2);
-      assert.strictEqual(log.warn.callCount, 0);
-      assert.strictEqual(log.error.callCount, 0);
-      assert(/Compiled successfully/.test(log.info.lastCall.args[0]));
+      expect(log.info).toBeCalledTimes(2);
+      expect(log.warn).toBeCalledTimes(0);
+      expect(log.error).toBeCalledTimes(0);
 
-      instance.context.log = null;
+      expect(log.info.mock.calls[0][0]).toBe('stats:basic');
+      expect(log.info.mock.calls[1][0]).toBe('Compiled successfully.');
+
       done();
     });
   });
@@ -90,10 +84,12 @@ describe('Reporter', () => {
     hooks.done(statOptions.error);
 
     setTimeout(() => {
-      assert.strictEqual(log.info.callCount, 1);
-      assert.strictEqual(log.warn.callCount, 0);
-      assert.strictEqual(log.error.callCount, 1);
-      assert(/Failed to compile/.test(log.info.firstCall.args[0]));
+      expect(log.info).toBeCalledTimes(1);
+      expect(log.warn).toBeCalledTimes(0);
+      expect(log.error).toBeCalledTimes(1);
+
+      expect(log.info.mock.calls[0][0]).toBe('Failed to compile.');
+
       done();
     });
   });
@@ -106,10 +102,12 @@ describe('Reporter', () => {
     hooks.done(statOptions.warning);
 
     setTimeout(() => {
-      assert.strictEqual(log.info.callCount, 1);
-      assert.strictEqual(log.warn.callCount, 1);
-      assert.strictEqual(log.error.callCount, 0);
-      assert(/Compiled with warnings/.test(log.info.firstCall.args[0]));
+      expect(log.info).toBeCalledTimes(1);
+      expect(log.warn).toBeCalledTimes(1);
+      expect(log.error).toBeCalledTimes(0);
+
+      expect(log.info.mock.calls[0][0]).toBe('Compiled with warnings.');
+
       done();
     });
   });
@@ -123,8 +121,10 @@ describe('Reporter', () => {
     hooks.invalid();
 
     setTimeout(() => {
-      assert.strictEqual(log.info.callCount, 1);
-      assert(/Compiling\.\.\./.test(log.info.firstCall.args[0]));
+      expect(log.info).toBeCalledTimes(1);
+
+      expect(log.info.mock.calls[0][0]).toBe('Compiling...');
+
       done();
     });
   });
@@ -137,8 +137,11 @@ describe('Reporter', () => {
     hooks.done(stats);
 
     setTimeout(() => {
-      assert.strictEqual(log.info.callCount, 2);
-      assert.equal(log.info.firstCall.args[0], stats.toString());
+      expect(log.info).toBeCalledTimes(2);
+
+      expect(log.info.mock.calls[0][0]).toBe(stats.toString());
+      expect(log.info.mock.calls[1][0]).toBe('Compiled successfully.');
+
       done();
     });
   });
@@ -151,7 +154,10 @@ describe('Reporter', () => {
     hooks.done(stats);
 
     setTimeout(() => {
-      assert.strictEqual(log.info.callCount, 1);
+      expect(log.info).toBeCalledTimes(1);
+
+      expect(log.info.mock.calls[0][0]).toBe('Compiled successfully.');
+
       done();
     });
   });
@@ -165,8 +171,10 @@ describe('Reporter', () => {
     instance.invalidate(function invalid() {}); // eslint-disable-line prefer-arrow-callback
 
     setTimeout(() => {
-      assert.strictEqual(log.info.callCount, 1);
-      assert(/wait until bundle finished: invalid/.test(log.info.firstCall.args[0]));
+      expect(log.info).toBeCalledTimes(1);
+
+      expect(log.info.mock.calls[0][0]).toBe('wait until bundle finished: invalid');
+
       done();
     });
   });
@@ -174,9 +182,10 @@ describe('Reporter', () => {
   it('should allow a custom reporter', (done) => {
     middleware(compiler, {
       reporter(middlewareOptions, options) {
-        assert.strictEqual(options.state, true);
-        assert(options.stats);
-        assert(middlewareOptions);
+        expect(options.state).toBe(true);
+        expect(options.stats).toBeDefined();
+        expect(middlewareOptions).toBeDefined();
+
         done();
       }
     });

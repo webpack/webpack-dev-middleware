@@ -1,12 +1,11 @@
 'use strict';
 
-const assert = require('assert');
-const middleware = require('../../');
+const middleware = require('..');
 
 function fakeWebpack() {
   const hook = { tap: () => {} };
   // mock a compiler, including hooks
-  const compiler = {
+  return {
     __test: 'mock compiler - log.js',
     watch() {},
     hooks: {
@@ -16,15 +15,14 @@ function fakeWebpack() {
       watchRun: hook
     }
   };
-
-  return compiler;
 }
 
 describe('FileSystem', () => {
   it('should set outputFileSystem on compiler', () => {
     const compiler = fakeWebpack();
     middleware(compiler);
-    assert(compiler.outputFileSystem);
+
+    expect(compiler.outputFileSystem).not.toBeUndefined();
   });
 
   it('should reuse outputFileSystem from compiler', () => {
@@ -34,7 +32,7 @@ describe('FileSystem', () => {
     middleware(compiler);
     const secondFs = compiler.outputFileSystem;
 
-    assert.equal(firstFs, secondFs);
+    expect(firstFs).toEqual(secondFs);
   });
 
   describe('options.fs', () => {
@@ -49,16 +47,18 @@ describe('FileSystem', () => {
     const fs = { join() {} };
 
     it('should throw on invalid fs', (done) => {
-      assert.throws(() => {
+      expect(() => {
         middleware(compiler, { fs: {} });
-      });
+      }).toThrow('Invalid options: options.fs.join() method is expected');
+
       done();
     });
 
     it('should assign fs to the compiler.outputFileSystem', (done) => {
       const instance = middleware(compiler, { fs });
 
-      assert.equal(compiler.outputFileSystem, fs);
+      expect(compiler.outputFileSystem).toEqual(fs);
+
       instance.close(done);
     });
 
@@ -67,7 +67,8 @@ describe('FileSystem', () => {
       cmplr.outputFileSystem = fs;
       const instance = middleware(cmplr, { fs });
 
-      assert.equal(cmplr.outputFileSystem, fs);
+      expect(cmplr.outputFileSystem).toEqual(fs);
+
       instance.close(done);
     });
   });
@@ -75,14 +76,17 @@ describe('FileSystem', () => {
   it('should throw on invalid outputPath config', () => {
     const compiler = fakeWebpack();
     compiler.outputPath = './dist';
-    assert.throws(() => {
+
+    expect(() => {
       middleware(compiler);
-    }, /output\.path/);
+    }).toThrow('`output.path` needs to be an absolute path or `/`.');
   });
 
   it('should not throw on valid outputPath config for Windows', () => {
     const compiler = fakeWebpack();
+
     compiler.outputPath = 'C:/my/path';
+
     middleware(compiler);
   });
 });

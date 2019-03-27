@@ -18,10 +18,10 @@ cache:
 matrix:
   fast_finish: true
   include:
-    - env: JOB_PART=lint
-      node_js: 6
+    - env: JOB_PART=pretest
+      node_js: 11
     - &test
-      env: JOB_PART=test
+      env: JOB_PART=test:coverage
       node_js: 6
     - <<: *test
       node_js: 8

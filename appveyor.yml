@@ -37,4 +37,4 @@ before_test:
 test_script:
   - node --version
   - npm --version
-  - cmd: npm test
+  - cmd: npm run test:only
