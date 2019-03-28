@@ -8,7 +8,7 @@ const doneStats = {
   },
   hasWarnings() {
     return false;
-  }
+  },
 };
 
 describe('Lazy mode', () => {
@@ -20,7 +20,7 @@ describe('Lazy mode', () => {
     return {
       tap: (id, callback) => {
         hooks[name] = callback;
-      }
+      },
     };
   };
   const logLevel = 'silent';
@@ -30,8 +30,8 @@ describe('Lazy mode', () => {
       done: hook('done'),
       invalid: hook('invalid'),
       run: hook('run'),
-      watchRun: hook('watchRun')
-    }
+      watchRun: hook('watchRun'),
+    },
   };
 
   beforeEach(() => {
@@ -88,7 +88,11 @@ describe('Lazy mode', () => {
 
   describe('custom filename', () => {
     it('should trigger build', () => {
-      instance = middleware(compiler, { lazy: true, logLevel: 'error', filename: 'foo.js' });
+      instance = middleware(compiler, {
+        lazy: true,
+        logLevel: 'error',
+        filename: 'foo.js',
+      });
 
       let req = { method: 'GET', url: '/bundle.js' };
 

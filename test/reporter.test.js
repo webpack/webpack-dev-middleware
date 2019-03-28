@@ -4,7 +4,9 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const middleware = require('..');
+
 const statOptions = require('./fixtures/stat-options');
 
 const statsPath = path.join(__dirname, './fixtures', 'stats.txt');
@@ -16,22 +18,22 @@ describe('Reporter', () => {
     return {
       tap: (id, callback) => {
         hooks[name] = callback;
-      }
+      },
     };
   };
   const defaults = { logLevel: 'silent' };
   const compiler = {
     watch() {
       return {
-        invalidate() {}
+        invalidate() {},
       };
     },
     hooks: {
       done: hook('done'),
       invalid: hook('invalid'),
       run: hook('run'),
-      watchRun: hook('watchRun')
-    }
+      watchRun: hook('watchRun'),
+    },
   };
   const stats = {
     hasErrors() {
@@ -42,7 +44,7 @@ describe('Reporter', () => {
     },
     toString() {
       return rawStats;
-    }
+    },
   };
 
   function spy(instance) {
@@ -147,7 +149,10 @@ describe('Reporter', () => {
   });
 
   it('should not print stats if options.stats is false', (done) => {
-    const instance = middleware(compiler, Object.assign(defaults, { stats: false }));
+    const instance = middleware(
+      compiler,
+      Object.assign(defaults, { stats: false })
+    );
     const { log } = instance.context;
 
     spy(instance);
@@ -173,7 +178,9 @@ describe('Reporter', () => {
     setTimeout(() => {
       expect(log.info).toBeCalledTimes(1);
 
-      expect(log.info.mock.calls[0][0]).toBe('wait until bundle finished: invalid');
+      expect(log.info.mock.calls[0][0]).toBe(
+        'wait until bundle finished: invalid'
+      );
 
       done();
     });
@@ -187,7 +194,7 @@ describe('Reporter', () => {
         expect(middlewareOptions).toBeDefined();
 
         done();
-      }
+      },
     });
 
     hooks.done(statOptions.basic);
