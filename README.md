@@ -21,7 +21,7 @@ Some of the benefits of using this middleware include:
 
 - No files are written to disk, rather it handles files in memory
 - If files changed in watch mode, the middleware delays requests until compiling
-has completed.
+  has completed.
 - Supports hot module reload (HMR).
 
 ## Requirements
@@ -44,15 +44,19 @@ _Note: We do not recommend installing this module globally._
 ```js
 const webpack = require('webpack');
 const middleware = require('webpack-dev-middleware');
-const compiler = webpack({ .. webpack options .. });
+const compiler = webpack({
+  // webpack options
+});
 const express = require('express');
 const app = express();
 
-app.use(middleware(compiler, {
-  // webpack-dev-middleware options
-}));
+app.use(
+  middleware(compiler, {
+    // webpack-dev-middleware options
+  })
+);
 
-app.listen(3000, () => console.log('Example app listening on port 3000!'))
+app.listen(3000, () => console.log('Example app listening on port 3000!'));
 ```
 
 ## Options
@@ -67,7 +71,7 @@ _Note: The `publicPath` property is required, whereas all other options are opti
 Type: `Array`  
 Default: `[ 'GET' ]`
 
-This property allows a user to pass the list of HTTP request methods accepted by the server. 
+This property allows a user to pass the list of HTTP request methods accepted by the server.
 
 ### headers
 
@@ -85,7 +89,6 @@ Default: `undefined`
 "index.html",
 // The index path for web server, defaults to "index.html".
 // If falsy (but not undefined), the server will not respond to requests to the root URL.
-
 
 ### lazy
 
@@ -150,12 +153,12 @@ Type: `Object`
 Default: `null`
 
 This property allows a user to register custom mime types or extension mappings.
-eg. `mimeTypes: { 'text/html': [ 'phtml' ] }`. 
+eg. `mimeTypes: { 'text/html': [ 'phtml' ] }`.
 
-By default node-mime will throw an error if you try to map a type to an extension 
-that is already assigned to another type. Passing `force: true` will suppress this behavior 
+By default node-mime will throw an error if you try to map a type to an extension
+that is already assigned to another type. Passing `force: true` will suppress this behavior
 (overriding any previous mapping).
-eg. `mimeTypes: { typeMap: { 'text/html': [ 'phtml' ] } }, force: true }`. 
+eg. `mimeTypes: { typeMap: { 'text/html': [ 'phtml' ] } }, force: true }`.
 
 Please see the documentation for
 [`node-mime`](https://github.com/broofa/node-mime#mimedefinetypemap-force--false) for more information.
@@ -227,19 +230,21 @@ of `true` _will_ write the file to disk. eg.
 {
   writeToDisk: (filePath) => {
     return /superman\.css$/.test(filePath);
-  }
+  };
 }
 ```
 
 ### fs
+
 Type: `Object`  
 Default: `MemoryFileSystem`
 
 Set the default file system which will be used by webpack as primary destination of generated files. Default is set to webpack's default file system: [memory-fs](https://github.com/webpack/memory-fs). This option isn't affected by the [writeToDisk](#writeToDisk) option.
 
 **Note:** As of 3.5.x version of the middleware you have to provide `.join()` method to the `fs` instance manually. This can be done simply by using `path.join`:
+
 ```js
-  fs.join = path.join // no need to bind
+fs.join = path.join; // no need to bind
 ```
 
 ## API
@@ -308,6 +313,7 @@ instance.waitUntilValid(() => {
   console.log('Package is in a valid state');
 });
 ```
+
 ## Known Issues
 
 ### Multiple Successive Builds
@@ -338,25 +344,28 @@ Example Implementation:
 
 ```js
 const webpack = require('webpack');
-const compiler = webpack({ ... });
+const compiler = webpack({
+  // webpack options
+});
 const isObject = require('is-object');
 const middleware = require('webpack-dev-middleware');
 
 // This function makes server rendering of asset references consistent with different webpack chunk/entry configurations
 function normalizeAssets(assets) {
   if (isObject(assets)) {
-    return Object.values(assets)
+    return Object.values(assets);
   }
-  return Array.isArray(assets) ? assets : [assets]
+
+  return Array.isArray(assets) ? assets : [assets];
 }
 
-app.use(middleware(compiler, { serverSideRender: true }))
+app.use(middleware(compiler, { serverSideRender: true }));
 
 // The following middleware would not be invoked until the latest build is finished.
 app.use((req, res) => {
-  const assetsByChunkName = res.locals.webpackStats.toJson().assetsByChunkName
-  const fs = res.locals.fs
-  const outputPath = res.locals.webpackStats.toJson().outputPath
+  const assetsByChunkName = res.locals.webpackStats.toJson().assetsByChunkName;
+  const fs = res.locals.fs;
+  const outputPath = res.locals.webpackStats.toJson().outputPath;
 
   // then use `assetsByChunkName` for server-sider rendering
   // For example, if you have only one main chunk:
@@ -365,23 +374,22 @@ app.use((req, res) => {
   <head>
     <title>My App</title>
     <style>
-		${normalizeAssets(assetsByChunkName.main)
-			  .filter(path => path.endsWith('.css'))
-			  .map(path => fs.readFileSync(outputPath + '/' + path))
-			  .join('\n')}
+    ${normalizeAssets(assetsByChunkName.main)
+      .filter((path) => path.endsWith('.css'))
+      .map((path) => fs.readFileSync(outputPath + '/' + path))
+      .join('\n')}
     </style>
   </head>
   <body>
     <div id="root"></div>
-		${normalizeAssets(assetsByChunkName.main)
-			  .filter(path => path.endsWith('.js'))
-			  .map(path => `<script src="${path}"></script>`)
-			  .join('\n')}
+    ${normalizeAssets(assetsByChunkName.main)
+      .filter((path) => path.endsWith('.js'))
+      .map((path) => `<script src="${path}"></script>`)
+      .join('\n')}
   </body>
 </html>
-  `)
-
-})
+  `);
+});
 ```
 
 ## Support
@@ -412,49 +420,26 @@ out completely._
 
 ## Contributing
 
-We welcome your contributions! Please have a read of [CONTRIBUTING.md](CONTRIBUTING.md) for more information on how to get involved.
+Please take a moment to read our contributing guidelines if you haven't yet done so.
 
-## Maintainers
-
-<table>
-  <tbody>
-    <tr>
-      <td align="center">
-        <img src="https://avatars.githubusercontent.com/SpaceK33z?v=4&s=150">
-        <br />
-        <a href="https://github.com/SpaceK33z">Kees Kluskens</a>
-      </td>
-      <td align="center">
-        <img src="https://i.imgur.com/4v6pgxh.png">
-        <br />
-        <a href="https://github.com/shellscape">Andrew Powell</a>
-      </td>
-    </tr>
-  </tbody>
-</table>
+[CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## License
 
-#### [MIT](./LICENSE)
+[MIT](./LICENSE)
 
 [npm]: https://img.shields.io/npm/v/webpack-dev-middleware.svg
 [npm-url]: https://npmjs.com/package/webpack-dev-middleware
-
 [node]: https://img.shields.io/node/v/webpack-dev-middleware.svg
 [node-url]: https://nodejs.org
-
 [deps]: https://david-dm.org/webpack/webpack-dev-middleware.svg
 [deps-url]: https://david-dm.org/webpack/webpack-dev-middleware
-
 [tests]: http://img.shields.io/travis/webpack/webpack-dev-middleware.svg
 [tests-url]: https://travis-ci.org/webpack/webpack-dev-middleware
-
 [cover]: https://codecov.io/gh/webpack/webpack-dev-middleware/branch/master/graph/badge.svg
 [cover-url]: https://codecov.io/gh/webpack/webpack-dev-middleware
-
 [chat]: https://badges.gitter.im/webpack/webpack.svg
 [chat-url]: https://gitter.im/webpack/webpack
-
 [docs-url]: https://webpack.js.org/guides/development/#using-webpack-dev-middleware
 [hash-url]: https://twitter.com/search?q=webpack
 [middleware-url]: https://github.com/webpack/webpack-dev-middleware

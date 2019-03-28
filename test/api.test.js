@@ -4,7 +4,7 @@ const middleware = require('../');
 
 const options = {
   logLevel: 'silent',
-  publicPath: '/public/'
+  publicPath: '/public/',
 };
 
 describe('API', () => {
@@ -12,13 +12,12 @@ describe('API', () => {
   let hooks = {};
   let invalidationCount = 0;
 
-
   // TODO: Should use sinon or something for this...
   const hook = (name) => {
     return {
       tap: (id, callback) => {
         hooks[name] = callback;
-      }
+      },
     };
   };
   const compiler = {
@@ -31,15 +30,15 @@ describe('API', () => {
         close(callback) {
           closeCount += 1;
           callback();
-        }
+        },
       };
     },
     hooks: {
       done: hook('done'),
       invalid: hook('invalid'),
       run: hook('run'),
-      watchRun: hook('watchRun')
-    }
+      watchRun: hook('watchRun'),
+    },
   };
 
   beforeEach(() => {
@@ -54,7 +53,7 @@ describe('API', () => {
     },
     hasWarnings() {
       return false;
-    }
+    },
   };
 
   describe('waitUntilValid', () => {

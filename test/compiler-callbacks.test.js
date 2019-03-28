@@ -1,6 +1,7 @@
 'use strict';
 
 const weblog = require('webpack-log');
+
 const middleware = require('../');
 
 describe('CompilerCallbacks', () => {
@@ -12,17 +13,16 @@ describe('CompilerCallbacks', () => {
       done: hook,
       invalid: hook,
       run: hook,
-      watchRun: hook
-    }
+      watchRun: hook,
+    },
   };
 
   it('watch error should be reported to console', () => {
     const err = new Error('Oh noes!');
 
-    jest.spyOn(compiler, 'watch')
-      .mockImplementation((opts, callback) => {
-        callback(err);
-      });
+    jest.spyOn(compiler, 'watch').mockImplementation((opts, callback) => {
+      callback(err);
+    });
 
     const logger = weblog({ level: logLevel });
     const errorSpy = jest.spyOn(logger, 'error');
@@ -34,10 +34,9 @@ describe('CompilerCallbacks', () => {
   });
 
   it('options.error should be used on watch error', (done) => {
-    jest.spyOn(compiler, 'watch')
-      .mockImplementation((opts, callback) => {
-        callback(new Error('Oh noes!'));
-      });
+    jest.spyOn(compiler, 'watch').mockImplementation((opts, callback) => {
+      callback(new Error('Oh noes!'));
+    });
 
     middleware(compiler, {
       logger: {
@@ -45,9 +44,9 @@ describe('CompilerCallbacks', () => {
           expect(err).toMatch(/^Error: Oh noes!/);
 
           done();
-        }
+        },
       },
-      logLevel: 'silent'
+      logLevel: 'silent',
     });
   });
 });

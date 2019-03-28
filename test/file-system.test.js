@@ -12,8 +12,8 @@ function fakeWebpack() {
       done: hook,
       invalid: hook,
       run: hook,
-      watchRun: hook
-    }
+      watchRun: hook,
+    },
   };
 }
 
@@ -41,7 +41,7 @@ describe('FileSystem', () => {
     const compiler = {
       outputPath: '/output',
       watch() {},
-      hooks: { done: hook, invalid: hook, run: hook, watchRun: hook }
+      hooks: { done: hook, invalid: hook, run: hook, watchRun: hook },
     };
 
     const fs = { join() {} };

@@ -10,7 +10,7 @@ module.exports = {
     },
     toString() {
       return 'stats:basic';
-    }
+    },
   },
 
   error: {
@@ -22,7 +22,7 @@ module.exports = {
     },
     toString() {
       return 'stats:error';
-    }
+    },
   },
 
   warning: {
@@ -34,6 +34,6 @@ module.exports = {
     },
     toString() {
       return 'stats:warning';
-    }
-  }
+    },
+  },
 };

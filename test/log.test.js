@@ -1,6 +1,7 @@
 'use strict';
 
 const weblog = require('webpack-log');
+
 const middleware = require('../');
 
 // @note logLevel testing is handled by the loglevel module
@@ -15,8 +16,8 @@ describe('Logging', () => {
       done: hook,
       invalid: hook,
       run: hook,
-      watchRun: hook
-    }
+      watchRun: hook,
+    },
   };
 
   function spy(instance) {
@@ -71,6 +72,8 @@ describe('Logging', () => {
     expect(log.error).toBeCalledTimes(1);
 
     expect(log.info).toBeCalledWith(expect.stringMatching(/bar/));
-    expect(infoSpy).toBeCalledWith(expect.stringMatching(/[\d{2}:\d{2}:\d{2}]/));
+    expect(infoSpy).toBeCalledWith(
+      expect.stringMatching(/[\d{2}:\d{2}:\d{2}]/)
+    );
   });
 });

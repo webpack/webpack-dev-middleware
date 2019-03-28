@@ -6,15 +6,15 @@ module.exports = {
   entry: './foo.js',
   output: {
     filename: 'bundle.js?[contenthash]',
-    path: '/'
+    path: '/',
   },
   module: {
     rules: [
       {
         test: /\.(svg|html)$/,
         loader: 'file-loader',
-        query: { name: '[name].[ext]' }
-      }
-    ]
-  }
+        query: { name: '[name].[ext]' },
+      },
+    ],
+  },
 };
