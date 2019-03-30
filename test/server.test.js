@@ -313,7 +313,10 @@ describe('Server', () => {
     });
   });
 
-  describe.only('when res.setHeader is undefined', () => {
+  /**
+   * ref: #385, for that koa-webpack@4.x doesn't pass in getHeader method.
+   */
+  describe.only('Should work when res.getHeader is undefined', () => {
     it('should not throw error', (done) => {
       const req = mockRequest({
         url: '/',
