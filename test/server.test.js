@@ -1,18 +1,18 @@
 'use strict';
 
-/* eslint import/no-extraneous-dependencies: off */
-
 const fs = require('fs');
 const path = require('path');
-const assert = require('assert');
+
 const express = require('express');
 const webpack = require('webpack');
 const request = require('supertest');
-const middleware = require('../../');
-const webpackConfig = require('../fixtures/server-test/webpack.config');
-const webpackMultiConfig = require('../fixtures/server-test/webpack.array.config');
-const webpackQuerystringConfig = require('../fixtures/server-test/webpack.querystring.config');
-const webpackClientServerConfig = require('../fixtures/server-test/webpack.client.server.config');
+
+const middleware = require('../');
+
+const webpackConfig = require('./fixtures/server-test/webpack.config');
+const webpackMultiConfig = require('./fixtures/server-test/webpack.array.config');
+const webpackQuerystringConfig = require('./fixtures/server-test/webpack.querystring.config');
+const webpackClientServerConfig = require('./fixtures/server-test/webpack.client.server.config');
 
 describe('Server', () => {
   let instance;
@@ -23,8 +23,11 @@ describe('Server', () => {
 
   function listenShorthand(done) {
     return app.listen(8000, '127.0.0.1', (err) => {
-      if (err) done(err);
-      done();
+      if (err) {
+        return done(err);
+      }
+
+      return done();
     });
   }
 
@@ -39,18 +42,21 @@ describe('Server', () => {
   }
 
   describe('requests', () => {
-    before((done) => {
+    beforeAll((done) => {
       app = express();
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
         logLevel,
-        publicPath: '/public/'
+        publicPath: '/public/',
       });
       app.use(instance);
       listen = listenShorthand(done);
       // Hack to add a mock HMR json file to the in-memory filesystem.
-      instance.fileSystem.writeFileSync('/123a123412.hot-update.json', '["hi"]');
+      instance.fileSystem.writeFileSync(
+        '/123a123412.hot-update.json',
+        '["hi"]'
+      );
 
       // Add a nested directory and index.html inside
       instance.fileSystem.mkdirSync('/reference');
@@ -61,19 +67,26 @@ describe('Server', () => {
       );
     });
 
-    after(close);
+    afterAll((done) => {
+      close(done);
+    });
 
     it('should not find a bundle file on disk', (done) => {
-      request(app).get('/public/bundle.js')
+      request(app)
+        .get('/public/bundle.js')
         .expect(200, () => {
-          const bundlePath = path.join(__dirname, '../fixtures/server-test/bundle.js');
-          assert(!fs.existsSync(bundlePath));
+          const bundlePath = path.join(
+            __dirname,
+            '../fixtures/server-test/bundle.js'
+          );
+          expect(fs.existsSync(bundlePath)).toBe(false);
           done();
         });
     });
 
     it('GET request to bundle file', (done) => {
-      request(app).get('/public/bundle.js')
+      request(app)
+        .get('/public/bundle.js')
         .expect('Content-Type', 'application/javascript; charset=UTF-8')
         // TODO(michael-ciniawsky) investigate the need for this test
         .expect('Content-Length', '4631')
@@ -81,31 +94,36 @@ describe('Server', () => {
     });
 
     it('POST request to bundle file', (done) => {
-      request(app).post('/public/bundle.js')
+      request(app)
+        .post('/public/bundle.js')
         .expect(404, done);
     });
 
     it('request to image', (done) => {
-      request(app).get('/public/svg.svg')
+      request(app)
+        .get('/public/svg.svg')
         .expect('Content-Type', 'image/svg+xml; charset=UTF-8')
         .expect('Content-Length', '4778')
         .expect(200, done);
     });
 
     it('request to non existing file', (done) => {
-      request(app).get('/public/nope')
+      request(app)
+        .get('/public/nope')
         .expect('Content-Type', 'text/html; charset=utf-8')
         .expect(404, done);
     });
 
     it('request to HMR json', (done) => {
-      request(app).get('/public/123a123412.hot-update.json')
+      request(app)
+        .get('/public/123a123412.hot-update.json')
         .expect('Content-Type', 'application/json; charset=UTF-8')
         .expect(200, /\["hi"\]/, done);
     });
 
     it('request to directory', (done) => {
-      request(app).get('/public/')
+      request(app)
+        .get('/public/')
         .expect('Content-Type', 'text/html; charset=UTF-8')
         .expect('Content-Length', '10')
         .expect(200, /My Index\./, done);
@@ -120,13 +138,15 @@ describe('Server', () => {
     });
 
     it('invalid range header', (done) => {
-      request(app).get('/public/svg.svg')
+      request(app)
+        .get('/public/svg.svg')
         .set('Range', 'bytes=6000-')
         .expect(416, done);
     });
 
     it('valid range header', (done) => {
-      request(app).get('/public/svg.svg')
+      request(app)
+        .get('/public/svg.svg')
         .set('Range', 'bytes=3000-3500')
         .expect('Content-Length', '501')
         .expect('Content-Range', 'bytes 3000-3500/4778')
@@ -134,80 +154,85 @@ describe('Server', () => {
     });
 
     it('request to non-public path', (done) => {
-      request(app).get('/nonpublic/')
+      request(app)
+        .get('/nonpublic/')
         .expect('Content-Type', 'text/html; charset=utf-8')
         .expect(404, done);
     });
   });
 
   describe('accepted methods', () => {
-    before((done) => {
+    beforeAll((done) => {
       app = express();
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
         methods: ['POST'],
         logLevel,
-        publicPath: '/public/'
+        publicPath: '/public/',
       });
       app.use(instance);
       listen = listenShorthand(done);
     });
-    after(close);
+    afterAll(close);
 
-    it('POST request to bundle file with methods set to [\'POST\']', (done) => {
-      request(app).post('/public/bundle.js')
+    it("POST request to bundle file with methods set to ['POST']", (done) => {
+      request(app)
+        .post('/public/bundle.js')
         .expect('Content-Type', 'application/javascript; charset=UTF-8')
         // TODO(michael-ciniawsky) investigate the need for this test
         .expect('Content-Length', '4631')
         .expect(200, /console\.log\('Hey\.'\)/, done);
     });
 
-    it('GET request to bundle file with methods set to [\'POST\']', (done) => {
-      request(app).get('/public/bundle.js')
+    it("GET request to bundle file with methods set to ['POST']", (done) => {
+      request(app)
+        .get('/public/bundle.js')
         .expect(404, done);
     });
   });
 
   describe('no index mode', () => {
-    before((done) => {
+    beforeAll((done) => {
       app = express();
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
         logLevel,
         index: false,
-        publicPath: '/'
+        publicPath: '/',
       });
       app.use(instance);
       listen = listenShorthand(done);
     });
-    after(close);
+    afterAll(close);
 
     it('request to directory', (done) => {
-      request(app).get('/')
+      request(app)
+        .get('/')
         .expect('Content-Type', 'text/html; charset=utf-8')
         .expect(404, done);
     });
   });
 
   describe('lazy mode', () => {
-    before((done) => {
+    beforeAll((done) => {
       app = express();
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
         logLevel,
         lazy: true,
-        publicPath: '/'
+        publicPath: '/',
       });
       app.use(instance);
       listen = listenShorthand(done);
     });
-    after(close);
+    afterAll(close);
 
     it('GET request to bundle file', (done) => {
-      request(app).get('/bundle.js')
+      request(app)
+        .get('/bundle.js')
         // TODO(michael-ciniawsky) investigate the need for this test
         .expect('Content-Length', '4631')
         .expect(200, /console\.log\('Hey\.'\)/, done);
@@ -215,21 +240,22 @@ describe('Server', () => {
   });
 
   describe('custom headers', () => {
-    before((done) => {
+    beforeAll((done) => {
       app = express();
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
         logLevel,
-        headers: { 'X-nonsense-1': 'yes', 'X-nonsense-2': 'no' }
+        headers: { 'X-nonsense-1': 'yes', 'X-nonsense-2': 'no' },
       });
       app.use(instance);
       listen = listenShorthand(done);
     });
-    after(close);
+    afterAll(close);
 
     it('request to bundle file', (done) => {
-      request(app).get('/bundle.js')
+      request(app)
+        .get('/bundle.js')
         .expect('X-nonsense-1', 'yes')
         .expect('X-nonsense-2', 'no')
         .expect(200, done);
@@ -237,22 +263,23 @@ describe('Server', () => {
   });
 
   describe('no extension support', () => {
-    before((done) => {
+    beforeAll((done) => {
       app = express();
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
         logLevel,
-        index: 'noextension'
+        index: 'noextension',
       });
       app.use(instance);
       listen = listenShorthand(done);
       instance.fileSystem.writeFileSync('/noextension', 'hello');
     });
-    after(close);
+    afterAll(close);
 
     it('request to noextension', (done) => {
-      request(app).get('/')
+      request(app)
+        .get('/')
         .expect('hello')
         .expect('Content-Type', '; charset=UTF-8')
         .expect(200, done);
@@ -260,7 +287,7 @@ describe('Server', () => {
   });
 
   describe('custom Content-Type', () => {
-    before((done) => {
+    beforeAll((done) => {
       app = express();
       app.use((req, res, next) => {
         res.set('Content-Type', 'application/octet-stream');
@@ -269,22 +296,23 @@ describe('Server', () => {
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel
+        logLevel,
       });
       app.use(instance);
       listen = listenShorthand(done);
     });
-    after(close);
+    afterAll(close);
 
     it('Do not guess mime type if Content-Type header is found', (done) => {
-      request(app).get('/bundle.js')
+      request(app)
+        .get('/bundle.js')
         .expect('Content-Type', 'application/octet-stream')
         .expect(200, done);
     });
   });
 
   describe('custom mimeTypes', () => {
-    before((done) => {
+    beforeAll((done) => {
       app = express();
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
@@ -292,17 +320,18 @@ describe('Server', () => {
         logLevel,
         index: 'Index.phtml',
         mimeTypes: {
-          'text/html': ['phtml']
-        }
+          'text/html': ['phtml'],
+        },
       });
       app.use(instance);
       listen = listenShorthand(done);
       instance.fileSystem.writeFileSync('/Index.phtml', 'welcome');
     });
-    after(close);
+    afterAll(close);
 
     it('request to Index.phtml', (done) => {
-      request(app).get('/')
+      request(app)
+        .get('/')
         .expect('welcome')
         .expect('Content-Type', /text\/html/)
         .expect(200, done);
@@ -310,7 +339,7 @@ describe('Server', () => {
   });
 
   describe('force option for custom mimeTypes', () => {
-    before((done) => {
+    beforeAll((done) => {
       app = express();
       const compiler = webpack(webpackClientServerConfig);
       instance = middleware(compiler, {
@@ -319,114 +348,125 @@ describe('Server', () => {
         index: 'Index.phtml',
         mimeTypes: {
           typeMap: { 'text/html': ['phtml'] },
-          force: true
-        }
+          force: true,
+        },
       });
       app.use(instance);
       listen = listenShorthand(done);
       instance.fileSystem.writeFileSync('/Index.phtml', 'welcome');
     });
-    after(close);
+    afterAll(close);
 
     it('request to Index.phtml', (done) => {
-      request(app).get('/')
+      request(app)
+        .get('/')
         .expect('welcome')
         .expect('Content-Type', /text\/html/)
         .expect(200, done);
     });
   });
 
-  describe('Special file type headers', () => {
-    before((done) => {
+  describe('special file type headers', () => {
+    beforeAll((done) => {
       app = express();
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
         logLevel,
         mimeTypes: {
-          'model/vnd.pixar.usd': ['usdz']
-        }
+          'model/vnd.pixar.usd': ['usdz'],
+        },
       });
       app.use(instance);
       listen = listenShorthand(done);
       instance.fileSystem.writeFileSync('/hello.wasm', 'welcome');
       instance.fileSystem.writeFileSync('/3dAr.usdz', '010101');
     });
-    after(close);
+    afterAll(close);
 
     it('request to hello.wasm', (done) => {
-      request(app).get('/hello.wasm')
+      request(app)
+        .get('/hello.wasm')
         .expect('Content-Type', 'application/wasm')
         .expect('welcome')
         .expect(200, done);
     });
 
     it('request to 3dAr.usdz', (done) => {
-      request(app).get('/3dAr.usdz')
+      request(app)
+        .get('/3dAr.usdz')
         .expect('Content-Type', 'model/vnd.pixar.usd')
         .expect('010101')
         .expect(200, done);
     });
   });
 
-  describe('MultiCompiler', () => {
-    before((done) => {
+  describe('multi compiler', () => {
+    beforeAll((done) => {
       app = express();
       const compiler = webpack(webpackMultiConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
         logLevel,
-        publicPath: '/'
+        publicPath: '/',
       });
       app.use(instance);
       listen = listenShorthand(done);
     });
-    after(close);
+    afterAll(close);
 
     it('request to both bundle files', (done) => {
-      request(app).get('/js1/foo.js')
+      request(app)
+        .get('/js1/foo.js')
         .expect(200, () => {
-          request(app).get('/js2/bar.js')
+          request(app)
+            .get('/js2/bar.js')
             .expect(200, done);
         });
     });
   });
 
-  describe('MultiCompiler: One `publicPath`', () => {
-    before((done) => {
+  describe('multi compiler: one `publicPath`', () => {
+    beforeAll((done) => {
       app = express();
       const compiler = webpack(webpackClientServerConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel
+        logLevel,
       });
       app.use(instance);
       listen = listenShorthand(done);
     });
-    after(close);
+    afterAll(close);
 
     it('request to bundle file', (done) => {
-      request(app).get('/static/foo.js').expect(200, done);
+      request(app)
+        .get('/static/foo.js')
+        .expect(200, done);
     });
 
     it('request to nonexistent file', (done) => {
-      request(app).get('/static/invalid.js').expect(404, done);
+      request(app)
+        .get('/static/invalid.js')
+        .expect(404, done);
     });
 
     it('request to non-public path', (done) => {
-      request(app).get('/').expect(404, done);
+      request(app)
+        .get('/')
+        .expect(404, done);
     });
   });
 
   describe('server side render', () => {
     let locals;
-    before((done) => {
+    beforeAll((done) => {
       app = express();
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
         logLevel,
-        serverSideRender: true
+        serverSideRender: true,
       });
       app.use(instance);
       app.use((req, res) => {
@@ -435,13 +475,15 @@ describe('Server', () => {
       });
       listen = listenShorthand(done);
     });
-    after(close);
+    afterAll(close);
 
     it('request to bundle file', (done) => {
-      request(app).get('/foo/bar')
+      request(app)
+        .get('/foo/bar')
         .expect(200, () => {
-          assert(locals.webpackStats);
-          assert(locals.fs);
+          expect(locals.webpackStats).toBeDefined();
+          expect(locals.fs).toBeDefined();
+
           done();
         });
     });
@@ -453,7 +495,7 @@ describe('Server', () => {
     instance = middleware(compiler, {
       stats: 'errors-only',
       logLevel,
-      writeToDisk: value
+      writeToDisk: value,
     });
     app.use(instance);
     app.use((req, res) => {
@@ -463,50 +505,70 @@ describe('Server', () => {
   }
 
   describe('write to disk', () => {
-    before((done) => {
+    beforeAll((done) => {
       writeToDisk(true, done);
     });
-    after(close);
+    afterAll(close);
 
     it('should find the bundle file on disk', (done) => {
-      request(app).get('/foo/bar')
+      request(app)
+        .get('/foo/bar')
         .expect(200, () => {
-          const bundlePath = path.join(__dirname, '../fixtures/server-test/bundle.js');
-          assert(fs.existsSync(bundlePath));
+          const bundlePath = path.join(
+            __dirname,
+            './fixtures/server-test/bundle.js'
+          );
+
+          expect(fs.existsSync(bundlePath)).toBe(true);
+
           fs.unlinkSync(bundlePath);
+
           done();
         });
     });
   });
 
   describe('write to disk with filter', () => {
-    before((done) => {
-      writeToDisk(filePath => /bundle\.js$/.test(filePath), done);
+    beforeAll((done) => {
+      writeToDisk((filePath) => /bundle\.js$/.test(filePath), done);
     });
-    after(close);
+    afterAll(close);
 
     it('should find the bundle file on disk', (done) => {
-      request(app).get('/foo/bar')
+      request(app)
+        .get('/foo/bar')
         .expect(200, () => {
-          const bundlePath = path.join(__dirname, '../fixtures/server-test/bundle.js');
-          assert(fs.existsSync(bundlePath));
+          const bundlePath = path.join(
+            __dirname,
+            './fixtures/server-test/bundle.js'
+          );
+
+          expect(fs.existsSync(bundlePath)).toBe(true);
+
           fs.unlinkSync(bundlePath);
+
           done();
         });
     });
   });
 
   describe('write to disk with false filter', () => {
-    before((done) => {
-      writeToDisk(filePath => !(/bundle\.js$/.test(filePath)), done);
+    beforeAll((done) => {
+      writeToDisk((filePath) => !/bundle\.js$/.test(filePath), done);
     });
-    after(close);
+    afterAll(close);
 
     it('should not find the bundle file on disk', (done) => {
-      request(app).get('/foo/bar')
+      request(app)
+        .get('/foo/bar')
         .expect(200, () => {
-          const bundlePath = path.join(__dirname, '../fixtures/server-test/bundle.js');
-          assert(!fs.existsSync(bundlePath));
+          const bundlePath = path.join(
+            __dirname,
+            './fixtures/server-test/bundle.js'
+          );
+
+          expect(fs.existsSync(bundlePath)).toBe(false);
+
           done();
         });
     });
@@ -518,7 +580,7 @@ describe('Server', () => {
     instance = middleware(compiler, {
       stats: 'errors-only',
       logLevel,
-      writeToDisk: value
+      writeToDisk: value,
     });
     app.use(instance);
     app.use((req, res) => {
@@ -528,17 +590,24 @@ describe('Server', () => {
   }
 
   describe('write to disk without including querystrings', () => {
-    before((done) => {
+    beforeAll((done) => {
       querystringToDisk(true, done);
     });
-    after(close);
+    afterAll(close);
 
     it('should find the bundle file on disk with no querystring', (done) => {
-      request(app).get('/foo/bar')
+      request(app)
+        .get('/foo/bar')
         .expect(200, () => {
-          const bundlePath = path.join(__dirname, '../fixtures/server-test/bundle.js');
-          assert(fs.existsSync(bundlePath));
+          const bundlePath = path.join(
+            __dirname,
+            './fixtures/server-test/bundle.js'
+          );
+
+          expect(fs.existsSync(bundlePath)).toBe(true);
+
           fs.unlinkSync(bundlePath);
+
           done();
         });
     });
@@ -546,43 +615,51 @@ describe('Server', () => {
 
   function multiToDisk(value, done) {
     app = express();
+
     const compiler = webpack(webpackMultiConfig);
+
     instance = middleware(compiler, {
       stats: 'errors-only',
       logLevel,
-      writeToDisk: value
+      writeToDisk: value,
     });
+
     app.use(instance);
     app.use((req, res) => {
       res.sendStatus(200);
     });
+
     listen = listenShorthand(done);
   }
 
   describe('write to disk with MultiCompiler', () => {
-    before((done) => {
+    beforeAll((done) => {
       multiToDisk(true, done);
     });
-    after(close);
+
+    afterAll(close);
 
     it('should find the bundle files on disk', (done) => {
-      request(app).get('/foo/bar')
+      request(app)
+        .get('/foo/bar')
         .expect(200, () => {
           const bundleFiles = [
-            '../fixtures/server-test/js1/foo.js',
-            '../fixtures/server-test/js1/index.html',
-            '../fixtures/server-test/js1/svg.svg',
-            '../fixtures/server-test/js2/bar.js'
+            './fixtures/server-test/js1/foo.js',
+            './fixtures/server-test/js1/index.html',
+            './fixtures/server-test/js1/svg.svg',
+            './fixtures/server-test/js2/bar.js',
           ];
 
           for (const bundleFile of bundleFiles) {
             const bundlePath = path.join(__dirname, bundleFile);
-            assert(fs.existsSync(bundlePath));
+
+            expect(fs.existsSync(bundlePath)).toBe(true);
+
             fs.unlinkSync(bundlePath);
           }
 
-          fs.rmdirSync(path.join(__dirname, '../fixtures/server-test/js1/'));
-          fs.rmdirSync(path.join(__dirname, '../fixtures/server-test/js2/'));
+          fs.rmdirSync(path.join(__dirname, './fixtures/server-test/js1/'));
+          fs.rmdirSync(path.join(__dirname, './fixtures/server-test/js2/'));
 
           done();
         });
