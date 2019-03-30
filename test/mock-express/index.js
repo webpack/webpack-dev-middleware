@@ -1,15 +1,16 @@
 'use strict';
 
-const mockRequest = (options = {}) => {
-  return {
-    body: {},
-    cookies: {},
-    query: {},
-    params: {},
-    get: jest.fn(),
-    ...options,
-  };
-};
+const mockRequest = (options = {}) =>
+  Object.assign(
+    {
+      body: {},
+      cookies: {},
+      query: {},
+      params: {},
+      get: jest.fn(),
+    },
+    options
+  );
 
 const mockResponse = (options = {}) => {
   const res = {
