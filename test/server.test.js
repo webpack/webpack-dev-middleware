@@ -314,9 +314,9 @@ describe('Server', () => {
   });
 
   /**
-   * ref: #385, for that koa-webpack@4.x doesn't pass in getHeader method.
+   * ref: #385, for that koa-webpack@4.x doesn't pass in res.getHeader method.
    */
-  describe.only('Should work when res.getHeader is undefined', () => {
+  describe('Should work when res.getHeader is undefined', () => {
     it('should not throw error', (done) => {
       const req = mockRequest({
         url: '/',
@@ -339,6 +339,7 @@ describe('Server', () => {
 
       instance(req, res, jest.fn()).then(done);
     });
+    afterAll(close);
   });
 
   describe('custom mimeTypes', () => {
