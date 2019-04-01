@@ -25,7 +25,8 @@
   ],
   "dependencies": {
     "memory-fs": "^0.4.1",
-    "mime": "^2.3.1",
+    "mime": "^2.4.0",
+    "mime-db": "^1.38.0",
     "range-parser": "^1.0.3",
     "webpack-log": "^2.0.0"
   },

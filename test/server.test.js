@@ -102,7 +102,7 @@ describe('Server', () => {
     it('request to image', (done) => {
       request(app)
         .get('/public/svg.svg')
-        .expect('Content-Type', 'image/svg+xml; charset=UTF-8')
+        .expect('Content-Type', 'image/svg+xml')
         .expect('Content-Length', '4778')
         .expect(200, done);
     });
@@ -124,7 +124,7 @@ describe('Server', () => {
     it('request to directory', (done) => {
       request(app)
         .get('/public/')
-        .expect('Content-Type', 'text/html; charset=UTF-8')
+        .expect('Content-Type', 'text/html')
         .expect('Content-Length', '10')
         .expect(200, /My Index\./, done);
     });
@@ -132,7 +132,7 @@ describe('Server', () => {
     it('request to subdirectory without trailing slash', (done) => {
       request(app)
         .get('/public/reference/mono-v6.x.x')
-        .expect('Content-Type', 'text/html; charset=UTF-8')
+        .expect('Content-Type', 'text/html')
         .expect('Content-Length', '9')
         .expect(200, /My Index\./, done);
     });
@@ -156,7 +156,6 @@ describe('Server', () => {
     it('request to non-public path', (done) => {
       request(app)
         .get('/nonpublic/')
-        .expect('Content-Type', 'text/html; charset=utf-8')
         .expect(404, done);
     });
   });
@@ -210,7 +209,6 @@ describe('Server', () => {
     it('request to directory', (done) => {
       request(app)
         .get('/')
-        .expect('Content-Type', 'text/html; charset=utf-8')
         .expect(404, done);
     });
   });
@@ -265,6 +263,10 @@ describe('Server', () => {
   describe('no extension support', () => {
     beforeAll((done) => {
       app = express();
+      app.use((req, res, next) => {
+        res.set('Content-Type', 'text/plain');
+        next();
+      });
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
@@ -281,7 +283,7 @@ describe('Server', () => {
       request(app)
         .get('/')
         .expect('hello')
-        .expect('Content-Type', '; charset=UTF-8')
+        .expect('Content-Type', 'text/plain; charset=utf-8')
         .expect(200, done);
     });
   });
@@ -333,7 +335,7 @@ describe('Server', () => {
       request(app)
         .get('/')
         .expect('welcome')
-        .expect('Content-Type', /text\/html/)
+        .expect('Content-Type', 'text/html')
         .expect(200, done);
     });
   });
@@ -361,7 +363,7 @@ describe('Server', () => {
       request(app)
         .get('/')
         .expect('welcome')
-        .expect('Content-Type', /text\/html/)
+        .expect('Content-Type', 'text/html')
         .expect(200, done);
     });
   });
