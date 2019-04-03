@@ -9,6 +9,8 @@ const request = require('supertest');
 
 const middleware = require('../');
 
+const { mockRequest, mockResponse } = require('./mock-express');
+
 const webpackConfig = require('./fixtures/server-test/webpack.config');
 const webpackMultiConfig = require('./fixtures/server-test/webpack.array.config');
 const webpackQuerystringConfig = require('./fixtures/server-test/webpack.querystring.config');
@@ -309,6 +311,35 @@ describe('Server', () => {
         .expect('Content-Type', 'application/octet-stream')
         .expect(200, done);
     });
+  });
+
+  /**
+   * ref: #385, for that koa-webpack@4.x doesn't pass in res.getHeader method.
+   */
+  describe('Should work when res.getHeader is undefined', () => {
+    it('should not throw error', (done) => {
+      const req = mockRequest({
+        url: '/',
+        method: 'GET',
+        headers: {
+          Range: 'bytes=6000-',
+        },
+      });
+
+      const res = mockResponse({
+        getHeader: undefined,
+        setHeader: jest.fn(),
+      });
+
+      const compiler = webpack(webpackConfig);
+      instance = middleware(compiler, {
+        stats: 'errors-only',
+        logLevel,
+      });
+
+      instance(req, res, jest.fn()).then(done);
+    });
+    afterAll(close);
   });
 
   describe('custom mimeTypes', () => {
