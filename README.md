@@ -88,7 +88,7 @@ Default: `undefined`
 
 "index.html",
 // The index path for web server, defaults to "index.html".
-// If falsy (but not undefined), the server will not respond to requests to the root URL.
+// If false (but not undefined), the server will not respond to requests to the root URL.
 
 ### lazy
 
