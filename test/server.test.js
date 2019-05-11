@@ -91,7 +91,7 @@ describe('Server', () => {
         .head('/public/bundle.js')
         .expect('Content-Type', 'application/javascript; charset=UTF-8')
         .expect('Content-Length', '4631')
-        .expect(200, /console\.log\('Hey\.'\)/, done);
+        .expect(200, undefined, done);
     });
 
     it('GET request to bundle file', (done) => {
