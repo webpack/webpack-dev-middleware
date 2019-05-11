@@ -86,6 +86,14 @@ describe('Server', () => {
         });
     });
 
+    it('HEAD request to bundle file', (done) => {
+      request(app)
+        .head('/public/bundle.js')
+        .expect('Content-Type', 'application/javascript; charset=UTF-8')
+        .expect('Content-Length', '4631')
+        .expect(200, /console\.log\('Hey\.'\)/, done);
+    });
+
     it('GET request to bundle file', (done) => {
       request(app)
         .get('/public/bundle.js')
@@ -185,6 +193,12 @@ describe('Server', () => {
         // TODO(michael-ciniawsky) investigate the need for this test
         .expect('Content-Length', '4631')
         .expect(200, /console\.log\('Hey\.'\)/, done);
+    });
+
+    it("HEAD request to bundle file with methods set to ['POST']", (done) => {
+      request(app)
+        .get('/public/bundle.js')
+        .expect(404, done);
     });
 
     it("GET request to bundle file with methods set to ['POST']", (done) => {
