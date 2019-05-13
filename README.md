@@ -10,6 +10,7 @@
 [![tests][tests]][tests-url]
 [![coverage][cover]][cover-url]
 [![chat][chat]][chat-url]
+[![size][size]][size-url]
 
 # webpack-dev-middleware
 
@@ -422,7 +423,7 @@ out completely._
 
 Please take a moment to read our contributing guidelines if you haven't yet done so.
 
-[CONTRIBUTING.md](CONTRIBUTING.md)
+[CONTRIBUTING](./.github/CONTRIBUTING.md)
 
 ## License
 
@@ -434,12 +435,14 @@ Please take a moment to read our contributing guidelines if you haven't yet done
 [node-url]: https://nodejs.org
 [deps]: https://david-dm.org/webpack/webpack-dev-middleware.svg
 [deps-url]: https://david-dm.org/webpack/webpack-dev-middleware
-[tests]: http://img.shields.io/travis/webpack/webpack-dev-middleware.svg
-[tests-url]: https://travis-ci.org/webpack/webpack-dev-middleware
+[tests]: https://dev.azure.com/webpack/webpack-dev-middleware/_apis/build/status/webpack.webpack-dev-middleware?branchName=master
+[tests-url]: https://dev.azure.com/webpack/webpack-dev-middleware/_build/latest?definitionId=8&branchName=master
 [cover]: https://codecov.io/gh/webpack/webpack-dev-middleware/branch/master/graph/badge.svg
 [cover-url]: https://codecov.io/gh/webpack/webpack-dev-middleware
 [chat]: https://badges.gitter.im/webpack/webpack.svg
 [chat-url]: https://gitter.im/webpack/webpack
+[size]: https://packagephobia.now.sh/badge?p=webpack-dev-middleware
+[size-url]: https://packagephobia.now.sh/result?p=webpack-dev-middleware
 [docs-url]: https://webpack.js.org/guides/development/#using-webpack-dev-middleware
 [hash-url]: https://twitter.com/search?q=webpack
 [middleware-url]: https://github.com/webpack/webpack-dev-middleware

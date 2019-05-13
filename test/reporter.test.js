@@ -1,13 +1,11 @@
-'use strict';
-
 /* eslint no-console: off */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
-const middleware = require('..');
+import middleware from '..';
 
-const statOptions = require('./fixtures/stat-options');
+import statOptions from './fixtures/stat-options';
 
 const statsPath = path.join(__dirname, './fixtures', 'stats.txt');
 const rawStats = fs.readFileSync(statsPath, 'utf8');
