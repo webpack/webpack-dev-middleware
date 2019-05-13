@@ -69,7 +69,7 @@ _Note: The `publicPath` property is required, whereas all other options are opti
 ### methods
 
 Type: `Array`  
-Default: `[ 'GET' ,'HEAD']`
+Default: `undefined`
 
 This property allows a user to pass the list of HTTP request methods accepted by the server.
 

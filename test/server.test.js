@@ -106,7 +106,9 @@ describe('Server', () => {
     it('POST request to bundle file', (done) => {
       request(app)
         .post('/public/bundle.js')
-        .expect(404, done);
+        .expect('Content-Type', 'application/javascript; charset=UTF-8')
+        .expect('Content-Length', '4631')
+        .expect(200, /console\.log\('Hey\.'\)/, done);
     });
 
     it('request to image', (done) => {
