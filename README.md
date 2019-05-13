@@ -71,7 +71,9 @@ _Note: The `publicPath` property is required, whereas all other options are opti
 Type: `Array`  
 Default: `undefined`
 
-This property allows a user to pass the list of HTTP request methods accepted by the server.
+This property allows a user to set HTTP request methods accepted by the server.
+
+By default all HTTP request methods are accepted by the server.
 
 ### headers
 
