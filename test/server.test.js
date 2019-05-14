@@ -1,20 +1,18 @@
-'use strict';
+import fs from 'fs';
+import path from 'path';
 
-const fs = require('fs');
-const path = require('path');
+import express from 'express';
+import webpack from 'webpack';
+import request from 'supertest';
 
-const express = require('express');
-const webpack = require('webpack');
-const request = require('supertest');
+import middleware from '../';
 
-const middleware = require('../');
+import { mockRequest, mockResponse } from './mock-express';
 
-const { mockRequest, mockResponse } = require('./mock-express');
-
-const webpackConfig = require('./fixtures/server-test/webpack.config');
-const webpackMultiConfig = require('./fixtures/server-test/webpack.array.config');
-const webpackQuerystringConfig = require('./fixtures/server-test/webpack.querystring.config');
-const webpackClientServerConfig = require('./fixtures/server-test/webpack.client.server.config');
+import webpackConfig from './fixtures/server-test/webpack.config';
+import webpackMultiConfig from './fixtures/server-test/webpack.array.config';
+import webpackQuerystringConfig from './fixtures/server-test/webpack.querystring.config';
+import webpackClientServerConfig from './fixtures/server-test/webpack.client.server.config';
 
 describe('Server', () => {
   let instance;
@@ -327,6 +325,7 @@ describe('Server', () => {
       });
 
       const res = mockResponse({
+        // eslint-disable-next-line no-undefined
         getHeader: undefined,
         setHeader: jest.fn(),
       });

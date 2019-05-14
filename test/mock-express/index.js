@@ -1,5 +1,3 @@
-'use strict';
-
 const mockRequest = (options = {}) =>
   Object.assign(
     {
