@@ -1,6 +1,4 @@
-'use strict';
-
-const middleware = require('../');
+import middleware from '../';
 
 const options = {
   logLevel: 'silent',

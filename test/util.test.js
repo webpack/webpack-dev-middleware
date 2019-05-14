@@ -1,6 +1,4 @@
-'use strict';
-
-const { getFilenameFromUrl } = require('../lib/util');
+import { getFilenameFromUrl } from '../lib/util';
 
 const isWindows = process.platform === 'win32';
 

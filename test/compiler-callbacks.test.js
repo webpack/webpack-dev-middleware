@@ -1,8 +1,6 @@
-'use strict';
+import weblog from 'webpack-log';
 
-const weblog = require('webpack-log');
-
-const middleware = require('../');
+import middleware from '../';
 
 describe('CompilerCallbacks', () => {
   const hook = { tap: () => {} };
