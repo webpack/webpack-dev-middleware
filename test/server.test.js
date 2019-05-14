@@ -93,6 +93,15 @@ describe('Server', () => {
         .expect(200, /console\.log\('Hey\.'\)/, done);
     });
 
+    it('HEAD request to bundle file', (done) => {
+      request(app)
+        .head('/public/bundle.js')
+        .expect('Content-Type', 'application/javascript; charset=UTF-8')
+        .expect('Content-Length', '4631')
+        // eslint-disable-next-line no-undefined
+        .expect(200, undefined, done);
+    });
+
     it('POST request to bundle file', (done) => {
       request(app)
         .post('/public/bundle.js')
@@ -186,6 +195,12 @@ describe('Server', () => {
     });
 
     it("GET request to bundle file with methods set to ['POST']", (done) => {
+      request(app)
+        .get('/public/bundle.js')
+        .expect(404, done);
+    });
+
+    it("HEAD request to bundle file with methods set to ['POST']", (done) => {
       request(app)
         .get('/public/bundle.js')
         .expect(404, done);
