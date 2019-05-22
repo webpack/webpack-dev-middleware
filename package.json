@@ -38,8 +38,8 @@
   },
   "devDependencies": {
     "@babel/cli": "7.4.4",
-    "@babel/core": "7.4.4",
-    "@babel/preset-env": "7.4.4",
+    "@babel/core": "7.4.5",
+    "@babel/preset-env": "7.4.5",
     "@commitlint/cli": "7.6.1",
     "@commitlint/config-conventional": "7.6.0",
     "@webpack-contrib/defaults": "4.0.1",
@@ -61,7 +61,7 @@
     "prettier": "1.17.1",
     "standard-version": "6.0.1",
     "supertest": "4.0.2",
-    "webpack": "4.32.0"
+    "webpack": "4.32.2"
   },
   "keywords": [
     "webpack",
