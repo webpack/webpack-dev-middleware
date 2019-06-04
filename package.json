@@ -42,7 +42,7 @@
     "@babel/preset-env": "7.4.5",
     "@commitlint/cli": "8.0.0",
     "@commitlint/config-conventional": "8.0.0",
-    "@webpack-contrib/defaults": "4.1.1",
+    "@webpack-contrib/defaults": "5.0.0",
     "@webpack-contrib/eslint-config-webpack": "3.0.0",
     "babel-jest": "24.8.0",
     "commitlint-azure-pipelines-cli": "1.0.1",
