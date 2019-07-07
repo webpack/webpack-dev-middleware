@@ -1,5 +1,6 @@
 {
   "extends": ["config:base", ":semanticCommitTypeAll(chore)"],
+  "baseBranches": ["master"],
   "labels": ["renovate"],
   "minor": {
     "groupName": "all minor dependencies"
@@ -7,5 +8,12 @@
   "patch": {
     "groupName": "all patch dependencies"
   },
-  "separateMinorPatch": true
+  "separateMinorPatch": true,
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "depTypeList": ["peerDependencies"],
+      "enabled": false
+    }
+  ]
 }
