@@ -31,10 +31,12 @@
     "webpack": "^4.0.0"
   },
   "dependencies": {
+    "execa": "^2.0.3",
     "memory-fs": "^0.4.1",
     "mime": "^2.4.2",
     "range-parser": "^1.2.1",
-    "webpack-log": "^2.0.0"
+    "webpack-log": "^2.0.0",
+    "yargs": "^13.2.4"
   },
   "devDependencies": {
     "@babel/cli": "7.4.4",

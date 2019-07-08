@@ -2,9 +2,13 @@
 
 const mime = require('mime');
 
+const { argv } = require('yargs');
+
 const createContext = require('./lib/context');
 const middleware = require('./lib/middleware');
 const reporter = require('./lib/reporter');
+const createConfig = require('./lib/createConfig');
+
 const { setFs, toDisk } = require('./lib/fs');
 const { getFilenameFromUrl, noop, ready } = require('./lib/util');
 
@@ -25,7 +29,8 @@ const defaults = {
 };
 
 module.exports = function wdm(compiler, opts) {
-  const options = Object.assign({}, defaults, opts);
+  const config = Object.assign({}, defaults, opts);
+  const options = createConfig(config, argv);
 
   if (options.lazy) {
     if (typeof options.filename === 'string') {
