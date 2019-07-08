@@ -165,6 +165,25 @@ describe('Reporter', () => {
     });
   });
 
+  it('should not print stats if options.stats without content', (done) => {
+    const statsWithoutContent = Object.assign({}, stats, {
+      toString: () => '',
+    });
+    const instance = middleware(
+      compiler,
+      Object.assign(defaults, { stats: statsWithoutContent })
+    );
+    const { log } = instance.context;
+    spy(instance);
+    hooks.done(statsWithoutContent);
+
+    setTimeout(() => {
+      expect(log.info).toBeCalledTimes(1);
+      expect(log.info.mock.calls[0][0]).toBe('Compiled successfully.');
+      done();
+    });
+  });
+
   it('should print: wait until bundle valid', (done) => {
     const instance = middleware(compiler, defaults);
     const { log } = instance.context;
