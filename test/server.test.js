@@ -419,7 +419,10 @@ describe('Server', () => {
         stats: 'errors-only',
         logLevel,
         mimeTypes: {
-          'model/vnd.pixar.usd': ['usdz'],
+          typeMap: {
+            'model/vnd.pixar.usd': ['usdz'],
+          },
+          force: true,
         },
       });
       app.use(instance);
