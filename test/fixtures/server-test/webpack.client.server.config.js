@@ -15,7 +15,7 @@ module.exports = [
         {
           test: /\.(svg|html)$/,
           loader: 'file-loader',
-          query: { name: '[name].[ext]' },
+          options: { name: '[name].[ext]' },
         },
       ],
     },
