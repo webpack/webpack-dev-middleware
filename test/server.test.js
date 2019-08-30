@@ -88,8 +88,6 @@ describe('Server', () => {
       request(app)
         .get('/public/bundle.js')
         .expect('Content-Type', 'application/javascript; charset=UTF-8')
-        // TODO(michael-ciniawsky) investigate the need for this test
-        .expect('Content-Length', '4631')
         .expect(200, /console\.log\('Hey\.'\)/, done);
     });
 
@@ -97,7 +95,6 @@ describe('Server', () => {
       request(app)
         .head('/public/bundle.js')
         .expect('Content-Type', 'application/javascript; charset=UTF-8')
-        .expect('Content-Length', '4631')
         // eslint-disable-next-line no-undefined
         .expect(200, undefined, done);
     });
@@ -112,7 +109,6 @@ describe('Server', () => {
       request(app)
         .get('/public/svg.svg')
         .expect('Content-Type', 'image/svg+xml; charset=UTF-8')
-        .expect('Content-Length', '4778')
         .expect(200, done);
     });
 
@@ -189,8 +185,6 @@ describe('Server', () => {
       request(app)
         .post('/public/bundle.js')
         .expect('Content-Type', 'application/javascript; charset=UTF-8')
-        // TODO(michael-ciniawsky) investigate the need for this test
-        .expect('Content-Length', '4631')
         .expect(200, /console\.log\('Hey\.'\)/, done);
     });
 
@@ -248,8 +242,6 @@ describe('Server', () => {
     it('GET request to bundle file', (done) => {
       request(app)
         .get('/bundle.js')
-        // TODO(michael-ciniawsky) investigate the need for this test
-        .expect('Content-Length', '4631')
         .expect(200, /console\.log\('Hey\.'\)/, done);
     });
   });
