@@ -50,7 +50,7 @@
     "cross-env": "^5.2.1",
     "del": "^4.1.1",
     "del-cli": "^1.1.0",
-    "eslint": "^6.2.2",
+    "eslint": "^6.3.0",
     "eslint-plugin-import": "^2.18.2",
     "eslint-plugin-prettier": "^3.1.0",
     "express": "^4.17.1",
