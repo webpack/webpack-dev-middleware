@@ -53,7 +53,6 @@ jobs:
         node-8-canary:
           node_version: ^8.9.0
           webpack_version: next
-          continue_on_error: true
     steps:
       - task: NodeTool@0
         inputs:
@@ -108,7 +107,6 @@ jobs:
         node-8-canary:
           node_version: ^8.9.0
           webpack_version: next
-          continue_on_error: true
     steps:
       - task: NodeTool@0
         inputs:
@@ -163,7 +161,6 @@ jobs:
         node-8-canary:
           node_version: ^8.9.0
           webpack_version: next
-          continue_on_error: true
     steps:
       - script: 'git config --global core.autocrlf input'
         displayName: 'Config git core.autocrlf'
