@@ -41,8 +41,8 @@
     "@babel/cli": "^7.6.0",
     "@babel/core": "^7.6.0",
     "@babel/preset-env": "^7.6.0",
-    "@commitlint/cli": "^8.1.0",
-    "@commitlint/config-conventional": "^8.1.0",
+    "@commitlint/cli": "^8.2.0",
+    "@commitlint/config-conventional": "^8.2.0",
     "@webpack-contrib/defaults": "^5.0.2",
     "@webpack-contrib/eslint-config-webpack": "^3.0.0",
     "babel-jest": "^24.9.0",
@@ -50,7 +50,7 @@
     "cross-env": "^5.2.1",
     "del": "^4.1.1",
     "del-cli": "^1.1.0",
-    "eslint": "^6.3.0",
+    "eslint": "^6.4.0",
     "eslint-plugin-import": "^2.18.2",
     "eslint-plugin-prettier": "^3.1.0",
     "express": "^4.17.1",
@@ -58,11 +58,11 @@
     "husky": "^3.0.5",
     "jest": "^24.9.0",
     "jest-junit": "^8.0.0",
-    "lint-staged": "^9.2.5",
+    "lint-staged": "^9.3.0",
     "prettier": "^1.18.2",
     "standard-version": "^7.0.0",
     "supertest": "^4.0.2",
-    "webpack": "^4.39.3"
+    "webpack": "^4.40.2"
   },
   "keywords": [
     "webpack",
