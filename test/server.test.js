@@ -531,20 +531,26 @@ describe('Server', () => {
 
   function writeToDisk(value, done) {
     app = express();
+
     const compiler = webpack(webpackConfig);
+
     instance = middleware(compiler, {
       stats: 'errors-only',
       logLevel,
       writeToDisk: value,
     });
+
     app.use(instance);
     app.use((req, res) => {
       res.sendStatus(200);
     });
+
     listen = listenShorthand(done);
+
+    return { compiler, instance };
   }
 
-  describe('write to disk', () => {
+  describe('write to disk with true', () => {
     beforeAll((done) => {
       writeToDisk(true, done);
     });
@@ -562,6 +568,28 @@ describe('Server', () => {
           expect(fs.existsSync(bundlePath)).toBe(true);
 
           fs.unlinkSync(bundlePath);
+
+          done();
+        });
+    });
+  });
+
+  describe('write to disk with false', () => {
+    beforeAll((done) => {
+      writeToDisk(false, done);
+    });
+    afterAll(close);
+
+    it('should not find the bundle file on disk', (done) => {
+      request(app)
+        .get('/foo/bar')
+        .expect(200, () => {
+          const bundlePath = path.join(
+            __dirname,
+            './fixtures/server-test/bundle.js'
+          );
+
+          expect(fs.existsSync(bundlePath)).toBe(false);
 
           done();
         });
@@ -702,6 +730,86 @@ describe('Server', () => {
           fs.rmdirSync(path.join(__dirname, './fixtures/server-test/js2/'));
 
           done();
+        });
+    });
+  });
+
+  describe('write to disk with true hooks', () => {
+    let compiler = null;
+
+    beforeAll((done) => {
+      ({ compiler, instance } = writeToDisk(true, done));
+    });
+    afterAll(close);
+
+    it('should not find the bundle file on disk', (done) => {
+      request(app)
+        .get('/foo/bar')
+        .expect(200, () => {
+          const bundlePath = path.join(
+            __dirname,
+            './fixtures/server-test/bundle.js'
+          );
+
+          expect(
+            compiler.hooks.assetEmitted.taps.filter(
+              (hook) => hook.name === 'WebpackDevMiddleware'
+            ).length
+          ).toBe(1);
+          expect(fs.existsSync(bundlePath)).toBe(true);
+
+          fs.unlinkSync(bundlePath);
+
+          instance.invalidate();
+
+          compiler.hooks.done.tap('WebpackDevMiddlewareWriteToDiskTest', () => {
+            expect(
+              compiler.hooks.assetEmitted.taps.filter(
+                (hook) => hook.name === 'WebpackDevMiddleware'
+              ).length
+            ).toBe(1);
+
+            done();
+          });
+        });
+    });
+  });
+
+  describe('write to disk with false hooks', () => {
+    let compiler = null;
+
+    beforeAll((done) => {
+      ({ compiler } = writeToDisk(false, done));
+    });
+    afterAll(close);
+
+    it('should not find the bundle file on disk', (done) => {
+      request(app)
+        .get('/foo/bar')
+        .expect(200, () => {
+          const bundlePath = path.join(
+            __dirname,
+            './fixtures/server-test/bundle.js'
+          );
+
+          expect(
+            compiler.hooks.assetEmitted.taps.filter(
+              (hook) => hook.name === 'WebpackDevMiddleware'
+            ).length
+          ).toBe(0);
+          expect(fs.existsSync(bundlePath)).toBe(false);
+
+          instance.invalidate();
+
+          compiler.hooks.done.tap('WebpackDevMiddlewareWriteToDiskTest', () => {
+            expect(
+              compiler.hooks.assetEmitted.taps.filter(
+                (hook) => hook.name === 'WebpackDevMiddleware'
+              ).length
+            ).toBe(0);
+
+            done();
+          });
         });
     });
   });
