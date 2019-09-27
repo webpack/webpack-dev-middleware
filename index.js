@@ -27,16 +27,6 @@ const defaults = {
 module.exports = function wdm(compiler, opts) {
   const options = Object.assign({}, defaults, opts);
 
-  if (options.lazy) {
-    if (typeof options.filename === 'string') {
-      const filename = options.filename
-        .replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&') // eslint-disable-line no-useless-escape
-        .replace(/\\\[[a-z]+\\\]/gi, '.+');
-
-      options.filename = new RegExp(`^[/]{0,1}${filename}$`);
-    }
-  }
-
   // defining custom MIME type
   if (options.mimeTypes) {
     const typeMap = options.mimeTypes.typeMap || options.mimeTypes;
@@ -57,6 +47,14 @@ module.exports = function wdm(compiler, opts) {
       }
     });
   } else {
+    if (typeof options.filename === 'string') {
+      const filename = options.filename
+        .replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&') // eslint-disable-line no-useless-escape
+        .replace(/\\\[[a-z]+\\\]/gi, '.+');
+
+      options.filename = new RegExp(`^[/]{0,1}${filename}$`);
+    }
+
     context.state = true;
   }
 
