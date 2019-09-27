@@ -58,11 +58,11 @@
     "husky": "^3.0.5",
     "jest": "^24.9.0",
     "jest-junit": "^8.0.0",
-    "lint-staged": "^9.3.0",
+    "lint-staged": "^9.4.0",
     "prettier": "^1.18.2",
     "standard-version": "^7.0.0",
     "supertest": "^4.0.2",
-    "webpack": "^4.40.2"
+    "webpack": "^4.41.0"
   },
   "keywords": [
     "webpack",
