@@ -6,7 +6,7 @@ module.exports = {
   entry: './foo.js',
   output: {
     filename: 'bundle.js?[contenthash]',
-    path: '/',
+    path: __dirname,
   },
   module: {
     rules: [
