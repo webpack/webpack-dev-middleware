@@ -1,4 +1,4 @@
-import { getFilenameFromUrl } from '../lib/util';
+import { getFilenameFromUrl } from '../lib/utils';
 
 const isWindows = process.platform === 'win32';
 
