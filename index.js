@@ -6,7 +6,9 @@ const createContext = require('./lib/context');
 const middleware = require('./lib/middleware');
 const reporter = require('./lib/reporter');
 const { setFs, toDisk } = require('./lib/fs');
-const { getFilenameFromUrl, noop, ready } = require('./lib/util');
+const { getFilenameFromUrl, ready } = require('./lib/utils');
+
+const noop = () => {};
 
 const defaults = {
   logLevel: 'info',
