@@ -5,8 +5,12 @@ const mime = require('mime');
 const createContext = require('./lib/context');
 const middleware = require('./lib/middleware');
 const reporter = require('./lib/reporter');
-const { setFs, toDisk } = require('./lib/fs');
-const { getFilenameFromUrl, ready } = require('./lib/utils');
+const {
+  setupWriteToDisk,
+  setupOutputFileSystem,
+  getFilenameFromUrl,
+  ready,
+} = require('./lib/utils');
 
 const noop = () => {};
 
@@ -61,10 +65,10 @@ module.exports = function wdm(compiler, opts) {
   }
 
   if (options.writeToDisk) {
-    toDisk(context);
+    setupWriteToDisk(context);
   }
 
-  setFs(context, compiler);
+  setupOutputFileSystem(compiler, context);
 
   return Object.assign(middleware(context), {
     close(callback) {
