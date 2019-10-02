@@ -2,10 +2,12 @@
 
 const mime = require('mime');
 
-const createContext = require('./lib/context');
 const middleware = require('./lib/middleware');
-const reporter = require('./lib/reporter');
+const reporter = require('./lib/utils/reporter');
 const {
+  setupHooks,
+  setupRebuild,
+  setupLogger,
   setupWriteToDisk,
   setupOutputFileSystem,
   getFilenameFromUrl,
@@ -36,17 +38,31 @@ module.exports = function wdm(compiler, opts) {
   // defining custom MIME type
   if (options.mimeTypes) {
     const typeMap = options.mimeTypes.typeMap || options.mimeTypes;
-    const force = !!options.mimeTypes.force;
+    const force = Boolean(options.mimeTypes.force);
+
     mime.define(typeMap, force);
   }
 
-  const context = createContext(compiler, options);
+  const context = {
+    state: false,
+    webpackStats: null,
+    callbacks: [],
+    options,
+    compiler,
+    watching: null,
+    forceRebuild: false,
+  };
+
+  setupHooks(context);
+  setupRebuild(context);
+  setupLogger(context);
 
   // start watching
   if (!options.lazy) {
     context.watching = compiler.watch(options.watchOptions, (err) => {
       if (err) {
         context.log.error(err.stack || err);
+
         if (err.details) {
           context.log.error(err.details);
         }
