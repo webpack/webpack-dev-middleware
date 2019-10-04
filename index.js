@@ -2,11 +2,19 @@
 
 const mime = require('mime');
 
-const createContext = require('./lib/context');
 const middleware = require('./lib/middleware');
-const reporter = require('./lib/reporter');
-const { setFs, toDisk } = require('./lib/fs');
-const { getFilenameFromUrl, noop, ready } = require('./lib/util');
+const reporter = require('./lib/utils/reporter');
+const {
+  setupHooks,
+  setupRebuild,
+  setupLogger,
+  setupWriteToDisk,
+  setupOutputFileSystem,
+  getFilenameFromUrl,
+  ready,
+} = require('./lib/utils');
+
+const noop = () => {};
 
 const defaults = {
   logLevel: 'info',
@@ -30,17 +38,31 @@ module.exports = function wdm(compiler, opts) {
   // defining custom MIME type
   if (options.mimeTypes) {
     const typeMap = options.mimeTypes.typeMap || options.mimeTypes;
-    const force = !!options.mimeTypes.force;
+    const force = Boolean(options.mimeTypes.force);
+
     mime.define(typeMap, force);
   }
 
-  const context = createContext(compiler, options);
+  const context = {
+    state: false,
+    webpackStats: null,
+    callbacks: [],
+    options,
+    compiler,
+    watching: null,
+    forceRebuild: false,
+  };
+
+  setupHooks(context);
+  setupRebuild(context);
+  setupLogger(context);
 
   // start watching
   if (!options.lazy) {
     context.watching = compiler.watch(options.watchOptions, (err) => {
       if (err) {
         context.log.error(err.stack || err);
+
         if (err.details) {
           context.log.error(err.details);
         }
@@ -59,10 +81,10 @@ module.exports = function wdm(compiler, opts) {
   }
 
   if (options.writeToDisk) {
-    toDisk(context);
+    setupWriteToDisk(context);
   }
 
-  setFs(context, compiler);
+  setupOutputFileSystem(compiler, context);
 
   return Object.assign(middleware(context), {
     close(callback) {
