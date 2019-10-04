@@ -7,25 +7,26 @@
   "author": "Tobias Koppers @sokra",
   "homepage": "https://github.com/webpack/webpack-dev-middleware",
   "bugs": "https://github.com/webpack/webpack-dev-middleware/issues",
-  "main": "index.js",
+  "main": "lib/index.js",
   "engines": {
     "node": ">= 6"
   },
   "scripts": {
     "commitlint": "commitlint --from=master",
-    "lint": "eslint --cache lib test",
+    "lint:prettier": "prettier \"{**/*,*}.{js,json,md,yml,css}\" --list-different",
+    "lint:js": "eslint --cache lib test",
+    "lint": "npm-run-all -l -p \"lint:**\"",
     "release": "standard-version",
     "security": "npm audit",
-    "test:only": "jest",
-    "test:coverage": "npm run test:only -- --coverage",
-    "test:watch": "npm run test:only --watch",
+    "test:only": "cross-env NODE_ENV=test jest",
+    "test:watch": "cross-env NODE_ENV=test jest --watch",
+    "test:coverage": "cross-env NODE_ENV=test jest --collectCoverageFrom=\"lib/**/*.js\" --coverage",
     "pretest": "npm run lint",
-    "test": "npm run test:coverage",
+    "test": "cross-env NODE_ENV=test npm run test:coverage",
     "defaults": "webpack-defaults"
   },
   "files": [
-    "lib",
-    "index.js"
+    "lib"
   ],
   "peerDependencies": {
     "webpack": "^4.0.0"
@@ -51,6 +52,7 @@
     "del": "^4.1.1",
     "del-cli": "^1.1.0",
     "eslint": "^6.5.1",
+    "eslint-config-prettier": "^6.3.0",
     "eslint-plugin-import": "^2.18.2",
     "eslint-plugin-prettier": "^3.1.1",
     "express": "^4.17.1",
@@ -59,6 +61,7 @@
     "jest": "^24.9.0",
     "jest-junit": "^8.0.0",
     "lint-staged": "^9.4.1",
+    "npm-run-all": "^4.1.5",
     "prettier": "^1.18.2",
     "standard-version": "^7.0.0",
     "supertest": "^4.0.2",
