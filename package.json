@@ -49,7 +49,7 @@
     "babel-jest": "^24.9.0",
     "commitlint-azure-pipelines-cli": "^1.0.2",
     "cross-env": "^6.0.0",
-    "del": "^4.1.1",
+    "del": "^5.1.0",
     "del-cli": "^1.1.0",
     "eslint": "^6.5.1",
     "eslint-config-prettier": "^6.4.0",
