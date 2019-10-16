@@ -39,9 +39,9 @@
     "webpack-log": "^2.0.0"
   },
   "devDependencies": {
-    "@babel/cli": "^7.6.2",
-    "@babel/core": "^7.6.2",
-    "@babel/preset-env": "^7.6.2",
+    "@babel/cli": "^7.6.4",
+    "@babel/core": "^7.6.4",
+    "@babel/preset-env": "^7.6.3",
     "@commitlint/cli": "^8.2.0",
     "@commitlint/config-conventional": "^8.2.0",
     "@webpack-contrib/defaults": "^5.0.2",
@@ -57,15 +57,15 @@
     "eslint-plugin-prettier": "^3.1.1",
     "express": "^4.17.1",
     "file-loader": "^4.2.0",
-    "husky": "^3.0.8",
+    "husky": "^3.0.9",
     "jest": "^24.9.0",
     "jest-junit": "^8.0.0",
-    "lint-staged": "^9.4.1",
+    "lint-staged": "^9.4.2",
     "npm-run-all": "^4.1.5",
     "prettier": "^1.18.2",
     "standard-version": "^7.0.0",
     "supertest": "^4.0.2",
-    "webpack": "^4.41.0"
+    "webpack": "^4.41.2"
   },
   "keywords": [
     "webpack",
