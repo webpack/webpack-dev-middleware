@@ -1,12 +1,10 @@
-'use strict';
+import path from 'path';
 
-const path = require('path');
+import MemoryFileSystem from 'memory-fs';
 
-const MemoryFileSystem = require('memory-fs');
+import DevMiddlewareError from '../DevMiddlewareError';
 
-const DevMiddlewareError = require('../DevMiddlewareError');
-
-function setupOutputFileSystem(compiler, context) {
+export default function setupOutputFileSystem(compiler, context) {
   if (
     typeof compiler.outputPath === 'string' &&
     !path.posix.isAbsolute(compiler.outputPath) &&

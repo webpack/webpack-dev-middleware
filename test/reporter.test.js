@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 
 import middleware from '../src';
+
 import statOptions from './fixtures/stat-options';
 
 const statsPath = path.join(__dirname, './fixtures', 'stats.txt');

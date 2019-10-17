@@ -5,7 +5,7 @@ module.exports = {
     {
       files: ['src/**/*.js'],
       parserOptions: {
-        sourceType: 'script',
+        sourceType: 'module',
       },
     },
   ],
