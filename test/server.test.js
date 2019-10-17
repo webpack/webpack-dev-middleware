@@ -5,7 +5,7 @@ import express from 'express';
 import webpack from 'webpack';
 import request from 'supertest';
 
-import middleware from '../';
+import middleware from '../src';
 
 import { mockRequest, mockResponse } from './mock-express';
 

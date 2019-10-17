@@ -1,6 +1,6 @@
 import weblog from 'webpack-log';
 
-import middleware from '../';
+import middleware from '../src';
 
 // @note logLevel testing is handled by the loglevel module
 
