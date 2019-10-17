@@ -9,7 +9,7 @@
   "bugs": "https://github.com/webpack/webpack-dev-middleware/issues",
   "main": "lib/index.js",
   "engines": {
-    "node": ">= 6"
+    "node": ">= 10.13"
   },
   "scripts": {
     "commitlint": "commitlint --from=master",
