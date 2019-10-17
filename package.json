@@ -16,7 +16,7 @@
     "lint:prettier": "prettier \"{**/*,*}.{js,json,md,yml,css}\" --list-different",
     "lint:js": "eslint --cache src test",
     "lint": "npm-run-all -l -p \"lint:**\"",
-    "build": "babel src -d lib",
+    "build": "del lib && babel src -d lib",
     "release": "standard-version",
     "security": "npm audit",
     "test:only": "cross-env NODE_ENV=test jest",
@@ -24,7 +24,8 @@
     "test:coverage": "cross-env NODE_ENV=test jest --collectCoverageFrom=\"src/**/*.js\" --coverage",
     "pretest": "npm run lint",
     "test": "cross-env NODE_ENV=test npm run test:coverage",
-    "defaults": "webpack-defaults"
+    "defaults": "webpack-defaults",
+    "prepublish": "npm run build"
   },
   "files": [
     "lib"
