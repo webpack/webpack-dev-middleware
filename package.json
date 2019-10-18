@@ -7,7 +7,7 @@
   "author": "Tobias Koppers @sokra",
   "homepage": "https://github.com/webpack/webpack-dev-middleware",
   "bugs": "https://github.com/webpack/webpack-dev-middleware/issues",
-  "main": "lib/index.js",
+  "main": "dist/index.js",
   "engines": {
     "node": ">= 10.13"
   },
@@ -16,7 +16,7 @@
     "lint:prettier": "prettier \"{**/*,*}.{js,json,md,yml,css}\" --list-different",
     "lint:js": "eslint --cache src test",
     "lint": "npm-run-all -l -p \"lint:**\"",
-    "build": "del lib && babel src -d lib",
+    "build": "del dist && babel src -d dist",
     "release": "standard-version",
     "security": "npm audit",
     "test:only": "cross-env NODE_ENV=test jest",
@@ -28,7 +28,7 @@
     "prepublish": "npm run build"
   },
   "files": [
-    "lib"
+    "dist"
   ],
   "peerDependencies": {
     "webpack": "^4.0.0"
