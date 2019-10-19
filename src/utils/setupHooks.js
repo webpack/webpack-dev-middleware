@@ -1,6 +1,4 @@
-'use strict';
-
-function setupHooks(context) {
+export default function setupHooks(context) {
   function invalid(callback) {
     if (context.state) {
       context.options.reporter(context.options, {
@@ -70,5 +68,3 @@ function setupHooks(context) {
     }
   );
 }
-
-module.exports = setupHooks;

@@ -180,7 +180,7 @@ Type: `Object`
 Default: `undefined`
 
 Allows users to provide a custom reporter to handle logging within the module.
-Please see the [default reporter](/lib/utils/reporter.js)
+Please see the [default reporter](/src/utils/reporter.js)
 for an example.
 
 ### serverSideRender

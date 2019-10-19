@@ -1,8 +1,6 @@
-'use strict';
+import parseRange from 'range-parser';
 
-const parseRange = require('range-parser');
-
-function handleRangeHeaders(content, req, res) {
+export default function handleRangeHeaders(content, req, res) {
   // assumes express API. For other servers, need to add logic to access
   // alternative header APIs
   res.setHeader('Accept-Ranges', 'bytes');
@@ -37,5 +35,3 @@ function handleRangeHeaders(content, req, res) {
 
   return content;
 }
-
-module.exports = handleRangeHeaders;
