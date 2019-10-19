@@ -1,4 +1,4 @@
-import middleware from '..';
+import middleware from '../src';
 
 const doneStats = {
   hasErrors() {

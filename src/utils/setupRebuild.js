@@ -1,6 +1,4 @@
-'use strict';
-
-function setupRebuild(context) {
+export default function setupRebuild(context) {
   function rebuild() {
     if (context.state) {
       // eslint-disable-next-line no-param-reassign
@@ -24,5 +22,3 @@ function setupRebuild(context) {
   // eslint-disable-next-line no-param-reassign
   context.rebuild = rebuild;
 }
-
-module.exports = setupRebuild;
