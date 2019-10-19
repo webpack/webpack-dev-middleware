@@ -1,18 +1,18 @@
-export default function reporter(context, stats) {
-  const { logger, options } = context;
+export default function reporter(middlewareOptions, options) {
+  const { log, state, stats } = options;
 
-  if (stats) {
-    const displayStats = options.stats !== false;
-    const statsString = stats.toString(options.stats);
+  if (state) {
+    const displayStats = middlewareOptions.stats !== false;
+    const statsString = stats.toString(middlewareOptions.stats);
 
     // displayStats only logged
     if (displayStats && statsString.trim().length) {
       if (stats.hasErrors()) {
-        logger.error(statsString);
+        log.error(statsString);
       } else if (stats.hasWarnings()) {
-        logger.warn(statsString);
+        log.warn(statsString);
       } else {
-        logger.info(statsString);
+        log.info(statsString);
       }
     }
 
@@ -23,9 +23,8 @@ export default function reporter(context, stats) {
     } else if (stats.hasWarnings()) {
       message = 'Compiled with warnings.';
     }
-
-    logger.info(message);
+    log.info(message);
   } else {
-    logger.info('Compiling...');
+    log.info('Compiling...');
   }
 }

@@ -1,215 +1,170 @@
-import express from 'express';
-import { Stats } from 'webpack';
-
 import middleware from '../src';
 
-import getCompiler from './helpers/getCompiler';
-import getCompilerHooks from './helpers/getCompilerHooks';
-import webpackConfig from './fixtures/server-test/webpack.config';
+const options = {
+  logLevel: 'silent',
+  publicPath: '/public/',
+};
 
 describe('API', () => {
-  let instance;
-  let listen;
-  let app;
-  let compiler;
+  let closeCount = 0;
+  let hooks = {};
+  let invalidationCount = 0;
 
-  beforeEach((done) => {
-    compiler = getCompiler(webpackConfig);
+  // TODO: Should use sinon or something for this...
+  const hook = (name) => {
+    return {
+      tap: (id, callback) => {
+        hooks[name] = callback;
+      },
+    };
+  };
+  const compiler = {
+    outputPath: '/output',
+    watch() {
+      return {
+        invalidate() {
+          invalidationCount += 1;
+        },
+        close(callback) {
+          closeCount += 1;
+          callback();
+        },
+      };
+    },
+    hooks: {
+      done: hook('done'),
+      invalid: hook('invalid'),
+      run: hook('run'),
+      watchRun: hook('watchRun'),
+    },
+  };
 
-    instance = middleware(compiler);
-
-    app = express();
-    app.use(instance);
-
-    listen = app.listen((error) => {
-      if (error) {
-        return done(error);
-      }
-
-      return done();
-    });
+  beforeEach(() => {
+    hooks = {};
+    invalidationCount = 0;
+    closeCount = 0;
   });
 
-  afterEach((done) => {
-    instance.close();
+  const doneStats = {
+    hasErrors() {
+      return false;
+    },
+    hasWarnings() {
+      return false;
+    },
+  };
 
-    if (listen) {
-      listen.close(done);
-    } else {
-      done();
-    }
-  });
-
-  describe('waitUntilValid method', () => {
-    it('should work without callback', (done) => {
-      const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
-
-      instance.waitUntilValid();
-
-      const intervalId = setInterval(() => {
-        if (instance.context.state) {
-          expect(compiler.running).toBe(true);
-          expect(instance.context.state).toBe(true);
-          expect(doneSpy).toHaveBeenCalledTimes(1);
-          expect(doneSpy.mock.calls[0][0]).toBeInstanceOf(Stats);
-
-          doneSpy.mockRestore();
-
-          clearInterval(intervalId);
-
+  describe('waitUntilValid', () => {
+    it('should wait for bundle done', (done) => {
+      let doneCalled = false;
+      const instance = middleware(compiler, options);
+      instance.waitUntilValid(() => {
+        if (doneCalled) {
           done();
+        } else {
+          done(new Error('`waitUntilValid` called before bundle was done'));
         }
+      });
+      setTimeout(() => {
+        hooks.done(doneStats);
+        doneCalled = true;
       });
     });
 
-    it('should work with callback', (done) => {
-      const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
-      let callbackCounter = 0;
-
-      instance.waitUntilValid(() => {
-        callbackCounter += 1;
-      });
-
-      const intervalId = setInterval(() => {
-        if (instance.context.state) {
-          expect(compiler.running).toBe(true);
-          expect(instance.context.state).toBe(true);
-          expect(callbackCounter).toBe(1);
-          expect(doneSpy).toHaveBeenCalledTimes(1);
-
-          doneSpy.mockRestore();
-
-          clearInterval(intervalId);
-
-          done();
-        }
-      });
-    });
-
-    it('should run callback immediately when state already valid', (done) => {
-      const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
-      let callbackCounter = 0;
-      let validToCheck = false;
-
-      instance.waitUntilValid(() => {
-        callbackCounter += 1;
-
+    it('callback should be called when bundle is already done', (done) => {
+      const instance = middleware(compiler, options);
+      hooks.done(doneStats);
+      setTimeout(() => {
         instance.waitUntilValid(() => {
-          validToCheck = true;
-          callbackCounter += 1;
+          done();
         });
       });
+    });
 
-      const intervalId = setInterval(() => {
-        if (instance.context.state && validToCheck) {
-          expect(compiler.running).toBe(true);
-          expect(instance.context.state).toBe(true);
-          expect(callbackCounter).toBe(2);
-          expect(doneSpy).toHaveBeenCalledTimes(1);
+    it('should work without callback', () => {
+      const instance = middleware(compiler, options);
+      hooks.done(doneStats);
+      setTimeout(() => {
+        instance.waitUntilValid();
+      });
+    });
 
-          doneSpy.mockRestore();
-
-          clearInterval(intervalId);
-
+    it('callback should have stats argument', (done) => {
+      const instance = middleware(compiler, options);
+      hooks.done(doneStats);
+      setTimeout(() => {
+        instance.waitUntilValid((stats) => {
+          const keys = Object.keys(stats);
+          expect(keys.includes('hasErrors')).toBe(true);
+          expect(keys.includes('hasWarnings')).toBe(true);
           done();
-        }
+        });
       });
     });
   });
 
-  describe('invalidate method', () => {
-    it('should work without callback', (done) => {
-      const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
-
-      instance.invalidate();
-
-      const intervalId = setInterval(() => {
-        if (instance.context.state) {
-          expect(compiler.running).toBe(true);
-          expect(instance.context.state).toBe(true);
-          expect(doneSpy).toHaveBeenCalledTimes(1);
-
-          doneSpy.mockRestore();
-
-          clearInterval(intervalId);
-
-          done();
-        }
-      });
+  describe('invalidate', () => {
+    it('should use callback immediately when in lazy mode', (done) => {
+      const instance = middleware(compiler, { lazy: true, logLevel: 'silent' });
+      instance.invalidate(done);
     });
 
-    it('should work with callback', (done) => {
-      const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
-      let callbackCounter = 0;
-
+    it('should wait for bundle done', (done) => {
+      const instance = middleware(compiler, options);
+      let doneCalled = false;
       instance.invalidate(() => {
-        callbackCounter += 1;
-      });
-
-      const intervalId = setInterval(() => {
-        if (instance.context.state) {
-          expect(compiler.running).toBe(true);
-          expect(instance.context.state).toBe(true);
-          expect(callbackCounter).toBe(1);
-          expect(doneSpy).toHaveBeenCalledTimes(1);
-
-          doneSpy.mockRestore();
-
-          clearInterval(intervalId);
-
+        if (doneCalled) {
+          expect(invalidationCount).toBe(1);
           done();
+        } else {
+          done(new Error('`invalid` called before bundle was done'));
         }
+      });
+      setTimeout(() => {
+        hooks.done(doneStats);
+        doneCalled = true;
+      });
+    });
+
+    it('should work without callback', (done) => {
+      const instance = middleware(compiler, options);
+      instance.invalidate();
+      setTimeout(() => {
+        expect(invalidationCount).toBe(1);
+        done();
       });
     });
   });
 
-  describe('close method', () => {
-    it('should work without callback', (done) => {
-      const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+  describe('close', () => {
+    it('should use callback immediately when in lazy mode', (done) => {
+      const instance = middleware(compiler, { lazy: true, logLevel: 'silent' });
+      instance.close(done);
+    });
 
-      instance.waitUntilValid(() => {
-        instance.close();
-
-        expect(compiler.running).toBe(false);
-        expect(doneSpy).toHaveBeenCalledTimes(1);
-
-        doneSpy.mockRestore();
-
+    it('should call close on watcher', (done) => {
+      const instance = middleware(compiler, options);
+      instance.close(() => {
+        expect(closeCount).toBe(1);
         done();
       });
     });
 
-    it('should work with callback', (done) => {
-      const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
-
-      instance.waitUntilValid(() => {
-        instance.close(() => {
-          expect(compiler.running).toBe(false);
-          expect(doneSpy).toHaveBeenCalledTimes(1);
-
-          doneSpy.mockRestore();
-
-          done();
-        });
-      });
+    it('should call close on watcher without callback', () => {
+      const instance = middleware(compiler, options);
+      instance.close();
+      expect(closeCount).toBe(1);
     });
   });
 
-  describe('getFilenameFromUrl method', () => {
-    it('use publicPath and compiler.outputPath to parse the filename', () => {
+  describe('getFilenameFromUrl', () => {
+    it('use publicPath and compiler.outputPath to parse the filename', (done) => {
+      const instance = middleware(compiler, options);
       const filename = instance.getFilenameFromUrl('/public/index.html');
 
-      expect(filename.endsWith('/public/index.html')).toBe(true);
-    });
-  });
+      expect(filename).toBe('/output/index.html');
 
-  describe('context property', () => {
-    it('should contain public properties', () => {
-      expect(instance.context.state).toBeDefined();
-      expect(instance.context.options).toBeDefined();
-      expect(instance.context.compiler).toBeDefined();
-      expect(instance.context.watching).toBeDefined();
-      expect(instance.context.outputFileSystem).toBeDefined();
+      instance.close(done);
     });
   });
 });

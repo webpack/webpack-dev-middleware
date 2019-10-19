@@ -91,6 +91,63 @@ Default: `undefined`
 // The index path for web server, defaults to "index.html".
 // If falsy (but not undefined), the server will not respond to requests to the root URL.
 
+### lazy
+
+Type: `Boolean`  
+Default: `undefined`
+
+This option instructs the module to operate in 'lazy' mode, meaning that it won't
+recompile when files change, but rather on each request.
+
+### logger
+
+Type: `Object`  
+Default: [`webpack-log`](https://github.com/webpack-contrib/webpack-log/blob/master/index.js)
+
+In the rare event that a user would like to provide a custom logging interface,
+this property allows the user to assign one. The module leverages
+[`webpack-log`](https://github.com/webpack-contrib/webpack-log#readme)
+for creating the [`loglevelnext`](https://github.com/shellscape/loglevelnext#readme)
+logging management by default. Any custom logger must adhere to the same
+exports for compatibility. Specifically, all custom loggers must have the
+following exported methods at a minimum:
+
+- `log.trace`
+- `log.debug`
+- `log.info`
+- `log.warn`
+- `log.error`
+
+Please see the documentation for `loglevel` for more information.
+
+### logLevel
+
+Type: `String`  
+Default: `'info'`
+
+This property defines the level of messages that the module will log. Valid levels
+include:
+
+- `trace`
+- `debug`
+- `info`
+- `warn`
+- `error`
+- `silent`
+
+Setting a log level means that all other levels below it will be visible in the
+console. Setting `logLevel: 'silent'` will hide all console output. The module
+leverages [`webpack-log`](https://github.com/webpack-contrib/webpack-log#readme)
+for logging management, and more information can be found on its page.
+
+### logTime
+
+Type: `Boolean`  
+Default: `false`
+
+If `true` the log output of the module will be prefixed by a timestamp in the
+`HH:mm:ss` format.
+
 ### mimeTypes
 
 Type: `Object`  
@@ -116,6 +173,15 @@ The public path that the middleware is bound to. _Best Practice: use the same
 `publicPath` defined in your webpack config. For more information about
 `publicPath`, please see
 [the webpack documentation](https://webpack.js.org/guides/public-path)._
+
+### reporter
+
+Type: `Object`  
+Default: `undefined`
+
+Allows users to provide a custom reporter to handle logging within the module.
+Please see the [default reporter](/src/utils/reporter.js)
+for an example.
 
 ### serverSideRender
 
@@ -162,45 +228,24 @@ in which a return value of `false` _will not_ write the file, and a return value
 of `true` _will_ write the file to disk. eg.
 
 ```js
-const webpack = require('webpack');
-const configuration = {
-  /* Webpack configuration */
-};
-const compiler = webpack(configuration);
-
-middleware(compiler, {
+{
   writeToDisk: (filePath) => {
     return /superman\.css$/.test(filePath);
-  },
-});
+  };
+}
 ```
 
-### outputFileSystem
+### fs
 
 Type: `Object`  
-Default: [memfs](https://github.com/streamich/memfs)
+Default: `MemoryFileSystem`
 
-Set the default file system which will be used by webpack as primary destination of generated files.
-This option isn't affected by the [writeToDisk](#writeToDisk) option.
+Set the default file system which will be used by webpack as primary destination of generated files. Default is set to webpack's default file system: [memory-fs](https://github.com/webpack/memory-fs). This option isn't affected by the [writeToDisk](#writeToDisk) option.
 
-You have to provide `.join()` and `mkdirp` method to the `outputFileSystem` instance manually for compatibility with `webpack@4`.
-
-This can be done simply by using `path.join`:
+**Note:** As of 3.5.x version of the middleware you have to provide `.join()` method to the `fs` instance manually. This can be done simply by using `path.join`:
 
 ```js
-const webpack = require('webpack');
-const path = require('path');
-const myOutputFileSystem = require('my-fs');
-const mkdirp = require('mkdirp');
-
-myOutputFileSystem.join = path.join.bind(path); // no need to bind
-myOutputFileSystem.mkdirp = mkdirp.bind(mkdirp); // no need to bind
-
-const compiler = webpack({
-  /* Webpack configuration */
-});
-
-middleware(compiler, { outputFileSystem: myOutputFileSystem });
+fs.join = path.join; // no need to bind
 ```
 
 ## API
@@ -274,7 +319,7 @@ instance.waitUntilValid(() => {
 
 ### Multiple Successive Builds
 
-Watching will frequently cause multiple compilations
+Watching (by means of `lazy: false`) will frequently cause multiple compilations
 as the bundle changes during compilation. This is due in part to cross-platform
 differences in file watchers, so that webpack doesn't loose file changes when
 watched files change rapidly. If you run into this situation, please make use of
@@ -289,8 +334,8 @@ In order to develop an app using server-side rendering, we need access to the
 generated with each build.
 
 With server-side rendering enabled, `webpack-dev-middleware` sets the `stat` to
-`res.locals.webpack.stats` and the filesystem to `res.locals.webpack.outputFileSystem` before invoking the next middleware,
-allowing a developer to render the page body and manage the response to clients.
+`res.locals.webpackStats` and the memory filesystem to `res.locals.fs` before invoking the next middleware, allowing a
+developer to render the page body and manage the response to clients.
 
 _Note: Requests for bundle files will still be handled by
 `webpack-dev-middleware` and all requests will be pending until the build
@@ -319,10 +364,9 @@ app.use(middleware(compiler, { serverSideRender: true }));
 
 // The following middleware would not be invoked until the latest build is finished.
 app.use((req, res) => {
-  const webpackLocals = res.locals.webpack;
-  const fs = webpackLocals.outputFileSystem;
-  const jsonWebpackStats = webpackLocals.stats.toJson();
-  const { assetsByChunkName, outputPath } = jsonWebpackStats;
+  const assetsByChunkName = res.locals.webpackStats.toJson().assetsByChunkName;
+  const fs = res.locals.fs;
+  const outputPath = res.locals.webpackStats.toJson().outputPath;
 
   // then use `assetsByChunkName` for server-sider rendering
   // For example, if you have only one main chunk:

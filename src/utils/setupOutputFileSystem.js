@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { createFsFromVolume, Volume } from 'memfs';
+import MemoryFileSystem from 'memory-fs';
 
 import DevMiddlewareError from '../DevMiddlewareError';
 
@@ -15,37 +15,38 @@ export default function setupOutputFileSystem(compiler, context) {
     );
   }
 
-  let outputFileSystem;
+  let fileSystem;
 
-  if (context.options.outputFileSystem) {
+  // store our files in memory
+  const isConfiguredFs = context.options.fs;
+  const isMemoryFs =
+    !isConfiguredFs &&
+    !compiler.compilers &&
+    compiler.outputFileSystem instanceof MemoryFileSystem;
+
+  if (isConfiguredFs) {
     // eslint-disable-next-line no-shadow
-    const { outputFileSystem: outputFileSystemFromOptions } = context.options;
+    const { fs } = context.options;
 
-    // Todo remove when we drop webpack@4 support
-    if (typeof outputFileSystemFromOptions.join !== 'function') {
-      throw new Error(
-        'Invalid options: options.outputFileSystem.join() method is expected'
-      );
+    if (typeof fs.join !== 'function') {
+      // very shallow check
+      throw new Error('Invalid options: options.fs.join() method is expected');
     }
 
-    // Todo remove when we drop webpack@4 support
-    if (typeof outputFileSystemFromOptions.mkdirp !== 'function') {
-      throw new Error(
-        'Invalid options: options.outputFileSystem.mkdirp() method is expected'
-      );
-    }
-
-    outputFileSystem = outputFileSystemFromOptions;
+    // eslint-disable-next-line no-param-reassign
+    compiler.outputFileSystem = fs;
+    fileSystem = fs;
+  } else if (isMemoryFs) {
+    fileSystem = compiler.outputFileSystem;
   } else {
-    outputFileSystem = createFsFromVolume(new Volume());
-    // Todo remove when we drop webpack@4 support
-    outputFileSystem.join = path.join.bind(path);
+    fileSystem = new MemoryFileSystem();
+
+    // eslint-disable-next-line no-param-reassign
+    compiler.outputFileSystem = fileSystem;
   }
 
   // eslint-disable-next-line no-param-reassign
-  compiler.outputFileSystem = outputFileSystem;
-  // eslint-disable-next-line no-param-reassign
-  context.outputFileSystem = outputFileSystem;
+  context.fs = fileSystem;
 }
 
 module.exports = setupOutputFileSystem;

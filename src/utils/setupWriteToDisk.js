@@ -1,6 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 
+import mkdirp from 'mkdirp';
+import { colors } from 'webpack-log';
+
 export default function setupWriteToDisk(context) {
   const compilers = context.compiler.compilers || [context.compiler];
 
@@ -30,6 +33,11 @@ export default function setupWriteToDisk(context) {
 
             let { outputPath } = compiler;
 
+            // TODO Why? Need remove in future major release
+            if (outputPath === '/') {
+              outputPath = compiler.context;
+            }
+
             outputPath = compilation.getPath(outputPath, {});
             content = info;
             targetPath = path.join(outputPath, targetFile);
@@ -43,11 +51,12 @@ export default function setupWriteToDisk(context) {
             return callback();
           }
 
+          const { log } = context;
           const dir = path.dirname(targetPath);
 
-          return fs.mkdir(dir, { recursive: true }, (mkdirError) => {
-            if (mkdirError) {
-              return callback(mkdirError);
+          return mkdirp(dir, (mkdirpError) => {
+            if (mkdirpError) {
+              return callback(mkdirpError);
             }
 
             return fs.writeFile(targetPath, content, (writeFileError) => {
@@ -55,11 +64,13 @@ export default function setupWriteToDisk(context) {
                 return callback(writeFileError);
               }
 
-              context.logger.log(
-                `Asset written to disk: ${path.relative(
-                  process.cwd(),
-                  targetPath
-                )}`
+              log.debug(
+                colors.cyan(
+                  `Asset written to disk: ${path.relative(
+                    process.cwd(),
+                    targetPath
+                  )}`
+                )
               );
 
               return callback();
