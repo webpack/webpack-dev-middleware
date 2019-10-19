@@ -3,9 +3,9 @@
 import fs from 'fs';
 import path from 'path';
 
-import statOptions from './fixtures/stat-options';
+import middleware from '../src';
 
-import middleware from '..';
+import statOptions from './fixtures/stat-options';
 
 const statsPath = path.join(__dirname, './fixtures', 'stats.txt');
 const rawStats = fs.readFileSync(statsPath, 'utf8');

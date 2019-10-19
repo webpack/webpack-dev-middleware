@@ -1,8 +1,6 @@
-'use strict';
+import weblog from 'webpack-log';
 
-const weblog = require('webpack-log');
-
-function setupLogger(context) {
+export default function setupLogger(context) {
   if (context.options.logger) {
     // eslint-disable-next-line no-param-reassign
     context.log = context.options.logger;
@@ -17,5 +15,3 @@ function setupLogger(context) {
     timestamp: context.options.logTime,
   });
 }
-
-module.exports = setupLogger;
