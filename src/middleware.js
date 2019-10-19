@@ -1,11 +1,11 @@
-'use strict';
+import path from 'path';
 
-const path = require('path');
+import mime from 'mime';
 
-const mime = require('mime');
-
-const DevMiddlewareError = require('./DevMiddlewareError');
-const { getFilenameFromUrl, handleRangeHeaders, ready } = require('./utils');
+import DevMiddlewareError from './DevMiddlewareError';
+import getFilenameFromUrl from './utils/getFilenameFromUrl';
+import handleRangeHeaders from './utils/handleRangeHeaders';
+import ready from './utils/ready';
 
 // Do not add a charset to the Content-Type header of these file types
 // otherwise the client will fail to render them correctly.
@@ -13,7 +13,7 @@ const NonCharsetFileTypes = /\.(wasm|usdz)$/;
 
 const HASH_REGEXP = /[0-9a-f]{10,}/;
 
-module.exports = function wrapper(context) {
+export default function wrapper(context) {
   return function middleware(req, res, next) {
     // fixes #282. credit @cexoso. in certain edge situations res.locals is
     // undefined.
@@ -150,4 +150,4 @@ module.exports = function wrapper(context) {
       ready(context, processRequest, req);
     });
   };
-};
+}

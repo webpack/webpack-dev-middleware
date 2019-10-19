@@ -1,8 +1,7 @@
-'use strict';
+import path from 'path';
+import { parse } from 'url';
 
-const path = require('path');
-const { parse } = require('url');
-const querystring = require('querystring');
+import querystring from 'querystring';
 
 // support for multi-compiler configuration
 // see: https://github.com/webpack/webpack-dev-server/issues/641
@@ -45,7 +44,7 @@ function getPaths(publicPath, compiler, url) {
   };
 }
 
-function getFilenameFromUrl(pubPath, compiler, url) {
+export default function getFilenameFromUrl(pubPath, compiler, url) {
   const { outputPath, publicPath } = getPaths(pubPath, compiler, url);
   // localPrefix is the folder our bundle should be in
   const localPrefix = parse(publicPath || '/', false, true);
@@ -109,5 +108,3 @@ function getFilenameFromUrl(pubPath, compiler, url) {
   // if no matches, use outputPath as filename
   return querystring.unescape(uri);
 }
-
-module.exports = getFilenameFromUrl;
