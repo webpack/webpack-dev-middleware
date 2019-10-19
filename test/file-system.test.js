@@ -1,4 +1,4 @@
-import middleware from '..';
+import middleware from '../src';
 
 function fakeWebpack() {
   const hook = { tap: () => {} };

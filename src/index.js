@@ -1,18 +1,14 @@
-'use strict';
+import mime from 'mime';
 
-const mime = require('mime');
-
-const middleware = require('./middleware');
-const reporter = require('./utils/reporter');
-const {
-  setupHooks,
-  setupRebuild,
-  setupLogger,
-  setupWriteToDisk,
-  setupOutputFileSystem,
-  getFilenameFromUrl,
-  ready,
-} = require('./utils');
+import middleware from './middleware';
+import reporter from './utils/reporter';
+import setupHooks from './utils/setupHooks';
+import setupRebuild from './utils/setupRebuild';
+import setupLogger from './utils/setupLogger';
+import setupWriteToDisk from './utils/setupWriteToDisk';
+import setupOutputFileSystem from './utils/setupOutputFileSystem';
+import getFilenameFromUrl from './utils/getFilenameFromUrl';
+import ready from './utils/ready';
 
 const noop = () => {};
 
@@ -32,7 +28,7 @@ const defaults = {
   writeToDisk: false,
 };
 
-module.exports = function wdm(compiler, opts) {
+export default function wdm(compiler, opts) {
   const options = Object.assign({}, defaults, opts);
 
   // defining custom MIME type
@@ -127,4 +123,4 @@ module.exports = function wdm(compiler, opts) {
       ready(context, callback, {});
     },
   });
-};
+}

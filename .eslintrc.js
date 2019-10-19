@@ -3,9 +3,9 @@ module.exports = {
   extends: ['@webpack-contrib/eslint-config-webpack', 'prettier'],
   overrides: [
     {
-      files: ['lib/**/*.js'],
+      files: ['src/**/*.js'],
       parserOptions: {
-        sourceType: 'script',
+        sourceType: 'module',
       },
     },
   ],

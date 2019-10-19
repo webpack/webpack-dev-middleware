@@ -1,12 +1,10 @@
-'use strict';
+import fs from 'fs';
+import path from 'path';
 
-const fs = require('fs');
-const path = require('path');
+import mkdirp from 'mkdirp';
+import { colors } from 'webpack-log';
 
-const mkdirp = require('mkdirp');
-const { colors } = require('webpack-log');
-
-function setupWriteToDisk(context) {
+export default function setupWriteToDisk(context) {
   const compilers = context.compiler.compilers || [context.compiler];
 
   for (const compiler of compilers) {
@@ -84,5 +82,3 @@ function setupWriteToDisk(context) {
     });
   }
 }
-
-module.exports = setupWriteToDisk;

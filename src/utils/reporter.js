@@ -1,6 +1,4 @@
-'use strict';
-
-module.exports = function reporter(middlewareOptions, options) {
+export default function reporter(middlewareOptions, options) {
   const { log, state, stats } = options;
 
   if (state) {
@@ -29,4 +27,4 @@ module.exports = function reporter(middlewareOptions, options) {
   } else {
     log.info('Compiling...');
   }
-};
+}
