@@ -38,6 +38,7 @@
     "mime": "^2.4.4",
     "mkdirp": "^0.5.1",
     "range-parser": "^1.2.1",
+    "schema-utils": "^2.5.0",
     "webpack-log": "^2.0.0"
   },
   "devDependencies": {
