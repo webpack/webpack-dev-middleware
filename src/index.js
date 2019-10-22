@@ -1,4 +1,5 @@
 import mime from 'mime';
+import validateOptions from 'schema-utils';
 
 import middleware from './middleware';
 import reporter from './utils/reporter';
@@ -9,14 +10,13 @@ import setupWriteToDisk from './utils/setupWriteToDisk';
 import setupOutputFileSystem from './utils/setupOutputFileSystem';
 import getFilenameFromUrl from './utils/getFilenameFromUrl';
 import ready from './utils/ready';
+import schema from './options.json';
 
 const noop = () => {};
 
 const defaults = {
   logLevel: 'info',
   logTime: false,
-  logger: null,
-  mimeTypes: null,
   reporter,
   stats: {
     colors: true,
@@ -28,7 +28,9 @@ const defaults = {
   writeToDisk: false,
 };
 
-export default function wdm(compiler, opts) {
+export default function wdm(compiler, opts = defaults) {
+  validateOptions(schema, opts, 'webpack Dev Middleware');
+
   const options = Object.assign({}, defaults, opts);
 
   // defining custom MIME type
