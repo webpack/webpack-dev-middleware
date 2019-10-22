@@ -1,8 +1,20 @@
 {
   "type": "object",
   "properties": {
+    "logLevel": {
+      "enum": ["info", "warn", "error", "debug", "trace", "silent"]
+    },
+    "logTime": {
+      "type": "boolean"
+    },
+    "logger": {
+      "type": "object"
+    },
     "mimeTypes": {
       "type": "object"
+    },
+    "reporter": {
+      "instanceof": "Function"
     },
     "stats": {
       "anyOf": [
@@ -46,13 +58,16 @@
     "headers": {
       "type": "object"
     },
+    "lazy": {
+      "type": "boolean"
+    },
     "publicPath": {
       "type": "string"
     },
     "serverSideRender": {
       "type": "boolean"
     },
-    "outputFileSystem": {
+    "fs": {
       "type": "object"
     },
     "index": {
@@ -65,6 +80,5 @@
         }
       ]
     }
-  },
-  "additionalProperties": false
+  }
 }

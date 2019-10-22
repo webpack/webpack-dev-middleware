@@ -1,9 +1,23 @@
+import webpack from 'webpack';
+
 import middleware from '../src';
 
-import getCompiler from './helpers/getCompiler';
+import config from './fixtures/simple-config/webpack.config';
 
 describe('validation', () => {
   const tests = {
+    logLevel: {
+      success: ['info', 'warn', 'error', 'debug', 'trace', 'silent'],
+      failure: ['foo'],
+    },
+    logTime: {
+      success: [true, false],
+      failure: [0],
+    },
+    logger: {
+      success: [{}],
+      failure: ['foo'],
+    },
     mimeTypes: {
       success: [{}],
       failure: ['foo'],
@@ -38,6 +52,10 @@ describe('validation', () => {
       success: [{}],
       failure: [true],
     },
+    lazy: {
+      success: [true],
+      failure: [0],
+    },
     publicPath: {
       success: ['foo'],
       failure: [false],
@@ -46,11 +64,10 @@ describe('validation', () => {
       success: [true],
       failure: ['foo', 0],
     },
-    outputFileSystem: {
+    fs: {
       success: [
         {
           join: () => {},
-          mkdirp: () => {},
         },
       ],
       failure: [false],
@@ -61,16 +78,25 @@ describe('validation', () => {
     },
   };
 
+  function createOptions(key, value) {
+    return Object.prototype.toString.call(value) === '[object Object]' &&
+      Object.keys(value).length !== 0
+      ? value
+      : {
+          [key]: value,
+        };
+  }
+
   for (const [key, values] of Object.entries(tests)) {
     it(`should validate "${key}" option`, async () => {
-      const compiler = getCompiler();
+      const compiler = webpack(config);
 
       for await (const type of Object.keys(values)) {
         for await (const sample of values[type]) {
           let server;
 
           try {
-            server = middleware(compiler, { [key]: sample });
+            server = middleware(compiler, createOptions(key, sample));
 
             if (type === 'success') {
               expect(true).toBeTruthy();
