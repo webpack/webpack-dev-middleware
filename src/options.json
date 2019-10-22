@@ -1,0 +1,84 @@
+{
+  "type": "object",
+  "properties": {
+    "logLevel": {
+      "enum": ["info", "warn", "error", "debug", "trace", "silent"]
+    },
+    "logTime": {
+      "type": "boolean"
+    },
+    "logger": {
+      "type": "object"
+    },
+    "mimeTypes": {
+      "type": "object"
+    },
+    "reporter": {
+      "instanceof": "Function"
+    },
+    "stats": {
+      "anyOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "enum": [
+            "none",
+            "errors-only",
+            "errors-warnings",
+            "minimal",
+            "normal",
+            "verbose"
+          ]
+        }
+      ]
+    },
+    "watchOptions": {
+      "type": "object"
+    },
+    "writeToDisk": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "instaceof": "Function"
+        }
+      ]
+    },
+    "methods": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "headers": {
+      "type": "object"
+    },
+    "lazy": {
+      "type": "boolean"
+    },
+    "publicPath": {
+      "type": "string"
+    },
+    "serverSideRender": {
+      "type": "boolean"
+    },
+    "fs": {
+      "type": "object"
+    },
+    "index": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    }
+  }
+}
