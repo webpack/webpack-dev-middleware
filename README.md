@@ -228,24 +228,43 @@ in which a return value of `false` _will not_ write the file, and a return value
 of `true` _will_ write the file to disk. eg.
 
 ```js
-{
+const webpack = require('webpack');
+const configuration = {
+  /* Webpack configuration */
+};
+const compiler = webpack(configuration);
+
+middleware(compiler, {
   writeToDisk: (filePath) => {
     return /superman\.css$/.test(filePath);
-  };
-}
+  },
+});
 ```
 
-### fs
+### outputFileSystem
 
 Type: `Object`  
 Default: `MemoryFileSystem`
 
 Set the default file system which will be used by webpack as primary destination of generated files. Default is set to webpack's default file system: [memory-fs](https://github.com/webpack/memory-fs). This option isn't affected by the [writeToDisk](#writeToDisk) option.
 
-**Note:** As of 3.5.x version of the middleware you have to provide `.join()` method to the `fs` instance manually. This can be done simply by using `path.join`:
+**Note:** As of 3.5.x version of the middleware you have to provide `.join()` method to the `outputFileSystem` instance manually. This can be done simply by using `path.join`:
 
 ```js
-fs.join = path.join; // no need to bind
+const webpack = require('webpack');
+const path = require('path');
+const myOutputFileSystem = require('my-fs');
+
+myOutputFileSystem.join = path.join; // no need to bind
+
+const configuration = {
+  /* Webpack configuration */
+};
+const compiler = webpack(configuration);
+
+middleware(compiler, {
+  outputFileSystem: myOutputFileSystem,
+});
 ```
 
 ## API
@@ -334,8 +353,8 @@ In order to develop an app using server-side rendering, we need access to the
 generated with each build.
 
 With server-side rendering enabled, `webpack-dev-middleware` sets the `stat` to
-`res.locals.webpackStats` and the memory filesystem to `res.locals.fs` before invoking the next middleware, allowing a
-developer to render the page body and manage the response to clients.
+`res.locals.webpack.stats` and the filesystem to `res.locals.webpack.outputFileSystem` before invoking the next middleware,
+allowing a developer to render the page body and manage the response to clients.
 
 _Note: Requests for bundle files will still be handled by
 `webpack-dev-middleware` and all requests will be pending until the build
@@ -364,9 +383,10 @@ app.use(middleware(compiler, { serverSideRender: true }));
 
 // The following middleware would not be invoked until the latest build is finished.
 app.use((req, res) => {
-  const assetsByChunkName = res.locals.webpackStats.toJson().assetsByChunkName;
-  const fs = res.locals.fs;
-  const outputPath = res.locals.webpackStats.toJson().outputPath;
+  const webpackLocals = res.locals.webpack;
+  const fs = webpackLocals.outputFileSystem;
+  const jsonWebpackStats = webpackLocals.stats.toJson();
+  const { assetsByChunkName, outputPath } = jsonWebpackStats;
 
   // then use `assetsByChunkName` for server-sider rendering
   // For example, if you have only one main chunk:
