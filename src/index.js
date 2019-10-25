@@ -96,16 +96,6 @@ export default function wdm(compiler, opts = defaults) {
       }
     },
 
-    context,
-
-    fileSystem: context.fs,
-
-    getFilenameFromUrl: getFilenameFromUrl.bind(
-      this,
-      context.options.publicPath,
-      context.compiler
-    ),
-
     invalidate(callback) {
       // eslint-disable-next-line no-param-reassign
       callback = callback || noop;
@@ -124,5 +114,13 @@ export default function wdm(compiler, opts = defaults) {
 
       ready(context, callback, {});
     },
+
+    context,
+
+    getFilenameFromUrl: getFilenameFromUrl.bind(
+      this,
+      context.options.publicPath,
+      context.compiler
+    ),
   });
 }
