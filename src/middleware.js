@@ -30,9 +30,10 @@ export default function wrapper(context) {
           context,
           () => {
             // eslint-disable-next-line no-param-reassign
-            res.locals.webpackStats = context.webpackStats;
-            // eslint-disable-next-line no-param-reassign
-            res.locals.fs = context.fs;
+            res.locals.webpack = {
+              stats: context.webpackStats,
+              outputFileSystem: context.outputFileSystem,
+            };
 
             resolve(next());
           },
@@ -61,7 +62,7 @@ export default function wrapper(context) {
       // eslint-disable-next-line consistent-return
       function processRequest() {
         try {
-          let stat = context.fs.statSync(filename);
+          let stat = context.outputFileSystem.statSync(filename);
 
           if (!stat.isFile()) {
             if (stat.isDirectory()) {
@@ -75,7 +76,7 @@ export default function wrapper(context) {
               }
 
               filename = path.posix.join(filename, index);
-              stat = context.fs.statSync(filename);
+              stat = context.outputFileSystem.statSync(filename);
 
               if (!stat.isFile()) {
                 throw new DevMiddlewareError('next');
@@ -89,7 +90,7 @@ export default function wrapper(context) {
         }
 
         // server content
-        let content = context.fs.readFileSync(filename);
+        let content = context.outputFileSystem.readFileSync(filename);
 
         content = handleRangeHeaders(content, req, res);
 
@@ -137,7 +138,7 @@ export default function wrapper(context) {
 
       if (HASH_REGEXP.test(filename)) {
         try {
-          if (context.fs.statSync(filename).isFile()) {
+          if (context.outputFileSystem.statSync(filename).isFile()) {
             processRequest();
 
             return;
