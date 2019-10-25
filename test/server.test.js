@@ -59,15 +59,15 @@ describe('Server', () => {
       app.use(instance);
       listen = listenShorthand(done);
       // Hack to add a mock HMR json file to the in-memory filesystem.
-      instance.fileSystem.writeFileSync(
+      instance.context.outputFileSystem.writeFileSync(
         '/123a123412.hot-update.json',
         '["hi"]'
       );
 
       // Add a nested directory and index.html inside
-      instance.fileSystem.mkdirSync('/reference');
-      instance.fileSystem.mkdirSync('/reference/mono-v6.x.x');
-      instance.fileSystem.writeFileSync(
+      instance.context.outputFileSystem.mkdirSync('/reference');
+      instance.context.outputFileSystem.mkdirSync('/reference/mono-v6.x.x');
+      instance.context.outputFileSystem.writeFileSync(
         '/reference/mono-v6.x.x/index.html',
         'My Index.'
       );
@@ -292,7 +292,7 @@ describe('Server', () => {
       });
       app.use(instance);
       listen = listenShorthand(done);
-      instance.fileSystem.writeFileSync('/noextension', 'hello');
+      instance.context.outputFileSystem.writeFileSync('/noextension', 'hello');
     });
     afterAll(close);
 
@@ -380,7 +380,10 @@ describe('Server', () => {
       });
       app.use(instance);
       listen = listenShorthand(done);
-      instance.fileSystem.writeFileSync('/Index.phtml', 'welcome');
+      instance.context.outputFileSystem.writeFileSync(
+        '/Index.phtml',
+        'welcome'
+      );
     });
     afterAll(close);
 
@@ -414,7 +417,10 @@ describe('Server', () => {
       });
       app.use(instance);
       listen = listenShorthand(done);
-      instance.fileSystem.writeFileSync('/Index.phtml', 'welcome');
+      instance.context.outputFileSystem.writeFileSync(
+        '/Index.phtml',
+        'welcome'
+      );
     });
     afterAll(close);
 
@@ -449,8 +455,8 @@ describe('Server', () => {
       });
       app.use(instance);
       listen = listenShorthand(done);
-      instance.fileSystem.writeFileSync('/hello.wasm', 'welcome');
-      instance.fileSystem.writeFileSync('/3dAr.usdz', '010101');
+      instance.context.outputFileSystem.writeFileSync('/hello.wasm', 'welcome');
+      instance.context.outputFileSystem.writeFileSync('/3dAr.usdz', '010101');
     });
     afterAll(close);
 
@@ -551,8 +557,8 @@ describe('Server', () => {
       request(app)
         .get('/foo/bar')
         .expect(200, () => {
-          expect(locals.webpackStats).toBeDefined();
-          expect(locals.fs).toBeDefined();
+          expect(locals.webpack.stats).toBeDefined();
+          expect(locals.webpack.outputFileSystem).toBeDefined();
 
           done();
         });
