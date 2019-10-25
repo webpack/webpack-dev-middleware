@@ -31,7 +31,7 @@ export default function wrapper(context) {
           () => {
             // eslint-disable-next-line no-param-reassign
             res.locals.webpack = {
-              stats: context.stats,
+              stats: context.webpackStats,
               outputFileSystem: context.outputFileSystem,
             };
 
@@ -104,6 +104,8 @@ export default function wrapper(context) {
           res.setHeader('Content-Type', contentType);
         }
 
+        res.setHeader('Content-Length', content.length);
+
         const { headers } = context.options;
 
         if (headers) {
@@ -114,9 +116,24 @@ export default function wrapper(context) {
           }
         }
 
-        res.send(content);
+        // Express automatically sets the statusCode to 200, but not all servers do (Koa).
+        // eslint-disable-next-line no-param-reassign
+        res.statusCode = res.statusCode || 200;
+
+        if (res.send) {
+          res.send(content);
+        } else {
+          res.end(content);
+        }
 
         resolve();
+      }
+
+      if (
+        context.options.lazy &&
+        (!context.options.filename || context.options.filename.test(filename))
+      ) {
+        context.rebuild();
       }
 
       if (HASH_REGEXP.test(filename)) {

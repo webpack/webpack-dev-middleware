@@ -46,7 +46,7 @@ export default function setupOutputFileSystem(compiler, context) {
   }
 
   // eslint-disable-next-line no-param-reassign
-  context.fs = fileSystem;
+  context.outputFileSystem = fileSystem;
 }
 
 module.exports = setupOutputFileSystem;
