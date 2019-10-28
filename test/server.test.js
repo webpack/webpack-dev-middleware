@@ -91,15 +91,26 @@ describe('Server', () => {
     });
 
     it('GET request to bundle file', (done) => {
+      const bundleData = instance.context.outputFileSystem.readFileSync(
+        '/bundle.js'
+      );
+      const contentLength = bundleData.byteLength.toString();
+
       request(app)
         .get('/public/bundle.js')
+        .expect('Content-Length', contentLength)
         .expect('Content-Type', 'application/javascript; charset=UTF-8')
-        .expect(200, /console\.log\('Hey\.'\)/, done);
+        .expect(200, bundleData.toString(), done);
     });
 
     it('HEAD request to bundle file', (done) => {
+      const contentLength = instance.context.outputFileSystem
+        .readFileSync('/bundle.js')
+        .byteLength.toString();
+
       request(app)
         .head('/public/bundle.js')
+        .expect('Content-Length', contentLength)
         .expect('Content-Type', 'application/javascript; charset=UTF-8')
         // eslint-disable-next-line no-undefined
         .expect(200, undefined, done);
@@ -112,8 +123,13 @@ describe('Server', () => {
     });
 
     it('request to image', (done) => {
+      const contentLength = instance.context.outputFileSystem
+        .readFileSync('/svg.svg')
+        .byteLength.toString();
+
       request(app)
         .get('/public/svg.svg')
+        .expect('Content-Length', contentLength)
         .expect('Content-Type', 'image/svg+xml; charset=UTF-8')
         .expect(200, done);
     });
@@ -126,10 +142,16 @@ describe('Server', () => {
     });
 
     it('request to HMR json', (done) => {
+      const manifestData = instance.context.outputFileSystem.readFileSync(
+        '/123a123412.hot-update.json'
+      );
+      const contentLength = manifestData.byteLength.toString();
+
       request(app)
         .get('/public/123a123412.hot-update.json')
+        .expect('Content-Length', contentLength)
         .expect('Content-Type', 'application/json; charset=UTF-8')
-        .expect(200, /\["hi"\]/, done);
+        .expect(200, manifestData.toString(), done);
     });
 
     it('request to directory', (done) => {
