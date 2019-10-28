@@ -104,8 +104,6 @@ export default function wrapper(context) {
           res.setHeader('Content-Type', contentType);
         }
 
-        res.setHeader('Content-Length', content.length);
-
         const { headers } = context.options;
 
         if (headers) {
