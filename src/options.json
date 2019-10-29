@@ -67,7 +67,7 @@
     "serverSideRender": {
       "type": "boolean"
     },
-    "fs": {
+    "outputFileSystem": {
       "type": "object"
     },
     "index": {
