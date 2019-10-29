@@ -1,7 +1,6 @@
 import middleware from '../src';
 
 const options = {
-  logLevel: 'silent',
   publicPath: '/public/',
 };
 
@@ -20,6 +19,7 @@ describe('API', () => {
   };
   const compiler = {
     outputPath: '/output',
+    getInfrastructureLogger: () => console,
     watch() {
       return {
         invalidate() {
@@ -105,7 +105,7 @@ describe('API', () => {
 
   describe('invalidate', () => {
     it('should use callback immediately when in lazy mode', (done) => {
-      const instance = middleware(compiler, { lazy: true, logLevel: 'silent' });
+      const instance = middleware(compiler, { lazy: true });
       instance.invalidate(done);
     });
 
@@ -138,7 +138,7 @@ describe('API', () => {
 
   describe('close', () => {
     it('should use callback immediately when in lazy mode', (done) => {
-      const instance = middleware(compiler, { lazy: true, logLevel: 'silent' });
+      const instance = middleware(compiler, { lazy: true });
       instance.close(done);
     });
 

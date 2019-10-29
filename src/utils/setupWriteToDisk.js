@@ -1,8 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 
-import { colors } from 'webpack-log';
-
 export default function setupWriteToDisk(context) {
   const compilers = context.compiler.compilers || [context.compiler];
 
@@ -50,7 +48,6 @@ export default function setupWriteToDisk(context) {
             return callback();
           }
 
-          const { log } = context;
           const dir = path.dirname(targetPath);
 
           return fs.mkdir(dir, { recursive: true }, (mkdirError) => {
@@ -63,13 +60,11 @@ export default function setupWriteToDisk(context) {
                 return callback(writeFileError);
               }
 
-              log.debug(
-                colors.cyan(
-                  `Asset written to disk: ${path.relative(
-                    process.cwd(),
-                    targetPath
-                  )}`
-                )
+              context.logger.log(
+                `Asset written to disk: ${path.relative(
+                  process.cwd(),
+                  targetPath
+                )}`
               );
 
               return callback();

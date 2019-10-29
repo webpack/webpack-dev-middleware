@@ -14,8 +14,6 @@ import schema from './options.json';
 const noop = () => {};
 
 const defaults = {
-  logLevel: 'info',
-  logTime: false,
   stats: {
     colors: true,
     context: process.cwd(),
@@ -55,13 +53,9 @@ export default function wdm(compiler, opts = defaults) {
 
   // start watching
   if (!options.lazy) {
-    context.watching = compiler.watch(options.watchOptions, (err) => {
-      if (err) {
-        context.log.error(err.stack || err);
-
-        if (err.details) {
-          context.log.error(err.details);
-        }
+    context.watching = compiler.watch(options.watchOptions, (error) => {
+      if (error) {
+        context.logger.error(error);
       }
     });
   } else {

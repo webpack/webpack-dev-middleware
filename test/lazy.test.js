@@ -21,9 +21,9 @@ describe('Lazy mode', () => {
       },
     };
   };
-  const logLevel = 'silent';
   const res = {};
   const compiler = {
+    getInfrastructureLogger: () => console,
     hooks: {
       done: hook('done'),
       invalid: hook('invalid'),
@@ -42,7 +42,7 @@ describe('Lazy mode', () => {
     const req = { method: 'GET', url: '/bundle.js' };
 
     beforeEach(() => {
-      instance = middleware(compiler, { lazy: true, logLevel });
+      instance = middleware(compiler, { lazy: true });
     });
 
     it('should trigger build', (done) => {
@@ -67,28 +67,12 @@ describe('Lazy mode', () => {
       expect(compiler.run).toBeCalledTimes(1);
       expect(next).toBeCalledTimes(0);
     });
-
-    it('should pass through compiler error', () => {
-      const err = new Error('MyCompilerError');
-      const { log } = instance.context;
-      const spy = jest.spyOn(log, 'error');
-
-      compiler.run.mockImplementation((callback) => {
-        callback(err);
-      });
-
-      instance(req, res, next);
-
-      expect(spy).toBeCalledTimes(1);
-      expect(spy).toBeCalledWith(err.stack);
-    });
   });
 
   describe('custom filename', () => {
     it('should trigger build', () => {
       instance = middleware(compiler, {
         lazy: true,
-        logLevel: 'error',
         filename: 'foo.js',
       });
 
@@ -105,7 +89,7 @@ describe('Lazy mode', () => {
     });
 
     it('should allow prepended slash', () => {
-      const options = { lazy: true, logLevel: 'error', filename: '/foo.js' };
+      const options = { lazy: true, filename: '/foo.js' };
 
       instance = middleware(compiler, options);
 

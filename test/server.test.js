@@ -19,8 +19,6 @@ describe('Server', () => {
   let listen;
   let app;
 
-  const logLevel = 'error';
-
   function listenShorthand(done) {
     return app.listen(8000, '127.0.0.1', (err) => {
       if (err) {
@@ -53,7 +51,6 @@ describe('Server', () => {
       });
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
         publicPath: '/public/',
       });
       app.use(instance);
@@ -201,7 +198,6 @@ describe('Server', () => {
       instance = middleware(compiler, {
         stats: 'errors-only',
         methods: ['POST'],
-        logLevel,
         publicPath: '/public/',
       });
       app.use(instance);
@@ -235,7 +231,6 @@ describe('Server', () => {
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
         index: false,
         publicPath: '/',
       });
@@ -258,7 +253,6 @@ describe('Server', () => {
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
         lazy: true,
         publicPath: '/',
       });
@@ -280,7 +274,6 @@ describe('Server', () => {
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
         headers: { 'X-nonsense-1': 'yes', 'X-nonsense-2': 'no' },
       });
       app.use(instance);
@@ -309,7 +302,6 @@ describe('Server', () => {
       });
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
         index: 'noextension',
       });
       app.use(instance);
@@ -337,7 +329,6 @@ describe('Server', () => {
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
       });
       app.use(instance);
       listen = listenShorthand(done);
@@ -374,7 +365,6 @@ describe('Server', () => {
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
       });
 
       instance(req, res, jest.fn()).then(done);
@@ -394,7 +384,6 @@ describe('Server', () => {
       });
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
         index: 'Index.phtml',
         mimeTypes: {
           'text/html': ['phtml'],
@@ -430,7 +419,6 @@ describe('Server', () => {
       });
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
         index: 'Index.phtml',
         mimeTypes: {
           typeMap: { 'text/html': ['phtml'] },
@@ -467,7 +455,6 @@ describe('Server', () => {
       });
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
         mimeTypes: {
           typeMap: {
             'model/vnd.pixar.usd': ['usdz'],
@@ -505,7 +492,6 @@ describe('Server', () => {
       const compiler = webpack(webpackMultiConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
         publicPath: '/',
       });
       app.use(instance);
@@ -530,7 +516,6 @@ describe('Server', () => {
       const compiler = webpack(webpackClientServerConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
       });
       app.use(instance);
       listen = listenShorthand(done);
@@ -563,7 +548,6 @@ describe('Server', () => {
       const compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
         serverSideRender: true,
       });
       app.use(instance);
@@ -594,7 +578,6 @@ describe('Server', () => {
 
     instance = middleware(compiler, {
       stats: 'errors-only',
-      logLevel,
       writeToDisk: value,
     });
 
@@ -705,7 +688,6 @@ describe('Server', () => {
     const compiler = webpack(webpackQuerystringConfig);
     instance = middleware(compiler, {
       stats: 'errors-only',
-      logLevel,
       writeToDisk: value,
     });
     app.use(instance);
@@ -746,7 +728,6 @@ describe('Server', () => {
 
     instance = middleware(compiler, {
       stats: 'errors-only',
-      logLevel,
       writeToDisk: value,
     });
 
