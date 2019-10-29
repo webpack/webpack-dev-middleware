@@ -5,6 +5,7 @@ function fakeWebpack() {
   // mock a compiler, including hooks
   return {
     __test: 'mock compiler - log.js',
+    getInfrastructureLogger: () => console,
     watch() {},
     hooks: {
       done: hook,
@@ -38,6 +39,7 @@ describe('FileSystem', () => {
     const hook = { tap() {} };
     const compiler = {
       outputPath: '/output',
+      getInfrastructureLogger: () => console,
       watch() {},
       hooks: { done: hook, invalid: hook, run: hook, watchRun: hook },
     };

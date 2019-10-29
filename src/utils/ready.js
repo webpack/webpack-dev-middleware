@@ -4,6 +4,6 @@ export default function ready(context, fn, req) {
     return fn(context.webpackStats);
   }
 
-  context.log.info(`wait until bundle finished: ${req.url || fn.name}`);
+  context.logger.info(`wait until bundle finished: ${req.url || fn.name}`);
   context.callbacks.push(fn);
 }
