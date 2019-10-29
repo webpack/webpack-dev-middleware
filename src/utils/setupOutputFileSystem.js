@@ -1,6 +1,6 @@
 import path from 'path';
 
-import MemoryFileSystem from 'memory-fs';
+import memfs from 'memfs';
 
 import DevMiddlewareError from '../DevMiddlewareError';
 
@@ -15,38 +15,31 @@ export default function setupOutputFileSystem(compiler, context) {
     );
   }
 
-  let fileSystem;
+  let outputFileSystem;
 
-  // store our files in memory
-  const isConfiguredFs = context.options.fs;
-  const isMemoryFs =
-    !isConfiguredFs &&
-    !compiler.compilers &&
-    compiler.outputFileSystem instanceof MemoryFileSystem;
-
-  if (isConfiguredFs) {
+  if (context.options.fs) {
     // eslint-disable-next-line no-shadow
     const { fs } = context.options;
 
+    // Todo remove when we drop webpack@4 support
     if (typeof fs.join !== 'function') {
       // very shallow check
       throw new Error('Invalid options: options.fs.join() method is expected');
     }
 
-    // eslint-disable-next-line no-param-reassign
-    compiler.outputFileSystem = fs;
-    fileSystem = fs;
-  } else if (isMemoryFs) {
-    fileSystem = compiler.outputFileSystem;
+    outputFileSystem = fs;
   } else {
-    fileSystem = new MemoryFileSystem();
+    outputFileSystem = memfs;
+    outputFileSystem.vol.reset();
 
-    // eslint-disable-next-line no-param-reassign
-    compiler.outputFileSystem = fileSystem;
+    // Todo remove when we drop webpack@4 support
+    outputFileSystem.join = path.join.bind(path);
   }
 
   // eslint-disable-next-line no-param-reassign
-  context.outputFileSystem = fileSystem;
+  compiler.outputFileSystem = outputFileSystem;
+  // eslint-disable-next-line no-param-reassign
+  context.outputFileSystem = outputFileSystem;
 }
 
 module.exports = setupOutputFileSystem;

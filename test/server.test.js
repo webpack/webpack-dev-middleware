@@ -42,15 +42,11 @@ describe('Server', () => {
   }
 
   describe('requests', () => {
+    let compiler;
+
     beforeAll((done) => {
       app = express();
-      const compiler = webpack({
-        ...webpackConfig,
-        output: {
-          filename: 'bundle.js',
-          path: '/',
-        },
-      });
+      compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
         logLevel,
@@ -59,16 +55,23 @@ describe('Server', () => {
       app.use(instance);
       listen = listenShorthand(done);
       // Hack to add a mock HMR json file to the in-memory filesystem.
+
+      instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+        recursive: true,
+      });
       instance.context.outputFileSystem.writeFileSync(
-        '/123a123412.hot-update.json',
+        path.resolve(compiler.outputPath, '123a123412.hot-update.json'),
         '["hi"]'
       );
-
       // Add a nested directory and index.html inside
-      instance.context.outputFileSystem.mkdirSync('/reference');
-      instance.context.outputFileSystem.mkdirSync('/reference/mono-v6.x.x');
+      instance.context.outputFileSystem.mkdirSync(
+        path.resolve(compiler.outputPath, 'reference')
+      );
+      instance.context.outputFileSystem.mkdirSync(
+        path.resolve(compiler.outputPath, 'reference/mono-v6.x.x')
+      );
       instance.context.outputFileSystem.writeFileSync(
-        '/reference/mono-v6.x.x/index.html',
+        path.resolve(compiler.outputPath, 'reference/mono-v6.x.x/index.html'),
         'My Index.'
       );
     });
@@ -81,10 +84,7 @@ describe('Server', () => {
       request(app)
         .get('/public/bundle.js')
         .expect(200, () => {
-          const bundlePath = path.join(
-            __dirname,
-            '../fixtures/server-test/bundle.js'
-          );
+          const bundlePath = path.resolve(compiler.outputPath, 'bundle.js');
           expect(fs.existsSync(bundlePath)).toBe(false);
           done();
         });
@@ -92,7 +92,7 @@ describe('Server', () => {
 
     it('GET request to bundle file', (done) => {
       const bundleData = instance.context.outputFileSystem.readFileSync(
-        '/bundle.js'
+        path.resolve(compiler.outputPath, 'bundle.js')
       );
       const contentLength = bundleData.byteLength.toString();
 
@@ -105,7 +105,7 @@ describe('Server', () => {
 
     it('HEAD request to bundle file', (done) => {
       const contentLength = instance.context.outputFileSystem
-        .readFileSync('/bundle.js')
+        .readFileSync(path.resolve(compiler.outputPath, 'bundle.js'))
         .byteLength.toString();
 
       request(app)
@@ -124,7 +124,7 @@ describe('Server', () => {
 
     it('request to image', (done) => {
       const contentLength = instance.context.outputFileSystem
-        .readFileSync('/svg.svg')
+        .readFileSync(path.resolve(compiler.outputPath, 'svg.svg'))
         .byteLength.toString();
 
       request(app)
@@ -143,7 +143,7 @@ describe('Server', () => {
 
     it('request to HMR json', (done) => {
       const manifestData = instance.context.outputFileSystem.readFileSync(
-        '/123a123412.hot-update.json'
+        path.resolve(compiler.outputPath, '123a123412.hot-update.json')
       );
       const contentLength = manifestData.byteLength.toString();
 
@@ -298,15 +298,11 @@ describe('Server', () => {
   });
 
   describe('no extension support', () => {
+    let compiler;
+
     beforeAll((done) => {
       app = express();
-      const compiler = webpack({
-        ...webpackConfig,
-        output: {
-          filename: 'bundle.js',
-          path: '/',
-        },
-      });
+      compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
         logLevel,
@@ -314,7 +310,13 @@ describe('Server', () => {
       });
       app.use(instance);
       listen = listenShorthand(done);
-      instance.context.outputFileSystem.writeFileSync('/noextension', 'hello');
+      instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+        recursive: true,
+      });
+      instance.context.outputFileSystem.writeFileSync(
+        path.resolve(compiler.outputPath, 'noextension'),
+        'hello'
+      );
     });
     afterAll(close);
 
@@ -383,15 +385,11 @@ describe('Server', () => {
   });
 
   describe('custom mimeTypes', () => {
+    let compiler;
+
     beforeAll((done) => {
       app = express();
-      const compiler = webpack({
-        ...webpackConfig,
-        output: {
-          filename: 'bundle.js',
-          path: '/',
-        },
-      });
+      compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
         logLevel,
@@ -402,8 +400,11 @@ describe('Server', () => {
       });
       app.use(instance);
       listen = listenShorthand(done);
+      instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+        recursive: true,
+      });
       instance.context.outputFileSystem.writeFileSync(
-        '/Index.phtml',
+        path.resolve(compiler.outputPath, 'Index.phtml'),
         'welcome'
       );
     });
@@ -419,15 +420,11 @@ describe('Server', () => {
   });
 
   describe('force option for custom mimeTypes', () => {
+    let compiler;
+
     beforeAll((done) => {
       app = express();
-      const compiler = webpack({
-        ...webpackConfig,
-        output: {
-          filename: 'bundle.js',
-          path: '/',
-        },
-      });
+      compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
         logLevel,
@@ -439,8 +436,11 @@ describe('Server', () => {
       });
       app.use(instance);
       listen = listenShorthand(done);
+      instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+        recursive: true,
+      });
       instance.context.outputFileSystem.writeFileSync(
-        '/Index.phtml',
+        path.resolve(compiler.outputPath, 'Index.phtml'),
         'welcome'
       );
     });
@@ -456,15 +456,11 @@ describe('Server', () => {
   });
 
   describe('special file type headers', () => {
+    let compiler;
+
     beforeAll((done) => {
       app = express();
-      const compiler = webpack({
-        ...webpackConfig,
-        output: {
-          filename: 'bundle.js',
-          path: '/',
-        },
-      });
+      compiler = webpack(webpackConfig);
       instance = middleware(compiler, {
         stats: 'errors-only',
         logLevel,
@@ -477,8 +473,17 @@ describe('Server', () => {
       });
       app.use(instance);
       listen = listenShorthand(done);
-      instance.context.outputFileSystem.writeFileSync('/hello.wasm', 'welcome');
-      instance.context.outputFileSystem.writeFileSync('/3dAr.usdz', '010101');
+      instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+        recursive: true,
+      });
+      instance.context.outputFileSystem.writeFileSync(
+        path.resolve(compiler.outputPath, 'hello.wasm'),
+        'welcome'
+      );
+      instance.context.outputFileSystem.writeFileSync(
+        path.resolve(compiler.outputPath, '3dAr.usdz'),
+        '010101'
+      );
     });
     afterAll(close);
 
