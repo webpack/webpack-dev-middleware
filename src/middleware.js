@@ -31,7 +31,7 @@ export default function wrapper(context) {
           () => {
             // eslint-disable-next-line no-param-reassign
             res.locals.webpack = {
-              stats: context.webpackStats,
+              stats: context.stats,
               outputFileSystem: context.outputFileSystem,
             };
 
