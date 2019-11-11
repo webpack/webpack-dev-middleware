@@ -4,9 +4,6 @@
     "mimeTypes": {
       "type": "object"
     },
-    "reporter": {
-      "instanceof": "Function"
-    },
     "stats": {
       "anyOf": [
         {
@@ -58,7 +55,7 @@
     "serverSideRender": {
       "type": "boolean"
     },
-    "fs": {
+    "outputFileSystem": {
       "type": "object"
     },
     "index": {

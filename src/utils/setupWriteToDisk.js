@@ -1,8 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 
-import mkdirp from 'mkdirp';
-
 export default function setupWriteToDisk(context) {
   const compilers = context.compiler.compilers || [context.compiler];
 
@@ -52,9 +50,9 @@ export default function setupWriteToDisk(context) {
 
           const dir = path.dirname(targetPath);
 
-          return mkdirp(dir, (mkdirpError) => {
-            if (mkdirpError) {
-              return callback(mkdirpError);
+          return fs.mkdir(dir, { recursive: true }, (mkdirError) => {
+            if (mkdirError) {
+              return callback(mkdirError);
             }
 
             return fs.writeFile(targetPath, content, (writeFileError) => {

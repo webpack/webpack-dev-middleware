@@ -52,7 +52,7 @@ describe('validation', () => {
       success: [true],
       failure: ['foo', 0],
     },
-    fs: {
+    outputFileSystem: {
       success: [
         {
           join: () => {},

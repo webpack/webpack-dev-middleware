@@ -125,15 +125,6 @@ The public path that the middleware is bound to. _Best Practice: use the same
 `publicPath`, please see
 [the webpack documentation](https://webpack.js.org/guides/public-path)._
 
-### reporter
-
-Type: `Object`  
-Default: `undefined`
-
-Allows users to provide a custom reporter to handle logging within the module.
-Please see the [default reporter](/src/utils/reporter.js)
-for an example.
-
 ### serverSideRender
 
 Type: `Boolean`  
@@ -199,7 +190,9 @@ Default: `MemoryFileSystem`
 
 Set the default file system which will be used by webpack as primary destination of generated files. Default is set to webpack's default file system: [memory-fs](https://github.com/webpack/memory-fs). This option isn't affected by the [writeToDisk](#writeToDisk) option.
 
-**Note:** As of 3.5.x version of the middleware you have to provide `.join()` method to the `outputFileSystem` instance manually. This can be done simply by using `path.join`:
+**Note:** As of 3.5.x version of the middleware you have to provide `.join()` method to the `outputFileSystem` instance manually.
+
+This can be done simply by using `path.join`:
 
 ```js
 const webpack = require('webpack');

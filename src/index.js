@@ -2,7 +2,6 @@ import mime from 'mime';
 import validateOptions from 'schema-utils';
 
 import middleware from './middleware';
-import reporter from './utils/reporter';
 import setupHooks from './utils/setupHooks';
 import setupRebuild from './utils/setupRebuild';
 import setupLogger from './utils/setupLogger';
@@ -15,7 +14,6 @@ import schema from './options.json';
 const noop = () => {};
 
 const defaults = {
-  reporter,
   stats: {
     colors: true,
     context: process.cwd(),
