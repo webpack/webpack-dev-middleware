@@ -80,7 +80,7 @@ describe('Lazy mode', () => {
       instance(req, res, next);
 
       expect(spy).toBeCalledTimes(1);
-      expect(spy).toBeCalledWith(err.stack);
+      expect(spy).toBeCalledWith(err);
     });
   });
 
