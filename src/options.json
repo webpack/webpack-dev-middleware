@@ -13,9 +13,6 @@
     "mimeTypes": {
       "type": "object"
     },
-    "reporter": {
-      "instanceof": "Function"
-    },
     "stats": {
       "anyOf": [
         {

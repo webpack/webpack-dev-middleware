@@ -174,15 +174,6 @@ The public path that the middleware is bound to. _Best Practice: use the same
 `publicPath`, please see
 [the webpack documentation](https://webpack.js.org/guides/public-path)._
 
-### reporter
-
-Type: `Object`  
-Default: `undefined`
-
-Allows users to provide a custom reporter to handle logging within the module.
-Please see the [default reporter](/src/utils/reporter.js)
-for an example.
-
 ### serverSideRender
 
 Type: `Boolean`  
