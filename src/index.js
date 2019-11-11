@@ -53,15 +53,17 @@ export default function wdm(compiler, opts = defaults) {
   setupRebuild(context);
   setupLogger(context);
 
+  if (options.writeToDisk) {
+    setupWriteToDisk(context);
+  }
+
+  setupOutputFileSystem(compiler, context);
+
   // start watching
   if (!options.lazy) {
-    context.watching = compiler.watch(options.watchOptions, (err) => {
-      if (err) {
-        context.log.error(err.stack || err);
-
-        if (err.details) {
-          context.log.error(err.details);
-        }
+    context.watching = compiler.watch(options.watchOptions, (error) => {
+      if (error) {
+        context.log.error(error);
       }
     });
   } else {
@@ -75,12 +77,6 @@ export default function wdm(compiler, opts = defaults) {
 
     context.state = true;
   }
-
-  if (options.writeToDisk) {
-    setupWriteToDisk(context);
-  }
-
-  setupOutputFileSystem(compiler, context);
 
   return Object.assign(middleware(context), {
     close(callback) {

@@ -1,8 +1,6 @@
-import webpack from 'webpack';
-
 import middleware from '../src';
 
-import config from './fixtures/simple-config/webpack.config';
+import getCompiler from './helpers/getCompiler';
 
 describe('validation', () => {
   const tests = {
@@ -76,27 +74,22 @@ describe('validation', () => {
       success: [true, false, 'foo'],
       failure: [0, {}],
     },
+    filename: {
+      success: ['foo.js'],
+      failure: [0, {}],
+    },
   };
-
-  function createOptions(key, value) {
-    return Object.prototype.toString.call(value) === '[object Object]' &&
-      Object.keys(value).length !== 0
-      ? value
-      : {
-          [key]: value,
-        };
-  }
 
   for (const [key, values] of Object.entries(tests)) {
     it(`should validate "${key}" option`, async () => {
-      const compiler = webpack(config);
+      const compiler = getCompiler();
 
       for await (const type of Object.keys(values)) {
         for await (const sample of values[type]) {
           let server;
 
           try {
-            server = middleware(compiler, createOptions(key, sample));
+            server = middleware(compiler, { [key]: sample });
 
             if (type === 'success') {
               expect(true).toBeTruthy();
