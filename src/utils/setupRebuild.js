@@ -4,13 +4,9 @@ export default function setupRebuild(context) {
       // eslint-disable-next-line no-param-reassign
       context.state = false;
 
-      context.compiler.run((err) => {
-        if (err) {
-          context.log.error(err.stack || err);
-
-          if (err.details) {
-            context.log.error(err.details);
-          }
+      context.compiler.run((error) => {
+        if (error) {
+          context.log.error(error);
         }
       });
     } else {

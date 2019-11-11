@@ -58,6 +58,9 @@
     "lazy": {
       "type": "boolean"
     },
+    "filename": {
+      "type": "string"
+    },
     "publicPath": {
       "type": "string"
     },
@@ -77,5 +80,6 @@
         }
       ]
     }
-  }
+  },
+  "additionalProperties": false
 }
