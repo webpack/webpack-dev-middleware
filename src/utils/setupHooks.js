@@ -23,7 +23,7 @@ export default function setupHooks(context) {
     // eslint-disable-next-line no-param-reassign
     context.state = true;
     // eslint-disable-next-line no-param-reassign
-    context.webpackStats = stats;
+    context.stats = stats;
 
     // Do the stuff in nextTick, because bundle may be invalidated
     // if a change happened while compiling

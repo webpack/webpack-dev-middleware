@@ -41,7 +41,7 @@ export default function wdm(compiler, opts = defaults) {
 
   const context = {
     state: false,
-    webpackStats: null,
+    stats: null,
     callbacks: [],
     options,
     compiler,
