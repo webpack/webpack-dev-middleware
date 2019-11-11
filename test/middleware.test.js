@@ -3,12 +3,11 @@ import path from 'path';
 
 import express from 'express';
 import request from 'supertest';
-import memfs, { createFsFromVolume, Volume } from 'memfs';
+import MemoryFileSystem from 'memory-fs';
 
 import middleware from '../src';
 
 import getCompiler from './helpers/getCompiler';
-import GetLogsPlugin from './helpers/GetLogsPlugin';
 
 import { mockRequest, mockResponse } from './mock-express';
 
@@ -24,10 +23,12 @@ describe('middleware', () => {
   let listen;
   let app;
 
+  const logLevel = 'error';
+
   function listenShorthand(done) {
-    return app.listen((error) => {
-      if (error) {
-        return done(error);
+    return app.listen(8000, '127.0.0.1', (err) => {
+      if (err) {
+        return done(err);
       }
 
       return done();
@@ -46,13 +47,20 @@ describe('middleware', () => {
 
   describe('basic', () => {
     describe('should work with difference requests', () => {
-      let compiler;
-
       beforeAll((done) => {
-        compiler = getCompiler(webpackConfig);
+        app = express();
+
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: '/',
+          },
+        });
 
         instance = middleware(compiler, {
           stats: 'errors-only',
+          logLevel,
           publicPath: '/public/',
           mimeTypes: {
             typeMap: {
@@ -62,38 +70,27 @@ describe('middleware', () => {
           },
         });
 
-        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
-          recursive: true,
-        });
+        // Hack to add a mock HMR json file to the in-memory outputFileSystem.
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, '123a123412.hot-update.json'),
+          '/123a123412.hot-update.json',
           '["hi"]'
         );
         // Add a nested directory and index.html inside
-        // Add a nested directory and index.html inside
-        instance.context.outputFileSystem.mkdirSync(
-          path.resolve(compiler.outputPath, 'reference')
-        );
-        instance.context.outputFileSystem.mkdirSync(
-          path.resolve(compiler.outputPath, 'reference/mono-v6.x.x')
-        );
+        instance.context.outputFileSystem.mkdirSync('/reference');
+        instance.context.outputFileSystem.mkdirSync('/reference/mono-v6.x.x');
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'reference/mono-v6.x.x/index.html'),
+          '/reference/mono-v6.x.x/index.html',
           'My Index.'
         );
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'hello.wasm'),
+          '/hello.wasm',
           'welcome'
         );
-        instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, '3dAr.usdz'),
-          '010101'
-        );
+        instance.context.outputFileSystem.writeFileSync('/3dAr.usdz', '010101');
       });
 
       afterAll((done) => {
@@ -104,8 +101,10 @@ describe('middleware', () => {
         request(app)
           .get('/public/bundle.js')
           .expect(200, () => {
-            const bundlePath = path.resolve(compiler.outputPath, 'bundle.js');
-
+            const bundlePath = path.join(
+              __dirname,
+              '../fixtures/server-test/bundle.js'
+            );
             expect(fs.existsSync(bundlePath)).toBe(false);
             done();
           });
@@ -113,7 +112,7 @@ describe('middleware', () => {
 
       it('GET request to bundle file', (done) => {
         const bundleData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(compiler.outputPath, 'bundle.js')
+          '/bundle.js'
         );
         const contentLength = bundleData.byteLength.toString();
 
@@ -126,7 +125,7 @@ describe('middleware', () => {
 
       it('HEAD request to bundle file', (done) => {
         const contentLength = instance.context.outputFileSystem
-          .readFileSync(path.resolve(compiler.outputPath, 'bundle.js'))
+          .readFileSync('/bundle.js')
           .byteLength.toString();
 
         request(app)
@@ -145,7 +144,7 @@ describe('middleware', () => {
 
       it('request to image', (done) => {
         const contentLength = instance.context.outputFileSystem
-          .readFileSync(path.resolve(compiler.outputPath, 'svg.svg'))
+          .readFileSync('/svg.svg')
           .byteLength.toString();
 
         request(app)
@@ -164,7 +163,7 @@ describe('middleware', () => {
 
       it('request to HMR json', (done) => {
         const manifestData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(compiler.outputPath, '123a123412.hot-update.json')
+          '/123a123412.hot-update.json'
         );
         const contentLength = manifestData.byteLength.toString();
 
@@ -185,7 +184,7 @@ describe('middleware', () => {
 
       it('request to subdirectory without trailing slash', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(compiler.outputPath, 'reference/mono-v6.x.x/index.html')
+          '/reference/mono-v6.x.x/index.html'
         );
         const contentLength = fileData.byteLength.toString();
 
@@ -221,7 +220,7 @@ describe('middleware', () => {
 
       it('request to hello.wasm', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(compiler.outputPath, 'hello.wasm')
+          '/hello.wasm'
         );
         const contentLength = fileData.byteLength.toString();
 
@@ -234,7 +233,7 @@ describe('middleware', () => {
 
       it('request to 3dAr.usdz', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(compiler.outputPath, '3dAr.usdz')
+          '/3dAr.usdz'
         );
         const contentLength = fileData.byteLength.toString();
 
@@ -266,7 +265,10 @@ describe('middleware', () => {
 
         const compiler = getCompiler(webpackConfig);
 
-        instance = middleware(compiler, { stats: 'errors-only' });
+        instance = middleware(compiler, {
+          stats: 'errors-only',
+          logLevel,
+        });
 
         instance(req, res, jest.fn()).then(done);
       });
@@ -276,15 +278,20 @@ describe('middleware', () => {
 
     describe('should respect the "Content-Type" from other middleware', () => {
       beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
-
-        instance = middleware(compiler, { stats: 'errors-only' });
-
         app = express();
+
         app.use((req, res, next) => {
           res.set('Content-Type', 'application/octet-stream');
           next();
         });
+
+        const compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler, {
+          stats: 'errors-only',
+          logLevel,
+        });
+
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -354,14 +361,16 @@ describe('middleware', () => {
   describe('multi compiler', () => {
     describe('should works', () => {
       beforeAll((done) => {
+        app = express();
+
         const compiler = getCompiler(webpackMultiConfig);
 
         instance = middleware(compiler, {
           stats: 'errors-only',
+          logLevel,
           publicPath: '/',
         });
 
-        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -382,11 +391,15 @@ describe('middleware', () => {
 
     describe('should works with one "publicPath"', () => {
       beforeAll((done) => {
+        app = express();
+
         const compiler = getCompiler(webpackClientServerConfig);
 
-        instance = middleware(compiler, { stats: 'errors-only' });
+        instance = middleware(compiler, {
+          stats: 'errors-only',
+          logLevel,
+        });
 
-        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -417,26 +430,31 @@ describe('middleware', () => {
   describe('mimeTypes option', () => {
     describe('custom extensions', () => {
       beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
+        app = express();
+
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: '/',
+          },
+        });
 
         instance = middleware(compiler, {
           stats: 'errors-only',
+          logLevel,
           index: 'Index.phtml',
           mimeTypes: {
             'text/html': ['phtml'],
           },
         });
 
-        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
-          recursive: true,
-        });
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'Index.phtml'),
+          '/Index.phtml',
           'welcome'
         );
       });
@@ -454,10 +472,19 @@ describe('middleware', () => {
 
     describe('force option for overriding any previous mapping', () => {
       beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
+        app = express();
+
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: '/',
+          },
+        });
 
         instance = middleware(compiler, {
           stats: 'errors-only',
+          logLevel,
           index: 'Index.phtml',
           mimeTypes: {
             typeMap: { 'text/html': ['phtml'] },
@@ -465,16 +492,12 @@ describe('middleware', () => {
           },
         });
 
-        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
-          recursive: true,
-        });
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'Index.phtml'),
+          '/Index.phtml',
           'welcome'
         );
       });
@@ -501,13 +524,18 @@ describe('middleware', () => {
     };
 
     beforeAll((done) => {
+      app = express();
+
       compiler = getCompiler(webpackConfig);
 
       spy = jest.spyOn(compiler, 'watch');
 
-      instance = middleware(compiler, { stats: 'errors-only', watchOptions });
+      instance = middleware(compiler, {
+        stats: 'errors-only',
+        logLevel,
+        watchOptions,
+      });
 
-      app = express();
       app.use(instance);
 
       listen = listenShorthand(done);
@@ -527,14 +555,16 @@ describe('middleware', () => {
 
   describe('writeToDisk option', () => {
     function writeToDisk(value, done) {
+      app = express();
+
       const compiler = getCompiler(webpackConfig);
 
       instance = middleware(compiler, {
         stats: 'errors-only',
+        logLevel,
         writeToDisk: value,
       });
 
-      app = express();
       app.use(instance);
       app.use((req, res) => {
         res.sendStatus(200);
@@ -546,14 +576,16 @@ describe('middleware', () => {
     }
 
     function querystringToDisk(value, done) {
+      app = express();
+
       const compiler = getCompiler(webpackQuerystringConfig);
 
       instance = middleware(compiler, {
         stats: 'errors-only',
+        logLevel,
         writeToDisk: value,
       });
 
-      app = express();
       app.use(instance);
       app.use((req, res) => {
         res.sendStatus(200);
@@ -565,14 +597,16 @@ describe('middleware', () => {
     }
 
     function multiToDisk(value, done) {
+      app = express();
+
       const compiler = getCompiler(webpackMultiConfig);
 
       instance = middleware(compiler, {
         stats: 'errors-only',
+        logLevel,
         writeToDisk: value,
       });
 
-      app = express();
       app.use(instance);
       app.use((req, res) => {
         res.sendStatus(200);
@@ -781,15 +815,17 @@ describe('middleware', () => {
 
   describe('methods option', () => {
     beforeAll((done) => {
+      app = express();
+
       const compiler = getCompiler(webpackConfig);
 
       instance = middleware(compiler, {
         stats: 'errors-only',
         methods: ['POST'],
+        logLevel,
         publicPath: '/public/',
       });
 
-      app = express();
       app.use(instance);
 
       listen = listenShorthand(done);
@@ -819,14 +855,16 @@ describe('middleware', () => {
 
   describe('headers option', () => {
     beforeAll((done) => {
+      app = express();
+
       const compiler = getCompiler(webpackConfig);
 
       instance = middleware(compiler, {
         stats: 'errors-only',
+        logLevel,
         headers: { 'X-nonsense-1': 'yes', 'X-nonsense-2': 'no' },
       });
 
-      app = express();
       app.use(instance);
 
       listen = listenShorthand(done);
@@ -843,17 +881,108 @@ describe('middleware', () => {
     });
   });
 
-  describe('publicPath option', () => {
-    describe('with "string" value', () => {
+  describe('lazy option', () => {
+    describe('with unspecified value', () => {
       beforeAll((done) => {
+        app = express();
+
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
           stats: 'errors-only',
+          logLevel,
+          lazy: false,
+          publicPath: '/',
+        });
+
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('GET request to bundle file', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(200, /console\.log\('Hey\.'\)/, done);
+      });
+    });
+
+    describe('with "false" value', () => {
+      beforeAll((done) => {
+        app = express();
+
+        const compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler, {
+          stats: 'errors-only',
+          logLevel,
+          lazy: false,
+          publicPath: '/',
+        });
+
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('GET request to bundle file', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(200, /console\.log\('Hey\.'\)/, done);
+      });
+    });
+
+    describe('with "true" value', () => {
+      beforeAll((done) => {
+        app = express();
+
+        const compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler, {
+          stats: 'errors-only',
+          logLevel,
+          lazy: true,
+          publicPath: '/',
+        });
+
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('GET request to bundle file', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(200, /console\.log\('Hey\.'\)/, done);
+      });
+    });
+  });
+
+  describe('publicPath option', () => {
+    describe('with "string" value', () => {
+      beforeAll((done) => {
+        app = express();
+
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: '/',
+          },
+        });
+
+        instance = middleware(compiler, {
+          stats: 'errors-only',
+          logLevel,
           publicPath: '/public/',
         });
 
-        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -876,14 +1005,16 @@ describe('middleware', () => {
     let locals;
 
     beforeAll((done) => {
+      app = express();
+
       const compiler = getCompiler(webpackConfig);
 
       instance = middleware(compiler, {
         stats: 'errors-only',
+        logLevel,
         serverSideRender: true,
       });
 
-      app = express();
       app.use(instance);
       app.use((req, res) => {
         // eslint-disable-next-line prefer-destructuring
@@ -914,11 +1045,12 @@ describe('middleware', () => {
       let compiler;
 
       beforeAll((done) => {
+        app = express();
+
         compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler);
 
-        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -926,44 +1058,61 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should use "memfs" by default', () => {
-        const { Stats } = memfs;
-
-        expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
-        expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
-          Stats
+      it('should use "MemoryFileSystem" by default', () => {
+        expect(compiler.outputFileSystem instanceof MemoryFileSystem).toBe(
+          true
         );
         expect(
-          Object.prototype.hasOwnProperty.call(
-            compiler.outputFileSystem,
-            'join'
-          )
-        ).toBe(true);
-        expect(
-          Object.prototype.hasOwnProperty.call(
-            compiler.outputFileSystem,
-            'mkdirp'
-          )
+          instance.context.outputFileSystem instanceof MemoryFileSystem
         ).toBe(true);
       });
     });
 
-    describe('with configured value (native fs)', () => {
+    describe('with "MemoryFileSystem" value on compiler', () => {
       let compiler;
 
       beforeAll((done) => {
+        app = express();
+
         compiler = getCompiler(webpackConfig);
 
-        const configuredFs = fs;
+        compiler.outputFileSystem = new MemoryFileSystem();
 
-        configuredFs.join = path.join.bind(path);
-        configuredFs.mkdirp = () => {};
+        instance = middleware(compiler);
+
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should use "outputFileSystem" from compiler', () => {
+        expect(compiler.outputFileSystem instanceof MemoryFileSystem).toBe(
+          true
+        );
+        expect(
+          instance.context.outputFileSystem instanceof MemoryFileSystem
+        ).toBe(true);
+      });
+    });
+
+    describe('with configured value', () => {
+      const configuredFs = fs;
+
+      configuredFs.join = path.join;
+
+      let compiler;
+
+      beforeAll((done) => {
+        app = express();
+
+        compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
           outputFileSystem: configuredFs,
         });
 
-        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -971,92 +1120,20 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should use configurated output file system', () => {
-        const { Stats } = fs;
-
-        expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
-        expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
-          Stats
-        );
-        expect(
-          Object.prototype.hasOwnProperty.call(
-            compiler.outputFileSystem,
-            'join'
-          )
-        ).toBe(true);
-        expect(
-          Object.prototype.hasOwnProperty.call(
-            compiler.outputFileSystem,
-            'mkdirp'
-          )
-        ).toBe(true);
+      it('should use MemoryFileSystem by default', () => {
+        expect(compiler.outputFileSystem).toEqual(configuredFs);
+        expect(instance.context.outputFileSystem).toEqual(configuredFs);
       });
     });
 
-    describe('with configured value (memfs)', () => {
-      let compiler;
-
-      beforeAll((done) => {
-        compiler = getCompiler(webpackConfig);
-
-        const configuredFs = createFsFromVolume(new Volume());
-
-        configuredFs.join = path.join.bind(path);
-
-        instance = middleware(compiler, {
-          outputFileSystem: configuredFs,
-        });
-
-        app = express();
-        app.use(instance);
-
-        listen = listenShorthand(done);
-      });
-
-      afterAll(close);
-
-      it('should use configurated output file system', () => {
-        const { Stats } = memfs;
-
-        expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
-        expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
-          Stats
-        );
-        expect(
-          Object.prototype.hasOwnProperty.call(
-            compiler.outputFileSystem,
-            'join'
-          )
-        ).toBe(true);
-        expect(
-          Object.prototype.hasOwnProperty.call(
-            compiler.outputFileSystem,
-            'mkdirp'
-          )
-        ).toBe(true);
-      });
-    });
-
-    describe('should throw error on invalid fs - no join method', () => {
+    describe('should throw error on invalid fs', () => {
       it('without "join" method', () => {
         expect(() => {
           const compiler = getCompiler(webpackConfig);
 
-          middleware(compiler, { outputFileSystem: { mkdirp: () => {} } });
+          middleware(compiler, { outputFileSystem: {} });
         }).toThrow(
           'Invalid options: options.outputFileSystem.join() method is expected'
-        );
-      });
-    });
-
-    describe('should throw error on invalid fs - no mkdirp method', () => {
-      it('without "join" method', () => {
-        expect(() => {
-          const compiler = getCompiler(webpackConfig);
-
-          middleware(compiler, { outputFileSystem: { join: () => {} } });
-        }).toThrow(
-          'Invalid options: options.outputFileSystem.mkdirp() method is expected'
         );
       });
     });
@@ -1065,15 +1142,17 @@ describe('middleware', () => {
   describe('index option', () => {
     describe('with "false" value', () => {
       beforeAll((done) => {
+        app = express();
+
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
           stats: 'errors-only',
+          logLevel,
           index: false,
           publicPath: '/',
         });
 
-        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -1091,15 +1170,17 @@ describe('middleware', () => {
 
     describe('with "true" value', () => {
       beforeAll((done) => {
+        app = express();
+
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
           stats: 'errors-only',
+          logLevel,
           index: true,
           publicPath: '/',
         });
 
-        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -1117,10 +1198,19 @@ describe('middleware', () => {
 
     describe('with "string" value', () => {
       beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
+        app = express();
+
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: '/',
+          },
+        });
 
         instance = middleware(compiler, {
           stats: 'errors-only',
+          logLevel,
           index: 'index.custom',
           mimeTypes: {
             'text/html': ['custom'],
@@ -1128,16 +1218,12 @@ describe('middleware', () => {
           publicPath: '/',
         });
 
-        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
-          recursive: true,
-        });
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'index.custom'),
+          '/index.custom',
           'hello'
         );
       });
@@ -1154,23 +1240,28 @@ describe('middleware', () => {
 
     describe('with "string" value without extension', () => {
       beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
+        app = express();
+
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: '/',
+          },
+        });
 
         instance = middleware(compiler, {
           stats: 'errors-only',
+          logLevel,
           index: 'noextension',
         });
 
-        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
-          recursive: true,
-        });
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'noextension'),
+          '/noextension',
           'hello'
         );
       });
@@ -1188,25 +1279,28 @@ describe('middleware', () => {
 
     describe('with "string" value but index is directory', () => {
       beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
+        app = express();
+
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: '/',
+          },
+        });
 
         instance = middleware(compiler, {
           stats: 'errors-only',
+          logLevel,
           index: 'custom.html',
           publicPath: '/',
         });
 
-        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
-          recursive: true,
-        });
-        instance.context.outputFileSystem.mkdirSync(
-          path.resolve(compiler.outputPath, 'custom.html')
-        );
+        instance.context.outputFileSystem.mkdirSync('/custom.html');
       });
 
       afterAll(close);
@@ -1220,19 +1314,42 @@ describe('middleware', () => {
   });
 
   describe('logger', () => {
+    function normalizeLogs(logs) {
+      if (Array.isArray(logs)) {
+        return logs.map((log) => normalizeLogs(log));
+      }
+
+      return logs.toString().trim();
+    }
+
     describe('should log on successfully build', () => {
       let compiler;
-      let getLogsPlugin;
+
+      const loggerMock = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+      };
 
       beforeAll((done) => {
-        compiler = getCompiler(webpackConfig);
-
-        getLogsPlugin = new GetLogsPlugin();
-        getLogsPlugin.apply(compiler);
-
-        instance = middleware(compiler, { stats: 'errors-warnings' });
-
         app = express();
+
+        compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: '/',
+          },
+        });
+
+        instance = middleware(compiler, {
+          stats: 'errors-warnings',
+          logLevel: 'info',
+        });
+
+        instance.context.log = loggerMock;
+
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -1248,7 +1365,18 @@ describe('middleware', () => {
             instance.invalidate();
 
             instance.waitUntilValid(() => {
-              expect(getLogsPlugin.logs).toMatchSnapshot();
+              expect(
+                normalizeLogs(loggerMock.debug.mock.calls)
+              ).toMatchSnapshot('debug');
+              expect(normalizeLogs(loggerMock.info.mock.calls)).toMatchSnapshot(
+                'info'
+              );
+              expect(normalizeLogs(loggerMock.warn.mock.calls)).toMatchSnapshot(
+                'warn'
+              );
+              expect(
+                normalizeLogs(loggerMock.error.mock.calls)
+              ).toMatchSnapshot('error');
 
               done();
             });
@@ -1258,17 +1386,31 @@ describe('middleware', () => {
 
     describe('should log on unsuccessful build', () => {
       let compiler;
-      let getLogsPlugin;
+      const loggerMock = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+      };
 
       beforeAll((done) => {
-        compiler = getCompiler(webpackErrorConfig);
-
-        getLogsPlugin = new GetLogsPlugin();
-        getLogsPlugin.apply(compiler);
-
-        instance = middleware(compiler, { stats: 'errors-warnings' });
-
         app = express();
+
+        compiler = getCompiler({
+          ...webpackErrorConfig,
+          output: {
+            filename: 'bundle.js',
+            path: '/',
+          },
+        });
+
+        instance = middleware(compiler, {
+          stats: 'errors-warnings',
+          logLevel: 'info',
+        });
+
+        instance.context.log = loggerMock;
+
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -1284,7 +1426,18 @@ describe('middleware', () => {
             instance.invalidate();
 
             instance.waitUntilValid(() => {
-              expect(getLogsPlugin.logs).toMatchSnapshot();
+              expect(
+                normalizeLogs(loggerMock.debug.mock.calls)
+              ).toMatchSnapshot('debug');
+              expect(normalizeLogs(loggerMock.info.mock.calls)).toMatchSnapshot(
+                'info'
+              );
+              expect(normalizeLogs(loggerMock.warn.mock.calls)).toMatchSnapshot(
+                'warn'
+              );
+              expect(
+                normalizeLogs(loggerMock.error.mock.calls)
+              ).toMatchSnapshot('error');
 
               done();
             });
@@ -1294,17 +1447,31 @@ describe('middleware', () => {
 
     describe('should log on warning build', () => {
       let compiler;
-      let getLogsPlugin;
+      const loggerMock = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+      };
 
       beforeAll((done) => {
-        compiler = getCompiler(webpackWarningConfig);
-
-        getLogsPlugin = new GetLogsPlugin();
-        getLogsPlugin.apply(compiler);
-
-        instance = middleware(compiler, { stats: 'errors-warnings' });
-
         app = express();
+
+        compiler = getCompiler({
+          ...webpackWarningConfig,
+          output: {
+            filename: 'bundle.js',
+            path: '/',
+          },
+        });
+
+        instance = middleware(compiler, {
+          stats: 'errors-warnings',
+          logLevel: 'info',
+        });
+
+        instance.context.log = loggerMock;
+
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -1320,7 +1487,18 @@ describe('middleware', () => {
             instance.invalidate();
 
             instance.waitUntilValid(() => {
-              expect(getLogsPlugin.logs).toMatchSnapshot();
+              expect(
+                normalizeLogs(loggerMock.debug.mock.calls)
+              ).toMatchSnapshot('debug');
+              expect(normalizeLogs(loggerMock.info.mock.calls)).toMatchSnapshot(
+                'info'
+              );
+              expect(normalizeLogs(loggerMock.warn.mock.calls)).toMatchSnapshot(
+                'warn'
+              );
+              expect(
+                normalizeLogs(loggerMock.error.mock.calls)
+              ).toMatchSnapshot('error');
 
               done();
             });
@@ -1329,10 +1507,14 @@ describe('middleware', () => {
     });
 
     describe('should log error in "watch" method', () => {
-      let getLogsPlugin;
-
       it('on startup', () => {
-        const compiler = getCompiler(webpackConfig);
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: '/',
+          },
+        });
 
         const watchSpy = jest
           .spyOn(compiler, 'watch')
@@ -1342,16 +1524,33 @@ describe('middleware', () => {
             error.stack = '';
 
             callback(error);
-
-            return { close: () => {} };
           });
 
-        getLogsPlugin = new GetLogsPlugin();
-        getLogsPlugin.apply(compiler);
+        const loggerMock = {
+          debug: jest.fn(),
+          info: jest.fn(),
+          warn: jest.fn(),
+          error: jest.fn(),
+        };
 
-        instance = middleware(compiler, { stats: 'errors-only' });
+        instance = middleware(compiler, {
+          stats: 'errors-only',
+          logger: loggerMock,
+          logLevel: 'silent',
+        });
 
-        expect(getLogsPlugin.logs).toMatchSnapshot();
+        expect(normalizeLogs(loggerMock.debug.mock.calls)).toMatchSnapshot(
+          'debug'
+        );
+        expect(normalizeLogs(loggerMock.info.mock.calls)).toMatchSnapshot(
+          'info'
+        );
+        expect(normalizeLogs(loggerMock.warn.mock.calls)).toMatchSnapshot(
+          'warn'
+        );
+        expect(normalizeLogs(loggerMock.error.mock.calls)).toMatchSnapshot(
+          'error'
+        );
 
         instance.close();
 
