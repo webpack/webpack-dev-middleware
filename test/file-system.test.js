@@ -42,30 +42,32 @@ describe('FileSystem', () => {
       hooks: { done: hook, invalid: hook, run: hook, watchRun: hook },
     };
 
-    const fs = { join() {} };
+    const outputFileSystem = { join() {} };
 
     it('should throw on invalid fs', (done) => {
       expect(() => {
-        middleware(compiler, { fs: {} });
-      }).toThrow('Invalid options: options.fs.join() method is expected');
+        middleware(compiler, { outputFileSystem: {} });
+      }).toThrow(
+        'Invalid options: options.outputFileSystem.join() method is expected'
+      );
 
       done();
     });
 
     it('should assign fs to the compiler.outputFileSystem', (done) => {
-      const instance = middleware(compiler, { fs });
+      const instance = middleware(compiler, { outputFileSystem });
 
-      expect(compiler.outputFileSystem).toEqual(fs);
+      expect(compiler.outputFileSystem).toEqual(outputFileSystem);
 
       instance.close(done);
     });
 
     it('should go safely when compiler.outputFileSystem is assigned by fs externally', (done) => {
       const cmplr = Object.create(compiler);
-      cmplr.outputFileSystem = fs;
-      const instance = middleware(cmplr, { fs });
+      cmplr.outputFileSystem = outputFileSystem;
+      const instance = middleware(cmplr, { outputFileSystem });
 
-      expect(cmplr.outputFileSystem).toEqual(fs);
+      expect(cmplr.outputFileSystem).toEqual(outputFileSystem);
 
       instance.close(done);
     });

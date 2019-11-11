@@ -18,24 +18,26 @@ export default function setupOutputFileSystem(compiler, context) {
   let fileSystem;
 
   // store our files in memory
-  const isConfiguredFs = context.options.fs;
+  const isConfiguredOutputFileSystem = context.options.outputFileSystem;
   const isMemoryFs =
-    !isConfiguredFs &&
+    !isConfiguredOutputFileSystem &&
     !compiler.compilers &&
     compiler.outputFileSystem instanceof MemoryFileSystem;
 
-  if (isConfiguredFs) {
+  if (isConfiguredOutputFileSystem) {
     // eslint-disable-next-line no-shadow
-    const { fs } = context.options;
+    const { outputFileSystem } = context.options;
 
-    if (typeof fs.join !== 'function') {
+    if (typeof outputFileSystem.join !== 'function') {
       // very shallow check
-      throw new Error('Invalid options: options.fs.join() method is expected');
+      throw new Error(
+        'Invalid options: options.outputFileSystem.join() method is expected'
+      );
     }
 
     // eslint-disable-next-line no-param-reassign
-    compiler.outputFileSystem = fs;
-    fileSystem = fs;
+    compiler.outputFileSystem = outputFileSystem;
+    fileSystem = outputFileSystem;
   } else if (isMemoryFs) {
     fileSystem = compiler.outputFileSystem;
   } else {
