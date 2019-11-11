@@ -1,7 +1,9 @@
+import reporter from './reporter';
+
 export default function setupHooks(context) {
   function invalid(callback) {
     if (context.state) {
-      context.options.reporter(context.options, {
+      reporter(context.options, {
         log: context.log,
         state: false,
       });
@@ -32,7 +34,7 @@ export default function setupHooks(context) {
       }
 
       // print webpack output
-      context.options.reporter(context.options, {
+      reporter(context.options, {
         log: context.log,
         state: true,
         stats,
