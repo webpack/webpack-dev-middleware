@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 
-import mkdirp from 'mkdirp';
 import { colors } from 'webpack-log';
 
 export default function setupWriteToDisk(context) {
@@ -54,9 +53,9 @@ export default function setupWriteToDisk(context) {
           const { log } = context;
           const dir = path.dirname(targetPath);
 
-          return mkdirp(dir, (mkdirpError) => {
-            if (mkdirpError) {
-              return callback(mkdirpError);
+          return fs.mkdir(dir, { recursive: true }, (mkdirError) => {
+            if (mkdirError) {
+              return callback(mkdirError);
             }
 
             return fs.writeFile(targetPath, content, (writeFileError) => {
