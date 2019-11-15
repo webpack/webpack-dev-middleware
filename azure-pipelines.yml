@@ -5,7 +5,7 @@ trigger:
 jobs:
   - job: Lint
     pool:
-      vmImage: ubuntu-16.04
+      vmImage: ubuntu-latest
     steps:
       - task: NodeTool@0
         inputs:
@@ -34,16 +34,16 @@ jobs:
 
   - job: Linux
     pool:
-      vmImage: ubuntu-16.04
+      vmImage: ubuntu-latest
     strategy:
       maxParallel: 3
       matrix:
         node-12:
           node_version: ^12.0.0
-          webpack_version: 5.0.0-beta.2
+          webpack_version: next
         node-10:
           node_version: ^10.13.0
-          webpack_version: 5.0.0-beta.2
+          webpack_version: next
         node-10-v4:
           node_version: ^10.13.0
           webpack_version: 4
@@ -82,16 +82,16 @@ jobs:
 
   - job: macOS
     pool:
-      vmImage: macOS-10.14
+      vmImage: macOS-latest
     strategy:
       maxParallel: 3
       matrix:
         node-12:
           node_version: ^12.0.0
-          webpack_version: 5.0.0-beta.2
+          webpack_version: next
         node-10:
           node_version: ^10.13.0
-          webpack_version: 5.0.0-beta.2
+          webpack_version: next
         node-10-v4:
           node_version: ^10.13.0
           webpack_version: 4
@@ -130,16 +130,16 @@ jobs:
 
   - job: Windows
     pool:
-      vmImage: windows-2019
+      vmImage: windows-latest
     strategy:
       maxParallel: 3
       matrix:
         node-12:
           node_version: ^12.0.0
-          webpack_version: 5.0.0-beta.2
+          webpack_version: next
         node-10:
           node_version: ^10.13.0
-          webpack_version: 5.0.0-beta.2
+          webpack_version: next
         node-10-v4:
           node_version: ^10.13.0
           webpack_version: 4

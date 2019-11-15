@@ -1,6 +1,6 @@
 import path from 'path';
 
-import MemoryFileSystem from 'memory-fs';
+import { createFsFromVolume, Volume } from 'memfs';
 
 import DevMiddlewareError from '../DevMiddlewareError';
 
@@ -15,40 +15,37 @@ export default function setupOutputFileSystem(compiler, context) {
     );
   }
 
-  let fileSystem;
+  let outputFileSystem;
 
-  // store our files in memory
-  const isConfiguredOutputFileSystem = context.options.outputFileSystem;
-  const isMemoryFs =
-    !isConfiguredOutputFileSystem &&
-    !compiler.compilers &&
-    compiler.outputFileSystem instanceof MemoryFileSystem;
-
-  if (isConfiguredOutputFileSystem) {
+  if (context.options.outputFileSystem) {
     // eslint-disable-next-line no-shadow
-    const { outputFileSystem } = context.options;
+    const { outputFileSystem: outputFileSystemFromOptions } = context.options;
 
-    if (typeof outputFileSystem.join !== 'function') {
-      // very shallow check
+    // Todo remove when we drop webpack@4 support
+    if (typeof outputFileSystemFromOptions.join !== 'function') {
       throw new Error(
         'Invalid options: options.outputFileSystem.join() method is expected'
       );
     }
 
-    // eslint-disable-next-line no-param-reassign
-    compiler.outputFileSystem = outputFileSystem;
-    fileSystem = outputFileSystem;
-  } else if (isMemoryFs) {
-    fileSystem = compiler.outputFileSystem;
-  } else {
-    fileSystem = new MemoryFileSystem();
+    // Todo remove when we drop webpack@4 support
+    if (typeof outputFileSystemFromOptions.mkdirp !== 'function') {
+      throw new Error(
+        'Invalid options: options.outputFileSystem.mkdirp() method is expected'
+      );
+    }
 
-    // eslint-disable-next-line no-param-reassign
-    compiler.outputFileSystem = fileSystem;
+    outputFileSystem = outputFileSystemFromOptions;
+  } else {
+    outputFileSystem = createFsFromVolume(new Volume());
+    // Todo remove when we drop webpack@4 support
+    outputFileSystem.join = path.join.bind(path);
   }
 
   // eslint-disable-next-line no-param-reassign
-  context.outputFileSystem = fileSystem;
+  compiler.outputFileSystem = outputFileSystem;
+  // eslint-disable-next-line no-param-reassign
+  context.outputFileSystem = outputFileSystem;
 }
 
 module.exports = setupOutputFileSystem;
