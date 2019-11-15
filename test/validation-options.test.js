@@ -66,6 +66,7 @@ describe('validation', () => {
       success: [
         {
           join: () => {},
+          mkdirp: () => {},
         },
       ],
       failure: [false],
