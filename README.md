@@ -235,11 +235,12 @@ middleware(compiler, {
 ### outputFileSystem
 
 Type: `Object`  
-Default: `MemoryFileSystem`
+Default: [memfs](https://github.com/streamich/memfs)
 
-Set the default file system which will be used by webpack as primary destination of generated files. Default is set to webpack's default file system: [memory-fs](https://github.com/webpack/memory-fs). This option isn't affected by the [writeToDisk](#writeToDisk) option.
+Set the default file system which will be used by webpack as primary destination of generated files.
+This option isn't affected by the [writeToDisk](#writeToDisk) option.
 
-**Note:** As of 3.5.x version of the middleware you have to provide `.join()` method to the `outputFileSystem` instance manually.
+You have to provide `.join()` and `mkdirp` method to the `outputFileSystem` instance manually for compatibility with `webpack@4`.
 
 This can be done simply by using `path.join`:
 
@@ -247,17 +248,16 @@ This can be done simply by using `path.join`:
 const webpack = require('webpack');
 const path = require('path');
 const myOutputFileSystem = require('my-fs');
+const mkdirp = require('mkdirp');
 
-myOutputFileSystem.join = path.join; // no need to bind
+myOutputFileSystem.join = path.join.bind(path); // no need to bind
+myOutputFileSystem.mkdirp = mkdirp.bind(mkdirp); // no need to bind
 
-const configuration = {
+const compiler = webpack({
   /* Webpack configuration */
-};
-const compiler = webpack(configuration);
-
-middleware(compiler, {
-  outputFileSystem: myOutputFileSystem,
 });
+
+middleware(compiler, { outputFileSystem: myOutputFileSystem });
 ```
 
 ## API
