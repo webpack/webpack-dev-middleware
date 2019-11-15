@@ -3,7 +3,7 @@ import path from 'path';
 
 import express from 'express';
 import request from 'supertest';
-import MemoryFileSystem from 'memory-fs';
+import memfs, { createFsFromVolume, Volume } from 'memfs';
 
 import middleware from '../src';
 
@@ -47,16 +47,12 @@ describe('middleware', () => {
 
   describe('basic', () => {
     describe('should work with difference requests', () => {
+      let compiler;
+
       beforeAll((done) => {
         app = express();
 
-        const compiler = getCompiler({
-          ...webpackConfig,
-          output: {
-            filename: 'bundle.js',
-            path: '/',
-          },
-        });
+        compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
           stats: 'errors-only',
@@ -74,23 +70,33 @@ describe('middleware', () => {
 
         listen = listenShorthand(done);
 
-        // Hack to add a mock HMR json file to the in-memory outputFileSystem.
+        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+          recursive: true,
+        });
         instance.context.outputFileSystem.writeFileSync(
-          '/123a123412.hot-update.json',
+          path.resolve(compiler.outputPath, '123a123412.hot-update.json'),
           '["hi"]'
         );
         // Add a nested directory and index.html inside
-        instance.context.outputFileSystem.mkdirSync('/reference');
-        instance.context.outputFileSystem.mkdirSync('/reference/mono-v6.x.x');
+        // Add a nested directory and index.html inside
+        instance.context.outputFileSystem.mkdirSync(
+          path.resolve(compiler.outputPath, 'reference')
+        );
+        instance.context.outputFileSystem.mkdirSync(
+          path.resolve(compiler.outputPath, 'reference/mono-v6.x.x')
+        );
         instance.context.outputFileSystem.writeFileSync(
-          '/reference/mono-v6.x.x/index.html',
+          path.resolve(compiler.outputPath, 'reference/mono-v6.x.x/index.html'),
           'My Index.'
         );
         instance.context.outputFileSystem.writeFileSync(
-          '/hello.wasm',
+          path.resolve(compiler.outputPath, 'hello.wasm'),
           'welcome'
         );
-        instance.context.outputFileSystem.writeFileSync('/3dAr.usdz', '010101');
+        instance.context.outputFileSystem.writeFileSync(
+          path.resolve(compiler.outputPath, '3dAr.usdz'),
+          '010101'
+        );
       });
 
       afterAll((done) => {
@@ -101,10 +107,8 @@ describe('middleware', () => {
         request(app)
           .get('/public/bundle.js')
           .expect(200, () => {
-            const bundlePath = path.join(
-              __dirname,
-              '../fixtures/server-test/bundle.js'
-            );
+            const bundlePath = path.resolve(compiler.outputPath, 'bundle.js');
+
             expect(fs.existsSync(bundlePath)).toBe(false);
             done();
           });
@@ -112,7 +116,7 @@ describe('middleware', () => {
 
       it('GET request to bundle file', (done) => {
         const bundleData = instance.context.outputFileSystem.readFileSync(
-          '/bundle.js'
+          path.resolve(compiler.outputPath, 'bundle.js')
         );
         const contentLength = bundleData.byteLength.toString();
 
@@ -125,7 +129,7 @@ describe('middleware', () => {
 
       it('HEAD request to bundle file', (done) => {
         const contentLength = instance.context.outputFileSystem
-          .readFileSync('/bundle.js')
+          .readFileSync(path.resolve(compiler.outputPath, 'bundle.js'))
           .byteLength.toString();
 
         request(app)
@@ -144,7 +148,7 @@ describe('middleware', () => {
 
       it('request to image', (done) => {
         const contentLength = instance.context.outputFileSystem
-          .readFileSync('/svg.svg')
+          .readFileSync(path.resolve(compiler.outputPath, 'svg.svg'))
           .byteLength.toString();
 
         request(app)
@@ -163,7 +167,7 @@ describe('middleware', () => {
 
       it('request to HMR json', (done) => {
         const manifestData = instance.context.outputFileSystem.readFileSync(
-          '/123a123412.hot-update.json'
+          path.resolve(compiler.outputPath, '123a123412.hot-update.json')
         );
         const contentLength = manifestData.byteLength.toString();
 
@@ -184,7 +188,7 @@ describe('middleware', () => {
 
       it('request to subdirectory without trailing slash', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          '/reference/mono-v6.x.x/index.html'
+          path.resolve(compiler.outputPath, 'reference/mono-v6.x.x/index.html')
         );
         const contentLength = fileData.byteLength.toString();
 
@@ -220,7 +224,7 @@ describe('middleware', () => {
 
       it('request to hello.wasm', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          '/hello.wasm'
+          path.resolve(compiler.outputPath, 'hello.wasm')
         );
         const contentLength = fileData.byteLength.toString();
 
@@ -233,7 +237,7 @@ describe('middleware', () => {
 
       it('request to 3dAr.usdz', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          '/3dAr.usdz'
+          path.resolve(compiler.outputPath, '3dAr.usdz')
         );
         const contentLength = fileData.byteLength.toString();
 
@@ -432,13 +436,7 @@ describe('middleware', () => {
       beforeAll((done) => {
         app = express();
 
-        const compiler = getCompiler({
-          ...webpackConfig,
-          output: {
-            filename: 'bundle.js',
-            path: '/',
-          },
-        });
+        const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
           stats: 'errors-only',
@@ -453,8 +451,11 @@ describe('middleware', () => {
 
         listen = listenShorthand(done);
 
+        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+          recursive: true,
+        });
         instance.context.outputFileSystem.writeFileSync(
-          '/Index.phtml',
+          path.resolve(compiler.outputPath, 'Index.phtml'),
           'welcome'
         );
       });
@@ -474,13 +475,7 @@ describe('middleware', () => {
       beforeAll((done) => {
         app = express();
 
-        const compiler = getCompiler({
-          ...webpackConfig,
-          output: {
-            filename: 'bundle.js',
-            path: '/',
-          },
-        });
+        const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
           stats: 'errors-only',
@@ -496,8 +491,11 @@ describe('middleware', () => {
 
         listen = listenShorthand(done);
 
+        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+          recursive: true,
+        });
         instance.context.outputFileSystem.writeFileSync(
-          '/Index.phtml',
+          path.resolve(compiler.outputPath, 'Index.phtml'),
           'welcome'
         );
       });
@@ -969,13 +967,7 @@ describe('middleware', () => {
       beforeAll((done) => {
         app = express();
 
-        const compiler = getCompiler({
-          ...webpackConfig,
-          output: {
-            filename: 'bundle.js',
-            path: '/',
-          },
-        });
+        const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
           stats: 'errors-only',
@@ -1058,17 +1050,29 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should use "MemoryFileSystem" by default', () => {
-        expect(compiler.outputFileSystem instanceof MemoryFileSystem).toBe(
-          true
+      it('should use "memfs" by default', () => {
+        const { Stats } = memfs;
+
+        expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
+        expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
+          Stats
         );
         expect(
-          instance.context.outputFileSystem instanceof MemoryFileSystem
+          Object.prototype.hasOwnProperty.call(
+            compiler.outputFileSystem,
+            'join'
+          )
+        ).toBe(true);
+        expect(
+          Object.prototype.hasOwnProperty.call(
+            compiler.outputFileSystem,
+            'mkdirp'
+          )
         ).toBe(true);
       });
     });
 
-    describe('with "MemoryFileSystem" value on compiler', () => {
+    describe('with configured value (native fs)', () => {
       let compiler;
 
       beforeAll((done) => {
@@ -1076,38 +1080,10 @@ describe('middleware', () => {
 
         compiler = getCompiler(webpackConfig);
 
-        compiler.outputFileSystem = new MemoryFileSystem();
+        const configuredFs = fs;
 
-        instance = middleware(compiler);
-
-        app.use(instance);
-
-        listen = listenShorthand(done);
-      });
-
-      afterAll(close);
-
-      it('should use "outputFileSystem" from compiler', () => {
-        expect(compiler.outputFileSystem instanceof MemoryFileSystem).toBe(
-          true
-        );
-        expect(
-          instance.context.outputFileSystem instanceof MemoryFileSystem
-        ).toBe(true);
-      });
-    });
-
-    describe('with configured value', () => {
-      const configuredFs = fs;
-
-      configuredFs.join = path.join;
-
-      let compiler;
-
-      beforeAll((done) => {
-        app = express();
-
-        compiler = getCompiler(webpackConfig);
+        configuredFs.join = path.join.bind(path);
+        configuredFs.mkdirp = () => {};
 
         instance = middleware(compiler, {
           outputFileSystem: configuredFs,
@@ -1120,20 +1096,93 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should use MemoryFileSystem by default', () => {
-        expect(compiler.outputFileSystem).toEqual(configuredFs);
-        expect(instance.context.outputFileSystem).toEqual(configuredFs);
+      it('should use configurated output file system', () => {
+        const { Stats } = fs;
+
+        expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
+        expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
+          Stats
+        );
+        expect(
+          Object.prototype.hasOwnProperty.call(
+            compiler.outputFileSystem,
+            'join'
+          )
+        ).toBe(true);
+        expect(
+          Object.prototype.hasOwnProperty.call(
+            compiler.outputFileSystem,
+            'mkdirp'
+          )
+        ).toBe(true);
       });
     });
 
-    describe('should throw error on invalid fs', () => {
+    describe('with configured value (memfs)', () => {
+      let compiler;
+
+      beforeAll((done) => {
+        app = express();
+
+        compiler = getCompiler(webpackConfig);
+
+        const configuredFs = createFsFromVolume(new Volume());
+
+        configuredFs.join = path.join.bind(path);
+
+        instance = middleware(compiler, {
+          outputFileSystem: configuredFs,
+        });
+
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should use configurated output file system', () => {
+        const { Stats } = memfs;
+
+        expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
+        expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
+          Stats
+        );
+        expect(
+          Object.prototype.hasOwnProperty.call(
+            compiler.outputFileSystem,
+            'join'
+          )
+        ).toBe(true);
+        expect(
+          Object.prototype.hasOwnProperty.call(
+            compiler.outputFileSystem,
+            'mkdirp'
+          )
+        ).toBe(true);
+      });
+    });
+
+    describe('should throw error on invalid fs - no join method', () => {
       it('without "join" method', () => {
         expect(() => {
           const compiler = getCompiler(webpackConfig);
 
-          middleware(compiler, { outputFileSystem: {} });
+          middleware(compiler, { outputFileSystem: { mkdirp: () => {} } });
         }).toThrow(
           'Invalid options: options.outputFileSystem.join() method is expected'
+        );
+      });
+    });
+
+    describe('should throw error on invalid fs - no mkdirp method', () => {
+      it('without "join" method', () => {
+        expect(() => {
+          const compiler = getCompiler(webpackConfig);
+
+          middleware(compiler, { outputFileSystem: { join: () => {} } });
+        }).toThrow(
+          'Invalid options: options.outputFileSystem.mkdirp() method is expected'
         );
       });
     });
@@ -1200,13 +1249,7 @@ describe('middleware', () => {
       beforeAll((done) => {
         app = express();
 
-        const compiler = getCompiler({
-          ...webpackConfig,
-          output: {
-            filename: 'bundle.js',
-            path: '/',
-          },
-        });
+        const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
           stats: 'errors-only',
@@ -1222,8 +1265,11 @@ describe('middleware', () => {
 
         listen = listenShorthand(done);
 
+        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+          recursive: true,
+        });
         instance.context.outputFileSystem.writeFileSync(
-          '/index.custom',
+          path.resolve(compiler.outputPath, 'index.custom'),
           'hello'
         );
       });
@@ -1242,13 +1288,7 @@ describe('middleware', () => {
       beforeAll((done) => {
         app = express();
 
-        const compiler = getCompiler({
-          ...webpackConfig,
-          output: {
-            filename: 'bundle.js',
-            path: '/',
-          },
-        });
+        const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
           stats: 'errors-only',
@@ -1260,8 +1300,11 @@ describe('middleware', () => {
 
         listen = listenShorthand(done);
 
+        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+          recursive: true,
+        });
         instance.context.outputFileSystem.writeFileSync(
-          '/noextension',
+          path.resolve(compiler.outputPath, 'noextension'),
           'hello'
         );
       });
@@ -1281,13 +1324,7 @@ describe('middleware', () => {
       beforeAll((done) => {
         app = express();
 
-        const compiler = getCompiler({
-          ...webpackConfig,
-          output: {
-            filename: 'bundle.js',
-            path: '/',
-          },
-        });
+        const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
           stats: 'errors-only',
@@ -1300,7 +1337,12 @@ describe('middleware', () => {
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync('/custom.html');
+        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+          recursive: true,
+        });
+        instance.context.outputFileSystem.mkdirSync(
+          path.resolve(compiler.outputPath, 'custom.html')
+        );
       });
 
       afterAll(close);
@@ -1335,13 +1377,7 @@ describe('middleware', () => {
       beforeAll((done) => {
         app = express();
 
-        compiler = getCompiler({
-          ...webpackConfig,
-          output: {
-            filename: 'bundle.js',
-            path: '/',
-          },
-        });
+        compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
           stats: 'errors-warnings',
@@ -1396,13 +1432,7 @@ describe('middleware', () => {
       beforeAll((done) => {
         app = express();
 
-        compiler = getCompiler({
-          ...webpackErrorConfig,
-          output: {
-            filename: 'bundle.js',
-            path: '/',
-          },
-        });
+        compiler = getCompiler(webpackErrorConfig);
 
         instance = middleware(compiler, {
           stats: 'errors-warnings',
@@ -1457,13 +1487,7 @@ describe('middleware', () => {
       beforeAll((done) => {
         app = express();
 
-        compiler = getCompiler({
-          ...webpackWarningConfig,
-          output: {
-            filename: 'bundle.js',
-            path: '/',
-          },
-        });
+        compiler = getCompiler(webpackWarningConfig);
 
         instance = middleware(compiler, {
           stats: 'errors-warnings',
@@ -1508,13 +1532,7 @@ describe('middleware', () => {
 
     describe('should log error in "watch" method', () => {
       it('on startup', () => {
-        const compiler = getCompiler({
-          ...webpackConfig,
-          output: {
-            filename: 'bundle.js',
-            path: '/',
-          },
-        });
+        const compiler = getCompiler(webpackConfig);
 
         const watchSpy = jest
           .spyOn(compiler, 'watch')
