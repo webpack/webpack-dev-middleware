@@ -30,11 +30,6 @@ export default function setupWriteToDisk(context) {
 
             let { outputPath } = compiler;
 
-            // TODO Why? Need remove in future major release
-            if (outputPath === '/') {
-              outputPath = compiler.context;
-            }
-
             outputPath = compilation.getPath(outputPath, {});
             content = info;
             targetPath = path.join(outputPath, targetFile);
