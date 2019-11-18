@@ -114,15 +114,7 @@ export default function wrapper(context) {
           }
         }
 
-        // Express automatically sets the statusCode to 200, but not all servers do (Koa).
-        // eslint-disable-next-line no-param-reassign
-        res.statusCode = res.statusCode || 200;
-
-        if (res.send) {
-          res.send(content);
-        } else {
-          res.end(content);
-        }
+        res.send(content);
 
         resolve();
       }
