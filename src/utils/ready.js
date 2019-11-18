@@ -6,7 +6,7 @@ export default function ready(context, fn, req) {
 
   const name = req.url || fn.name;
 
-  context.log.info(`wait until bundle finished${name ? `: ${name}` : ''}`);
+  context.logger.info(`wait until bundle finished${name ? `: ${name}` : ''}`);
 
   context.callbacks.push(fn);
 }

@@ -8,6 +8,7 @@ import memfs, { createFsFromVolume, Volume } from 'memfs';
 import middleware from '../src';
 
 import getCompiler from './helpers/getCompiler';
+import GetLogsPlugin from './helpers/GetLogsPlugin';
 
 import { mockRequest, mockResponse } from './mock-express';
 
@@ -22,8 +23,6 @@ describe('middleware', () => {
   let instance;
   let listen;
   let app;
-
-  const logLevel = 'error';
 
   function listenShorthand(done) {
     return app.listen(8000, '127.0.0.1', (err) => {
@@ -56,7 +55,6 @@ describe('middleware', () => {
 
         instance = middleware(compiler, {
           stats: 'errors-only',
-          logLevel,
           publicPath: '/public/',
           mimeTypes: {
             typeMap: {
@@ -269,10 +267,7 @@ describe('middleware', () => {
 
         const compiler = getCompiler(webpackConfig);
 
-        instance = middleware(compiler, {
-          stats: 'errors-only',
-          logLevel,
-        });
+        instance = middleware(compiler, { stats: 'errors-only' });
 
         instance(req, res, jest.fn()).then(done);
       });
@@ -291,10 +286,7 @@ describe('middleware', () => {
 
         const compiler = getCompiler(webpackConfig);
 
-        instance = middleware(compiler, {
-          stats: 'errors-only',
-          logLevel,
-        });
+        instance = middleware(compiler, { stats: 'errors-only' });
 
         app.use(instance);
 
@@ -371,7 +363,6 @@ describe('middleware', () => {
 
         instance = middleware(compiler, {
           stats: 'errors-only',
-          logLevel,
           publicPath: '/',
         });
 
@@ -399,10 +390,7 @@ describe('middleware', () => {
 
         const compiler = getCompiler(webpackClientServerConfig);
 
-        instance = middleware(compiler, {
-          stats: 'errors-only',
-          logLevel,
-        });
+        instance = middleware(compiler, { stats: 'errors-only' });
 
         app.use(instance);
 
@@ -440,7 +428,6 @@ describe('middleware', () => {
 
         instance = middleware(compiler, {
           stats: 'errors-only',
-          logLevel,
           index: 'Index.phtml',
           mimeTypes: {
             'text/html': ['phtml'],
@@ -479,7 +466,6 @@ describe('middleware', () => {
 
         instance = middleware(compiler, {
           stats: 'errors-only',
-          logLevel,
           index: 'Index.phtml',
           mimeTypes: {
             typeMap: { 'text/html': ['phtml'] },
@@ -528,11 +514,7 @@ describe('middleware', () => {
 
       spy = jest.spyOn(compiler, 'watch');
 
-      instance = middleware(compiler, {
-        stats: 'errors-only',
-        logLevel,
-        watchOptions,
-      });
+      instance = middleware(compiler, { stats: 'errors-only', watchOptions });
 
       app.use(instance);
 
@@ -559,7 +541,6 @@ describe('middleware', () => {
 
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
         writeToDisk: value,
       });
 
@@ -580,7 +561,6 @@ describe('middleware', () => {
 
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
         writeToDisk: value,
       });
 
@@ -601,7 +581,6 @@ describe('middleware', () => {
 
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
         writeToDisk: value,
       });
 
@@ -820,7 +799,6 @@ describe('middleware', () => {
       instance = middleware(compiler, {
         stats: 'errors-only',
         methods: ['POST'],
-        logLevel,
         publicPath: '/public/',
       });
 
@@ -859,7 +837,6 @@ describe('middleware', () => {
 
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
         headers: { 'X-nonsense-1': 'yes', 'X-nonsense-2': 'no' },
       });
 
@@ -888,7 +865,6 @@ describe('middleware', () => {
 
         instance = middleware(compiler, {
           stats: 'errors-only',
-          logLevel,
           lazy: false,
           publicPath: '/',
         });
@@ -915,7 +891,6 @@ describe('middleware', () => {
 
         instance = middleware(compiler, {
           stats: 'errors-only',
-          logLevel,
           lazy: false,
           publicPath: '/',
         });
@@ -942,7 +917,6 @@ describe('middleware', () => {
 
         instance = middleware(compiler, {
           stats: 'errors-only',
-          logLevel,
           lazy: true,
           publicPath: '/',
         });
@@ -971,7 +945,6 @@ describe('middleware', () => {
 
         instance = middleware(compiler, {
           stats: 'errors-only',
-          logLevel,
           publicPath: '/public/',
         });
 
@@ -1003,7 +976,6 @@ describe('middleware', () => {
 
       instance = middleware(compiler, {
         stats: 'errors-only',
-        logLevel,
         serverSideRender: true,
       });
 
@@ -1197,7 +1169,6 @@ describe('middleware', () => {
 
         instance = middleware(compiler, {
           stats: 'errors-only',
-          logLevel,
           index: false,
           publicPath: '/',
         });
@@ -1225,7 +1196,6 @@ describe('middleware', () => {
 
         instance = middleware(compiler, {
           stats: 'errors-only',
-          logLevel,
           index: true,
           publicPath: '/',
         });
@@ -1253,7 +1223,6 @@ describe('middleware', () => {
 
         instance = middleware(compiler, {
           stats: 'errors-only',
-          logLevel,
           index: 'index.custom',
           mimeTypes: {
             'text/html': ['custom'],
@@ -1292,7 +1261,6 @@ describe('middleware', () => {
 
         instance = middleware(compiler, {
           stats: 'errors-only',
-          logLevel,
           index: 'noextension',
         });
 
@@ -1328,7 +1296,6 @@ describe('middleware', () => {
 
         instance = middleware(compiler, {
           stats: 'errors-only',
-          logLevel,
           index: 'custom.html',
           publicPath: '/',
         });
@@ -1356,35 +1323,19 @@ describe('middleware', () => {
   });
 
   describe('logger', () => {
-    function normalizeLogs(logs) {
-      if (Array.isArray(logs)) {
-        return logs.map((log) => normalizeLogs(log));
-      }
-
-      return logs.toString().trim();
-    }
-
     describe('should log on successfully build', () => {
       let compiler;
-
-      const loggerMock = {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-      };
+      let getLogsPlugin;
 
       beforeAll((done) => {
         app = express();
 
         compiler = getCompiler(webpackConfig);
 
-        instance = middleware(compiler, {
-          stats: 'errors-warnings',
-          logLevel: 'info',
-        });
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
 
-        instance.context.log = loggerMock;
+        instance = middleware(compiler, { stats: 'errors-warnings' });
 
         app.use(instance);
 
@@ -1401,18 +1352,7 @@ describe('middleware', () => {
             instance.invalidate();
 
             instance.waitUntilValid(() => {
-              expect(
-                normalizeLogs(loggerMock.debug.mock.calls)
-              ).toMatchSnapshot('debug');
-              expect(normalizeLogs(loggerMock.info.mock.calls)).toMatchSnapshot(
-                'info'
-              );
-              expect(normalizeLogs(loggerMock.warn.mock.calls)).toMatchSnapshot(
-                'warn'
-              );
-              expect(
-                normalizeLogs(loggerMock.error.mock.calls)
-              ).toMatchSnapshot('error');
+              expect(getLogsPlugin.logs).toMatchSnapshot();
 
               done();
             });
@@ -1422,24 +1362,17 @@ describe('middleware', () => {
 
     describe('should log on unsuccessful build', () => {
       let compiler;
-      const loggerMock = {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-      };
+      let getLogsPlugin;
 
       beforeAll((done) => {
         app = express();
 
         compiler = getCompiler(webpackErrorConfig);
 
-        instance = middleware(compiler, {
-          stats: 'errors-warnings',
-          logLevel: 'info',
-        });
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
 
-        instance.context.log = loggerMock;
+        instance = middleware(compiler, { stats: 'errors-warnings' });
 
         app.use(instance);
 
@@ -1456,18 +1389,7 @@ describe('middleware', () => {
             instance.invalidate();
 
             instance.waitUntilValid(() => {
-              expect(
-                normalizeLogs(loggerMock.debug.mock.calls)
-              ).toMatchSnapshot('debug');
-              expect(normalizeLogs(loggerMock.info.mock.calls)).toMatchSnapshot(
-                'info'
-              );
-              expect(normalizeLogs(loggerMock.warn.mock.calls)).toMatchSnapshot(
-                'warn'
-              );
-              expect(
-                normalizeLogs(loggerMock.error.mock.calls)
-              ).toMatchSnapshot('error');
+              expect(getLogsPlugin.logs).toMatchSnapshot();
 
               done();
             });
@@ -1477,24 +1399,17 @@ describe('middleware', () => {
 
     describe('should log on warning build', () => {
       let compiler;
-      const loggerMock = {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-      };
+      let getLogsPlugin;
 
       beforeAll((done) => {
         app = express();
 
         compiler = getCompiler(webpackWarningConfig);
 
-        instance = middleware(compiler, {
-          stats: 'errors-warnings',
-          logLevel: 'info',
-        });
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
 
-        instance.context.log = loggerMock;
+        instance = middleware(compiler, { stats: 'errors-warnings' });
 
         app.use(instance);
 
@@ -1511,18 +1426,7 @@ describe('middleware', () => {
             instance.invalidate();
 
             instance.waitUntilValid(() => {
-              expect(
-                normalizeLogs(loggerMock.debug.mock.calls)
-              ).toMatchSnapshot('debug');
-              expect(normalizeLogs(loggerMock.info.mock.calls)).toMatchSnapshot(
-                'info'
-              );
-              expect(normalizeLogs(loggerMock.warn.mock.calls)).toMatchSnapshot(
-                'warn'
-              );
-              expect(
-                normalizeLogs(loggerMock.error.mock.calls)
-              ).toMatchSnapshot('error');
+              expect(getLogsPlugin.logs).toMatchSnapshot();
 
               done();
             });
@@ -1531,6 +1435,8 @@ describe('middleware', () => {
     });
 
     describe('should log error in "watch" method', () => {
+      let getLogsPlugin;
+
       it('on startup', () => {
         const compiler = getCompiler(webpackConfig);
 
@@ -1544,31 +1450,12 @@ describe('middleware', () => {
             callback(error);
           });
 
-        const loggerMock = {
-          debug: jest.fn(),
-          info: jest.fn(),
-          warn: jest.fn(),
-          error: jest.fn(),
-        };
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
 
-        instance = middleware(compiler, {
-          stats: 'errors-only',
-          logger: loggerMock,
-          logLevel: 'silent',
-        });
+        instance = middleware(compiler, { stats: 'errors-only' });
 
-        expect(normalizeLogs(loggerMock.debug.mock.calls)).toMatchSnapshot(
-          'debug'
-        );
-        expect(normalizeLogs(loggerMock.info.mock.calls)).toMatchSnapshot(
-          'info'
-        );
-        expect(normalizeLogs(loggerMock.warn.mock.calls)).toMatchSnapshot(
-          'warn'
-        );
-        expect(normalizeLogs(loggerMock.error.mock.calls)).toMatchSnapshot(
-          'error'
-        );
+        expect(getLogsPlugin.logs).toMatchSnapshot();
 
         instance.close();
 

@@ -21,6 +21,9 @@ module.exports = [
         },
       ],
     },
+    infrastructureLogging: {
+      level: 'none'
+    }
   },
   {
     mode: 'development',
@@ -30,5 +33,8 @@ module.exports = [
       filename: 'bar.js',
       path: path.resolve(__dirname, 'server'),
     },
+    infrastructureLogging: {
+      level: 'none'
+    }
   },
 ];
