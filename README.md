@@ -99,55 +99,6 @@ Default: `undefined`
 This option instructs the module to operate in 'lazy' mode, meaning that it won't
 recompile when files change, but rather on each request.
 
-### logger
-
-Type: `Object`  
-Default: [`webpack-log`](https://github.com/webpack-contrib/webpack-log/blob/master/index.js)
-
-In the rare event that a user would like to provide a custom logging interface,
-this property allows the user to assign one. The module leverages
-[`webpack-log`](https://github.com/webpack-contrib/webpack-log#readme)
-for creating the [`loglevelnext`](https://github.com/shellscape/loglevelnext#readme)
-logging management by default. Any custom logger must adhere to the same
-exports for compatibility. Specifically, all custom loggers must have the
-following exported methods at a minimum:
-
-- `log.trace`
-- `log.debug`
-- `log.info`
-- `log.warn`
-- `log.error`
-
-Please see the documentation for `loglevel` for more information.
-
-### logLevel
-
-Type: `String`  
-Default: `'info'`
-
-This property defines the level of messages that the module will log. Valid levels
-include:
-
-- `trace`
-- `debug`
-- `info`
-- `warn`
-- `error`
-- `silent`
-
-Setting a log level means that all other levels below it will be visible in the
-console. Setting `logLevel: 'silent'` will hide all console output. The module
-leverages [`webpack-log`](https://github.com/webpack-contrib/webpack-log#readme)
-for logging management, and more information can be found on its page.
-
-### logTime
-
-Type: `Boolean`  
-Default: `false`
-
-If `true` the log output of the module will be prefixed by a timestamp in the
-`HH:mm:ss` format.
-
 ### mimeTypes
 
 Type: `Object`  

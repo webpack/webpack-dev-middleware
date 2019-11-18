@@ -4,18 +4,6 @@ import getCompiler from './helpers/getCompiler';
 
 describe('validation', () => {
   const tests = {
-    logLevel: {
-      success: ['info', 'warn', 'error', 'debug', 'trace', 'silent'],
-      failure: ['foo'],
-    },
-    logTime: {
-      success: [true, false],
-      failure: [0],
-    },
-    logger: {
-      success: [{}],
-      failure: ['foo'],
-    },
     mimeTypes: {
       success: [{}],
       failure: ['foo'],

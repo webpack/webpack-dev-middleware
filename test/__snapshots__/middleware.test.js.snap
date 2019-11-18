@@ -1,119 +1,169 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`middleware logger should log error in "watch" method on startup: debug 1`] = `Array []`;
-
-exports[`middleware logger should log error in "watch" method on startup: error 1`] = `
+exports[`middleware logger should log error in "watch" method on startup 1`] = `
 Array [
   Array [
-    "Error: Error in Watch method",
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "Error: Error in Watch method",
+    ],
   ],
 ]
 `;
 
-exports[`middleware logger should log error in "watch" method on startup: info 1`] = `Array []`;
-
-exports[`middleware logger should log error in "watch" method on startup: warn 1`] = `Array []`;
-
-exports[`middleware logger should log on successfully build logs: debug 1`] = `Array []`;
-
-exports[`middleware logger should log on successfully build logs: error 1`] = `Array []`;
-
-exports[`middleware logger should log on successfully build logs: info 1`] = `
+exports[`middleware logger should log on successfully build logs 1`] = `
 Array [
   Array [
-    "wait until bundle finished: /bundle.js",
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /bundle.js",
+    ],
   ],
   Array [
-    "Compiled successfully.",
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled successfully.",
+    ],
   ],
   Array [
-    "Compiling...",
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiling...",
+    ],
   ],
   Array [
-    "wait until bundle finished",
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished",
+    ],
   ],
   Array [
-    "Compiled successfully.",
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled successfully.",
+    ],
   ],
 ]
 `;
 
-exports[`middleware logger should log on successfully build logs: warn 1`] = `Array []`;
-
-exports[`middleware logger should log on unsuccessful build logs: debug 1`] = `Array []`;
-
-exports[`middleware logger should log on unsuccessful build logs: error 1`] = `
+exports[`middleware logger should log on unsuccessful build logs 1`] = `
 Array [
   Array [
-    "ERROR in ./foo.js 1:3
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR in ./foo.js 1:3
 Module parse failed: Unexpected token (1:3)
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
 > 1()2()3()
 |",
+    ],
   ],
   Array [
-    "ERROR in ./foo.js 1:3
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Failed to compile.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiling...",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR in ./foo.js 1:3
 Module parse failed: Unexpected token (1:3)
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
 > 1()2()3()
 |",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Failed to compile.",
+    ],
   ],
 ]
 `;
 
-exports[`middleware logger should log on unsuccessful build logs: info 1`] = `
+exports[`middleware logger should log on warning build logs 1`] = `
 Array [
   Array [
-    "wait until bundle finished: /bundle.js",
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /bundle.js",
+    ],
   ],
   Array [
-    "Failed to compile.",
+    "webpack-dev-middleware",
+    "warn",
+    Array [
+      "WARNING in Warning",
+    ],
   ],
   Array [
-    "Compiling...",
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled with warnings.",
+    ],
   ],
   Array [
-    "wait until bundle finished",
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiling...",
+    ],
   ],
   Array [
-    "Failed to compile.",
-  ],
-]
-`;
-
-exports[`middleware logger should log on unsuccessful build logs: warn 1`] = `Array []`;
-
-exports[`middleware logger should log on warning build logs: debug 1`] = `Array []`;
-
-exports[`middleware logger should log on warning build logs: error 1`] = `Array []`;
-
-exports[`middleware logger should log on warning build logs: info 1`] = `
-Array [
-  Array [
-    "wait until bundle finished: /bundle.js",
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished",
+    ],
   ],
   Array [
-    "Compiled with warnings.",
+    "webpack-dev-middleware",
+    "warn",
+    Array [
+      "WARNING in Warning",
+    ],
   ],
   Array [
-    "Compiling...",
-  ],
-  Array [
-    "wait until bundle finished",
-  ],
-  Array [
-    "Compiled with warnings.",
-  ],
-]
-`;
-
-exports[`middleware logger should log on warning build logs: warn 1`] = `
-Array [
-  Array [
-    "WARNING in Warning",
-  ],
-  Array [
-    "WARNING in Warning",
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled with warnings.",
+    ],
   ],
 ]
 `;
