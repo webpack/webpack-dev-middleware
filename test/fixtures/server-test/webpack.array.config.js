@@ -21,6 +21,9 @@ module.exports = [
         },
       ],
     },
+    infrastructureLogging: {
+      level: 'none'
+    }
   },
   {
     mode: 'development',
@@ -31,5 +34,8 @@ module.exports = [
       path: path.resolve(__dirname, 'js2'),
       publicPath: '/js2/',
     },
+    infrastructureLogging: {
+      level: 'none'
+    }
   },
 ];
