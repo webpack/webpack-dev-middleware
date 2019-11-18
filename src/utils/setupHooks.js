@@ -3,10 +3,7 @@ import reporter from './reporter';
 export default function setupHooks(context) {
   function invalid(callback) {
     if (context.state) {
-      reporter(context.options, {
-        log: context.log,
-        state: false,
-      });
+      reporter(context);
     }
 
     // We are now in invalid state
@@ -34,11 +31,7 @@ export default function setupHooks(context) {
       }
 
       // print webpack output
-      reporter(context.options, {
-        log: context.log,
-        state: true,
-        stats,
-      });
+      reporter(context, stats);
 
       // execute callback that are delayed
       const { callbacks } = context;

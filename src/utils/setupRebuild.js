@@ -6,7 +6,7 @@ export default function setupRebuild(context) {
 
       context.compiler.run((error) => {
         if (error) {
-          context.log.error(error);
+          context.logger.error(error);
         }
       });
     } else {

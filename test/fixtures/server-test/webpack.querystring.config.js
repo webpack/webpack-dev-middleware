@@ -17,4 +17,7 @@ module.exports = {
       },
     ],
   },
+  infrastructureLogging: {
+    level: 'none'
+  }
 };
