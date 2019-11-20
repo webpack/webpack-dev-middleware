@@ -25,9 +25,9 @@ describe('middleware', () => {
   let app;
 
   function listenShorthand(done) {
-    return app.listen(8000, '127.0.0.1', (err) => {
-      if (err) {
-        return done(err);
+    return app.listen((error) => {
+      if (error) {
+        return done(error);
       }
 
       return done();
@@ -49,8 +49,6 @@ describe('middleware', () => {
       let compiler;
 
       beforeAll((done) => {
-        app = express();
-
         compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
@@ -64,6 +62,7 @@ describe('middleware', () => {
           },
         });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -277,17 +276,15 @@ describe('middleware', () => {
 
     describe('should respect the "Content-Type" from other middleware', () => {
       beforeAll((done) => {
-        app = express();
-
-        app.use((req, res, next) => {
-          res.set('Content-Type', 'application/octet-stream');
-          next();
-        });
-
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, { stats: 'errors-only' });
 
+        app = express();
+        app.use((req, res, next) => {
+          res.set('Content-Type', 'application/octet-stream');
+          next();
+        });
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -357,8 +354,6 @@ describe('middleware', () => {
   describe('multi compiler', () => {
     describe('should works', () => {
       beforeAll((done) => {
-        app = express();
-
         const compiler = getCompiler(webpackMultiConfig);
 
         instance = middleware(compiler, {
@@ -366,6 +361,7 @@ describe('middleware', () => {
           publicPath: '/',
         });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -386,12 +382,11 @@ describe('middleware', () => {
 
     describe('should works with one "publicPath"', () => {
       beforeAll((done) => {
-        app = express();
-
         const compiler = getCompiler(webpackClientServerConfig);
 
         instance = middleware(compiler, { stats: 'errors-only' });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -422,8 +417,6 @@ describe('middleware', () => {
   describe('mimeTypes option', () => {
     describe('custom extensions', () => {
       beforeAll((done) => {
-        app = express();
-
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
@@ -434,6 +427,7 @@ describe('middleware', () => {
           },
         });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -460,8 +454,6 @@ describe('middleware', () => {
 
     describe('force option for overriding any previous mapping', () => {
       beforeAll((done) => {
-        app = express();
-
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
@@ -473,6 +465,7 @@ describe('middleware', () => {
           },
         });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -508,14 +501,13 @@ describe('middleware', () => {
     };
 
     beforeAll((done) => {
-      app = express();
-
       compiler = getCompiler(webpackConfig);
 
       spy = jest.spyOn(compiler, 'watch');
 
       instance = middleware(compiler, { stats: 'errors-only', watchOptions });
 
+      app = express();
       app.use(instance);
 
       listen = listenShorthand(done);
@@ -535,8 +527,6 @@ describe('middleware', () => {
 
   describe('writeToDisk option', () => {
     function writeToDisk(value, done) {
-      app = express();
-
       const compiler = getCompiler(webpackConfig);
 
       instance = middleware(compiler, {
@@ -544,6 +534,7 @@ describe('middleware', () => {
         writeToDisk: value,
       });
 
+      app = express();
       app.use(instance);
       app.use((req, res) => {
         res.sendStatus(200);
@@ -555,8 +546,6 @@ describe('middleware', () => {
     }
 
     function querystringToDisk(value, done) {
-      app = express();
-
       const compiler = getCompiler(webpackQuerystringConfig);
 
       instance = middleware(compiler, {
@@ -564,6 +553,7 @@ describe('middleware', () => {
         writeToDisk: value,
       });
 
+      app = express();
       app.use(instance);
       app.use((req, res) => {
         res.sendStatus(200);
@@ -575,8 +565,6 @@ describe('middleware', () => {
     }
 
     function multiToDisk(value, done) {
-      app = express();
-
       const compiler = getCompiler(webpackMultiConfig);
 
       instance = middleware(compiler, {
@@ -584,6 +572,7 @@ describe('middleware', () => {
         writeToDisk: value,
       });
 
+      app = express();
       app.use(instance);
       app.use((req, res) => {
         res.sendStatus(200);
@@ -792,8 +781,6 @@ describe('middleware', () => {
 
   describe('methods option', () => {
     beforeAll((done) => {
-      app = express();
-
       const compiler = getCompiler(webpackConfig);
 
       instance = middleware(compiler, {
@@ -802,6 +789,7 @@ describe('middleware', () => {
         publicPath: '/public/',
       });
 
+      app = express();
       app.use(instance);
 
       listen = listenShorthand(done);
@@ -831,8 +819,6 @@ describe('middleware', () => {
 
   describe('headers option', () => {
     beforeAll((done) => {
-      app = express();
-
       const compiler = getCompiler(webpackConfig);
 
       instance = middleware(compiler, {
@@ -840,6 +826,7 @@ describe('middleware', () => {
         headers: { 'X-nonsense-1': 'yes', 'X-nonsense-2': 'no' },
       });
 
+      app = express();
       app.use(instance);
 
       listen = listenShorthand(done);
@@ -859,8 +846,6 @@ describe('middleware', () => {
   describe('lazy option', () => {
     describe('with unspecified value', () => {
       beforeAll((done) => {
-        app = express();
-
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
@@ -869,6 +854,7 @@ describe('middleware', () => {
           publicPath: '/',
         });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -885,8 +871,6 @@ describe('middleware', () => {
 
     describe('with "false" value', () => {
       beforeAll((done) => {
-        app = express();
-
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
@@ -895,6 +879,7 @@ describe('middleware', () => {
           publicPath: '/',
         });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -911,8 +896,6 @@ describe('middleware', () => {
 
     describe('with "true" value', () => {
       beforeAll((done) => {
-        app = express();
-
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
@@ -921,6 +904,7 @@ describe('middleware', () => {
           publicPath: '/',
         });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -939,8 +923,6 @@ describe('middleware', () => {
   describe('publicPath option', () => {
     describe('with "string" value', () => {
       beforeAll((done) => {
-        app = express();
-
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
@@ -948,6 +930,7 @@ describe('middleware', () => {
           publicPath: '/public/',
         });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -970,8 +953,6 @@ describe('middleware', () => {
     let locals;
 
     beforeAll((done) => {
-      app = express();
-
       const compiler = getCompiler(webpackConfig);
 
       instance = middleware(compiler, {
@@ -979,6 +960,7 @@ describe('middleware', () => {
         serverSideRender: true,
       });
 
+      app = express();
       app.use(instance);
       app.use((req, res) => {
         // eslint-disable-next-line prefer-destructuring
@@ -1009,12 +991,11 @@ describe('middleware', () => {
       let compiler;
 
       beforeAll((done) => {
-        app = express();
-
         compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler);
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -1048,8 +1029,6 @@ describe('middleware', () => {
       let compiler;
 
       beforeAll((done) => {
-        app = express();
-
         compiler = getCompiler(webpackConfig);
 
         const configuredFs = fs;
@@ -1061,6 +1040,7 @@ describe('middleware', () => {
           outputFileSystem: configuredFs,
         });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -1094,8 +1074,6 @@ describe('middleware', () => {
       let compiler;
 
       beforeAll((done) => {
-        app = express();
-
         compiler = getCompiler(webpackConfig);
 
         const configuredFs = createFsFromVolume(new Volume());
@@ -1106,6 +1084,7 @@ describe('middleware', () => {
           outputFileSystem: configuredFs,
         });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -1163,8 +1142,6 @@ describe('middleware', () => {
   describe('index option', () => {
     describe('with "false" value', () => {
       beforeAll((done) => {
-        app = express();
-
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
@@ -1173,6 +1150,7 @@ describe('middleware', () => {
           publicPath: '/',
         });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -1190,8 +1168,6 @@ describe('middleware', () => {
 
     describe('with "true" value', () => {
       beforeAll((done) => {
-        app = express();
-
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
@@ -1200,6 +1176,7 @@ describe('middleware', () => {
           publicPath: '/',
         });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -1217,8 +1194,6 @@ describe('middleware', () => {
 
     describe('with "string" value', () => {
       beforeAll((done) => {
-        app = express();
-
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
@@ -1230,6 +1205,7 @@ describe('middleware', () => {
           publicPath: '/',
         });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -1255,8 +1231,6 @@ describe('middleware', () => {
 
     describe('with "string" value without extension', () => {
       beforeAll((done) => {
-        app = express();
-
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
@@ -1264,6 +1238,7 @@ describe('middleware', () => {
           index: 'noextension',
         });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -1290,8 +1265,6 @@ describe('middleware', () => {
 
     describe('with "string" value but index is directory', () => {
       beforeAll((done) => {
-        app = express();
-
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
@@ -1300,6 +1273,7 @@ describe('middleware', () => {
           publicPath: '/',
         });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -1328,8 +1302,6 @@ describe('middleware', () => {
       let getLogsPlugin;
 
       beforeAll((done) => {
-        app = express();
-
         compiler = getCompiler(webpackConfig);
 
         getLogsPlugin = new GetLogsPlugin();
@@ -1337,6 +1309,7 @@ describe('middleware', () => {
 
         instance = middleware(compiler, { stats: 'errors-warnings' });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -1365,8 +1338,6 @@ describe('middleware', () => {
       let getLogsPlugin;
 
       beforeAll((done) => {
-        app = express();
-
         compiler = getCompiler(webpackErrorConfig);
 
         getLogsPlugin = new GetLogsPlugin();
@@ -1374,6 +1345,7 @@ describe('middleware', () => {
 
         instance = middleware(compiler, { stats: 'errors-warnings' });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
@@ -1402,8 +1374,6 @@ describe('middleware', () => {
       let getLogsPlugin;
 
       beforeAll((done) => {
-        app = express();
-
         compiler = getCompiler(webpackWarningConfig);
 
         getLogsPlugin = new GetLogsPlugin();
@@ -1411,6 +1381,7 @@ describe('middleware', () => {
 
         instance = middleware(compiler, { stats: 'errors-warnings' });
 
+        app = express();
         app.use(instance);
 
         listen = listenShorthand(done);
