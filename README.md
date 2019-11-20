@@ -91,14 +91,6 @@ Default: `undefined`
 // The index path for web server, defaults to "index.html".
 // If falsy (but not undefined), the server will not respond to requests to the root URL.
 
-### lazy
-
-Type: `Boolean`  
-Default: `undefined`
-
-This option instructs the module to operate in 'lazy' mode, meaning that it won't
-recompile when files change, but rather on each request.
-
 ### mimeTypes
 
 Type: `Object`  
@@ -282,7 +274,7 @@ instance.waitUntilValid(() => {
 
 ### Multiple Successive Builds
 
-Watching (by means of `lazy: false`) will frequently cause multiple compilations
+Watching will frequently cause multiple compilations
 as the bundle changes during compilation. This is due in part to cross-platform
 differences in file watchers, so that webpack doesn't loose file changes when
 watched files change rapidly. If you run into this situation, please make use of

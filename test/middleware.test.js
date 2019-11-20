@@ -843,83 +843,6 @@ describe('middleware', () => {
     });
   });
 
-  describe('lazy option', () => {
-    describe('with unspecified value', () => {
-      beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
-
-        instance = middleware(compiler, {
-          stats: 'errors-only',
-          lazy: false,
-          publicPath: '/',
-        });
-
-        app = express();
-        app.use(instance);
-
-        listen = listenShorthand(done);
-      });
-
-      afterAll(close);
-
-      it('GET request to bundle file', (done) => {
-        request(app)
-          .get('/bundle.js')
-          .expect(200, /console\.log\('Hey\.'\)/, done);
-      });
-    });
-
-    describe('with "false" value', () => {
-      beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
-
-        instance = middleware(compiler, {
-          stats: 'errors-only',
-          lazy: false,
-          publicPath: '/',
-        });
-
-        app = express();
-        app.use(instance);
-
-        listen = listenShorthand(done);
-      });
-
-      afterAll(close);
-
-      it('GET request to bundle file', (done) => {
-        request(app)
-          .get('/bundle.js')
-          .expect(200, /console\.log\('Hey\.'\)/, done);
-      });
-    });
-
-    describe('with "true" value', () => {
-      beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
-
-        instance = middleware(compiler, {
-          stats: 'errors-only',
-          lazy: true,
-          publicPath: '/',
-        });
-
-        app = express();
-        app.use(instance);
-
-        listen = listenShorthand(done);
-      });
-
-      afterAll(close);
-
-      it('GET request to bundle file', (done) => {
-        request(app)
-          .get('/bundle.js')
-          .expect(200, /console\.log\('Hey\.'\)/, done);
-      });
-    });
-  });
-
   describe('publicPath option', () => {
     describe('with "string" value', () => {
       beforeAll((done) => {
@@ -1419,6 +1342,8 @@ describe('middleware', () => {
             error.stack = '';
 
             callback(error);
+
+            return { close: () => {} };
           });
 
         getLogsPlugin = new GetLogsPlugin();

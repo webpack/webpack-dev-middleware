@@ -46,12 +46,6 @@
     "headers": {
       "type": "object"
     },
-    "lazy": {
-      "type": "boolean"
-    },
-    "filename": {
-      "type": "string"
-    },
     "publicPath": {
       "type": "string"
     },

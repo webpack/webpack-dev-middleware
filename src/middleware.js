@@ -119,13 +119,6 @@ export default function wrapper(context) {
         resolve();
       }
 
-      if (
-        context.options.lazy &&
-        (!context.options.filename || context.options.filename.test(filename))
-      ) {
-        context.rebuild();
-      }
-
       if (HASH_REGEXP.test(filename)) {
         try {
           if (context.outputFileSystem.statSync(filename).isFile()) {
