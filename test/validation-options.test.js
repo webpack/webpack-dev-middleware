@@ -38,10 +38,6 @@ describe('validation', () => {
       success: [{}],
       failure: [true],
     },
-    lazy: {
-      success: [true],
-      failure: [0],
-    },
     publicPath: {
       success: ['foo'],
       failure: [false],
@@ -61,10 +57,6 @@ describe('validation', () => {
     },
     index: {
       success: [true, false, 'foo'],
-      failure: [0, {}],
-    },
-    filename: {
-      success: ['foo.js'],
       failure: [0, {}],
     },
   };
