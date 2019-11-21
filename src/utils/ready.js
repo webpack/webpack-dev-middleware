@@ -1,12 +1,12 @@
 // eslint-disable-next-line consistent-return
-export default function ready(context, fn, req) {
+export default function ready(context, callback, req) {
   if (context.state) {
-    return fn(context.stats);
+    return callback(context.stats);
   }
 
-  const name = req.url || fn.name;
+  const name = req.url || callback.name;
 
   context.logger.info(`wait until bundle finished${name ? `: ${name}` : ''}`);
 
-  context.callbacks.push(fn);
+  context.callbacks.push(callback);
 }
