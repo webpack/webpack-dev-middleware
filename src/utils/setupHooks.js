@@ -1,7 +1,7 @@
 import reporter from './reporter';
 
 export default function setupHooks(context) {
-  function invalid(callback) {
+  function invalid() {
     if (context.state) {
       reporter(context);
     }
@@ -9,10 +9,6 @@ export default function setupHooks(context) {
     // We are now in invalid state
     // eslint-disable-next-line no-param-reassign
     context.state = false;
-
-    if (typeof callback === 'function') {
-      callback();
-    }
   }
 
   function done(stats) {
@@ -53,13 +49,8 @@ export default function setupHooks(context) {
     }
   }
 
-  context.compiler.hooks.invalid.tap('WebpackDevMiddleware', invalid);
+  context.compiler.hooks.invalid.tap('WebpackDevMiddleware', () => invalid);
   context.compiler.hooks.run.tap('WebpackDevMiddleware', invalid);
   context.compiler.hooks.done.tap('WebpackDevMiddleware', done);
-  context.compiler.hooks.watchRun.tap(
-    'WebpackDevMiddleware',
-    (comp, callback) => {
-      invalid(callback);
-    }
-  );
+  context.compiler.hooks.watchRun.tap('WebpackDevMiddleware', invalid);
 }
