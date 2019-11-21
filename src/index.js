@@ -77,15 +77,11 @@ export default function wdm(compiler, opts = defaults) {
   }
 
   return Object.assign(middleware(context), {
-    close(callback) {
+    waitUntilValid(callback) {
       // eslint-disable-next-line no-param-reassign
       callback = callback || noop;
 
-      if (context.watching) {
-        context.watching.close(callback);
-      } else {
-        callback();
-      }
+      ready(context, callback, {});
     },
 
     invalidate(callback) {
@@ -100,19 +96,23 @@ export default function wdm(compiler, opts = defaults) {
       }
     },
 
-    waitUntilValid(callback) {
+    close(callback) {
       // eslint-disable-next-line no-param-reassign
       callback = callback || noop;
 
-      ready(context, callback, {});
+      if (context.watching) {
+        context.watching.close(callback);
+      } else {
+        callback();
+      }
     },
-
-    context,
 
     getFilenameFromUrl: getFilenameFromUrl.bind(
       this,
       context.options.publicPath,
       context.compiler
     ),
+
+    context,
   });
 }
