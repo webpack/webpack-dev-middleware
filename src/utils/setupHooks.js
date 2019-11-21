@@ -39,14 +39,6 @@ export default function setupHooks(context) {
         cb(stats);
       });
     });
-
-    // In lazy mode, we may issue another rebuild
-    if (context.forceRebuild) {
-      // eslint-disable-next-line no-param-reassign
-      context.forceRebuild = false;
-
-      context.rebuild();
-    }
   }
 
   context.compiler.hooks.invalid.tap('WebpackDevMiddleware', () => invalid);
