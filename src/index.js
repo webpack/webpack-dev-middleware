@@ -3,7 +3,6 @@ import validateOptions from 'schema-utils';
 
 import middleware from './middleware';
 import setupHooks from './utils/setupHooks';
-import setupRebuild from './utils/setupRebuild';
 import setupLogger from './utils/setupLogger';
 import setupWriteToDisk from './utils/setupWriteToDisk';
 import setupOutputFileSystem from './utils/setupOutputFileSystem';
@@ -44,11 +43,9 @@ export default function wdm(compiler, opts = defaults) {
     options,
     compiler,
     watching: null,
-    forceRebuild: false,
   };
 
   setupHooks(context);
-  setupRebuild(context);
   setupLogger(context);
 
   if (options.writeToDisk) {
@@ -57,24 +54,12 @@ export default function wdm(compiler, opts = defaults) {
 
   setupOutputFileSystem(compiler, context);
 
-  // start watching
-  if (!options.lazy) {
-    context.watching = compiler.watch(options.watchOptions, (error) => {
-      if (error) {
-        context.logger.error(error);
-      }
-    });
-  } else {
-    if (typeof options.filename === 'string') {
-      const filename = options.filename
-        .replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&') // eslint-disable-line no-useless-escape
-        .replace(/\\\[[a-z]+\\\]/gi, '.+');
-
-      options.filename = new RegExp(`^[/]{0,1}${filename}$`);
+  // Start watching
+  context.watching = compiler.watch(options.watchOptions, (error) => {
+    if (error) {
+      context.logger.error(error);
     }
-
-    context.state = true;
-  }
+  });
 
   return Object.assign(middleware(context), {
     waitUntilValid(callback) {
@@ -88,23 +73,16 @@ export default function wdm(compiler, opts = defaults) {
       // eslint-disable-next-line no-param-reassign
       callback = callback || noop;
 
-      if (context.watching) {
-        ready(context, callback, {});
-        context.watching.invalidate();
-      } else {
-        callback();
-      }
+      ready(context, callback, {});
+
+      context.watching.invalidate();
     },
 
     close(callback) {
       // eslint-disable-next-line no-param-reassign
       callback = callback || noop;
 
-      if (context.watching) {
-        context.watching.close(callback);
-      } else {
-        callback();
-      }
+      context.watching.close(callback);
     },
 
     getFilenameFromUrl: getFilenameFromUrl.bind(
