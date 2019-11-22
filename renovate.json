@@ -15,6 +15,5 @@
       "depTypeList": ["peerDependencies"],
       "enabled": false
     }
-  ],
-  "ignoreDeps": ["cross-env"]
+  ]
 }
