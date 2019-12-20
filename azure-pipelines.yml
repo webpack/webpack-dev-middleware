@@ -36,8 +36,11 @@ jobs:
     pool:
       vmImage: ubuntu-latest
     strategy:
-      maxParallel: 3
+      maxParallel: 4
       matrix:
+        node-13:
+          node_version: ^13.0.0
+          webpack_version: next
         node-12:
           node_version: ^12.0.0
           webpack_version: next
@@ -84,8 +87,11 @@ jobs:
     pool:
       vmImage: macOS-latest
     strategy:
-      maxParallel: 3
+      maxParallel: 4
       matrix:
+        node-13:
+          node_version: ^13.0.0
+          webpack_version: next
         node-12:
           node_version: ^12.0.0
           webpack_version: next
@@ -132,8 +138,11 @@ jobs:
     pool:
       vmImage: windows-latest
     strategy:
-      maxParallel: 3
+      maxParallel: 4
       matrix:
+        node-13:
+          node_version: ^13.0.0
+          webpack_version: next
         node-12:
           node_version: ^12.0.0
           webpack_version: next
