@@ -34,10 +34,10 @@
     "webpack": "^4.0.0"
   },
   "dependencies": {
-    "memfs": "^2.16.1",
+    "memfs": "^3.0.1",
     "mime": "^2.4.4",
     "range-parser": "^1.2.1",
-    "schema-utils": "^2.5.0"
+    "schema-utils": "^2.6.1"
   },
   "devDependencies": {
     "@babel/cli": "^7.7.7",
@@ -45,7 +45,7 @@
     "@babel/preset-env": "^7.7.7",
     "@commitlint/cli": "^8.2.0",
     "@commitlint/config-conventional": "^8.2.0",
-    "@webpack-contrib/defaults": "^5.1.1",
+    "@webpack-contrib/defaults": "^6.3.0",
     "@webpack-contrib/eslint-config-webpack": "^3.0.0",
     "babel-jest": "^24.9.0",
     "commitlint-azure-pipelines-cli": "^1.0.2",
