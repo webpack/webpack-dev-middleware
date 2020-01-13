@@ -57,7 +57,7 @@
     "eslint-plugin-prettier": "^3.1.2",
     "express": "^4.17.1",
     "file-loader": "^5.0.2",
-    "husky": "^3.1.0",
+    "husky": "^4.0.7",
     "jest": "^24.9.0",
     "jest-junit": "^10.0.0",
     "lint-staged": "^9.5.0",
