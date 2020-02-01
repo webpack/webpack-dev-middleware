@@ -2,19 +2,7 @@ import path from 'path';
 
 import { createFsFromVolume, Volume } from 'memfs';
 
-import DevMiddlewareError from '../DevMiddlewareError';
-
 export default function setupOutputFileSystem(compiler, context) {
-  if (
-    typeof compiler.outputPath === 'string' &&
-    !path.posix.isAbsolute(compiler.outputPath) &&
-    !path.win32.isAbsolute(compiler.outputPath)
-  ) {
-    throw new DevMiddlewareError(
-      '`output.path` needs to be an absolute path or `/`.'
-    );
-  }
-
   let outputFileSystem;
 
   if (context.options.outputFileSystem) {
