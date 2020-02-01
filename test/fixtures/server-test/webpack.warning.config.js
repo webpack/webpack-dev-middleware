@@ -4,8 +4,8 @@ const path = require('path');
 
 module.exports = {
   mode: 'development',
-  context: __dirname,
-  entry: './foo.js',
+  context: path.resolve(__dirname),
+  entry: './warning.js',
   output: {
     path: path.resolve(__dirname, '../../outputs/'),
   },
