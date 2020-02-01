@@ -5,7 +5,7 @@ const path = require('path');
 module.exports = [
   {
     mode: 'development',
-    context: __dirname,
+    context: path.resolve(__dirname),
     entry: './foo.js',
     output: {
       filename: 'foo.js',
@@ -27,7 +27,7 @@ module.exports = [
   },
   {
     mode: 'development',
-    context: __dirname,
+    context: path.resolve(__dirname),
     entry: './bar.js',
     output: {
       filename: 'bar.js',
