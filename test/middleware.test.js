@@ -17,8 +17,8 @@ import webpackConfig from './fixtures/server-test/webpack.config';
 import webpackMultiConfig from './fixtures/server-test/webpack.array.config';
 import webpackQueryStringConfig from './fixtures/server-test/webpack.querystring.config';
 import webpackClientServerConfig from './fixtures/server-test/webpack.client.server.config';
-import webpackErrorConfig from './fixtures/error-config/webpack.config';
-import webpackWarningConfig from './fixtures/warning-config/webpack.config';
+import webpackErrorConfig from './fixtures/server-test/webpack.error.config';
+import webpackWarningConfig from './fixtures/server-test/webpack.warning.config';
 
 describe('middleware', () => {
   let instance;
