@@ -962,7 +962,7 @@ describe('middleware', () => {
     });
   });
 
-  describe('fs option', () => {
+  describe('outputFileSystem option', () => {
     describe('with unspecified value', () => {
       let compiler;
 
