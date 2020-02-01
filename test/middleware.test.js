@@ -329,28 +329,6 @@ describe('middleware', () => {
         }).not.toThrow();
       });
     });
-
-    describe('should throw error on invalid outputPath config', () => {
-      it('error with "/"', () => {
-        const compiler = getCompiler();
-
-        compiler.outputPath = './dist';
-
-        expect(() => {
-          middleware(compiler);
-        }).toThrow('`output.path` needs to be an absolute path or `/`.');
-      });
-
-      it('error with "\\"', () => {
-        const compiler = getCompiler();
-
-        compiler.outputPath = '.\\dist';
-
-        expect(() => {
-          middleware(compiler);
-        }).toThrow('`output.path` needs to be an absolute path or `/`.');
-      });
-    });
   });
 
   describe('multi compiler', () => {
