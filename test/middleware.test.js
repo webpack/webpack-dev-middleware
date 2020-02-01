@@ -10,6 +10,7 @@ import middleware from '../src';
 
 import getCompiler from './helpers/getCompiler';
 import GetLogsPlugin from './helpers/GetLogsPlugin';
+import isWebpack5 from './helpers/isWebpack5';
 
 import { mockRequest, mockResponse } from './mock-express';
 
@@ -590,7 +591,9 @@ describe('middleware', () => {
         ...{
           output: {
             filename: 'bundle.js',
-            path: path.resolve(__dirname, 'fixtures/dist_[hash]'),
+            path: isWebpack5()
+              ? path.resolve(__dirname, 'fixtures/dist_[fullhash]')
+              : path.resolve(__dirname, 'fixtures/dist_[hash]'),
           },
         },
       });
@@ -806,7 +809,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should work with "[hash]" in the "output.path" option', () => {
+    describe('should work with "[hash]"/"fullhash" in the "output.path" option', () => {
       beforeAll((done) => {
         writeToDiskWithHash(true, done);
       });
@@ -817,10 +820,15 @@ describe('middleware', () => {
         request(app)
           .get('/foo/bar')
           .expect(200, () => {
-            const bundlePath = path.join(
-              __dirname,
-              './fixtures/dist_f2e154f7f2fe769e53d3/bundle.js'
-            );
+            const bundlePath = isWebpack5()
+              ? path.join(
+                  __dirname,
+                  './fixtures/dist_6e9d1c41483198efea74/bundle.js'
+                )
+              : path.join(
+                  __dirname,
+                  './fixtures/dist_f2e154f7f2fe769e53d3/bundle.js'
+                );
 
             expect(fs.existsSync(bundlePath)).toBe(true);
 
