@@ -4,20 +4,22 @@ import path from 'path';
 import express from 'express';
 import request from 'supertest';
 import memfs, { createFsFromVolume, Volume } from 'memfs';
+import del from 'del';
 
 import middleware from '../src';
 
 import getCompiler from './helpers/getCompiler';
 import GetLogsPlugin from './helpers/GetLogsPlugin';
+import isWebpack5 from './helpers/isWebpack5';
 
 import { mockRequest, mockResponse } from './mock-express';
 
 import webpackConfig from './fixtures/server-test/webpack.config';
 import webpackMultiConfig from './fixtures/server-test/webpack.array.config';
-import webpackQuerystringConfig from './fixtures/server-test/webpack.querystring.config';
+import webpackQueryStringConfig from './fixtures/server-test/webpack.querystring.config';
 import webpackClientServerConfig from './fixtures/server-test/webpack.client.server.config';
-import webpackErrorConfig from './fixtures/error-config/webpack.config';
-import webpackWarningConfig from './fixtures/warning-config/webpack.config';
+import webpackErrorConfig from './fixtures/server-test/webpack.error.config';
+import webpackWarningConfig from './fixtures/server-test/webpack.warning.config';
 
 describe('middleware', () => {
   let instance;
@@ -546,7 +548,7 @@ describe('middleware', () => {
     }
 
     function querystringToDisk(value, done) {
-      const compiler = getCompiler(webpackQuerystringConfig);
+      const compiler = getCompiler(webpackQueryStringConfig);
 
       instance = middleware(compiler, {
         stats: 'errors-only',
@@ -583,7 +585,36 @@ describe('middleware', () => {
       return { compiler, instance, app };
     }
 
-    describe('with "true" value', () => {
+    function writeToDiskWithHash(value, done) {
+      const compiler = getCompiler({
+        ...webpackConfig,
+        ...{
+          output: {
+            filename: 'bundle.js',
+            path: isWebpack5()
+              ? path.resolve(__dirname, 'fixtures/dist_[fullhash]')
+              : path.resolve(__dirname, 'fixtures/dist_[hash]'),
+          },
+        },
+      });
+
+      instance = middleware(compiler, {
+        stats: 'errors-only',
+        writeToDisk: value,
+      });
+
+      app = express();
+      app.use(instance);
+      app.use((req, res) => {
+        res.sendStatus(200);
+      });
+
+      listen = listenShorthand(done);
+
+      return { compiler, instance, app };
+    }
+
+    describe('should work with a "true" value', () => {
       let compiler;
 
       beforeAll((done) => {
@@ -628,7 +659,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('with "false" value', () => {
+    describe('should work with a "false" value', () => {
       let compiler;
 
       beforeAll((done) => {
@@ -671,7 +702,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('with "function" that returns truthy', () => {
+    describe('should work with the "Function" value, which returns "true"', () => {
       beforeAll((done) => {
         writeToDisk((filePath) => /bundle\.js$/.test(filePath), done);
       });
@@ -696,7 +727,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('with "function" that returns falsy', () => {
+    describe('should work with the "Function" value, which returns "false"', () => {
       beforeAll((done) => {
         writeToDisk((filePath) => !/bundle\.js$/.test(filePath), done);
       });
@@ -719,7 +750,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should work when asset has querystrings', () => {
+    describe('should work when assets have query string', () => {
       beforeAll((done) => {
         querystringToDisk(true, done);
       });
@@ -772,6 +803,36 @@ describe('middleware', () => {
 
             fs.rmdirSync(path.join(__dirname, './fixtures/server-test/js1/'));
             fs.rmdirSync(path.join(__dirname, './fixtures/server-test/js2/'));
+
+            done();
+          });
+      });
+    });
+
+    describe('should work with "[hash]"/"fullhash" in the "output.path" option', () => {
+      beforeAll((done) => {
+        writeToDiskWithHash(true, done);
+      });
+
+      afterAll(close);
+
+      it('should find the bundle file on disk', (done) => {
+        request(app)
+          .get('/foo/bar')
+          .expect(200, () => {
+            const bundlePath = isWebpack5()
+              ? path.join(
+                  __dirname,
+                  './fixtures/dist_6e9d1c41483198efea74/bundle.js'
+                )
+              : path.join(
+                  __dirname,
+                  './fixtures/dist_f2e154f7f2fe769e53d3/bundle.js'
+                );
+
+            expect(fs.existsSync(bundlePath)).toBe(true);
+
+            del.sync(path.dirname(bundlePath));
 
             done();
           });
@@ -909,7 +970,7 @@ describe('middleware', () => {
     });
   });
 
-  describe('fs option', () => {
+  describe('outputFileSystem option', () => {
     describe('with unspecified value', () => {
       let compiler;
 
