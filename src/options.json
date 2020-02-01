@@ -33,7 +33,7 @@
           "type": "boolean"
         },
         {
-          "instaceof": "Function"
+          "instanceof": "Function"
         }
       ]
     },
