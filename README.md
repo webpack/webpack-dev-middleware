@@ -403,5 +403,4 @@ Please take a moment to read our contributing guidelines if you haven't yet done
 [hash-url]: https://twitter.com/search?q=webpack
 [middleware-url]: https://github.com/webpack/webpack-dev-middleware
 [stack-url]: https://stackoverflow.com/questions/tagged/webpack-dev-middleware
-[uglify-url]: https://github.com/webpack-contrib/uglifyjs-webpack-plugin
 [wjo-url]: https://github.com/webpack/webpack.js.org
