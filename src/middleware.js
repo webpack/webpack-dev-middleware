@@ -48,11 +48,7 @@ export default function wrapper(context) {
       return goNext();
     }
 
-    let filename = getFilenameFromUrl(
-      context.options.publicPath,
-      context.compiler,
-      req.url
-    );
+    let filename = getFilenameFromUrl(context, req.url);
 
     if (filename === false) {
       return goNext();

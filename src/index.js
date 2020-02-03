@@ -52,14 +52,17 @@ export default function wdm(compiler, opts = defaults) {
     setupWriteToDisk(context);
   }
 
-  setupOutputFileSystem(compiler, context);
+  setupOutputFileSystem(context);
 
   // Start watching
-  context.watching = compiler.watch(options.watchOptions, (error) => {
-    if (error) {
-      context.logger.error(error);
+  context.watching = context.compiler.watch(
+    context.options.watchOptions,
+    (error) => {
+      if (error) {
+        context.logger.error(error);
+      }
     }
-  });
+  );
 
   return Object.assign(middleware(context), {
     waitUntilValid(callback) {
@@ -85,11 +88,7 @@ export default function wdm(compiler, opts = defaults) {
       context.watching.close(callback);
     },
 
-    getFilenameFromUrl: getFilenameFromUrl.bind(
-      this,
-      context.options.publicPath,
-      context.compiler
-    ),
+    getFilenameFromUrl: getFilenameFromUrl.bind(this, context),
 
     context,
   });

@@ -2,7 +2,7 @@ import path from 'path';
 
 import { createFsFromVolume, Volume } from 'memfs';
 
-export default function setupOutputFileSystem(compiler, context) {
+export default function setupOutputFileSystem(context) {
   let outputFileSystem;
 
   if (context.options.outputFileSystem) {
@@ -31,7 +31,7 @@ export default function setupOutputFileSystem(compiler, context) {
   }
 
   // eslint-disable-next-line no-param-reassign
-  compiler.outputFileSystem = outputFileSystem;
+  context.compiler.outputFileSystem = outputFileSystem;
   // eslint-disable-next-line no-param-reassign
   context.outputFileSystem = outputFileSystem;
 }
