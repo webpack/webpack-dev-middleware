@@ -3,9 +3,12 @@ import middleware from '../src';
 import getCompiler from './helpers/getCompiler';
 
 describe('validation', () => {
-  const tests = {
+  const cases = {
     mimeTypes: {
-      success: [{}],
+      success: [
+        { 'text/html': ['phtml'] },
+        { typeMap: { 'text/html': ['phtml'] }, force: true },
+      ],
       failure: ['foo'],
     },
     stats: {
@@ -23,7 +26,7 @@ describe('validation', () => {
       failure: [0, 'foo'],
     },
     watchOptions: {
-      success: [{}],
+      success: [{}, { aggregateTimeout: 200 }],
       failure: [0],
     },
     writeToDisk: {
@@ -31,15 +34,15 @@ describe('validation', () => {
       failure: [{}],
     },
     methods: {
-      success: [['foo', 'bar']],
+      success: [['GET', 'HEAD']],
       failure: [{}, true],
     },
     headers: {
-      success: [{}],
+      success: [{ 'X-Custom-Header': 'yes' }],
       failure: [true],
     },
     publicPath: {
-      success: ['foo'],
+      success: ['/foo'],
       failure: [false],
     },
     serverSideRender: {
@@ -61,41 +64,65 @@ describe('validation', () => {
     },
   };
 
-  for (const [key, values] of Object.entries(tests)) {
-    it(`should validate "${key}" option`, async () => {
-      const compiler = getCompiler();
+  function stringifyValue(value) {
+    if (
+      Array.isArray(value) ||
+      (value && typeof value === 'object' && value.constructor === Object)
+    ) {
+      return JSON.stringify(value);
+    }
 
-      for await (const type of Object.keys(values)) {
-        for await (const sample of values[type]) {
-          let server;
+    return value;
+  }
 
-          try {
-            server = middleware(compiler, { [key]: sample });
-
-            if (type === 'success') {
-              expect(true).toBeTruthy();
-            } else {
-              expect(false).toBeTruthy();
-            }
-          } catch (e) {
-            if (type === 'success') {
-              expect(false).toBeTruthy();
-            } else {
-              expect(true).toBeTruthy();
-            }
-          } finally {
-            await new Promise((resolve) => {
-              if (server) {
-                server.close(() => {
-                  resolve();
-                });
-              } else {
-                resolve();
-              }
-            });
-          }
-        }
+  async function close(webpackDevMiddleware) {
+    return new Promise((resolve) => {
+      if (webpackDevMiddleware) {
+        webpackDevMiddleware.close(() => {
+          resolve();
+        });
+      } else {
+        resolve();
       }
     });
+  }
+
+  async function createTestCase(key, value, type) {
+    it(`should ${
+      type === 'success' ? 'successfully validate' : 'throw an error on'
+    } the "${key}" option with "${stringifyValue(value)}" value`, async () => {
+      const compiler = getCompiler();
+
+      let webpackDevMiddleware;
+      let error;
+
+      try {
+        webpackDevMiddleware = middleware(compiler, { [key]: value });
+      } catch (maybeError) {
+        if (maybeError.name !== 'ValidationError') {
+          throw maybeError;
+        }
+
+        error = maybeError;
+      } finally {
+        if (type === 'success') {
+          expect(error).toBeUndefined();
+        } else if (type === 'failure') {
+          expect(() => {
+            throw error;
+          }).toThrowErrorMatchingSnapshot();
+        }
+
+        await close(webpackDevMiddleware);
+      }
+    });
+  }
+
+  for (const [key, values] of Object.entries(cases)) {
+    for (const type of Object.keys(values)) {
+      for (const value of values[type]) {
+        createTestCase(key, value, type);
+      }
+    }
   }
 });
