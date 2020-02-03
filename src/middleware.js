@@ -9,7 +9,7 @@ import ready from './utils/ready';
 
 // Do not add a charset to the Content-Type header of these file types
 // otherwise the client will fail to render them correctly.
-const NonCharsetFileTypes = /\.(wasm|usdz)$/;
+const nonCharsetFileTypes = /\.(wasm|usdz)$/;
 
 const HASH_REGEXP = /[0-9a-f]{10,}/;
 
@@ -81,18 +81,24 @@ export default function wrapper(context) {
               throw new DevMiddlewareError('next');
             }
           }
-        } catch (e) {
+        } catch (_ignoreError) {
           return resolve(goNext());
         }
 
         // server content
-        let content = context.outputFileSystem.readFileSync(filename);
+        let content;
+
+        try {
+          content = context.outputFileSystem.readFileSync(filename);
+        } catch (_ignoreError) {
+          return resolve(goNext());
+        }
 
         content = handleRangeHeaders(content, req, res);
 
         let contentType = mime.getType(filename) || '';
 
-        if (!NonCharsetFileTypes.test(filename)) {
+        if (!nonCharsetFileTypes.test(filename)) {
           contentType += '; charset=UTF-8';
         }
 
@@ -122,7 +128,7 @@ export default function wrapper(context) {
 
             return;
           }
-        } catch (_error) {
+        } catch (_ignoreError) {
           // Ignore error
         }
       }
