@@ -96,6 +96,13 @@ describe('middleware', () => {
           path.resolve(compiler.outputPath, '3dAr.usdz'),
           '010101'
         );
+        instance.context.outputFileSystem.writeFileSync(
+          path.resolve(
+            compiler.outputPath,
+            'throw-an-exception-on-readFileSync.txt'
+          ),
+          'exception'
+        );
       });
 
       afterAll((done) => {
@@ -246,6 +253,22 @@ describe('middleware', () => {
           .expect('Content-Type', 'model/vnd.pixar.usd')
           .expect('010101')
           .expect(200, fileData.toString(), done);
+      });
+
+      it('request to deleted file', (done) => {
+        const spy = jest
+          .spyOn(instance.context.outputFileSystem, 'readFileSync')
+          .mockImplementation(() => {
+            throw new Error('error');
+          });
+
+        request(app)
+          .get('/public/throw-an-exception-on-readFileSync.txt')
+          .expect(404, () => {
+            spy.mockRestore();
+
+            done();
+          });
       });
     });
 
