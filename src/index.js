@@ -88,11 +88,7 @@ export default function wdm(compiler, opts = defaults) {
       context.watching.close(callback);
     },
 
-    getFilenameFromUrl: getFilenameFromUrl.bind(
-      this,
-      context.options.publicPath,
-      context.compiler
-    ),
+    getFilenameFromUrl: getFilenameFromUrl.bind(this, context),
 
     context,
   });

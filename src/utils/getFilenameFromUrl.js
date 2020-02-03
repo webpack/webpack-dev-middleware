@@ -44,8 +44,13 @@ function getPaths(publicPath, compiler, url) {
   };
 }
 
-export default function getFilenameFromUrl(pubPath, compiler, url) {
-  const { outputPath, publicPath } = getPaths(pubPath, compiler, url);
+export default function getFilenameFromUrl(context, url) {
+  const { options, compiler } = context;
+  const { outputPath, publicPath } = getPaths(
+    options.publicPath,
+    compiler,
+    url
+  );
   // localPrefix is the folder our bundle should be in
   const localPrefix = parse(publicPath || '/', false, true);
   const urlObject = parse(url);
