@@ -1076,6 +1076,57 @@ describe('middleware', () => {
       });
     });
 
+    describe('with configured value in multi compiler mode (native fs)', () => {
+      let compiler;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackMultiConfig);
+
+        const configuredFs = fs;
+
+        configuredFs.join = path.join.bind(path);
+        configuredFs.mkdirp = () => {};
+
+        instance = middleware(compiler, {
+          outputFileSystem: configuredFs,
+        });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should use configurated output file system', () => {
+        const { Stats } = fs;
+
+        for (const compilerFromMultiCompilerMode of compiler.compilers) {
+          expect(
+            new compilerFromMultiCompilerMode.outputFileSystem.Stats()
+          ).toBeInstanceOf(Stats);
+
+          expect(
+            Object.prototype.hasOwnProperty.call(
+              compilerFromMultiCompilerMode.outputFileSystem,
+              'join'
+            )
+          ).toBe(true);
+          expect(
+            Object.prototype.hasOwnProperty.call(
+              compilerFromMultiCompilerMode.outputFileSystem,
+              'mkdirp'
+            )
+          ).toBe(true);
+        }
+
+        expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
+          Stats
+        );
+      });
+    });
+
     describe('should throw error on invalid fs - no join method', () => {
       it('without "join" method', () => {
         expect(() => {
