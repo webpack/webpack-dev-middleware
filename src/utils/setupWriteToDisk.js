@@ -47,20 +47,23 @@ export default function setupWriteToDisk(context) {
 
           return fs.mkdir(dir, { recursive: true }, (mkdirError) => {
             if (mkdirError) {
+              context.logger.error(
+                `Unable to write "${dir}" directory to disk:\n${mkdirError}`
+              );
+
               return callback(mkdirError);
             }
 
             return fs.writeFile(targetPath, content, (writeFileError) => {
               if (writeFileError) {
+                context.logger.error(
+                  `Unable to write "${targetPath}" asset to disk:\n${writeFileError}`
+                );
+
                 return callback(writeFileError);
               }
 
-              context.logger.log(
-                `Asset written to disk: ${path.relative(
-                  process.cwd(),
-                  targetPath
-                )}`
-              );
+              context.logger.log(`Asset written to disk: "${targetPath}"`);
 
               return callback();
             });
