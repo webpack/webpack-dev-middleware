@@ -87,12 +87,6 @@ exports[`validation should throw an error on the "stats" option with "foo" value
       \\"none\\" | \\"errors-only\\" | \\"errors-warnings\\" | \\"minimal\\" | \\"normal\\" | \\"verbose\\""
 `;
 
-exports[`validation should throw an error on the "watchOptions" option with "0" value 1`] = `
-"Invalid configuration object. Object has been initialized using a configuration object that does not match the API schema.
- - configuration.watchOptions should be an object:
-   object { … }"
-`;
-
 exports[`validation should throw an error on the "writeToDisk" option with "{}" value 1`] = `
 "Invalid configuration object. Object has been initialized using a configuration object that does not match the API schema.
  - configuration.writeToDisk should be one of these:

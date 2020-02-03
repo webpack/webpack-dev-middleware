@@ -16,6 +16,8 @@ import { mockRequest, mockResponse } from './mock-express';
 
 import webpackConfig from './fixtures/server-test/webpack.config';
 import webpackMultiConfig from './fixtures/server-test/webpack.array.config';
+import webpackWatchOptionsConfig from './fixtures/server-test/webpack.watch-options.config';
+import webpackMultiWatchOptionsConfig from './fixtures/server-test/webpack.array.watch-options.config';
 import webpackQueryStringConfig from './fixtures/server-test/webpack.querystring.config';
 import webpackClientServerConfig from './fixtures/server-test/webpack.client.server.config';
 import webpackErrorConfig from './fixtures/server-test/webpack.error.config';
@@ -495,36 +497,115 @@ describe('middleware', () => {
   });
 
   describe('watchOptions option', () => {
-    let compiler;
-    let spy;
+    describe('should work without value', () => {
+      let compiler;
+      let spy;
 
-    const watchOptions = {
-      aggregateTimeout: 300,
-      poll: 1000,
-    };
+      beforeAll((done) => {
+        compiler = getCompiler(webpackConfig);
 
-    beforeAll((done) => {
-      compiler = getCompiler(webpackConfig);
+        spy = jest.spyOn(compiler, 'watch');
 
-      spy = jest.spyOn(compiler, 'watch');
+        instance = middleware(compiler, { stats: 'errors-only' });
 
-      instance = middleware(compiler, { stats: 'errors-only', watchOptions });
+        app = express();
+        app.use(instance);
 
-      app = express();
-      app.use(instance);
+        listen = listenShorthand(done);
+      });
 
-      listen = listenShorthand(done);
+      afterAll(() => {
+        spy.mockRestore();
+
+        close();
+      });
+
+      it('should pass to "watch" method', (done) => {
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy.mock.calls[0][0]).toEqual({});
+
+        request(app)
+          .get('/public/bundle.js')
+          .expect(200, () => {
+            done();
+          });
+      });
     });
 
-    afterAll(close);
+    describe('should respect option from config', () => {
+      let compiler;
+      let spy;
 
-    it('should pass to "watch" method', (done) => {
-      expect(spy).toHaveBeenCalledTimes(1);
-      expect(spy.mock.calls[0][0]).toEqual(watchOptions);
+      beforeAll((done) => {
+        compiler = getCompiler(webpackWatchOptionsConfig);
 
-      spy.mockRestore();
+        spy = jest.spyOn(compiler, 'watch');
 
-      done();
+        instance = middleware(compiler, { stats: 'errors-only' });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(() => {
+        spy.mockRestore();
+
+        close();
+      });
+
+      it('should pass to "watch" method', (done) => {
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy.mock.calls[0][0]).toEqual({
+          aggregateTimeout: 300,
+          poll: true,
+        });
+
+        request(app)
+          .get('/public/bundle.js')
+          .expect(200, () => {
+            done();
+          });
+      });
+    });
+
+    describe('should respect option from config in multi-compile mode', () => {
+      let compiler;
+      let spy;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackMultiWatchOptionsConfig);
+
+        spy = jest.spyOn(compiler, 'watch');
+
+        instance = middleware(compiler, { stats: 'errors-only' });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(() => {
+        spy.mockRestore();
+
+        close();
+      });
+
+      it('should pass to "watch" method', (done) => {
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy.mock.calls[0][0]).toEqual([
+          { aggregateTimeout: 800, poll: false },
+          { aggregateTimeout: 300, poll: true },
+        ]);
+
+        request(app)
+          .get('/public/bundle.js')
+          .expect(200, () => {
+            done();
+          });
+      });
     });
   });
 
