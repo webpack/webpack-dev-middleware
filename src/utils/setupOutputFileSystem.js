@@ -30,8 +30,13 @@ export default function setupOutputFileSystem(context) {
     outputFileSystem.join = path.join.bind(path);
   }
 
-  // eslint-disable-next-line no-param-reassign
-  context.compiler.outputFileSystem = outputFileSystem;
+  const compilers = context.compiler.compilers || [context.compiler];
+
+  for (const compiler of compilers) {
+    // eslint-disable-next-line no-param-reassign
+    compiler.outputFileSystem = outputFileSystem;
+  }
+
   // eslint-disable-next-line no-param-reassign
   context.outputFileSystem = outputFileSystem;
 }
