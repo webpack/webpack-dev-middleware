@@ -31,7 +31,9 @@ describe('API', () => {
   });
 
   afterEach((done) => {
-    instance.close();
+    if (instance) {
+      instance.close();
+    }
 
     if (listen) {
       listen.close(done);

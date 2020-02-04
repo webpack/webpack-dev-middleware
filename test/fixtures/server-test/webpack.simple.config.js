@@ -8,5 +8,6 @@ module.exports = {
   entry: './simple.js',
   output: {
     path: path.resolve(__dirname, '../../outputs/'),
-  }
+  },
+  stats: 'errors-warnings'
 };

@@ -1,97 +1,73 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`validation should throw an error on the "headers" option with "true" value 1`] = `
-"Invalid configuration object. Object has been initialized using a configuration object that does not match the API schema.
- - configuration.headers should be an object:
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.headers should be an object:
    object { … }"
 `;
 
 exports[`validation should throw an error on the "index" option with "{}" value 1`] = `
-"Invalid configuration object. Object has been initialized using a configuration object that does not match the API schema.
- - configuration.index should be one of these:
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.index should be one of these:
    boolean | string
    Details:
-    * configuration.index should be a boolean.
-    * configuration.index should be a string."
+    * options.index should be a boolean.
+    * options.index should be a string."
 `;
 
 exports[`validation should throw an error on the "index" option with "0" value 1`] = `
-"Invalid configuration object. Object has been initialized using a configuration object that does not match the API schema.
- - configuration.index should be one of these:
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.index should be one of these:
    boolean | string
    Details:
-    * configuration.index should be a boolean.
-    * configuration.index should be a string."
+    * options.index should be a boolean.
+    * options.index should be a string."
 `;
 
 exports[`validation should throw an error on the "methods" option with "{}" value 1`] = `
-"Invalid configuration object. Object has been initialized using a configuration object that does not match the API schema.
- - configuration.methods should be an array:
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.methods should be an array:
    [string, ...]"
 `;
 
 exports[`validation should throw an error on the "methods" option with "true" value 1`] = `
-"Invalid configuration object. Object has been initialized using a configuration object that does not match the API schema.
- - configuration.methods should be an array:
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.methods should be an array:
    [string, ...]"
 `;
 
 exports[`validation should throw an error on the "mimeTypes" option with "foo" value 1`] = `
-"Invalid configuration object. Object has been initialized using a configuration object that does not match the API schema.
- - configuration.mimeTypes should be an object:
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.mimeTypes should be an object:
    object { … }"
 `;
 
 exports[`validation should throw an error on the "outputFileSystem" option with "false" value 1`] = `
-"Invalid configuration object. Object has been initialized using a configuration object that does not match the API schema.
- - configuration.outputFileSystem should be an object:
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.outputFileSystem should be an object:
    object { … }"
 `;
 
 exports[`validation should throw an error on the "publicPath" option with "false" value 1`] = `
-"Invalid configuration object. Object has been initialized using a configuration object that does not match the API schema.
- - configuration.publicPath should be a string."
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.publicPath should be a string."
 `;
 
 exports[`validation should throw an error on the "serverSideRender" option with "0" value 1`] = `
-"Invalid configuration object. Object has been initialized using a configuration object that does not match the API schema.
- - configuration.serverSideRender should be a boolean."
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.serverSideRender should be a boolean."
 `;
 
 exports[`validation should throw an error on the "serverSideRender" option with "foo" value 1`] = `
-"Invalid configuration object. Object has been initialized using a configuration object that does not match the API schema.
- - configuration.serverSideRender should be a boolean."
-`;
-
-exports[`validation should throw an error on the "stats" option with "0" value 1`] = `
-"Invalid configuration object. Object has been initialized using a configuration object that does not match the API schema.
- - configuration.stats should be one of these:
-   object { … } | boolean | \\"none\\" | \\"errors-only\\" | \\"errors-warnings\\" | \\"minimal\\" | \\"normal\\" | \\"verbose\\"
-   Details:
-    * configuration.stats should be an object:
-      object { … }
-    * configuration.stats should be a boolean.
-    * configuration.stats should be one of these:
-      \\"none\\" | \\"errors-only\\" | \\"errors-warnings\\" | \\"minimal\\" | \\"normal\\" | \\"verbose\\""
-`;
-
-exports[`validation should throw an error on the "stats" option with "foo" value 1`] = `
-"Invalid configuration object. Object has been initialized using a configuration object that does not match the API schema.
- - configuration.stats should be one of these:
-   object { … } | boolean | \\"none\\" | \\"errors-only\\" | \\"errors-warnings\\" | \\"minimal\\" | \\"normal\\" | \\"verbose\\"
-   Details:
-    * configuration.stats should be an object:
-      object { … }
-    * configuration.stats should be a boolean.
-    * configuration.stats should be one of these:
-      \\"none\\" | \\"errors-only\\" | \\"errors-warnings\\" | \\"minimal\\" | \\"normal\\" | \\"verbose\\""
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.serverSideRender should be a boolean."
 `;
 
 exports[`validation should throw an error on the "writeToDisk" option with "{}" value 1`] = `
-"Invalid configuration object. Object has been initialized using a configuration object that does not match the API schema.
- - configuration.writeToDisk should be one of these:
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.writeToDisk should be one of these:
    boolean | function
    Details:
-    * configuration.writeToDisk should be a boolean.
-    * configuration.writeToDisk should be an instance of function."
+    * options.writeToDisk should be a boolean.
+    * options.writeToDisk should be an instance of function."
 `;

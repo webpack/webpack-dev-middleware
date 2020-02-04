@@ -21,5 +21,6 @@ module.exports = {
   },
   infrastructureLogging: {
     level: 'none'
-  }
+  },
+  stats: 'errors-warnings'
 };
