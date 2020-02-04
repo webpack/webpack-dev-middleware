@@ -13,14 +13,7 @@ import schema from './options.json';
 const noop = () => {};
 
 const defaults = {
-  stats: {
-    colors: true,
-    context: process.cwd(),
-  },
-  watchOptions: {
-    aggregateTimeout: 200,
-  },
-  writeToDisk: false,
+  stats: { colors: true, context: process.cwd() },
 };
 
 export default function wdm(compiler, opts = defaults) {
@@ -54,15 +47,23 @@ export default function wdm(compiler, opts = defaults) {
 
   setupOutputFileSystem(context);
 
+  let watchOptions;
+
+  if (Array.isArray(context.compiler.compilers)) {
+    watchOptions = context.compiler.compilers.map(
+      (compilerFromMultiCompileMode) =>
+        compilerFromMultiCompileMode.options.watchOptions || {}
+    );
+  } else {
+    watchOptions = context.compiler.options.watchOptions || {};
+  }
+
   // Start watching
-  context.watching = context.compiler.watch(
-    context.options.watchOptions,
-    (error) => {
-      if (error) {
-        context.logger.error(error);
-      }
+  context.watching = context.compiler.watch(watchOptions, (error) => {
+    if (error) {
+      context.logger.error(error);
     }
-  );
+  });
 
   return Object.assign(middleware(context), {
     waitUntilValid(callback) {

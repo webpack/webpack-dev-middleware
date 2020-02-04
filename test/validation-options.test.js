@@ -25,10 +25,6 @@ describe('validation', () => {
       ],
       failure: [0, 'foo'],
     },
-    watchOptions: {
-      success: [{}, { aggregateTimeout: 200 }],
-      failure: [0],
-    },
     writeToDisk: {
       success: [true, false, () => {}],
       failure: [{}],
