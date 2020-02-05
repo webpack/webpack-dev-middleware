@@ -12,18 +12,18 @@ import getCompiler from './helpers/getCompiler';
 import GetLogsPlugin from './helpers/GetLogsPlugin';
 import isWebpack5 from './helpers/isWebpack5';
 
-import webpackConfig from './fixtures/server-test/webpack.config';
-import webpackMultiConfig from './fixtures/server-test/webpack.array.config';
-import webpackWatchOptionsConfig from './fixtures/server-test/webpack.watch-options.config';
-import webpackMultiWatchOptionsConfig from './fixtures/server-test/webpack.array.watch-options.config';
-import webpackQueryStringConfig from './fixtures/server-test/webpack.querystring.config';
-import webpackClientServerConfig from './fixtures/server-test/webpack.client.server.config';
-import webpackErrorConfig from './fixtures/server-test/webpack.error.config';
-import webpackMultiErrorConfig from './fixtures/server-test/webpack.array.error.config';
-import webpackWarningConfig from './fixtures/server-test/webpack.warning.config';
-import webpackMultiWarningConfig from './fixtures/server-test/webpack.array.warning.config';
-import webpackOneErrorOneWarningOneSuccessConfig from './fixtures/server-test/webpack.array.one-error-one-warning-one-success';
-import webpackOneErrorOneWarningOneSuccessWithNamesConfig from './fixtures/server-test/webpack.array.one-error-one-warning-one-success-with-names';
+import webpackConfig from './fixtures/webpack.config';
+import webpackMultiConfig from './fixtures/webpack.array.config';
+import webpackWatchOptionsConfig from './fixtures/webpack.watch-options.config';
+import webpackMultiWatchOptionsConfig from './fixtures/webpack.array.watch-options.config';
+import webpackQueryStringConfig from './fixtures/webpack.querystring.config';
+import webpackClientServerConfig from './fixtures/webpack.client.server.config';
+import webpackErrorConfig from './fixtures/webpack.error.config';
+import webpackMultiErrorConfig from './fixtures/webpack.array.error.config';
+import webpackWarningConfig from './fixtures/webpack.warning.config';
+import webpackMultiWarningConfig from './fixtures/webpack.array.warning.config';
+import webpackOneErrorOneWarningOneSuccessConfig from './fixtures/webpack.array.one-error-one-warning-one-success';
+import webpackOneErrorOneWarningOneSuccessWithNamesConfig from './fixtures/webpack.array.one-error-one-warning-one-success-with-names';
 
 describe('middleware', () => {
   let instance;
@@ -111,11 +111,16 @@ describe('middleware', () => {
       it('should not find a bundle file on disk', (done) => {
         request(app)
           .get('/public/bundle.js')
-          .expect(200, () => {
-            const bundlePath = path.resolve(compiler.outputPath, 'bundle.js');
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
 
-            expect(fs.existsSync(bundlePath)).toBe(false);
-            done();
+            expect(
+              fs.existsSync(path.resolve(compiler.outputPath, 'bundle.js'))
+            ).toBe(false);
+
+            return done();
           });
       });
 
@@ -263,10 +268,14 @@ describe('middleware', () => {
 
         request(app)
           .get('/public/throw-an-exception-on-readFileSync.txt')
-          .expect(404, () => {
+          .expect(404, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             spy.mockRestore();
 
-            done();
+            return done();
           });
       });
 
@@ -354,10 +363,14 @@ describe('middleware', () => {
 
       it('request to both bundle files', (done) => {
         request(app)
-          .get('/js1/foo.js')
-          .expect(200, () => {
-            request(app)
-              .get('/js2/bar.js')
+          .get('/js1/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            return request(app)
+              .get('/js2/bundle.js')
               .expect(200, done);
           });
       });
@@ -379,7 +392,7 @@ describe('middleware', () => {
 
       it('request to bundle file', (done) => {
         request(app)
-          .get('/static/foo.js')
+          .get('/static/bundle.js')
           .expect(200, done);
       });
 
@@ -420,11 +433,15 @@ describe('middleware', () => {
 
       it('should handle request to bundle file', (done) => {
         request(app)
-          .get('/public/bundle.js')
-          .expect(200, () => {
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             expect(getLogsPlugin.logs).toMatchSnapshot();
 
-            done();
+            return done();
           });
       });
     });
@@ -453,11 +470,15 @@ describe('middleware', () => {
 
       it('should handle request to bundle file', (done) => {
         request(app)
-          .get('/public/bundle.js')
-          .expect(200, () => {
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             expect(getLogsPlugin.logs).toMatchSnapshot();
 
-            done();
+            return done();
           });
       });
     });
@@ -486,11 +507,15 @@ describe('middleware', () => {
 
       it('should handle request to bundle file', (done) => {
         request(app)
-          .get('/public/bundle.js')
-          .expect(200, () => {
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             expect(getLogsPlugin.logs).toMatchSnapshot();
 
-            done();
+            return done();
           });
       });
     });
@@ -519,11 +544,15 @@ describe('middleware', () => {
 
       it('should handle request to bundle file', (done) => {
         request(app)
-          .get('/public/bundle.js')
-          .expect(200, () => {
+          .get('/js1/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             expect(getLogsPlugin.logs).toMatchSnapshot();
 
-            done();
+            return done();
           });
       });
     });
@@ -555,11 +584,15 @@ describe('middleware', () => {
 
       it('should handle request to bundle file', (done) => {
         request(app)
-          .get('/public/bundle.js')
-          .expect(200, () => {
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             expect(getLogsPlugin.logs).toMatchSnapshot();
 
-            done();
+            return done();
           });
       });
     });
@@ -588,11 +621,15 @@ describe('middleware', () => {
 
       it('should handle request to bundle file', (done) => {
         request(app)
-          .get('/public/bundle.js')
-          .expect(200, () => {
+          .get('/js1/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             expect(getLogsPlugin.logs).toMatchSnapshot();
 
-            done();
+            return done();
           });
       });
     });
@@ -623,11 +660,15 @@ describe('middleware', () => {
 
       it('should handle request to bundle file', (done) => {
         request(app)
-          .get('/public/bundle.js')
-          .expect(200, () => {
+          .get('/js1/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             expect(getLogsPlugin.logs).toMatchSnapshot();
 
-            done();
+            return done();
           });
       });
     });
@@ -700,10 +741,8 @@ describe('middleware', () => {
         expect(spy.mock.calls[0][0]).toEqual({});
 
         request(app)
-          .get('/public/bundle.js')
-          .expect(200, () => {
-            done();
-          });
+          .get('/bundle.js')
+          .expect(200, done);
       });
     });
 
@@ -738,10 +777,8 @@ describe('middleware', () => {
         });
 
         request(app)
-          .get('/public/bundle.js')
-          .expect(200, () => {
-            done();
-          });
+          .get('/bundle.js')
+          .expect(200, done);
       });
     });
 
@@ -776,10 +813,8 @@ describe('middleware', () => {
         ]);
 
         request(app)
-          .get('/public/bundle.js')
-          .expect(200, () => {
-            done();
-          });
+          .get('/js1/bundle.js')
+          .expect(200, done);
       });
     });
   });
@@ -792,9 +827,6 @@ describe('middleware', () => {
 
       app = express();
       app.use(instance);
-      app.use((req, res) => {
-        res.sendStatus(200);
-      });
 
       listen = listenShorthand(done);
 
@@ -808,9 +840,6 @@ describe('middleware', () => {
 
       app = express();
       app.use(instance);
-      app.use((req, res) => {
-        res.sendStatus(200);
-      });
 
       listen = listenShorthand(done);
 
@@ -824,9 +853,6 @@ describe('middleware', () => {
 
       app = express();
       app.use(instance);
-      app.use((req, res) => {
-        res.sendStatus(200);
-      });
 
       listen = listenShorthand(done);
 
@@ -840,8 +866,8 @@ describe('middleware', () => {
           output: {
             filename: 'bundle.js',
             path: isWebpack5()
-              ? path.resolve(__dirname, 'fixtures/dist_[fullhash]')
-              : path.resolve(__dirname, 'fixtures/dist_[hash]'),
+              ? path.resolve(__dirname, './outputs/dist_[fullhash]')
+              : path.resolve(__dirname, './outputs/dist_[hash]'),
           },
         },
       });
@@ -850,9 +876,6 @@ describe('middleware', () => {
 
       app = express();
       app.use(instance);
-      app.use((req, res) => {
-        res.sendStatus(200);
-      });
 
       listen = listenShorthand(done);
 
@@ -870,11 +893,15 @@ describe('middleware', () => {
 
       it('should find the bundle file on disk', (done) => {
         request(app)
-          .get('/foo/bar')
-          .expect(200, () => {
-            const bundlePath = path.join(
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            const bundlePath = path.resolve(
               __dirname,
-              './fixtures/server-test/bundle.js'
+              './outputs/simple/bundle.js'
             );
 
             expect(
@@ -888,7 +915,7 @@ describe('middleware', () => {
 
             instance.invalidate();
 
-            compiler.hooks.done.tap(
+            return compiler.hooks.done.tap(
               'WebpackDevMiddlewareWriteToDiskTest',
               () => {
                 expect(
@@ -915,11 +942,15 @@ describe('middleware', () => {
 
       it('should not find the bundle file on disk', (done) => {
         request(app)
-          .get('/foo/bar')
-          .expect(200, () => {
-            const bundlePath = path.join(
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            const bundlePath = path.resolve(
               __dirname,
-              './fixtures/server-test/bundle.js'
+              './outputs/simple/bundle.js'
             );
 
             expect(
@@ -931,7 +962,7 @@ describe('middleware', () => {
 
             instance.invalidate();
 
-            compiler.hooks.done.tap(
+            return compiler.hooks.done.tap(
               'WebpackDevMiddlewareWriteToDiskTest',
               () => {
                 expect(
@@ -956,18 +987,22 @@ describe('middleware', () => {
 
       it('should find the bundle file on disk', (done) => {
         request(app)
-          .get('/foo/bar')
-          .expect(200, () => {
-            const bundlePath = path.join(
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            const bundlePath = path.resolve(
               __dirname,
-              './fixtures/server-test/bundle.js'
+              './outputs/simple/bundle.js'
             );
 
             expect(fs.existsSync(bundlePath)).toBe(true);
 
             fs.unlinkSync(bundlePath);
 
-            done();
+            return done();
           });
       });
     });
@@ -981,16 +1016,20 @@ describe('middleware', () => {
 
       it('should not find the bundle file on disk', (done) => {
         request(app)
-          .get('/foo/bar')
-          .expect(200, () => {
-            const bundlePath = path.join(
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            const bundlePath = path.resolve(
               __dirname,
-              './fixtures/server-test/bundle.js'
+              './outputs/simple/bundle.js'
             );
 
             expect(fs.existsSync(bundlePath)).toBe(false);
 
-            done();
+            return done();
           });
       });
     });
@@ -1004,18 +1043,22 @@ describe('middleware', () => {
 
       it('should find the bundle file on disk with no querystring', (done) => {
         request(app)
-          .get('/foo/bar')
-          .expect(200, () => {
-            const bundlePath = path.join(
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            const bundlePath = path.resolve(
               __dirname,
-              './fixtures/server-test/bundle.js'
+              './outputs/querystring/bundle.js'
             );
 
             expect(fs.existsSync(bundlePath)).toBe(true);
 
             fs.unlinkSync(bundlePath);
 
-            done();
+            return done();
           });
       });
     });
@@ -1029,32 +1072,36 @@ describe('middleware', () => {
 
       it('should find the bundle files on disk', (done) => {
         request(app)
-          .get('/foo/bar')
-          .expect(200, () => {
+          .get('/js1/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             const bundleFiles = [
-              './fixtures/server-test/js1/foo.js',
-              './fixtures/server-test/js1/index.html',
-              './fixtures/server-test/js1/svg.svg',
-              './fixtures/server-test/js2/bar.js',
+              './outputs/array/js1/bundle.js',
+              './outputs/array/js1/index.html',
+              './outputs/array/js1/svg.svg',
+              './outputs/array/js2/bundle.js',
             ];
 
             for (const bundleFile of bundleFiles) {
-              const bundlePath = path.join(__dirname, bundleFile);
+              const bundlePath = path.resolve(__dirname, bundleFile);
 
               expect(fs.existsSync(bundlePath)).toBe(true);
 
               fs.unlinkSync(bundlePath);
             }
 
-            fs.rmdirSync(path.join(__dirname, './fixtures/server-test/js1/'));
-            fs.rmdirSync(path.join(__dirname, './fixtures/server-test/js2/'));
+            fs.rmdirSync(path.resolve(__dirname, './outputs/array/js1/'));
+            fs.rmdirSync(path.resolve(__dirname, './outputs/array/js2/'));
 
-            done();
+            return done();
           });
       });
     });
 
-    describe('should work with "[hash]"/"fullhash" in the "output.path" option', () => {
+    describe.skip('should work with "[hash]"/"[fullhash]" in the "output.path" option', () => {
       beforeAll((done) => {
         writeToDiskWithHash(true, done);
       });
@@ -1063,23 +1110,27 @@ describe('middleware', () => {
 
       it('should find the bundle file on disk', (done) => {
         request(app)
-          .get('/foo/bar')
-          .expect(200, () => {
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             const bundlePath = isWebpack5()
-              ? path.join(
+              ? path.resolve(
                   __dirname,
-                  './fixtures/dist_6e9d1c41483198efea74/bundle.js'
+                  './outputs/dist_6e9d1c41483198efea74/bundle.js'
                 )
-              : path.join(
+              : path.resolve(
                   __dirname,
-                  './fixtures/dist_f2e154f7f2fe769e53d3/bundle.js'
+                  './outputs/dist_f2e154f7f2fe769e53d3/bundle.js'
                 );
 
             expect(fs.existsSync(bundlePath)).toBe(true);
 
             del.sync(path.dirname(bundlePath));
 
-            done();
+            return done();
           });
       });
     });
@@ -1198,11 +1249,15 @@ describe('middleware', () => {
     it('request to bundle file', (done) => {
       request(app)
         .get('/foo/bar')
-        .expect(200, () => {
+        .expect(200, (error) => {
+          if (error) {
+            return done(error);
+          }
+
           expect(locals.webpack.stats).toBeDefined();
           expect(locals.webpack.outputFileSystem).toBeDefined();
 
-          done();
+          return done();
         });
     });
   });
@@ -1646,11 +1701,15 @@ describe('middleware', () => {
       it('logs', (done) => {
         request(app)
           .get('/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=UTF-8')
-          .expect(200, /console\.log\('Hey\.'\)/, () => {
+          .expect('Content-Type', 'application/javascript; charset=utf-8')
+          .expect(200, /console\.log\('Hey\.'\)/, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             instance.invalidate();
 
-            instance.waitUntilValid(() => {
+            return instance.waitUntilValid(() => {
               expect(getLogsPlugin.logs).toMatchSnapshot();
 
               done();
@@ -1681,12 +1740,16 @@ describe('middleware', () => {
 
       it('logs', (done) => {
         request(app)
-          .get('/bundle.js')
+          .get('/js1/bundle.js')
           .expect('Content-Type', 'application/javascript; charset=utf-8')
-          .expect(200, /console\.log\('Hey\.'\)/, () => {
+          .expect(200, /console\.log\('Hey\.'\)/, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             instance.invalidate();
 
-            instance.waitUntilValid(() => {
+            return instance.waitUntilValid(() => {
               expect(getLogsPlugin.logs).toMatchSnapshot();
 
               done();
@@ -1718,11 +1781,15 @@ describe('middleware', () => {
       it('logs', (done) => {
         request(app)
           .get('/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=UTF-8')
-          .expect(200, /console\.log\('Hey\.'\)/, () => {
+          .expect('Content-Type', 'application/javascript; charset=utf-8')
+          .expect(200, /1\(\)2\(\)3\(\)/, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             instance.invalidate();
 
-            instance.waitUntilValid(() => {
+            return instance.waitUntilValid(() => {
               expect(getLogsPlugin.logs).toMatchSnapshot();
 
               done();
@@ -1753,12 +1820,16 @@ describe('middleware', () => {
 
       it('logs', (done) => {
         request(app)
-          .get('/bundle.js')
+          .get('/js1/bundle.js')
           .expect('Content-Type', 'application/javascript; charset=utf-8')
-          .expect(200, /console\.log\('Hey\.'\)/, () => {
+          .expect(200, /1\(\)2\(\)3\(\)/, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             instance.invalidate();
 
-            instance.waitUntilValid(() => {
+            return instance.waitUntilValid(() => {
               expect(getLogsPlugin.logs).toMatchSnapshot();
 
               done();
@@ -1790,11 +1861,15 @@ describe('middleware', () => {
       it('logs', (done) => {
         request(app)
           .get('/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=UTF-8')
-          .expect(200, /console\.log\('Hey\.'\)/, () => {
+          .expect('Content-Type', 'application/javascript; charset=utf-8')
+          .expect(200, /console\.log\('foo'\)/, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             instance.invalidate();
 
-            instance.waitUntilValid(() => {
+            return instance.waitUntilValid(() => {
               expect(getLogsPlugin.logs).toMatchSnapshot();
 
               done();
@@ -1825,12 +1900,16 @@ describe('middleware', () => {
 
       it('logs', (done) => {
         request(app)
-          .get('/bundle.js')
+          .get('/js1/bundle.js')
           .expect('Content-Type', 'application/javascript; charset=utf-8')
-          .expect(200, /console\.log\('Hey\.'\)/, () => {
+          .expect(200, /console\.log\('foo'\)/, (error) => {
+            if (error) {
+              return done(error);
+            }
+
             instance.invalidate();
 
-            instance.waitUntilValid(() => {
+            return instance.waitUntilValid(() => {
               expect(getLogsPlugin.logs).toMatchSnapshot();
 
               done();

@@ -8,7 +8,8 @@ module.exports = [
     context: path.resolve(__dirname),
     entry: './broken.js',
     output: {
-      path: path.resolve(__dirname, 'js1'),
+      filename: 'bundle.js',
+      path: path.resolve(__dirname, '../outputs/one-error-one-warning-one-success/js1'),
       publicPath: '/js1/',
     },
     infrastructureLogging: {
@@ -21,7 +22,8 @@ module.exports = [
     context: path.resolve(__dirname),
     entry: './warning.js',
     output: {
-      path: path.resolve(__dirname, 'js2'),
+      filename: 'bundle.js',
+      path: path.resolve(__dirname, '../outputs/one-error-one-warning-one-success/js2'),
       publicPath: '/js2/',
     },
     plugins: [
@@ -45,6 +47,7 @@ module.exports = [
     context: path.resolve(__dirname),
     entry: './foo.js',
     output: {
+      filename: 'bundle.js',
       path: path.resolve(__dirname, 'js3'),
       publicPath: '/js3/',
     },

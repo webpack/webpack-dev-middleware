@@ -8,8 +8,8 @@ module.exports = [
     context: path.resolve(__dirname),
     entry: './foo.js',
     output: {
-      filename: 'foo.js',
-      path: path.resolve(__dirname, 'js1'),
+      filename: 'bundle.js',
+      path: path.resolve(__dirname, '../outputs/array-watch-options/js1'),
       publicPath: '/js1/',
     },
     module: {
@@ -24,19 +24,26 @@ module.exports = [
     infrastructureLogging: {
       level: 'none'
     },
-    stats: 'errors-warnings'
+    watchOptions: {
+      aggregateTimeout: 800,
+      poll: false,
+    },
   },
   {
     mode: 'development',
     context: path.resolve(__dirname),
     entry: './bar.js',
     output: {
-      filename: 'bar.js',
-      path: path.resolve(__dirname, 'js2'),
+      filename: 'bundle.js',
+      path: path.resolve(__dirname, '../outputs/array-watch-options/js2'),
       publicPath: '/js2/',
     },
     infrastructureLogging: {
       level: 'none'
+    },
+    watchOptions: {
+      aggregateTimeout: 300,
+      poll: true,
     },
     stats: 'errors-warnings'
   },

@@ -5,7 +5,7 @@ import middleware from '../src';
 
 import getCompiler from './helpers/getCompiler';
 import getCompilerHooks from './helpers/getCompilerHooks';
-import webpackConfig from './fixtures/server-test/webpack.config';
+import webpackConfig from './fixtures/webpack.config';
 
 describe('API', () => {
   let instance;

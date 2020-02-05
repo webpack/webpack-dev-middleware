@@ -7,7 +7,8 @@ module.exports = {
   context: path.resolve(__dirname),
   entry: './broken.js',
   output: {
-    path: path.resolve(__dirname, '../../outputs/'),
+    filename: 'bundle.js',
+    path: path.resolve(__dirname, '../outputs/error'),
   },
   stats: 'errors-warnings'
 };

@@ -7,7 +7,8 @@ module.exports = {
   context: path.resolve(__dirname),
   entry: './warning.js',
   output: {
-    path: path.resolve(__dirname, '../../outputs/'),
+    filename: 'bundle.js',
+    path: path.resolve(__dirname, '../outputs/warning'),
   },
   plugins: [
     {
