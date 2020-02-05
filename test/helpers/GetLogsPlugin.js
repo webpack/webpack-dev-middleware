@@ -3,12 +3,17 @@ export default class GetLogsPlugin {
     this.logs = [];
   }
 
-  static normalizeLogs(logs) {
-    if (Array.isArray(logs)) {
-      return logs.map((log) => GetLogsPlugin.normalizeLogs(log));
+  static normalizeLogs(log) {
+    if (Array.isArray(log)) {
+      return log.map((nestedLog) => GetLogsPlugin.normalizeLogs(nestedLog));
     }
 
-    return logs.toString().trim();
+    return log
+      .toString()
+      .trim()
+      .replace(/\d+ modules/, 'X modules')
+      .replace(/Entrypoint (\w+) = ([\w.]+)( (\(.*\)))?/, 'Entrypoint $1 = $2')
+      .replace(/Child "(\w+)":\s+/, 'Child "$1": ');
   }
 
   apply(compiler) {

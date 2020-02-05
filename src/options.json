@@ -4,26 +4,6 @@
     "mimeTypes": {
       "type": "object"
     },
-    "stats": {
-      "anyOf": [
-        {
-          "type": "object"
-        },
-        {
-          "type": "boolean"
-        },
-        {
-          "enum": [
-            "none",
-            "errors-only",
-            "errors-warnings",
-            "minimal",
-            "normal",
-            "verbose"
-          ]
-        }
-      ]
-    },
     "writeToDisk": {
       "anyOf": [
         {

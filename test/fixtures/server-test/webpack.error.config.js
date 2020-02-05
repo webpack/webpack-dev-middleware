@@ -8,5 +8,6 @@ module.exports = {
   entry: './broken.js',
   output: {
     path: path.resolve(__dirname, '../../outputs/'),
-  }
+  },
+  stats: 'errors-warnings'
 };

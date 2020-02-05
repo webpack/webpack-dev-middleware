@@ -44,11 +44,14 @@ export default function setupWriteToDisk(context) {
           }
 
           const dir = path.dirname(targetPath);
+          const name = compiler.options.name
+            ? `Child "${compiler.options.name}": `
+            : '';
 
           return fs.mkdir(dir, { recursive: true }, (mkdirError) => {
             if (mkdirError) {
               context.logger.error(
-                `Unable to write "${dir}" directory to disk:\n${mkdirError}`
+                `${name}Unable to write "${dir}" directory to disk:\n${mkdirError}`
               );
 
               return callback(mkdirError);
@@ -57,13 +60,15 @@ export default function setupWriteToDisk(context) {
             return fs.writeFile(targetPath, content, (writeFileError) => {
               if (writeFileError) {
                 context.logger.error(
-                  `Unable to write "${targetPath}" asset to disk:\n${writeFileError}`
+                  `${name}Unable to write "${targetPath}" asset to disk:\n${writeFileError}`
                 );
 
                 return callback(writeFileError);
               }
 
-              context.logger.log(`Asset written to disk: "${targetPath}"`);
+              context.logger.log(
+                `${name}Asset written to disk: "${targetPath}"`
+              );
 
               return callback();
             });

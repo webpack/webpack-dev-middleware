@@ -23,18 +23,21 @@ module.exports = [
     },
     infrastructureLogging: {
       level: 'none'
-    }
+    },
+    stats: 'errors-warnings'
   },
   {
     mode: 'development',
     context: path.resolve(__dirname),
     entry: './bar.js',
+    target: 'node',
     output: {
       filename: 'bar.js',
       path: path.resolve(__dirname, 'server'),
     },
     infrastructureLogging: {
       level: 'none'
-    }
+    },
+    stats: 'errors-warnings'
   },
 ];

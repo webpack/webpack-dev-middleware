@@ -45,5 +45,6 @@ module.exports = [
       aggregateTimeout: 300,
       poll: true,
     },
+    stats: 'errors-warnings'
   },
 ];
