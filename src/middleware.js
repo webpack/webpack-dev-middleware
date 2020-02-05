@@ -1,15 +1,11 @@
 import path from 'path';
 
-import mime from 'mime';
+import mime from 'mime-types';
 
 import DevMiddlewareError from './DevMiddlewareError';
 import getFilenameFromUrl from './utils/getFilenameFromUrl';
 import handleRangeHeaders from './utils/handleRangeHeaders';
 import ready from './utils/ready';
-
-// Do not add a charset to the Content-Type header of these file types
-// otherwise the client will fail to render them correctly.
-const nonCharsetFileTypes = /\.(wasm|usdz)$/;
 
 const HASH_REGEXP = /[0-9a-f]{10,}/;
 
@@ -96,14 +92,10 @@ export default function wrapper(context) {
 
         content = handleRangeHeaders(content, req, res);
 
-        let contentType = mime.getType(filename) || '';
+        if (!res.get('Content-Type')) {
+          const contentType = mime.contentType(path.extname(filename));
 
-        if (contentType) {
-          if (!nonCharsetFileTypes.test(filename)) {
-            contentType += '; charset=utf-8';
-          }
-
-          if (!res.get('Content-Type')) {
+          if (contentType) {
             res.set('Content-Type', contentType);
           }
         }
