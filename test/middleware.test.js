@@ -103,6 +103,10 @@ describe('middleware', () => {
           ),
           'exception'
         );
+        instance.context.outputFileSystem.writeFileSync(
+          path.resolve(compiler.outputPath, 'unknown'),
+          'unknown'
+        );
       });
 
       afterAll((done) => {
@@ -129,7 +133,7 @@ describe('middleware', () => {
         request(app)
           .get('/public/bundle.js')
           .expect('Content-Length', contentLength)
-          .expect('Content-Type', 'application/javascript; charset=UTF-8')
+          .expect('Content-Type', 'application/javascript; charset=utf-8')
           .expect(200, bundleData.toString(), done);
       });
 
@@ -141,7 +145,7 @@ describe('middleware', () => {
         request(app)
           .head('/public/bundle.js')
           .expect('Content-Length', contentLength)
-          .expect('Content-Type', 'application/javascript; charset=UTF-8')
+          .expect('Content-Type', 'application/javascript; charset=utf-8')
           // eslint-disable-next-line no-undefined
           .expect(200, undefined, done);
       });
@@ -160,7 +164,7 @@ describe('middleware', () => {
         request(app)
           .get('/public/svg.svg')
           .expect('Content-Length', contentLength)
-          .expect('Content-Type', 'image/svg+xml; charset=UTF-8')
+          .expect('Content-Type', 'image/svg+xml; charset=utf-8')
           .expect(200, done);
       });
 
@@ -180,14 +184,14 @@ describe('middleware', () => {
         request(app)
           .get('/public/123a123412.hot-update.json')
           .expect('Content-Length', contentLength)
-          .expect('Content-Type', 'application/json; charset=UTF-8')
+          .expect('Content-Type', 'application/json; charset=utf-8')
           .expect(200, manifestData.toString(), done);
       });
 
       it('request to directory', (done) => {
         request(app)
           .get('/public/')
-          .expect('Content-Type', 'text/html; charset=UTF-8')
+          .expect('Content-Type', 'text/html; charset=utf-8')
           .expect('Content-Length', '10')
           .expect(200, /My Index\./, done);
       });
@@ -201,7 +205,7 @@ describe('middleware', () => {
         request(app)
           .get('/public/reference/mono-v6.x.x')
           .expect('Content-Length', contentLength)
-          .expect('Content-Type', 'text/html; charset=UTF-8')
+          .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, fileData.toString(), done);
       });
 
@@ -269,6 +273,19 @@ describe('middleware', () => {
 
             done();
           });
+      });
+
+      it('request to unknown file', (done) => {
+        const fileData = instance.context.outputFileSystem.readFileSync(
+          path.resolve(compiler.outputPath, 'unknown')
+        );
+        const contentLength = fileData.byteLength.toString();
+
+        request(app)
+          .get('/public/unknown')
+          .expect('Content-Length', contentLength)
+          .expect('Content-Type', 'application/octet-stream')
+          .expect(200, done);
       });
     });
 
@@ -914,7 +931,7 @@ describe('middleware', () => {
     it("POST request to bundle file with methods set to ['POST']", (done) => {
       request(app)
         .post('/public/bundle.js')
-        .expect('Content-Type', 'application/javascript; charset=UTF-8')
+        .expect('Content-Type', 'application/javascript; charset=utf-8')
         .expect(200, /console\.log\('Hey\.'\)/, done);
     });
 
@@ -980,7 +997,7 @@ describe('middleware', () => {
       it('GET request to bundle file', (done) => {
         request(app)
           .get('/public/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=UTF-8')
+          .expect('Content-Type', 'application/javascript; charset=utf-8')
           .expect(200, /console\.log\('Hey\.'\)/, done);
       });
     });
@@ -1275,7 +1292,7 @@ describe('middleware', () => {
       it('request to directory', (done) => {
         request(app)
           .get('/')
-          .expect('Content-Type', 'text/html; charset=UTF-8')
+          .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
     });
@@ -1312,7 +1329,7 @@ describe('middleware', () => {
       it('request to directory', (done) => {
         request(app)
           .get('/')
-          .expect('Content-Type', 'text/html; charset=UTF-8')
+          .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
     });
@@ -1345,8 +1362,9 @@ describe('middleware', () => {
       it('request to noextension', (done) => {
         request(app)
           .get('/')
-          .expect('hello')
-          .expect('Content-Type', '; charset=UTF-8')
+          // The "Content-Type" header should have "token" and "subtype"
+          // https://tools.ietf.org/html/rfc7231#section-3.1.1.1
+          .expect('Content-Type', 'application/octet-stream')
           .expect(200, done);
       });
     });
@@ -1408,7 +1426,7 @@ describe('middleware', () => {
       it('logs', (done) => {
         request(app)
           .get('/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=UTF-8')
+          .expect('Content-Type', 'application/javascript; charset=utf-8')
           .expect(200, /console\.log\('Hey\.'\)/, () => {
             instance.invalidate();
 
@@ -1444,7 +1462,7 @@ describe('middleware', () => {
       it('logs', (done) => {
         request(app)
           .get('/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=UTF-8')
+          .expect('Content-Type', 'application/javascript; charset=utf-8')
           .expect(200, /console\.log\('Hey\.'\)/, () => {
             instance.invalidate();
 
@@ -1480,7 +1498,7 @@ describe('middleware', () => {
       it('logs', (done) => {
         request(app)
           .get('/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=UTF-8')
+          .expect('Content-Type', 'application/javascript; charset=utf-8')
           .expect(200, /console\.log\('Hey\.'\)/, () => {
             instance.invalidate();
 
