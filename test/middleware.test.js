@@ -56,12 +56,6 @@ describe('middleware', () => {
         instance = middleware(compiler, {
           stats: 'errors-only',
           publicPath: '/public/',
-          mimeTypes: {
-            typeMap: {
-              'model/vnd.pixar.usd': ['usdz'],
-            },
-            force: true,
-          },
         });
 
         app = express();
@@ -164,7 +158,7 @@ describe('middleware', () => {
         request(app)
           .get('/public/svg.svg')
           .expect('Content-Length', contentLength)
-          .expect('Content-Type', 'image/svg+xml; charset=utf-8')
+          .expect('Content-Type', 'image/svg+xml')
           .expect(200, done);
       });
 
@@ -254,7 +248,7 @@ describe('middleware', () => {
         request(app)
           .get('/public/3dAr.usdz')
           .expect('Content-Length', contentLength)
-          .expect('Content-Type', 'model/vnd.pixar.usd')
+          .expect('Content-Type', 'model/vnd.usdz+zip')
           .expect('010101')
           .expect(200, fileData.toString(), done);
       });
@@ -407,7 +401,7 @@ describe('middleware', () => {
     });
   });
 
-  describe('mimeTypes option', () => {
+  describe.skip('mimeTypes option', () => {
     describe('custom extensions', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
@@ -1298,6 +1292,74 @@ describe('middleware', () => {
     });
 
     describe('with "string" value', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler, {
+          stats: 'errors-only',
+          index: 'default.html',
+          publicPath: '/',
+        });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+
+        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+          recursive: true,
+        });
+        instance.context.outputFileSystem.writeFileSync(
+          path.resolve(compiler.outputPath, 'default.html'),
+          'hello'
+        );
+      });
+
+      afterAll(close);
+
+      it('request to directory', (done) => {
+        request(app)
+          .get('/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+    });
+
+    describe('with "string" value with custom extension', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler, {
+          stats: 'errors-only',
+          index: 'index.custom',
+          publicPath: '/',
+        });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+
+        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+          recursive: true,
+        });
+        instance.context.outputFileSystem.writeFileSync(
+          path.resolve(compiler.outputPath, 'index.custom'),
+          'hello'
+        );
+      });
+
+      afterAll(close);
+
+      it('request to directory', (done) => {
+        request(app)
+          .get('/')
+          .expect('Content-Type', 'application/octet-stream')
+          .expect(200, done);
+      });
+    });
+
+    describe.skip('with "string" value with custom extension and defined custom MIME type', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
