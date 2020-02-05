@@ -119,24 +119,6 @@ Default: `undefined`
 Instructs the module to enable or disable the server-side rendering mode. Please
 see [Server-Side Rendering](#server-side-rendering) for more information.
 
-### stats
-
-Type: `Object`  
-Default: `{ context: process.cwd() }`
-
-Options for formatting statistics displayed during and after compile. For more
-information and property details, please see the
-[webpack documentation](https://webpack.js.org/configuration/stats/#stats).
-
-### watchOptions
-
-Type: `Object`  
-Default: `{ aggregateTimeout: 200 }`
-
-The module accepts an `Object` containing options for file watching, which is
-passed directly to the compiler provided. For more information on watch options
-please see the [webpack documentation](https://webpack.js.org/configuration/watch/#watchoptions)
-
 ### writeToDisk
 
 Type: `Boolean|Function`  
