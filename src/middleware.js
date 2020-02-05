@@ -99,7 +99,7 @@ export default function wrapper(context) {
         let contentType = mime.getType(filename) || '';
 
         if (!nonCharsetFileTypes.test(filename)) {
-          contentType += '; charset=UTF-8';
+          contentType += '; charset=utf-8';
         }
 
         if (!res.get('Content-Type')) {
