@@ -12,8 +12,6 @@ import getCompiler from './helpers/getCompiler';
 import GetLogsPlugin from './helpers/GetLogsPlugin';
 import isWebpack5 from './helpers/isWebpack5';
 
-import { mockRequest, mockResponse } from './mock-express';
-
 import webpackConfig from './fixtures/server-test/webpack.config';
 import webpackMultiConfig from './fixtures/server-test/webpack.array.config';
 import webpackWatchOptionsConfig from './fixtures/server-test/webpack.watch-options.config';
@@ -272,33 +270,6 @@ describe('middleware', () => {
             done();
           });
       });
-    });
-
-    // Issue #385, for that koa-webpack@4.x doesn't pass in res.getHeader method.
-    describe('should work when res.getHeader is undefined', () => {
-      it('should not throw error', (done) => {
-        const req = mockRequest({
-          url: '/',
-          method: 'GET',
-          headers: {
-            Range: 'bytes=6000-',
-          },
-        });
-
-        const res = mockResponse({
-          // eslint-disable-next-line no-undefined
-          getHeader: undefined,
-          setHeader: jest.fn(),
-        });
-
-        const compiler = getCompiler(webpackConfig);
-
-        instance = middleware(compiler, { stats: 'errors-only' });
-
-        instance(req, res, jest.fn()).then(done);
-      });
-
-      afterAll(close);
     });
 
     describe('should respect the "Content-Type" from other middleware', () => {
