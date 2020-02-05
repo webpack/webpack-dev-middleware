@@ -102,8 +102,8 @@ export default function wrapper(context) {
           contentType += '; charset=UTF-8';
         }
 
-        if (!res.getHeader || !res.getHeader('Content-Type')) {
-          res.setHeader('Content-Type', contentType);
+        if (!res.get('Content-Type')) {
+          res.set('Content-Type', contentType);
         }
 
         const { headers } = context.options;
