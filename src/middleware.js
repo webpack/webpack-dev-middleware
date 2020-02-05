@@ -98,12 +98,14 @@ export default function wrapper(context) {
 
         let contentType = mime.getType(filename) || '';
 
-        if (!nonCharsetFileTypes.test(filename)) {
-          contentType += '; charset=utf-8';
-        }
+        if (contentType) {
+          if (!nonCharsetFileTypes.test(filename)) {
+            contentType += '; charset=utf-8';
+          }
 
-        if (!res.get('Content-Type')) {
-          res.set('Content-Type', contentType);
+          if (!res.get('Content-Type')) {
+            res.set('Content-Type', contentType);
+          }
         }
 
         const { headers } = context.options;

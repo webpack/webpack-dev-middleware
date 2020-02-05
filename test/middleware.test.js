@@ -275,7 +275,7 @@ describe('middleware', () => {
           });
       });
 
-      it.skip('request to unknown file', (done) => {
+      it('request to unknown file', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
           path.resolve(compiler.outputPath, 'unknown')
         );
@@ -1362,8 +1362,9 @@ describe('middleware', () => {
       it('request to noextension', (done) => {
         request(app)
           .get('/')
-          .expect('hello')
-          .expect('Content-Type', '; charset=utf-8')
+          // The "Content-Type" header should have "token" and "subtype"
+          // https://tools.ietf.org/html/rfc7231#section-3.1.1.1
+          .expect('Content-Type', 'application/octet-stream')
           .expect(200, done);
       });
     });
