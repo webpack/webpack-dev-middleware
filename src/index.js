@@ -1,4 +1,5 @@
 import validateOptions from 'schema-utils';
+import mime from 'mime-types';
 
 import middleware from './middleware';
 import setupHooks from './utils/setupHooks';
@@ -27,6 +28,14 @@ export default function wdm(compiler, opts = defaults) {
     compiler,
     watching: null,
   };
+
+  const { mimeTypes } = options;
+
+  if (mimeTypes) {
+    const { types } = mime;
+
+    mime.types = { ...mimeTypes, ...types };
+  }
 
   setupHooks(context);
   setupLogger(context);

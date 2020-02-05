@@ -401,7 +401,7 @@ describe('middleware', () => {
     });
   });
 
-  describe.skip('mimeTypes option', () => {
+  describe('mimeTypes option', () => {
     describe('custom extensions', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
@@ -410,45 +410,7 @@ describe('middleware', () => {
           stats: 'errors-only',
           index: 'Index.phtml',
           mimeTypes: {
-            'text/html': ['phtml'],
-          },
-        });
-
-        app = express();
-        app.use(instance);
-
-        listen = listenShorthand(done);
-
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
-          recursive: true,
-        });
-        instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'Index.phtml'),
-          'welcome'
-        );
-      });
-
-      afterAll(close);
-
-      it('request to Index.phtml', (done) => {
-        request(app)
-          .get('/')
-          .expect('welcome')
-          .expect('Content-Type', /text\/html/)
-          .expect(200, done);
-      });
-    });
-
-    describe('force option for overriding any previous mapping', () => {
-      beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
-
-        instance = middleware(compiler, {
-          stats: 'errors-only',
-          index: 'Index.phtml',
-          mimeTypes: {
-            typeMap: { 'text/html': ['phtml'] },
-            force: true,
+            phtml: 'text/html',
           },
         });
 
@@ -1359,7 +1321,7 @@ describe('middleware', () => {
       });
     });
 
-    describe.skip('with "string" value with custom extension and defined custom MIME type', () => {
+    describe('with "string" value with custom extension and defined custom MIME type', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
@@ -1367,7 +1329,7 @@ describe('middleware', () => {
           stats: 'errors-only',
           index: 'index.custom',
           mimeTypes: {
-            'text/html': ['custom'],
+            custom: 'text/html',
           },
           publicPath: '/',
         });
