@@ -5,10 +5,7 @@ import getCompiler from './helpers/getCompiler';
 describe('validation', () => {
   const cases = {
     mimeTypes: {
-      success: [
-        { 'text/html': ['phtml'] },
-        { typeMap: { 'text/html': ['phtml'] }, force: true },
-      ],
+      success: [{ phtml: ['text/html'] }],
       failure: ['foo'],
     },
     stats: {

@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "memfs": "^3.0.4",
-    "mime": "^2.4.4",
+    "mime-types": "^2.1.26",
     "range-parser": "^1.2.1",
     "schema-utils": "^2.6.4"
   },

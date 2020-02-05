@@ -1,5 +1,5 @@
-import mime from 'mime';
 import validateOptions from 'schema-utils';
+import mime from 'mime-types';
 
 import middleware from './middleware';
 import setupHooks from './utils/setupHooks';
@@ -20,15 +20,6 @@ export default function wdm(compiler, opts = defaults) {
   validateOptions(schema, opts, 'webpack Dev Middleware');
 
   const options = Object.assign({}, defaults, opts);
-
-  // defining custom MIME type
-  if (options.mimeTypes) {
-    const typeMap = options.mimeTypes.typeMap || options.mimeTypes;
-    const force = Boolean(options.mimeTypes.force);
-
-    mime.define(typeMap, force);
-  }
-
   const context = {
     state: false,
     stats: null,
@@ -37,6 +28,14 @@ export default function wdm(compiler, opts = defaults) {
     compiler,
     watching: null,
   };
+
+  const { mimeTypes } = options;
+
+  if (mimeTypes) {
+    const { types } = mime;
+
+    mime.types = { ...mimeTypes, ...types };
+  }
 
   setupHooks(context);
   setupLogger(context);
