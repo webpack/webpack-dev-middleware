@@ -8,7 +8,9 @@ module.exports = [
     context: path.resolve(__dirname),
     entry: './warning.js',
     output: {
-      path: path.resolve(__dirname, '../../outputs/'),
+      filename: 'bundle.js',
+      path: path.resolve(__dirname, '../../outputs/array-warning/js1'),
+      publicPath: '/js1/',
     },
     plugins: [
       {
@@ -28,7 +30,9 @@ module.exports = [
     context: path.resolve(__dirname),
     entry: './warning.js',
     output: {
-      path: path.resolve(__dirname, '../../outputs/'),
+      filename: 'bundle.js',
+      path: path.resolve(__dirname, '../outputs/array-warning/js2'),
+      publicPath: '/js2/',
     },
     plugins: [
       {

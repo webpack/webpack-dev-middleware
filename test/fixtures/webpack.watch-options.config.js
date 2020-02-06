@@ -4,10 +4,11 @@ const path = require('path');
 
 module.exports = {
   mode: 'development',
-  context: __dirname,
+  context: path.resolve(__dirname),
   entry: './simple.js',
   output: {
-    path: path.resolve(__dirname, '../../outputs/'),
+    filename: 'bundle.js',
+    path: path.resolve(__dirname, '../outputs/watch-options'),
   },
   watchOptions: {
     aggregateTimeout: 300,

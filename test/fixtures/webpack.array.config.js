@@ -8,9 +8,9 @@ module.exports = [
     context: path.resolve(__dirname),
     entry: './foo.js',
     output: {
-      filename: 'foo.js',
-      path: path.resolve(__dirname, 'client'),
-      publicPath: '/static/',
+      filename: 'bundle.js',
+      path: path.resolve(__dirname, '../outputs/array/js1'),
+      publicPath: '/js1/',
     },
     module: {
       rules: [
@@ -30,10 +30,10 @@ module.exports = [
     mode: 'development',
     context: path.resolve(__dirname),
     entry: './bar.js',
-    target: 'node',
     output: {
-      filename: 'bar.js',
-      path: path.resolve(__dirname, 'server'),
+      filename: 'bundle.js',
+      path: path.resolve(__dirname, '../outputs/array/js2'),
+      publicPath: '/js2/',
     },
     infrastructureLogging: {
       level: 'none'

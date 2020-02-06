@@ -8,9 +8,9 @@ module.exports = [
     context: path.resolve(__dirname),
     entry: './foo.js',
     output: {
-      filename: 'foo.js',
-      path: path.resolve(__dirname, 'js1'),
-      publicPath: '/js1/',
+      filename: 'bundle.js',
+      path: path.resolve(__dirname, '../outputs/client-server/client'),
+      publicPath: '/static/',
     },
     module: {
       rules: [
@@ -24,26 +24,19 @@ module.exports = [
     infrastructureLogging: {
       level: 'none'
     },
-    watchOptions: {
-      aggregateTimeout: 800,
-      poll: false,
-    },
+    stats: 'errors-warnings'
   },
   {
     mode: 'development',
     context: path.resolve(__dirname),
     entry: './bar.js',
+    target: 'node',
     output: {
-      filename: 'bar.js',
-      path: path.resolve(__dirname, 'js2'),
-      publicPath: '/js2/',
+      filename: 'bundle.js',
+      path: path.resolve(__dirname, '../outputs/client-server/server'),
     },
     infrastructureLogging: {
       level: 'none'
-    },
-    watchOptions: {
-      aggregateTimeout: 300,
-      poll: true,
     },
     stats: 'errors-warnings'
   },
