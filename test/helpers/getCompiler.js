@@ -1,6 +1,6 @@
 import webpack from 'webpack';
 
-import defaultConfig from '../fixtures/server-test/webpack.simple.config';
+import defaultConfig from '../fixtures/webpack.config';
 
 function getCompiler(config) {
   return webpack(config || defaultConfig);

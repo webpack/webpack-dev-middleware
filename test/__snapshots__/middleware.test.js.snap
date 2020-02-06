@@ -6,7 +6,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /public/bundle.js",
+      "wait until bundle finished: /js1/bundle.js",
     ],
   ],
   Array [
@@ -57,7 +57,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /public/bundle.js",
+      "wait until bundle finished: /js1/bundle.js",
     ],
   ],
   Array [
@@ -97,7 +97,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /public/bundle.js",
+      "wait until bundle finished: /bundle.js",
     ],
   ],
   Array [
@@ -123,7 +123,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /public/bundle.js",
+      "wait until bundle finished: /js1/bundle.js",
     ],
   ],
   Array [
@@ -174,7 +174,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /public/bundle.js",
+      "wait until bundle finished: /bundle.js",
     ],
   ],
   Array [
@@ -193,7 +193,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /public/bundle.js",
+      "wait until bundle finished: /bundle.js",
     ],
   ],
   Array [
@@ -219,7 +219,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /public/bundle.js",
+      "wait until bundle finished: /bundle.js",
     ],
   ],
   Array [
@@ -250,7 +250,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /bundle.js",
+      "wait until bundle finished: /js1/bundle.js",
     ],
   ],
   Array [
@@ -344,7 +344,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /bundle.js",
+      "wait until bundle finished: /js1/bundle.js",
     ],
   ],
   Array [
@@ -504,7 +504,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /bundle.js",
+      "wait until bundle finished: /js1/bundle.js",
     ],
   ],
   Array [
