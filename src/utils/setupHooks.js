@@ -67,14 +67,13 @@ export default function setupHooks(context) {
       context.callbacks = [];
 
       // Execute callback that are delayed
-      callbacks.forEach((cb) => {
-        cb(stats);
+      callbacks.forEach((callback) => {
+        callback(stats);
       });
     });
   }
 
-  context.compiler.hooks.invalid.tap('WebpackDevMiddleware', () => invalid);
-  context.compiler.hooks.run.tap('WebpackDevMiddleware', invalid);
-  context.compiler.hooks.done.tap('WebpackDevMiddleware', done);
-  context.compiler.hooks.watchRun.tap('WebpackDevMiddleware', invalid);
+  context.compiler.hooks.watchRun.tap('DevMiddleware', invalid);
+  context.compiler.hooks.invalid.tap('DevMiddleware', invalid);
+  context.compiler.hooks.done.tap('DevMiddleware', done);
 }

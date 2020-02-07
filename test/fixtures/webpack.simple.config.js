@@ -5,19 +5,10 @@ const path = require('path');
 module.exports = {
   mode: 'development',
   context: path.resolve(__dirname),
-  entry: './foo.js',
+  entry: './simple.js',
   output: {
     filename: 'bundle.js',
-    path: path.resolve(__dirname, '../outputs/basic'),
-  },
-  module: {
-    rules: [
-      {
-        test: /\.(svg|html)$/,
-        loader: 'file-loader',
-        options: { name: '[name].[ext]' },
-      },
-    ],
+    path: path.resolve(__dirname, '../outputs/simple'),
   },
   infrastructureLogging: {
     level: 'none'

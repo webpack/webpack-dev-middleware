@@ -13,6 +13,7 @@ import GetLogsPlugin from './helpers/GetLogsPlugin';
 import isWebpack5 from './helpers/isWebpack5';
 
 import webpackConfig from './fixtures/webpack.config';
+import webpackSimpleConfig from './fixtures/webpack.simple.config';
 import webpackMultiConfig from './fixtures/webpack.array.config';
 import webpackWatchOptionsConfig from './fixtures/webpack.watch-options.config';
 import webpackMultiWatchOptionsConfig from './fixtures/webpack.array.watch-options.config';
@@ -672,6 +673,86 @@ describe('middleware', () => {
           });
       });
     });
+
+    describe('should throw an error on "run" when we watching', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('logs', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect('Content-Type', 'application/javascript; charset=utf-8')
+          .expect(200, /console\.log\('Hey\.'\)/, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            return compiler.run((runError) => {
+              expect(() => {
+                throw runError;
+              }).toThrowErrorMatchingSnapshot();
+
+              done();
+            });
+          });
+      });
+    });
+
+    describe('should throw an error on "watch" when we watching', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('logs', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect('Content-Type', 'application/javascript; charset=utf-8')
+          .expect(200, /console\.log\('Hey\.'\)/, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            return compiler.watch({}, (watchError) => {
+              expect(() => {
+                throw watchError;
+              }).toThrowErrorMatchingSnapshot();
+
+              done();
+            });
+          });
+      });
+    });
   });
 
   describe('mimeTypes option', () => {
@@ -901,7 +982,7 @@ describe('middleware', () => {
 
             const bundlePath = path.resolve(
               __dirname,
-              './outputs/simple/bundle.js'
+              './outputs/basic/bundle.js'
             );
 
             expect(
@@ -950,7 +1031,7 @@ describe('middleware', () => {
 
             const bundlePath = path.resolve(
               __dirname,
-              './outputs/simple/bundle.js'
+              './outputs/basic/bundle.js'
             );
 
             expect(
@@ -995,7 +1076,7 @@ describe('middleware', () => {
 
             const bundlePath = path.resolve(
               __dirname,
-              './outputs/simple/bundle.js'
+              './outputs/basic/bundle.js'
             );
 
             expect(fs.existsSync(bundlePath)).toBe(true);
@@ -1024,7 +1105,7 @@ describe('middleware', () => {
 
             const bundlePath = path.resolve(
               __dirname,
-              './outputs/simple/bundle.js'
+              './outputs/basic/bundle.js'
             );
 
             expect(fs.existsSync(bundlePath)).toBe(false);
@@ -1946,6 +2027,94 @@ describe('middleware', () => {
         instance.close();
 
         watchSpy.mockRestore();
+      });
+    });
+
+    describe('should log an error from the "fs.mkdir" method when the "writeToDisk" option is "true" ', () => {
+      let compiler;
+      let getLogsPlugin;
+      let mkdirSpy;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackSimpleConfig);
+
+        mkdirSpy = jest.spyOn(fs, 'mkdir').mockImplementation((...args) => {
+          const callback = args[args.length - 1];
+
+          return callback(new Error('Error in the "fs.mkdir" method.'));
+        });
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler, { writeToDisk: true });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(() => {
+        mkdirSpy.mockRestore();
+      });
+
+      it('logs', (done) => {
+        compiler.hooks.failed.tap('FailedCatcher', () => {
+          instance.close(() => {
+            expect(getLogsPlugin.logs).toMatchSnapshot();
+
+            listen.close(() => {
+              done();
+            });
+          });
+        });
+      });
+    });
+
+    describe('should log an error from the "fs.writeFile" method when the "writeToDisk" option is "true" ', () => {
+      let compiler;
+      let getLogsPlugin;
+      let writeFileSpy;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackSimpleConfig);
+
+        writeFileSpy = jest
+          .spyOn(fs, 'writeFile')
+          .mockImplementation((...args) => {
+            const callback = args[args.length - 1];
+
+            return callback(new Error('Error in the "fs.writeFile" method.'));
+          });
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler, { writeToDisk: true });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(() => {
+        writeFileSpy.mockRestore();
+
+        close();
+      });
+
+      it('logs', (done) => {
+        compiler.hooks.failed.tap('FailedCatcher', () => {
+          instance.close(() => {
+            expect(getLogsPlugin.logs).toMatchSnapshot();
+
+            listen.close(() => {
+              done();
+            });
+          });
+        });
       });
     });
   });
