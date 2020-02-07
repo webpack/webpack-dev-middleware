@@ -3,7 +3,7 @@ export default (compiler) => {
 
   for (const hook of Object.keys(compiler.hooks)) {
     for (const tap of compiler.hooks[hook].taps) {
-      if (tap.name === 'WebpackDevMiddleware') {
+      if (tap.name === 'DevMiddleware') {
         if (!result[hook]) {
           result[hook] = [];
         }
