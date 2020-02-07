@@ -11,6 +11,8 @@ export default class GetLogsPlugin {
     return log
       .toString()
       .trim()
+      .replace(process.cwd(), '/absolute/path/to')
+      .replace(/\\/g, '/')
       .replace(/\d+ modules/, 'X modules')
       .replace(/Entrypoint (\w+) = ([\w.]+)( (\(.*\)))?/, 'Entrypoint $1 = $2')
       .replace(/Child "(\w+)":\s+/, 'Child "$1": ');

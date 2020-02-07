@@ -57,6 +57,10 @@ export default function wdm(compiler, options = {}) {
   // Start watching
   context.watching = context.compiler.watch(watchOptions, (error) => {
     if (error) {
+      // TODO: improve that in future
+      // For example - `writeToDisk` can throw an error and right now it is ends watching.
+      // We can improve that and keep watching active, but it is require API on webpack side.
+      // Let's implement that in webpack@5 because it is rare case.
       context.logger.error(error);
     }
   });
