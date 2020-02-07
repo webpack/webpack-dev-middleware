@@ -5,13 +5,13 @@ export default function setupWriteToDisk(context) {
   const compilers = context.compiler.compilers || [context.compiler];
 
   for (const compiler of compilers) {
-    compiler.hooks.emit.tap('WebpackDevMiddleware', (compilation) => {
+    compiler.hooks.emit.tap('DevMiddleware', (compilation) => {
       if (compiler.hasWebpackDevMiddlewareAssetEmittedCallback) {
         return;
       }
 
       compiler.hooks.assetEmitted.tapAsync(
-        'WebpackDevMiddleware',
+        'DevMiddleware',
         (file, info, callback) => {
           let targetPath = null;
           let content = null;
