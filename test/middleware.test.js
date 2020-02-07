@@ -901,76 +901,31 @@ describe('middleware', () => {
   });
 
   describe('writeToDisk option', () => {
-    function writeToDisk(value, done) {
-      const compiler = getCompiler(webpackConfig);
-
-      instance = middleware(compiler, { writeToDisk: value });
-
-      app = express();
-      app.use(instance);
-
-      listen = listenShorthand(done);
-
-      return { compiler, instance, app };
-    }
-
-    function querystringToDisk(value, done) {
-      const compiler = getCompiler(webpackQueryStringConfig);
-
-      instance = middleware(compiler, { writeToDisk: value });
-
-      app = express();
-      app.use(instance);
-
-      listen = listenShorthand(done);
-
-      return { compiler, instance, app };
-    }
-
-    function multiToDisk(value, done) {
-      const compiler = getCompiler(webpackMultiConfig);
-
-      instance = middleware(compiler, { writeToDisk: value });
-
-      app = express();
-      app.use(instance);
-
-      listen = listenShorthand(done);
-
-      return { compiler, instance, app };
-    }
-
-    function writeToDiskWithHash(value, done) {
-      const compiler = getCompiler({
-        ...webpackConfig,
-        ...{
-          output: {
-            filename: 'bundle.js',
-            path: isWebpack5()
-              ? path.resolve(__dirname, './outputs/dist_[fullhash]')
-              : path.resolve(__dirname, './outputs/dist_[hash]'),
-          },
-        },
-      });
-
-      instance = middleware(compiler, { writeToDisk: value });
-
-      app = express();
-      app.use(instance);
-
-      listen = listenShorthand(done);
-
-      return { compiler, instance, app };
-    }
-
     describe('should work with a "true" value', () => {
       let compiler;
 
       beforeAll((done) => {
-        ({ compiler } = writeToDisk(true, done));
+        compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: path.resolve(__dirname, './outputs/write-to-disk-true'),
+          },
+        });
+
+        instance = middleware(compiler, { writeToDisk: true });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
       });
 
-      afterAll(close);
+      afterAll(() => {
+        del.sync(path.posix.resolve(__dirname, './outputs/write-to-disk-true'));
+
+        close();
+      });
 
       it('should find the bundle file on disk', (done) => {
         request(app)
@@ -982,26 +937,24 @@ describe('middleware', () => {
 
             const bundlePath = path.resolve(
               __dirname,
-              './outputs/basic/bundle.js'
+              './outputs/write-to-disk-true/bundle.js'
             );
 
             expect(
               compiler.hooks.assetEmitted.taps.filter(
-                (hook) => hook.name === 'WebpackDevMiddleware'
+                (hook) => hook.name === 'DevMiddleware'
               ).length
             ).toBe(1);
             expect(fs.existsSync(bundlePath)).toBe(true);
 
-            fs.unlinkSync(bundlePath);
-
             instance.invalidate();
 
             return compiler.hooks.done.tap(
-              'WebpackDevMiddlewareWriteToDiskTest',
+              'DevMiddlewareWriteToDiskTest',
               () => {
                 expect(
                   compiler.hooks.assetEmitted.taps.filter(
-                    (hook) => hook.name === 'WebpackDevMiddleware'
+                    (hook) => hook.name === 'DevMiddleware'
                   ).length
                 ).toBe(1);
 
@@ -1016,7 +969,20 @@ describe('middleware', () => {
       let compiler;
 
       beforeAll((done) => {
-        ({ compiler } = writeToDisk(false, done));
+        compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: path.resolve(__dirname, './outputs/write-to-disk-false'),
+          },
+        });
+
+        instance = middleware(compiler, { writeToDisk: false });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
       });
 
       afterAll(close);
@@ -1031,12 +997,12 @@ describe('middleware', () => {
 
             const bundlePath = path.resolve(
               __dirname,
-              './outputs/basic/bundle.js'
+              './outputs/write-to-disk-false/bundle.js'
             );
 
             expect(
               compiler.hooks.assetEmitted.taps.filter(
-                (hook) => hook.name === 'WebpackDevMiddleware'
+                (hook) => hook.name === 'DevMiddleware'
               ).length
             ).toBe(0);
             expect(fs.existsSync(bundlePath)).toBe(false);
@@ -1044,11 +1010,11 @@ describe('middleware', () => {
             instance.invalidate();
 
             return compiler.hooks.done.tap(
-              'WebpackDevMiddlewareWriteToDiskTest',
+              'DevMiddlewareWriteToDiskTest',
               () => {
                 expect(
                   compiler.hooks.assetEmitted.taps.filter(
-                    (hook) => hook.name === 'WebpackDevMiddleware'
+                    (hook) => hook.name === 'DevMiddleware'
                   ).length
                 ).toBe(0);
 
@@ -1059,12 +1025,38 @@ describe('middleware', () => {
       });
     });
 
-    describe('should work with the "Function" value, which returns "true"', () => {
+    describe('should work with the "Function" value and returns "true"', () => {
+      let compiler;
+
       beforeAll((done) => {
-        writeToDisk((filePath) => /bundle\.js$/.test(filePath), done);
+        compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: path.resolve(
+              __dirname,
+              './outputs/write-to-disk-function-true'
+            ),
+          },
+        });
+
+        instance = middleware(compiler, {
+          writeToDisk: (filePath) => /bundle\.js$/.test(filePath),
+        });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
       });
 
-      afterAll(close);
+      afterAll(() => {
+        del.sync(
+          path.posix.resolve(__dirname, './outputs/write-to-disk-function-true')
+        );
+
+        close();
+      });
 
       it('should find the bundle file on disk', (done) => {
         request(app)
@@ -1076,24 +1068,51 @@ describe('middleware', () => {
 
             const bundlePath = path.resolve(
               __dirname,
-              './outputs/basic/bundle.js'
+              './outputs/write-to-disk-function-true/bundle.js'
             );
 
             expect(fs.existsSync(bundlePath)).toBe(true);
-
-            fs.unlinkSync(bundlePath);
 
             return done();
           });
       });
     });
 
-    describe('should work with the "Function" value, which returns "false"', () => {
+    describe('should work with the "Function" value and returns "false"', () => {
+      let compiler;
+
       beforeAll((done) => {
-        writeToDisk((filePath) => !/bundle\.js$/.test(filePath), done);
+        compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: path.resolve(
+              __dirname,
+              './outputs/write-to-disk-function-false'
+            ),
+          },
+        });
+
+        instance = middleware(compiler, {
+          writeToDisk: (filePath) => !/bundle\.js$/.test(filePath),
+        });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
       });
 
-      afterAll(close);
+      afterAll(() => {
+        del.sync(
+          path.posix.resolve(
+            __dirname,
+            './outputs/write-to-disk-function-false'
+          )
+        );
+
+        close();
+      });
 
       it('should not find the bundle file on disk', (done) => {
         request(app)
@@ -1105,7 +1124,7 @@ describe('middleware', () => {
 
             const bundlePath = path.resolve(
               __dirname,
-              './outputs/basic/bundle.js'
+              './outputs/write-to-disk-function-false/bundle.js'
             );
 
             expect(fs.existsSync(bundlePath)).toBe(false);
@@ -1116,11 +1135,35 @@ describe('middleware', () => {
     });
 
     describe('should work when assets have query string', () => {
+      let compiler;
+
       beforeAll((done) => {
-        querystringToDisk(true, done);
+        compiler = getCompiler({
+          ...webpackQueryStringConfig,
+          output: {
+            filename: 'bundle.js?[contenthash]',
+            path: path.resolve(
+              __dirname,
+              './outputs/write-to-disk-query-string'
+            ),
+          },
+        });
+
+        instance = middleware(compiler, { writeToDisk: true });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
       });
 
-      afterAll(close);
+      afterAll(() => {
+        del.sync(
+          path.posix.resolve(__dirname, './outputs/write-to-disk-query-string')
+        );
+
+        close();
+      });
 
       it('should find the bundle file on disk with no querystring', (done) => {
         request(app)
@@ -1132,12 +1175,10 @@ describe('middleware', () => {
 
             const bundlePath = path.resolve(
               __dirname,
-              './outputs/querystring/bundle.js'
+              './outputs/write-to-disk-query-string/bundle.js'
             );
 
             expect(fs.existsSync(bundlePath)).toBe(true);
-
-            fs.unlinkSync(bundlePath);
 
             return done();
           });
@@ -1145,11 +1186,52 @@ describe('middleware', () => {
     });
 
     describe('should work in multi compiler mode', () => {
+      let compiler;
+
       beforeAll((done) => {
-        multiToDisk(true, done);
+        compiler = getCompiler([
+          {
+            ...webpackMultiWatchOptionsConfig[0],
+            output: {
+              filename: 'bundle.js',
+              path: path.resolve(
+                __dirname,
+                './outputs/write-to-disk-multi-compiler/js1'
+              ),
+              publicPath: '/js1/',
+            },
+          },
+          {
+            ...webpackMultiWatchOptionsConfig[1],
+            output: {
+              filename: 'bundle.js',
+              path: path.resolve(
+                __dirname,
+                './outputs/write-to-disk-multi-compiler/js2'
+              ),
+              publicPath: '/js2/',
+            },
+          },
+        ]);
+
+        instance = middleware(compiler, { writeToDisk: true });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
       });
 
-      afterAll(close);
+      afterAll(() => {
+        del.sync(
+          path.posix.resolve(
+            __dirname,
+            './outputs/write-to-disk-multi-compiler/'
+          )
+        );
+
+        close();
+      });
 
       it('should find the bundle files on disk', (done) => {
         request(app)
@@ -1160,22 +1242,17 @@ describe('middleware', () => {
             }
 
             const bundleFiles = [
-              './outputs/array/js1/bundle.js',
-              './outputs/array/js1/index.html',
-              './outputs/array/js1/svg.svg',
-              './outputs/array/js2/bundle.js',
+              './outputs/write-to-disk-multi-compiler/js1/bundle.js',
+              './outputs/write-to-disk-multi-compiler/js1/index.html',
+              './outputs/write-to-disk-multi-compiler/js1/svg.svg',
+              './outputs/write-to-disk-multi-compiler/js2/bundle.js',
             ];
 
             for (const bundleFile of bundleFiles) {
               const bundlePath = path.resolve(__dirname, bundleFile);
 
               expect(fs.existsSync(bundlePath)).toBe(true);
-
-              fs.unlinkSync(bundlePath);
             }
-
-            fs.rmdirSync(path.resolve(__dirname, './outputs/array/js1/'));
-            fs.rmdirSync(path.resolve(__dirname, './outputs/array/js2/'));
 
             return done();
           });
@@ -1183,11 +1260,42 @@ describe('middleware', () => {
     });
 
     describe.skip('should work with "[hash]"/"[fullhash]" in the "output.path" option', () => {
+      let compiler;
+
       beforeAll((done) => {
-        writeToDiskWithHash(true, done);
+        compiler = getCompiler({
+          ...webpackConfig,
+          ...{
+            output: {
+              filename: 'bundle.js',
+              path: isWebpack5()
+                ? path.resolve(
+                    __dirname,
+                    './outputs/write-to-disk-with-hash/dist_[fullhash]'
+                  )
+                : path.resolve(
+                    __dirname,
+                    './outputs/write-to-disk-with-hash/dist_[hash]'
+                  ),
+            },
+          },
+        });
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
       });
 
-      afterAll(close);
+      afterAll(() => {
+        del.sync(
+          path.posix.resolve(__dirname, './outputs/write-to-disk-with-hash/')
+        );
+
+        close();
+      });
 
       it('should find the bundle file on disk', (done) => {
         request(app)
@@ -1200,11 +1308,11 @@ describe('middleware', () => {
             const bundlePath = isWebpack5()
               ? path.resolve(
                   __dirname,
-                  './outputs/dist_6e9d1c41483198efea74/bundle.js'
+                  './outputs/write-to-disk-with-hash/dist_6e9d1c41483198efea74/bundle.js'
                 )
               : path.resolve(
                   __dirname,
-                  './outputs/dist_f2e154f7f2fe769e53d3/bundle.js'
+                  './outputs/write-to-disk-with-hash/dist_f2e154f7f2fe769e53d3/bundle.js'
                 );
 
             expect(fs.existsSync(bundlePath)).toBe(true);
@@ -2036,7 +2144,16 @@ describe('middleware', () => {
       let mkdirSpy;
 
       beforeAll((done) => {
-        compiler = getCompiler(webpackSimpleConfig);
+        compiler = getCompiler({
+          ...webpackSimpleConfig,
+          output: {
+            filename: 'bundle.js',
+            path: path.resolve(
+              __dirname,
+              './outputs/write-to-disk-mkdir-error'
+            ),
+          },
+        });
 
         mkdirSpy = jest.spyOn(fs, 'mkdir').mockImplementation((...args) => {
           const callback = args[args.length - 1];
@@ -2056,6 +2173,10 @@ describe('middleware', () => {
       });
 
       afterAll(() => {
+        del.sync(
+          path.posix.resolve(__dirname, './outputs/write-to-disk-mkdir-error')
+        );
+
         mkdirSpy.mockRestore();
       });
 
@@ -2078,7 +2199,16 @@ describe('middleware', () => {
       let writeFileSpy;
 
       beforeAll((done) => {
-        compiler = getCompiler(webpackSimpleConfig);
+        compiler = getCompiler({
+          ...webpackSimpleConfig,
+          output: {
+            filename: 'bundle.js',
+            path: path.resolve(
+              __dirname,
+              './outputs/write-to-disk-writeFile-error'
+            ),
+          },
+        });
 
         writeFileSpy = jest
           .spyOn(fs, 'writeFile')
@@ -2101,6 +2231,13 @@ describe('middleware', () => {
 
       afterAll(() => {
         writeFileSpy.mockRestore();
+
+        del.sync(
+          path.posix.resolve(
+            __dirname,
+            './outputs/write-to-disk-writeFile-error'
+          )
+        );
 
         close();
       });
