@@ -66,14 +66,14 @@ export default function wdm(compiler, options = {}) {
       // eslint-disable-next-line no-param-reassign
       callback = callback || noop;
 
-      ready(context, callback, {});
+      ready(context, callback);
     },
 
     invalidate(callback) {
       // eslint-disable-next-line no-param-reassign
       callback = callback || noop;
 
-      ready(context, callback, {});
+      ready(context, callback);
 
       context.watching.invalidate();
     },
