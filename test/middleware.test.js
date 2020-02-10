@@ -773,6 +773,37 @@ describe('middleware', () => {
           });
       });
     });
+
+    describe('should handle an earlier request if a change happened while compiling', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler);
+
+        let invalidated = false;
+
+        compiler.hooks.done.tap('Invalidated', () => {
+          if (!invalidated) {
+            instance.invalidate();
+
+            invalidated = true;
+          }
+        });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" request to the bundle file', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(200, done);
+      });
+    });
   });
 
   describe('mimeTypes option', () => {
@@ -1927,6 +1958,46 @@ describe('middleware', () => {
       afterAll(close);
 
       it('should return the "404" code for the "GET" request to the', (done) => {
+        request(app)
+          .get('/')
+          .expect(404, done);
+      });
+    });
+
+    describe('should not handle request when index is neither a file nor a directory', () => {
+      let compiler;
+      let isDirectory;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler, {
+          index: 'default.html',
+          publicPath: '/',
+        });
+
+        isDirectory = jest
+          .spyOn(instance.context.outputFileSystem, 'statSync')
+          .mockImplementation(() => {
+            return {
+              isFile: () => false,
+              isDirectory: () => false,
+            };
+          });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(() => {
+        isDirectory.mockRestore();
+
+        close();
+      });
+
+      it('should logging an error', (done) => {
         request(app)
           .get('/')
           .expect(404, done);
