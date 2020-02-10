@@ -105,13 +105,12 @@ describe('middleware', () => {
         );
       });
 
-      afterAll((done) => {
-        close(done);
-      });
+      afterAll(close);
 
       it('should not find a bundle file on disk', (done) => {
         request(app)
           .get('/public/bundle.js')
+          .expect('Content-Type', 'application/javascript; charset=utf-8')
           .expect(200, (error) => {
             if (error) {
               return done(error);
@@ -125,99 +124,101 @@ describe('middleware', () => {
           });
       });
 
-      it('GET request to bundle file', (done) => {
-        const bundleData = instance.context.outputFileSystem.readFileSync(
+      it('should return the "200" code for the "GET" request to the bundle file', (done) => {
+        const fileData = instance.context.outputFileSystem.readFileSync(
           path.resolve(compiler.outputPath, 'bundle.js')
         );
-        const contentLength = bundleData.byteLength.toString();
 
         request(app)
           .get('/public/bundle.js')
-          .expect('Content-Length', contentLength)
+          .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'application/javascript; charset=utf-8')
-          .expect(200, bundleData.toString(), done);
+          .expect(200, fileData.toString(), done);
       });
 
-      it('HEAD request to bundle file', (done) => {
-        const contentLength = instance.context.outputFileSystem
-          .readFileSync(path.resolve(compiler.outputPath, 'bundle.js'))
-          .byteLength.toString();
-
+      it('should return the "200" code for the "HEAD" request to the bundle file', (done) => {
         request(app)
           .head('/public/bundle.js')
-          .expect('Content-Length', contentLength)
+          .expect(
+            'Content-Length',
+            instance.context.outputFileSystem
+              .readFileSync(path.resolve(compiler.outputPath, 'bundle.js'))
+              .byteLength.toString()
+          )
           .expect('Content-Type', 'application/javascript; charset=utf-8')
           // eslint-disable-next-line no-undefined
           .expect(200, undefined, done);
       });
 
-      it('POST request to bundle file', (done) => {
+      it('should return the "404" code for the "POST" request to the bundle file', (done) => {
         request(app)
           .post('/public/bundle.js')
           .expect(404, done);
       });
 
-      it('request to image', (done) => {
-        const contentLength = instance.context.outputFileSystem
-          .readFileSync(path.resolve(compiler.outputPath, 'svg.svg'))
-          .byteLength.toString();
+      it('should return the "200" code for the "GET" request to the image file', (done) => {
+        const fileData = instance.context.outputFileSystem.readFileSync(
+          path.resolve(compiler.outputPath, 'svg.svg')
+        );
 
         request(app)
           .get('/public/svg.svg')
-          .expect('Content-Length', contentLength)
+          .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'image/svg+xml')
-          .expect(200, done);
+          .expect(200, fileData, done);
       });
 
-      it('request to non existing file', (done) => {
+      it('should return the "404" code for the "GET" request to a nonexisting file', (done) => {
         request(app)
           .get('/public/nope')
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(404, done);
       });
 
-      it('request to HMR json', (done) => {
-        const manifestData = instance.context.outputFileSystem.readFileSync(
+      it('should return the "200" code for the "GET" request to the hot module replacement file', (done) => {
+        const fileData = instance.context.outputFileSystem.readFileSync(
           path.resolve(compiler.outputPath, '123a123412.hot-update.json')
         );
-        const contentLength = manifestData.byteLength.toString();
 
         request(app)
           .get('/public/123a123412.hot-update.json')
-          .expect('Content-Length', contentLength)
+          .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'application/json; charset=utf-8')
-          .expect(200, manifestData.toString(), done);
+          .expect(200, fileData.toString(), done);
       });
 
-      it('request to directory', (done) => {
+      it('should return the "200" code for the "GET" request to the directory', (done) => {
+        const fileData = fs.readFileSync(
+          path.resolve(__dirname, './fixtures/index.html')
+        );
+
         request(app)
           .get('/public/')
           .expect('Content-Type', 'text/html; charset=utf-8')
-          .expect('Content-Length', '10')
-          .expect(200, /My Index\./, done);
+          .expect('Content-Length', fileData.byteLength.toString())
+          .expect(200, fileData.toString(), done);
       });
 
-      it('request to subdirectory without trailing slash', (done) => {
+      it('should return the "200" code for the "GET" request to the subdirectory without trailing slash', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
           path.resolve(compiler.outputPath, 'reference/mono-v6.x.x/index.html')
         );
-        const contentLength = fileData.byteLength.toString();
 
         request(app)
           .get('/public/reference/mono-v6.x.x')
-          .expect('Content-Length', contentLength)
+          .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, fileData.toString(), done);
       });
 
-      it('invalid range header', (done) => {
+      it('should return the "416" code for the "GET" request with the invalid range header', (done) => {
         request(app)
           .get('/public/svg.svg')
           .set('Range', 'bytes=6000-')
           .expect(416, done);
       });
 
-      it('valid range header', (done) => {
+      it('should return the "206" code for the "GET" request with the valid range header', (done) => {
         request(app)
           .get('/public/svg.svg')
           .set('Range', 'bytes=3000-3500')
@@ -226,41 +227,39 @@ describe('middleware', () => {
           .expect(206, done);
       });
 
-      it('request to non-public path', (done) => {
+      it('should return the "404" code for the "GET" request with to the non-public path', (done) => {
         request(app)
           .get('/nonpublic/')
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(404, done);
       });
 
-      it('request to hello.wasm', (done) => {
+      it('should return the "200" code for the "GET" request to "hello.wasm"', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
           path.resolve(compiler.outputPath, 'hello.wasm')
         );
-        const contentLength = fileData.byteLength.toString();
 
         request(app)
           .get('/public/hello.wasm')
-          .expect('Content-Length', contentLength)
+          .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'application/wasm')
           .expect(200, fileData.toString(), done);
       });
 
-      it('request to 3dAr.usdz', (done) => {
+      it('should return the "200" code for the "GET" request to "3dAr.usdz"', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
           path.resolve(compiler.outputPath, '3dAr.usdz')
         );
-        const contentLength = fileData.byteLength.toString();
 
         request(app)
           .get('/public/3dAr.usdz')
-          .expect('Content-Length', contentLength)
+          .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'model/vnd.usdz+zip')
           .expect('010101')
           .expect(200, fileData.toString(), done);
       });
 
-      it('request to deleted file', (done) => {
+      it('should return the "404" code for the "GET" request to the deleted file', (done) => {
         const spy = jest
           .spyOn(instance.context.outputFileSystem, 'readFileSync')
           .mockImplementation(() => {
@@ -280,21 +279,20 @@ describe('middleware', () => {
           });
       });
 
-      it('request to unknown file', (done) => {
+      it('should return "200" code code for the "GET" request to the file without extension', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
           path.resolve(compiler.outputPath, 'unknown')
         );
-        const contentLength = fileData.byteLength.toString();
 
         request(app)
           .get('/public/unknown')
-          .expect('Content-Length', contentLength)
+          .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'application/octet-stream')
           .expect(200, done);
       });
     });
 
-    describe('should respect the "Content-Type" from other middleware', () => {
+    describe('should respect the value of the "Content-Type" header from other middleware', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
@@ -312,7 +310,7 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('Do not guess mime type if Content-Type header is found', (done) => {
+      it('should not guess a MIME type if the "Content-Type" header is found', (done) => {
         request(app)
           .get('/bundle.js')
           .expect('Content-Type', 'application/octet-stream')
@@ -320,8 +318,8 @@ describe('middleware', () => {
       });
     });
 
-    describe('should not throw error on valid outputPath config for linux', () => {
-      it('no error', (done) => {
+    describe('should not throw an error on the valid "output.path" value for linux', () => {
+      it('should be no error', (done) => {
         expect(() => {
           const compiler = getCompiler();
 
@@ -334,8 +332,8 @@ describe('middleware', () => {
       });
     });
 
-    describe('should not throw error on valid outputPath config for windows', () => {
-      it('no error', (done) => {
+    describe('should not throw an error on the valid "output.path" value for windows', () => {
+      it('should be no error', (done) => {
         expect(() => {
           const compiler = getCompiler();
 
@@ -362,18 +360,16 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('request to both bundle files', (done) => {
+      it('should return 200 code for GET request to the first bundle file', (done) => {
         request(app)
           .get('/js1/bundle.js')
-          .expect(200, (error) => {
-            if (error) {
-              return done(error);
-            }
+          .expect(200, done);
+      });
 
-            return request(app)
-              .get('/js2/bundle.js')
-              .expect(200, done);
-          });
+      it('should return 200 code for GET request to the second bundle file', (done) => {
+        request(app)
+          .get('/js2/bundle.js')
+          .expect(200, done);
       });
     });
 
@@ -391,19 +387,19 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('request to bundle file', (done) => {
+      it('should return 200 code for GET request to the bundle file', (done) => {
         request(app)
           .get('/static/bundle.js')
           .expect(200, done);
       });
 
-      it('request to nonexistent file', (done) => {
+      it('should return 404 code for GET request to nonexistent file', (done) => {
         request(app)
           .get('/static/invalid.js')
           .expect(404, done);
       });
 
-      it('request to non-public path', (done) => {
+      it('should return 404 code for GET request to non-public path', (done) => {
         request(app)
           .get('/')
           .expect(404, done);
@@ -428,11 +424,9 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
-        close();
-      });
+      afterAll(close);
 
-      it('should handle request to bundle file', (done) => {
+      it('should return the "200" code for the "GET" request to the bundle file', (done) => {
         request(app)
           .get('/bundle.js')
           .expect(200, (error) => {
@@ -465,11 +459,9 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
-        close();
-      });
+      afterAll(close);
 
-      it('should handle request to bundle file', (done) => {
+      it('should return the "200" code for the "GET" request to the bundle file', (done) => {
         request(app)
           .get('/bundle.js')
           .expect(200, (error) => {
@@ -502,11 +494,9 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
-        close();
-      });
+      afterAll(close);
 
-      it('should handle request to bundle file', (done) => {
+      it('should return the "200" code for the "GET" request to the bundle file', (done) => {
         request(app)
           .get('/bundle.js')
           .expect(200, (error) => {
@@ -521,7 +511,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should respect the "stats" option with the "errors-warnings" value from the configuration', () => {
+    describe('should respect the "stats" option in multi-compiler mode', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -539,21 +529,35 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
-        close();
-      });
+      afterAll(close);
 
-      it('should handle request to bundle file', (done) => {
+      it('should return the "200" code for the "GET" requests to bundles file', (done) => {
         request(app)
           .get('/js1/bundle.js')
-          .expect(200, (error) => {
-            if (error) {
-              return done(error);
+          .expect(200, (firstError) => {
+            if (firstError) {
+              return done(firstError);
             }
 
-            expect(getLogsPlugin.logs).toMatchSnapshot();
+            return request(app)
+              .get('/js2/bundle.js')
+              .expect(200, (secondError) => {
+                if (secondError) {
+                  return done(secondError);
+                }
 
-            return done();
+                return request(app)
+                  .get('/js3/bundle.js')
+                  .expect(200, (thirdError) => {
+                    if (thirdError) {
+                      return done(thirdError);
+                    }
+
+                    expect(getLogsPlugin.logs).toMatchSnapshot();
+
+                    return done();
+                  });
+              });
           });
       });
     });
@@ -579,11 +583,9 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
-        close();
-      });
+      afterAll(close);
 
-      it('should handle request to bundle file', (done) => {
+      it('should return the "200" code for the "GET" request to the bundle file', (done) => {
         request(app)
           .get('/bundle.js')
           .expect(200, (error) => {
@@ -616,21 +618,27 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
-        close();
-      });
+      afterAll(close);
 
-      it('should handle request to bundle file', (done) => {
+      it('should return the "200" code for the "GET" request to bundle files', (done) => {
         request(app)
           .get('/js1/bundle.js')
-          .expect(200, (error) => {
-            if (error) {
-              return done(error);
+          .expect(200, (firstError) => {
+            if (firstError) {
+              return done(firstError);
             }
 
-            expect(getLogsPlugin.logs).toMatchSnapshot();
+            return request(app)
+              .get('/js2/bundle.js')
+              .expect(200, (secondError) => {
+                if (secondError) {
+                  return done(secondError);
+                }
 
-            return done();
+                expect(getLogsPlugin.logs).toMatchSnapshot();
+
+                return done();
+              });
           });
       });
     });
@@ -655,21 +663,35 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
-        close();
-      });
+      afterAll(close);
 
-      it('should handle request to bundle file', (done) => {
+      it('should return the "200" code for "GET" requests to bundle files', (done) => {
         request(app)
           .get('/js1/bundle.js')
-          .expect(200, (error) => {
-            if (error) {
-              return done(error);
+          .expect(200, (firstError) => {
+            if (firstError) {
+              return done(firstError);
             }
 
-            expect(getLogsPlugin.logs).toMatchSnapshot();
+            return request(app)
+              .get('/js2/bundle.js')
+              .expect(200, (secondError) => {
+                if (secondError) {
+                  return done(secondError);
+                }
 
-            return done();
+                return request(app)
+                  .get('/js3/bundle.js')
+                  .expect(200, (thirdError) => {
+                    if (thirdError) {
+                      return done(thirdError);
+                    }
+
+                    expect(getLogsPlugin.logs).toMatchSnapshot();
+
+                    return done();
+                  });
+              });
           });
       });
     });
@@ -694,11 +716,10 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('logs', (done) => {
+      it('should logging an error', (done) => {
         request(app)
           .get('/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=utf-8')
-          .expect(200, /console\.log\('Hey\.'\)/, (error) => {
+          .expect(200, (error) => {
             if (error) {
               return done(error);
             }
@@ -734,11 +755,10 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('logs', (done) => {
+      it('should logging an error', (done) => {
         request(app)
           .get('/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=utf-8')
-          .expect(200, /console\.log\('Hey\.'\)/, (error) => {
+          .expect(200, (error) => {
             if (error) {
               return done(error);
             }
@@ -756,12 +776,71 @@ describe('middleware', () => {
   });
 
   describe('mimeTypes option', () => {
-    describe('custom extensions', () => {
+    describe('should set the correct value for "Content-Type" header to known MIME type', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+
+        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+          recursive: true,
+        });
+        instance.context.outputFileSystem.writeFileSync(
+          path.resolve(compiler.outputPath, 'file.html'),
+          'welcome'
+        );
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" request to "file.html"', (done) => {
+        request(app)
+          .get('/file.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, 'welcome', done);
+      });
+    });
+
+    describe('should set the correct value for "Content-Type" header to unknown MIME type', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+
+        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+          recursive: true,
+        });
+        instance.context.outputFileSystem.writeFileSync(
+          path.resolve(compiler.outputPath, 'file.phtml'),
+          'welcome'
+        );
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" request to "file.html"', (done) => {
+        request(app)
+          .get('/file.phtml')
+          .expect('Content-Type', 'application/octet-stream')
+          .expect(200, done);
+      });
+    });
+
+    describe('should set the correct value for "Content-Type" header to specified MIME type', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
-          index: 'Index.phtml',
           mimeTypes: {
             phtml: 'text/html',
           },
@@ -776,19 +855,18 @@ describe('middleware', () => {
           recursive: true,
         });
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'Index.phtml'),
+          path.resolve(compiler.outputPath, 'file.phtml'),
           'welcome'
         );
       });
 
       afterAll(close);
 
-      it('request to Index.phtml', (done) => {
+      it('should return the "200" code for the "GET" request "file.html"', (done) => {
         request(app)
-          .get('/')
-          .expect('welcome')
-          .expect('Content-Type', /text\/html/)
-          .expect(200, done);
+          .get('/file.phtml')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, 'welcome', done);
       });
     });
   });
@@ -817,17 +895,23 @@ describe('middleware', () => {
         close();
       });
 
-      it('should pass to "watch" method', (done) => {
-        expect(spy).toHaveBeenCalledTimes(1);
-        expect(spy.mock.calls[0][0]).toEqual({});
-
+      it('should pass arguments to the "watch" method', (done) => {
         request(app)
           .get('/bundle.js')
-          .expect(200, done);
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            expect(spy).toHaveBeenCalledTimes(1);
+            expect(spy.mock.calls[0][0]).toEqual({});
+
+            return done();
+          });
       });
     });
 
-    describe('should respect option from config', () => {
+    describe('should respect options from the configuration', () => {
       let compiler;
       let spy;
 
@@ -850,20 +934,26 @@ describe('middleware', () => {
         close();
       });
 
-      it('should pass to "watch" method', (done) => {
-        expect(spy).toHaveBeenCalledTimes(1);
-        expect(spy.mock.calls[0][0]).toEqual({
-          aggregateTimeout: 300,
-          poll: true,
-        });
-
+      it('should pass arguments to the "watch" method', (done) => {
         request(app)
           .get('/bundle.js')
-          .expect(200, done);
+          .expect(200, (error) => {
+            if (error) {
+              return done(done);
+            }
+
+            expect(spy).toHaveBeenCalledTimes(1);
+            expect(spy.mock.calls[0][0]).toEqual({
+              aggregateTimeout: 300,
+              poll: true,
+            });
+
+            return done(error);
+          });
       });
     });
 
-    describe('should respect option from config in multi-compile mode', () => {
+    describe('should respect options from the configuration in multi-compile mode', () => {
       let compiler;
       let spy;
 
@@ -886,22 +976,36 @@ describe('middleware', () => {
         close();
       });
 
-      it('should pass to "watch" method', (done) => {
-        expect(spy).toHaveBeenCalledTimes(1);
-        expect(spy.mock.calls[0][0]).toEqual([
-          { aggregateTimeout: 800, poll: false },
-          { aggregateTimeout: 300, poll: true },
-        ]);
-
+      it('should pass arguments to the "watch" method', (done) => {
         request(app)
           .get('/js1/bundle.js')
-          .expect(200, done);
+          .expect(200, (firstError) => {
+            if (firstError) {
+              return done(firstError);
+            }
+
+            return request(app)
+              .get('/js2/bundle.js')
+              .expect(200, (secondError) => {
+                if (secondError) {
+                  return done(secondError);
+                }
+
+                expect(spy).toHaveBeenCalledTimes(1);
+                expect(spy.mock.calls[0][0]).toEqual([
+                  { aggregateTimeout: 800, poll: false },
+                  { aggregateTimeout: 300, poll: true },
+                ]);
+
+                return done();
+              });
+          });
       });
     });
   });
 
   describe('writeToDisk option', () => {
-    describe('should work with a "true" value', () => {
+    describe('should work with "true" value', () => {
       let compiler;
 
       beforeAll((done) => {
@@ -965,7 +1069,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should work with a "false" value', () => {
+    describe('should work with "false" value', () => {
       let compiler;
 
       beforeAll((done) => {
@@ -1025,7 +1129,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should work with the "Function" value and returns "true"', () => {
+    describe('should work with "Function" value when it returns "true"', () => {
       let compiler;
 
       beforeAll((done) => {
@@ -1078,7 +1182,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should work with the "Function" value and returns "false"', () => {
+    describe('should work with "Function" value when it returns "false"', () => {
       let compiler;
 
       beforeAll((done) => {
@@ -1185,7 +1289,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should work in multi compiler mode', () => {
+    describe('should work in multi-compiler mode', () => {
       let compiler;
 
       beforeAll((done) => {
@@ -1236,25 +1340,32 @@ describe('middleware', () => {
       it('should find the bundle files on disk', (done) => {
         request(app)
           .get('/js1/bundle.js')
-          .expect(200, (error) => {
-            if (error) {
-              return done(error);
+          .expect(200, (firstError) => {
+            if (firstError) {
+              return done(firstError);
             }
 
-            const bundleFiles = [
-              './outputs/write-to-disk-multi-compiler/js1/bundle.js',
-              './outputs/write-to-disk-multi-compiler/js1/index.html',
-              './outputs/write-to-disk-multi-compiler/js1/svg.svg',
-              './outputs/write-to-disk-multi-compiler/js2/bundle.js',
-            ];
+            return request(app)
+              .get('/js2/bundle.js')
+              .expect(200, (secondError) => {
+                if (secondError) {
+                  return done(secondError);
+                }
+                const bundleFiles = [
+                  './outputs/write-to-disk-multi-compiler/js1/bundle.js',
+                  './outputs/write-to-disk-multi-compiler/js1/index.html',
+                  './outputs/write-to-disk-multi-compiler/js1/svg.svg',
+                  './outputs/write-to-disk-multi-compiler/js2/bundle.js',
+                ];
 
-            for (const bundleFile of bundleFiles) {
-              const bundlePath = path.resolve(__dirname, bundleFile);
+                for (const bundleFile of bundleFiles) {
+                  const bundlePath = path.resolve(__dirname, bundleFile);
 
-              expect(fs.existsSync(bundlePath)).toBe(true);
-            }
+                  expect(fs.existsSync(bundlePath)).toBe(true);
+                }
 
-            return done();
+                return done();
+              });
           });
       });
     });
@@ -1326,8 +1437,10 @@ describe('middleware', () => {
   });
 
   describe('methods option', () => {
+    let compiler;
+
     beforeAll((done) => {
-      const compiler = getCompiler(webpackConfig);
+      compiler = getCompiler(webpackConfig);
 
       instance = middleware(compiler, {
         methods: ['POST'],
@@ -1342,22 +1455,21 @@ describe('middleware', () => {
 
     afterAll(close);
 
-    it("POST request to bundle file with methods set to ['POST']", (done) => {
+    it('should return the "200" code for the "POST" request to the bundle file', (done) => {
       request(app)
         .post('/public/bundle.js')
-        .expect('Content-Type', 'application/javascript; charset=utf-8')
-        .expect(200, /console\.log\('Hey\.'\)/, done);
+        .expect(200, done);
     });
 
-    it("GET request to bundle file with methods set to ['POST']", (done) => {
+    it('should return the "404" code for the "GET" request to the bundle file', (done) => {
       request(app)
         .get('/public/bundle.js')
         .expect(404, done);
     });
 
-    it("HEAD request to bundle file with methods set to ['POST']", (done) => {
+    it('should return the "200" code for the "HEAD" request to the bundle file', (done) => {
       request(app)
-        .get('/public/bundle.js')
+        .head('/public/bundle.js')
         .expect(404, done);
     });
   });
@@ -1378,7 +1490,7 @@ describe('middleware', () => {
 
     afterAll(close);
 
-    it('request to bundle file and custom headers exists', (done) => {
+    it('should return the "200" code for the "GET" request to the bundle file and return headers', (done) => {
       request(app)
         .get('/bundle.js')
         .expect('X-nonsense-1', 'yes')
@@ -1388,7 +1500,7 @@ describe('middleware', () => {
   });
 
   describe('publicPath option', () => {
-    describe('with "string" value', () => {
+    describe('should work with "string" value', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
@@ -1400,15 +1512,12 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll((done) => {
-        close(done);
-      });
+      afterAll(close);
 
-      it('GET request to bundle file', (done) => {
+      it('should return the "200" code for the "GET" request to the bundle file', (done) => {
         request(app)
           .get('/public/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=utf-8')
-          .expect(200, /console\.log\('Hey\.'\)/, done);
+          .expect(200, done);
       });
     });
   });
@@ -1435,7 +1544,7 @@ describe('middleware', () => {
 
     afterAll(close);
 
-    it('request to bundle file', (done) => {
+    it('should return the "200" code for the "GET" request', (done) => {
       request(app)
         .get('/foo/bar')
         .expect(200, (error) => {
@@ -1452,7 +1561,7 @@ describe('middleware', () => {
   });
 
   describe('outputFileSystem option', () => {
-    describe('with unspecified value', () => {
+    describe('should work with an unspecified value', () => {
       let compiler;
 
       beforeAll((done) => {
@@ -1468,29 +1577,19 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should use "memfs" by default', () => {
+      it('should use the "memfs" package by default', () => {
         const { Stats } = memfs;
 
         expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
         expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
           Stats
         );
-        expect(
-          Object.prototype.hasOwnProperty.call(
-            compiler.outputFileSystem,
-            'join'
-          )
-        ).toBe(true);
-        expect(
-          Object.prototype.hasOwnProperty.call(
-            compiler.outputFileSystem,
-            'mkdirp'
-          )
-        ).toBe(true);
+        expect(compiler.outputFileSystem).toHaveProperty('join');
+        expect(compiler.outputFileSystem).toHaveProperty('mkdirp');
       });
     });
 
-    describe('with configured value (native fs)', () => {
+    describe('should work with the configured value (native fs)', () => {
       let compiler;
 
       beforeAll((done) => {
@@ -1513,29 +1612,19 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should use configurated output file system', () => {
+      it('should use the configurated output filesystem', () => {
         const { Stats } = fs;
 
         expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
         expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
           Stats
         );
-        expect(
-          Object.prototype.hasOwnProperty.call(
-            compiler.outputFileSystem,
-            'join'
-          )
-        ).toBe(true);
-        expect(
-          Object.prototype.hasOwnProperty.call(
-            compiler.outputFileSystem,
-            'mkdirp'
-          )
-        ).toBe(true);
+        expect(compiler.outputFileSystem).toHaveProperty('join');
+        expect(compiler.outputFileSystem).toHaveProperty('mkdirp');
       });
     });
 
-    describe('with configured value (memfs)', () => {
+    describe('should work with the configured value (memfs)', () => {
       let compiler;
 
       beforeAll((done) => {
@@ -1557,29 +1646,19 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should use configurated output file system', () => {
+      it('should use the configured output filesystem', () => {
         const { Stats } = memfs;
 
         expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
         expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
           Stats
         );
-        expect(
-          Object.prototype.hasOwnProperty.call(
-            compiler.outputFileSystem,
-            'join'
-          )
-        ).toBe(true);
-        expect(
-          Object.prototype.hasOwnProperty.call(
-            compiler.outputFileSystem,
-            'mkdirp'
-          )
-        ).toBe(true);
+        expect(compiler.outputFileSystem).toHaveProperty('join');
+        expect(compiler.outputFileSystem).toHaveProperty('mkdirp');
       });
     });
 
-    describe('with configured value in multi compiler mode (native fs)', () => {
+    describe('should work with the configured value in multi-compiler mode (native fs)', () => {
       let compiler;
 
       beforeAll((done) => {
@@ -1602,36 +1681,27 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should use configurated output file system', () => {
+      it('should use configured output filesystems', () => {
         const { Stats } = fs;
 
-        for (const compilerFromMultiCompilerMode of compiler.compilers) {
-          expect(
-            new compilerFromMultiCompilerMode.outputFileSystem.Stats()
-          ).toBeInstanceOf(Stats);
-
-          expect(
-            Object.prototype.hasOwnProperty.call(
-              compilerFromMultiCompilerMode.outputFileSystem,
-              'join'
-            )
-          ).toBe(true);
-          expect(
-            Object.prototype.hasOwnProperty.call(
-              compilerFromMultiCompilerMode.outputFileSystem,
-              'mkdirp'
-            )
-          ).toBe(true);
+        for (const childCompiler of compiler.compilers) {
+          expect(new childCompiler.outputFileSystem.Stats()).toBeInstanceOf(
+            Stats
+          );
+          expect(childCompiler.outputFileSystem).toHaveProperty('join');
+          expect(childCompiler.outputFileSystem).toHaveProperty('mkdirp');
         }
 
         expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
           Stats
         );
+        expect(instance.context.outputFileSystem).toHaveProperty('join');
+        expect(instance.context.outputFileSystem).toHaveProperty('mkdirp');
       });
     });
 
-    describe('should throw error on invalid fs - no join method', () => {
-      it('without "join" method', () => {
+    describe('should throw an error on the invalid fs value - no join method', () => {
+      it('should throw an error', () => {
         expect(() => {
           const compiler = getCompiler(webpackConfig);
 
@@ -1642,8 +1712,8 @@ describe('middleware', () => {
       });
     });
 
-    describe('should throw error on invalid fs - no mkdirp method', () => {
-      it('without "join" method', () => {
+    describe('should throw an error on the invalid fs value - no mkdirp method', () => {
+      it('should throw an error', () => {
         expect(() => {
           const compiler = getCompiler(webpackConfig);
 
@@ -1656,7 +1726,7 @@ describe('middleware', () => {
   });
 
   describe('index option', () => {
-    describe('with "false" value', () => {
+    describe('should work with "false" value', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
@@ -1678,7 +1748,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('with "true" value', () => {
+    describe('should work with "true" value', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
@@ -1692,7 +1762,7 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('request to directory', (done) => {
+      it('should return the "404" code for the "GET" request to the directory', (done) => {
         request(app)
           .get('/')
           .expect('Content-Type', 'text/html; charset=utf-8')
@@ -1700,7 +1770,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('with "string" value', () => {
+    describe('should work with "string" value', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
@@ -1725,7 +1795,7 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('request to directory', (done) => {
+      it('should return the "200" code for the "GET" request to the directory', (done) => {
         request(app)
           .get('/')
           .expect('Content-Type', 'text/html; charset=utf-8')
@@ -1733,7 +1803,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('with "string" value with custom extension', () => {
+    describe('should work with "string" value with a custom extension', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
@@ -1758,7 +1828,7 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('request to directory', (done) => {
+      it('should return the "200" code for the "GET" request to the directory', (done) => {
         request(app)
           .get('/')
           .expect('Content-Type', 'application/octet-stream')
@@ -1766,7 +1836,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('with "string" value with custom extension and defined custom MIME type', () => {
+    describe('should work with "string" value with a custom extension and defined a custom MIME type', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
@@ -1794,7 +1864,7 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('request to directory', (done) => {
+      it('should return the "200" code for the "GET" request to the directory', (done) => {
         request(app)
           .get('/')
           .expect('Content-Type', 'text/html; charset=utf-8')
@@ -1802,7 +1872,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('with "string" value without extension', () => {
+    describe('should work with "string" value without an extension', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
@@ -1824,17 +1894,15 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('request to noextension', (done) => {
+      it('should return the "200" code for the "GET" request to the directory', (done) => {
         request(app)
           .get('/')
-          // The "Content-Type" header should have "token" and "subtype"
-          // https://tools.ietf.org/html/rfc7231#section-3.1.1.1
           .expect('Content-Type', 'application/octet-stream')
           .expect(200, done);
       });
     });
 
-    describe('with "string" value but index is directory', () => {
+    describe('should work with "string" value but the "index" option is a directory', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
@@ -1858,7 +1926,7 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('request to directory', (done) => {
+      it('should return the "404" code for the "GET" request to the', (done) => {
         request(app)
           .get('/')
           .expect(404, done);
@@ -1867,7 +1935,7 @@ describe('middleware', () => {
   });
 
   describe('logger', () => {
-    describe('should log on successfully build', () => {
+    describe('should logging on successfully build', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -1887,11 +1955,10 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('logs', (done) => {
+      it('should logging', (done) => {
         request(app)
           .get('/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=utf-8')
-          .expect(200, /console\.log\('Hey\.'\)/, (error) => {
+          .expect(200, (error) => {
             if (error) {
               return done(error);
             }
@@ -1907,7 +1974,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should log on successfully build in multi-compiler mode', () => {
+    describe('should logging on successfully build in multi-compiler mode', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -1927,11 +1994,10 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('logs', (done) => {
+      it('should logging', (done) => {
         request(app)
           .get('/js1/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=utf-8')
-          .expect(200, /console\.log\('Hey\.'\)/, (error) => {
+          .expect(200, (error) => {
             if (error) {
               return done(error);
             }
@@ -1947,7 +2013,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should log on unsuccessful build', () => {
+    describe('should logging on unsuccessful build', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -1967,11 +2033,10 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('logs', (done) => {
+      it('should logging', (done) => {
         request(app)
           .get('/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=utf-8')
-          .expect(200, /1\(\)2\(\)3\(\)/, (error) => {
+          .expect(200, (error) => {
             if (error) {
               return done(error);
             }
@@ -1987,7 +2052,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should log on unsuccessful build in multi-compiler ', () => {
+    describe('should logging on unsuccessful build in multi-compiler ', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -2007,11 +2072,10 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('logs', (done) => {
+      it('should logging', (done) => {
         request(app)
           .get('/js1/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=utf-8')
-          .expect(200, /1\(\)2\(\)3\(\)/, (error) => {
+          .expect(200, (error) => {
             if (error) {
               return done(error);
             }
@@ -2027,7 +2091,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should log on warning build', () => {
+    describe('should logging an warning', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -2047,11 +2111,10 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('logs', (done) => {
+      it('should logging', (done) => {
         request(app)
           .get('/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=utf-8')
-          .expect(200, /console\.log\('foo'\)/, (error) => {
+          .expect(200, (error) => {
             if (error) {
               return done(error);
             }
@@ -2067,7 +2130,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should log on warning build in multi-compiler mode', () => {
+    describe('should logging warnings in multi-compiler mode', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -2087,11 +2150,10 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('logs', (done) => {
+      it('should logging', (done) => {
         request(app)
           .get('/js1/bundle.js')
-          .expect('Content-Type', 'application/javascript; charset=utf-8')
-          .expect(200, /console\.log\('foo'\)/, (error) => {
+          .expect(200, (error) => {
             if (error) {
               return done(error);
             }
@@ -2107,10 +2169,10 @@ describe('middleware', () => {
       });
     });
 
-    describe('should log error in "watch" method', () => {
+    describe('should logging an error in "watch" method', () => {
       let getLogsPlugin;
 
-      it('on startup', () => {
+      it('should logging on startup', () => {
         const compiler = getCompiler(webpackConfig);
 
         const watchSpy = jest
@@ -2138,7 +2200,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should log an error from the "fs.mkdir" method when the "writeToDisk" option is "true" ', () => {
+    describe('should logging an error from the "fs.mkdir" method when the "writeToDisk" option is "true" ', () => {
       let compiler;
       let getLogsPlugin;
       let mkdirSpy;
@@ -2180,7 +2242,7 @@ describe('middleware', () => {
         mkdirSpy.mockRestore();
       });
 
-      it('logs', (done) => {
+      it('should logging', (done) => {
         compiler.hooks.failed.tap('FailedCatcher', () => {
           instance.close(() => {
             expect(getLogsPlugin.logs).toMatchSnapshot();
@@ -2193,7 +2255,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should log an error from the "fs.writeFile" method when the "writeToDisk" option is "true" ', () => {
+    describe('should logging an error from the "fs.writeFile" method when the "writeToDisk" option is "true" ', () => {
       let compiler;
       let getLogsPlugin;
       let writeFileSpy;
@@ -2242,7 +2304,7 @@ describe('middleware', () => {
         close();
       });
 
-      it('logs', (done) => {
+      it('should logging', (done) => {
         compiler.hooks.failed.tap('FailedCatcher', () => {
           instance.close(() => {
             expect(getLogsPlugin.logs).toMatchSnapshot();
