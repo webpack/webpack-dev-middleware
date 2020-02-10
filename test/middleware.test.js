@@ -571,7 +571,7 @@ describe('middleware', () => {
         request(app)
           .get(
             isWebpack5()
-              ? '/static/4c347cd8af8b39e58cbf/bundle.js'
+              ? '/static/45c13f171499f5100d88/bundle.js'
               : '/static/4c347cd8af8b39e58cbf/bundle.js'
           )
           .expect(200, done);
@@ -633,7 +633,7 @@ describe('middleware', () => {
         request(app)
           .get(
             isWebpack5()
-              ? '/static-one/7ed325c92a1d0fe4ce64/bundle.js'
+              ? '/static-one/a9739b1fa1e4eb31790f/bundle.js'
               : '/static-one/7ed325c92a1d0fe4ce64/bundle.js'
           )
           .expect(200, done);
@@ -643,7 +643,7 @@ describe('middleware', () => {
         request(app)
           .get(
             isWebpack5()
-              ? '/static-two/db47aa827bb52e5f2e6b/bundle.js'
+              ? '/static-two/a819fc976c8e917e69c6/bundle.js'
               : '/static-two/db47aa827bb52e5f2e6b/bundle.js'
           )
           .expect(200, done);
@@ -1768,7 +1768,7 @@ describe('middleware', () => {
         request(app)
           .get(
             isWebpack5()
-              ? '/static/4c347cd8af8b39e58cbf/bundle.js'
+              ? '/static/45c13f171499f5100d88/bundle.js'
               : '/static/4c347cd8af8b39e58cbf/bundle.js'
           )
           .expect(200, (error) => {
@@ -1779,7 +1779,7 @@ describe('middleware', () => {
             const bundlePath = isWebpack5()
               ? path.resolve(
                   __dirname,
-                  './outputs/write-to-disk-with-hash/dist_6e9d1c41483198efea74/bundle.js'
+                  './outputs/write-to-disk-with-hash/dist_45c13f171499f5100d88/bundle.js'
                 )
               : path.resolve(
                   __dirname,

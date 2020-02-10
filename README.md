@@ -25,11 +25,6 @@ Some of the benefits of using this middleware include:
   has completed.
 - Supports hot module reload (HMR).
 
-## Requirements
-
-This module requires a minimum of Node v6.9.0 and Webpack v4.0.0, and must be used with a
-server that accepts express-style middleware.
-
 ## Getting Started
 
 First thing's first, install the module:
@@ -62,10 +57,7 @@ app.listen(3000, () => console.log('Example app listening on port 3000!'));
 
 ## Options
 
-The middleware accepts an `options` Object. The following is a property reference
-for the Object.
-
-_Note: The `publicPath` property is required, whereas all other options are optional_
+The middleware accepts an `options` Object. The following is a property reference for the Object.
 
 ### methods
 
@@ -103,13 +95,12 @@ Please see the documentation for [`mime-types`](https://github.com/jshttp/mime-t
 
 ### publicPath
 
-Type: `String`  
-_Required_
+Type: `String`
+Default: `output.publicPath`
 
-The public path that the middleware is bound to. _Best Practice: use the same
-`publicPath` defined in your webpack config. For more information about
-`publicPath`, please see
-[the webpack documentation](https://webpack.js.org/guides/public-path)._
+The public path that the middleware is bound to.
+_Best Practice: use the same `publicPath` defined in your webpack config.
+For more information about `publicPath`, please see [the webpack documentation](https://webpack.js.org/guides/public-path)._
 
 ### serverSideRender
 
