@@ -54,9 +54,16 @@ describe('middleware', () => {
   describe('basic', () => {
     describe('should work with difference requests', () => {
       let compiler;
+      const outputPath = path.resolve(__dirname, './outputs/basic');
 
       beforeAll((done) => {
-        compiler = getCompiler(webpackConfig);
+        compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+          },
+        });
 
         instance = middleware(compiler, { publicPath: '/public/' });
 
@@ -65,42 +72,39 @@ describe('middleware', () => {
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+        instance.context.outputFileSystem.mkdirSync(outputPath, {
           recursive: true,
         });
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, '123a123412.hot-update.json'),
+          path.resolve(outputPath, '123a123412.hot-update.json'),
           '["hi"]'
         );
         // Add a nested directory and index.html inside
         // Add a nested directory and index.html inside
         instance.context.outputFileSystem.mkdirSync(
-          path.resolve(compiler.outputPath, 'reference')
+          path.resolve(outputPath, 'reference')
         );
         instance.context.outputFileSystem.mkdirSync(
-          path.resolve(compiler.outputPath, 'reference/mono-v6.x.x')
+          path.resolve(outputPath, 'reference/mono-v6.x.x')
         );
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'reference/mono-v6.x.x/index.html'),
+          path.resolve(outputPath, 'reference/mono-v6.x.x/index.html'),
           'My Index.'
         );
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'hello.wasm'),
+          path.resolve(outputPath, 'hello.wasm'),
           'welcome'
         );
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, '3dAr.usdz'),
+          path.resolve(outputPath, '3dAr.usdz'),
           '010101'
         );
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(
-            compiler.outputPath,
-            'throw-an-exception-on-readFileSync.txt'
-          ),
+          path.resolve(outputPath, 'throw-an-exception-on-readFileSync.txt'),
           'exception'
         );
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'unknown'),
+          path.resolve(outputPath, 'unknown'),
           'unknown'
         );
       });
@@ -116,9 +120,9 @@ describe('middleware', () => {
               return done(error);
             }
 
-            expect(
-              fs.existsSync(path.resolve(compiler.outputPath, 'bundle.js'))
-            ).toBe(false);
+            expect(fs.existsSync(path.resolve(outputPath, 'bundle.js'))).toBe(
+              false
+            );
 
             return done();
           });
@@ -126,7 +130,7 @@ describe('middleware', () => {
 
       it('should return the "200" code for the "GET" request to the bundle file', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(compiler.outputPath, 'bundle.js')
+          path.resolve(outputPath, 'bundle.js')
         );
 
         request(app)
@@ -142,7 +146,7 @@ describe('middleware', () => {
           .expect(
             'Content-Length',
             instance.context.outputFileSystem
-              .readFileSync(path.resolve(compiler.outputPath, 'bundle.js'))
+              .readFileSync(path.resolve(outputPath, 'bundle.js'))
               .byteLength.toString()
           )
           .expect('Content-Type', 'application/javascript; charset=utf-8')
@@ -158,7 +162,7 @@ describe('middleware', () => {
 
       it('should return the "200" code for the "GET" request to the image file', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(compiler.outputPath, 'svg.svg')
+          path.resolve(outputPath, 'svg.svg')
         );
 
         request(app)
@@ -177,7 +181,7 @@ describe('middleware', () => {
 
       it('should return the "200" code for the "GET" request to the hot module replacement file', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(compiler.outputPath, '123a123412.hot-update.json')
+          path.resolve(outputPath, '123a123412.hot-update.json')
         );
 
         request(app)
@@ -201,7 +205,7 @@ describe('middleware', () => {
 
       it('should return the "200" code for the "GET" request to the subdirectory without trailing slash', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(compiler.outputPath, 'reference/mono-v6.x.x/index.html')
+          path.resolve(outputPath, 'reference/mono-v6.x.x/index.html')
         );
 
         request(app)
@@ -236,7 +240,7 @@ describe('middleware', () => {
 
       it('should return the "200" code for the "GET" request to "hello.wasm"', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(compiler.outputPath, 'hello.wasm')
+          path.resolve(outputPath, 'hello.wasm')
         );
 
         request(app)
@@ -248,7 +252,7 @@ describe('middleware', () => {
 
       it('should return the "200" code for the "GET" request to "3dAr.usdz"', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(compiler.outputPath, '3dAr.usdz')
+          path.resolve(outputPath, '3dAr.usdz')
         );
 
         request(app)
@@ -281,7 +285,7 @@ describe('middleware', () => {
 
       it('should return "200" code code for the "GET" request to the file without extension', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(compiler.outputPath, 'unknown')
+          path.resolve(outputPath, 'unknown')
         );
 
         request(app)
@@ -350,7 +354,7 @@ describe('middleware', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackMultiConfig);
 
-        instance = middleware(compiler, { publicPath: '/' });
+        instance = middleware(compiler);
 
         app = express();
         app.use(instance);
@@ -373,9 +377,90 @@ describe('middleware', () => {
       });
     });
 
-    describe('should work with one "publicPath" in multi-compiler mode', () => {
+    describe('should work without "output" options', () => {
       beforeAll((done) => {
-        const compiler = getCompiler(webpackClientServerConfig);
+        // eslint-disable-next-line no-undefined
+        const compiler = getCompiler({ ...webpackConfig, output: undefined });
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return 200 code for GET request to the bundle file', (done) => {
+        request(app)
+          .get('/main.js')
+          .expect(200, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file', (done) => {
+        request(app)
+          .get('/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 200 code for GET request to non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect(200, done);
+      });
+    });
+
+    describe('should work with trailing slash at the end of the "option.path" option', () => {
+      beforeAll((done) => {
+        // eslint-disable-next-line no-undefined
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: path.resolve(__dirname, './outputs/basic/'),
+          },
+        });
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return 200 code for GET request to the bundle file', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(200, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file', (done) => {
+        request(app)
+          .get('/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 200 code for GET request to non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect(200, done);
+      });
+    });
+
+    describe('should respect "output.publicPath" and "output.path" options', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            publicPath: '/static/',
+            path: path.resolve(__dirname, '../outputs/other-basic'),
+          },
+        });
 
         instance = middleware(compiler);
 
@@ -403,6 +488,222 @@ describe('middleware', () => {
         request(app)
           .get('/')
           .expect(404, done);
+      });
+    });
+
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackMultiConfig);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return 200 code for GET request to the first bundle file', (done) => {
+        request(app)
+          .get('/js1/bundle.js')
+          .expect(200, done);
+      });
+
+      it('should return 200 code for GET request to the second bundle file', (done) => {
+        request(app)
+          .get('/js2/bundle.js')
+          .expect(200, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file for the first compiler', (done) => {
+        request(app)
+          .get('/js1/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file for the second compiler', (done) => {
+        request(app)
+          .get('/js2/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file', (done) => {
+        request(app)
+          .get('/static/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 404 code for GET request to non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect(404, done);
+      });
+    });
+
+    describe('should respect "output.publicPath" and "output.path" options with hash substitutions', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            publicPath: isWebpack5()
+              ? '/static/[fullhash]/'
+              : '/static/[hash]/',
+            path: isWebpack5()
+              ? path.resolve(__dirname, '../outputs/other-basic-[fullhash]')
+              : path.resolve(__dirname, '../outputs/other-basic-[hash]'),
+          },
+        });
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return 200 code for GET request to the bundle file', (done) => {
+        request(app)
+          .get(
+            isWebpack5()
+              ? '/static/4c347cd8af8b39e58cbf/bundle.js'
+              : '/static/4c347cd8af8b39e58cbf/bundle.js'
+          )
+          .expect(200, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file', (done) => {
+        request(app)
+          .get('/static/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 404 code for GET request to non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect(404, done);
+      });
+    });
+
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with hash substitutions', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler([
+          {
+            ...webpackMultiConfig[0],
+            output: {
+              filename: 'bundle.js',
+              path: isWebpack5()
+                ? path.resolve(__dirname, './outputs/array-[fullhash]/js1')
+                : path.resolve(__dirname, './outputs/array-[hash]/js1'),
+              publicPath: isWebpack5()
+                ? '/static-one/[fullhash]/'
+                : '/static-one/[hash]/',
+            },
+          },
+          {
+            ...webpackMultiConfig[1],
+            output: {
+              filename: 'bundle.js',
+              path: isWebpack5()
+                ? path.resolve(__dirname, './outputs/array-[fullhash]/js2')
+                : path.resolve(__dirname, './outputs/array-[hash]/js2'),
+              publicPath: isWebpack5()
+                ? '/static-two/[fullhash]/'
+                : '/static-two/[hash]/',
+            },
+          },
+        ]);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return 200 code for GET request to the first bundle file', (done) => {
+        request(app)
+          .get(
+            isWebpack5()
+              ? '/static-one/7ed325c92a1d0fe4ce64/bundle.js'
+              : '/static-one/7ed325c92a1d0fe4ce64/bundle.js'
+          )
+          .expect(200, done);
+      });
+
+      it('should return 200 code for GET request to the second bundle file', (done) => {
+        request(app)
+          .get(
+            isWebpack5()
+              ? '/static-two/db47aa827bb52e5f2e6b/bundle.js'
+              : '/static-two/db47aa827bb52e5f2e6b/bundle.js'
+          )
+          .expect(200, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file for the first compiler', (done) => {
+        request(app)
+          .get('/static-one/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file for the second compiler', (done) => {
+        request(app)
+          .get('/static-two/db47aa827bb52e5f2e6b/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file', (done) => {
+        request(app)
+          .get('/static/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 404 code for GET request to non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect(404, done);
+      });
+    });
+
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackClientServerConfig);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return 200 code for GET request to the bundle file', (done) => {
+        request(app)
+          .get('/static/bundle.js')
+          .expect(200, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file', (done) => {
+        request(app)
+          .get('/static/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 200 code for GET request to non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect(200, done);
       });
     });
 
@@ -809,7 +1110,14 @@ describe('middleware', () => {
   describe('mimeTypes option', () => {
     describe('should set the correct value for "Content-Type" header to known MIME type', () => {
       beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
+        const outputPath = path.resolve(__dirname, './outputs/basic');
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+          },
+        });
 
         instance = middleware(compiler);
 
@@ -818,11 +1126,11 @@ describe('middleware', () => {
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+        instance.context.outputFileSystem.mkdirSync(outputPath, {
           recursive: true,
         });
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'file.html'),
+          path.resolve(outputPath, 'file.html'),
           'welcome'
         );
       });
@@ -839,7 +1147,14 @@ describe('middleware', () => {
 
     describe('should set the correct value for "Content-Type" header to unknown MIME type', () => {
       beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
+        const outputPath = path.resolve(__dirname, './outputs/basic');
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+          },
+        });
 
         instance = middleware(compiler);
 
@@ -848,11 +1163,11 @@ describe('middleware', () => {
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+        instance.context.outputFileSystem.mkdirSync(outputPath, {
           recursive: true,
         });
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'file.phtml'),
+          path.resolve(outputPath, 'file.phtml'),
           'welcome'
         );
       });
@@ -869,7 +1184,14 @@ describe('middleware', () => {
 
     describe('should set the correct value for "Content-Type" header to specified MIME type', () => {
       beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
+        const outputPath = path.resolve(__dirname, './outputs/basic');
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+          },
+        });
 
         instance = middleware(compiler, {
           mimeTypes: {
@@ -882,11 +1204,11 @@ describe('middleware', () => {
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+        instance.context.outputFileSystem.mkdirSync(outputPath, {
           recursive: true,
         });
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'file.phtml'),
+          path.resolve(outputPath, 'file.phtml'),
           'welcome'
         );
       });
@@ -1401,7 +1723,7 @@ describe('middleware', () => {
       });
     });
 
-    describe.skip('should work with "[hash]"/"[fullhash]" in the "output.path" option', () => {
+    describe('should work with "[hash]"/"[fullhash]" in the "output.path" and "output.publicPath" option', () => {
       let compiler;
 
       beforeAll((done) => {
@@ -1410,6 +1732,9 @@ describe('middleware', () => {
           ...{
             output: {
               filename: 'bundle.js',
+              publicPath: isWebpack5()
+                ? '/static/[fullhash]/'
+                : '/static/[hash]/',
               path: isWebpack5()
                 ? path.resolve(
                     __dirname,
@@ -1423,7 +1748,7 @@ describe('middleware', () => {
           },
         });
 
-        instance = middleware(compiler);
+        instance = middleware(compiler, { writeToDisk: true });
 
         app = express();
         app.use(instance);
@@ -1441,7 +1766,11 @@ describe('middleware', () => {
 
       it('should find the bundle file on disk', (done) => {
         request(app)
-          .get('/bundle.js')
+          .get(
+            isWebpack5()
+              ? '/static/4c347cd8af8b39e58cbf/bundle.js'
+              : '/static/4c347cd8af8b39e58cbf/bundle.js'
+          )
           .expect(200, (error) => {
             if (error) {
               return done(error);
@@ -1454,12 +1783,10 @@ describe('middleware', () => {
                 )
               : path.resolve(
                   __dirname,
-                  './outputs/write-to-disk-with-hash/dist_f2e154f7f2fe769e53d3/bundle.js'
+                  './outputs/write-to-disk-with-hash/dist_4c347cd8af8b39e58cbf/bundle.js'
                 );
 
             expect(fs.existsSync(bundlePath)).toBe(true);
-
-            del.sync(path.dirname(bundlePath));
 
             return done();
           });
@@ -1803,7 +2130,14 @@ describe('middleware', () => {
 
     describe('should work with "string" value', () => {
       beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
+        const outputPath = path.resolve(__dirname, './outputs/basic');
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+          },
+        });
 
         instance = middleware(compiler, {
           index: 'default.html',
@@ -1815,11 +2149,11 @@ describe('middleware', () => {
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+        instance.context.outputFileSystem.mkdirSync(outputPath, {
           recursive: true,
         });
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'default.html'),
+          path.resolve(outputPath, 'default.html'),
           'hello'
         );
       });
@@ -1836,7 +2170,14 @@ describe('middleware', () => {
 
     describe('should work with "string" value with a custom extension', () => {
       beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
+        const outputPath = path.resolve(__dirname, './outputs/basic');
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+          },
+        });
 
         instance = middleware(compiler, {
           index: 'index.custom',
@@ -1848,11 +2189,11 @@ describe('middleware', () => {
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+        instance.context.outputFileSystem.mkdirSync(outputPath, {
           recursive: true,
         });
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'index.custom'),
+          path.resolve(outputPath, 'index.custom'),
           'hello'
         );
       });
@@ -1869,7 +2210,14 @@ describe('middleware', () => {
 
     describe('should work with "string" value with a custom extension and defined a custom MIME type', () => {
       beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
+        const outputPath = path.resolve(__dirname, './outputs/basic');
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+          },
+        });
 
         instance = middleware(compiler, {
           index: 'index.custom',
@@ -1884,11 +2232,11 @@ describe('middleware', () => {
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+        instance.context.outputFileSystem.mkdirSync(outputPath, {
           recursive: true,
         });
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'index.custom'),
+          path.resolve(outputPath, 'index.custom'),
           'hello'
         );
       });
@@ -1905,7 +2253,14 @@ describe('middleware', () => {
 
     describe('should work with "string" value without an extension', () => {
       beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
+        const outputPath = path.resolve(__dirname, './outputs/basic');
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+          },
+        });
 
         instance = middleware(compiler, { index: 'noextension' });
 
@@ -1914,11 +2269,11 @@ describe('middleware', () => {
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+        instance.context.outputFileSystem.mkdirSync(outputPath, {
           recursive: true,
         });
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(compiler.outputPath, 'noextension'),
+          path.resolve(outputPath, 'noextension'),
           'hello'
         );
       });
@@ -1935,7 +2290,14 @@ describe('middleware', () => {
 
     describe('should work with "string" value but the "index" option is a directory', () => {
       beforeAll((done) => {
-        const compiler = getCompiler(webpackConfig);
+        const outputPath = path.resolve(__dirname, './outputs/basic');
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+          },
+        });
 
         instance = middleware(compiler, {
           index: 'custom.html',
@@ -1947,11 +2309,11 @@ describe('middleware', () => {
 
         listen = listenShorthand(done);
 
-        instance.context.outputFileSystem.mkdirSync(compiler.outputPath, {
+        instance.context.outputFileSystem.mkdirSync(outputPath, {
           recursive: true,
         });
         instance.context.outputFileSystem.mkdirSync(
-          path.resolve(compiler.outputPath, 'custom.html')
+          path.resolve(outputPath, 'custom.html')
         );
       });
 
