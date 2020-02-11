@@ -5,12 +5,10 @@ import querystring from 'querystring';
 import mem from 'mem';
 
 function getPaths(stats, options) {
-  const multipleStats = stats.stats ? stats.stats : [stats];
-
+  const childStats = stats.stats ? stats.stats : [stats];
   const publicPaths = [];
 
-  for (const childStats of multipleStats) {
-    const { compilation } = childStats;
+  for (const { compilation } of childStats) {
     // The `output.path` is always present and always absolute
     const outputPath = compilation.getPath(compilation.outputOptions.path);
     const publicPath = options.publicPath
