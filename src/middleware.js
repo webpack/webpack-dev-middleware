@@ -9,8 +9,7 @@ import ready from './utils/ready';
 
 export default function wrapper(context) {
   return function middleware(req, res, next) {
-    // fixes #282. credit @cexoso. in certain edge situations res.locals is
-    // undefined.
+    // fixes #282. credit @cexoso. in certain edge situations res.locals is undefined.
     // eslint-disable-next-line no-param-reassign
     res.locals = res.locals || {};
 
@@ -47,7 +46,7 @@ export default function wrapper(context) {
       function processRequest(stats) {
         let filename = getFilenameFromUrl(context, req.url, stats);
 
-        if (filename === false) {
+        if (!filename) {
           return goNext();
         }
 

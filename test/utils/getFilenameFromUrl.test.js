@@ -139,7 +139,8 @@ describe('GetFilenameFromUrl', () => {
         publicPath: '/complex',
       },
       url: '/more/complex/path.js',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
     {
       // publicPath is not in url, so it should fail
@@ -148,7 +149,8 @@ describe('GetFilenameFromUrl', () => {
         publicPath: '/',
       },
       url: 'c.js',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
     {
       outputOptions: {
@@ -164,7 +166,8 @@ describe('GetFilenameFromUrl', () => {
         publicPath: 'http://localhost/foo/',
       },
       url: '/bar/',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
     {
       outputOptions: {
@@ -172,7 +175,8 @@ describe('GetFilenameFromUrl', () => {
         publicPath: 'http://localhost:8080/foo/',
       },
       url: '/bar/',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
     {
       outputOptions: {
@@ -196,7 +200,8 @@ describe('GetFilenameFromUrl', () => {
         publicPath: 'http://localhost:8080/foo/',
       },
       url: 'http://localhost:8080/bar/index.html',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
     {
       outputOptions: {
@@ -336,7 +341,8 @@ describe('GetFilenameFromUrl', () => {
         },
       ],
       url: '/five/sample.css',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
     {
       outputOptions: [
@@ -350,7 +356,8 @@ describe('GetFilenameFromUrl', () => {
         },
       ],
       url: '/other/sample.txt',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
     {
       outputOptions: [
@@ -364,7 +371,8 @@ describe('GetFilenameFromUrl', () => {
         },
       ],
       url: '/other/sample.txt',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
     {
       outputOptions: [
@@ -382,12 +390,12 @@ describe('GetFilenameFromUrl', () => {
     {
       outputOptions: [
         {
-          path: '/foo',
-          publicPath: '',
-        },
-        {
           path: '/bar',
           publicPath: '/css/',
+        },
+        {
+          path: '/foo',
+          publicPath: '',
         },
       ],
       url: '/css/sample.css',
@@ -489,7 +497,8 @@ describe('GetFilenameFromUrl', () => {
         },
       ],
       url: '/other/sample.txt',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
     {
       outputOptions: [
@@ -503,7 +512,8 @@ describe('GetFilenameFromUrl', () => {
         },
       ],
       url: '/other/sample.txt',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
     {
       outputOptions: [
@@ -517,7 +527,8 @@ describe('GetFilenameFromUrl', () => {
         },
       ],
       url: '/test/sample.txt',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
     {
       outputOptions: [
@@ -531,7 +542,8 @@ describe('GetFilenameFromUrl', () => {
         },
       ],
       url: '/test/sample.txt',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
     {
       outputOptions: {
@@ -555,7 +567,8 @@ describe('GetFilenameFromUrl', () => {
         publicPath: '/',
       },
       url: '%',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
     {
       outputOptions: {
@@ -563,7 +576,8 @@ describe('GetFilenameFromUrl', () => {
         publicPath: '/',
       },
       url: '\uD800',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
     {
       outputOptions: {
@@ -579,7 +593,8 @@ describe('GetFilenameFromUrl', () => {
         publicPath: '/complex/',
       },
       url: 'https://test:malfor%5Med@test.example.com',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
     {
       outputOptions: {
@@ -587,7 +602,8 @@ describe('GetFilenameFromUrl', () => {
         publicPath: 'https://test:malfor%5Med@test.example.com',
       },
       url: '/foo/bar',
-      expected: false,
+      // eslint-disable-next-line no-undefined
+      expected: undefined,
     },
 
     // Windows tests

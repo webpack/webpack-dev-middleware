@@ -700,10 +700,10 @@ describe('middleware', () => {
           .expect(404, done);
       });
 
-      it('should return 200 code for GET request to non-public path', (done) => {
+      it('should return 404 code for GET request to non-public path', (done) => {
         request(app)
           .get('/')
-          .expect(200, done);
+          .expect(404, done);
       });
     });
 
