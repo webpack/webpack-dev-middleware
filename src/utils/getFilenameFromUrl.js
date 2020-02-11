@@ -66,21 +66,21 @@ export default function getFilenameFromUrl(context, url, stats) {
   let urlObject;
 
   try {
-    urlObject = parse(url);
+    urlObject = parse(url, false, true);
   } catch (_ignoreError) {
     return false;
   }
 
+  // The `publicPath` option has the `protocol` property that is not the same as request url's, should fail
+  // The `publicPath` option has the `auth` property that is not the same as request url's, should fail
+  // The `publicPath` option has the `host` property that is not the same as request url's, should fail
   if (
-    // The `publicPath` option has the `protocol` that is not the same as request url's, should fail
     (publicPathObject.protocol !== null &&
       urlObject.protocol !== null &&
       publicPathObject.protocol !== urlObject.protocol) ||
-    // The `publicPath` option has the `auth` that is not the same as request url's, should fail
     (publicPathObject.auth !== null &&
       urlObject.auth !== null &&
       publicPathObject.auth !== urlObject.auth) ||
-    // The `publicPath` option has the `host` that is not the same as request url's, should fail
     (publicPathObject.host !== null &&
       urlObject.host !== null &&
       publicPathObject.host !== urlObject.host)
@@ -90,7 +90,7 @@ export default function getFilenameFromUrl(context, url, stats) {
 
   // The `publicPath` option has the `host` property.
   // The requested url doesn't contain the `host` property.
-  // But the `pathname` property of the requested url doesn't start with `pathname` property of `publicPath`.
+  // But the `pathname` property of the requested url doesn't start with `pathname` property of `publicPath`, should fail
   if (
     publicPathObject.host &&
     !urlObject.host &&
