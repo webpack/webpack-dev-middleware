@@ -6,7 +6,9 @@ function testUrl(test) {
   const context = { options: {} };
   const stats = getStatsMock(test.outputOptions);
 
-  expect(getFilenameFromUrl(context, test.url, stats)).toBe(test.expected);
+  expect(getFilenameFromUrl(context, test.url, stats)).toBe(
+    isWindows ? test.expected.replace(/\\/g, '/') : test.expected
+  );
 }
 
 function getStatsMock(outputOptions) {

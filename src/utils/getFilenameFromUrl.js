@@ -41,9 +41,7 @@ export default function getFilenameFromUrl(context, url, stats) {
     return pathToFile;
   }
 
-  for (const childPaths of paths) {
-    const { publicPath, outputPath } = childPaths;
-
+  for (const { publicPath, outputPath } of paths) {
     let publicPathObject;
 
     try {
