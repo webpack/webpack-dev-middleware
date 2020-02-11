@@ -1,7 +1,8 @@
 import path from 'path';
 import { parse } from 'url';
-
 import querystring from 'querystring';
+
+import mem from 'mem';
 
 function getPaths(stats, options, url) {
   let outputPath;
@@ -51,6 +52,8 @@ function getPaths(stats, options, url) {
   return { outputPath, publicPath };
 }
 
+const memoizedParse = mem(parse);
+
 export default function getFilenameFromUrl(context, url, stats) {
   const { options } = context;
   const { outputPath, publicPath } = getPaths(stats, options, url);
@@ -58,7 +61,7 @@ export default function getFilenameFromUrl(context, url, stats) {
   let publicPathObject;
 
   try {
-    publicPathObject = parse(publicPath || '/', false, true);
+    publicPathObject = memoizedParse(publicPath || '/', false, true);
   } catch (_ignoreError) {
     return false;
   }
@@ -66,25 +69,9 @@ export default function getFilenameFromUrl(context, url, stats) {
   let urlObject;
 
   try {
-    urlObject = parse(url, false, true);
+    // The `url` property of the `request` is contains only  `pathname`, `search` and `hash`
+    urlObject = memoizedParse(url, false, true);
   } catch (_ignoreError) {
-    return false;
-  }
-
-  // The `publicPath` option has the `protocol` property that is not the same as request url's, should fail
-  // The `publicPath` option has the `auth` property that is not the same as request url's, should fail
-  // The `publicPath` option has the `host` property that is not the same as request url's, should fail
-  if (
-    (publicPathObject.protocol !== null &&
-      urlObject.protocol !== null &&
-      publicPathObject.protocol !== urlObject.protocol) ||
-    (publicPathObject.auth !== null &&
-      urlObject.auth !== null &&
-      publicPathObject.auth !== urlObject.auth) ||
-    (publicPathObject.host !== null &&
-      urlObject.host !== null &&
-      publicPathObject.host !== urlObject.host)
-  ) {
     return false;
   }
 

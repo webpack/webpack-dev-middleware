@@ -86,30 +86,30 @@ describe('GetFilenameFromUrl', () => {
       url: '/complex/foo.js',
       expected: '/foo.js',
     },
-    {
-      outputOptions: {
-        path: '/',
-        publicPath: 'http://localhost:8081/complex/',
-      },
-      url: 'http://localhost:8080/complex/foo.js',
-      expected: false,
-    },
-    {
-      outputOptions: {
-        path: '/',
-        publicPath: 'http://localhost:8080/complex/',
-      },
-      url: 'https://localhost:8080/complex/foo.js',
-      expected: false,
-    },
-    {
-      outputOptions: {
-        path: '/',
-        publicPath: 'http://foo:pass@localhost:8080/complex/',
-      },
-      url: 'http://bar:pass@localhost:8080/complex/foo.js',
-      expected: false,
-    },
+    // {
+    //  outputOptions: {
+    //    path: '/',
+    //    publicPath: 'http://localhost:8081/complex/',
+    //  },
+    //  url: 'http://localhost:8080/complex/foo.js',
+    //  expected: false,
+    // },
+    // {
+    //  outputOptions: {
+    //    path: '/',
+    //    publicPath: 'http://localhost:8080/complex/',
+    //  },
+    //  url: 'https://localhost:8080/complex/foo.js',
+    //  expected: false,
+    // },
+    // {
+    //  outputOptions: {
+    //    path: '/',
+    //    publicPath: 'http://foo:pass@localhost:8080/complex/',
+    //  },
+    //  url: 'http://bar:pass@localhost:8080/complex/foo.js',
+    //  expected: false,
+    // },
     {
       outputOptions: {
         path: '/',
@@ -250,14 +250,14 @@ describe('GetFilenameFromUrl', () => {
       url: 'http://test.domain/test/sample.js',
       expected: '/sample.js',
     },
-    {
-      outputOptions: {
-        path: '/',
-        publicPath: 'http://other.domain/test/',
-      },
-      url: 'http://test.domain/test/sample.js',
-      expected: false,
-    },
+    // {
+    //  outputOptions: {
+    //    path: '/',
+    //    publicPath: 'http://other.domain/test/',
+    //  },
+    //  url: 'http://test.domain/test/sample.js',
+    //  expected: false,
+    // },
     {
       outputOptions: {
         path: '/',
@@ -324,6 +324,20 @@ describe('GetFilenameFromUrl', () => {
         },
       ],
       url: '/js/sample.js',
+      expected: '/foo/sample.js',
+    },
+    {
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: 'http://localhost/css/',
+        },
+        {
+          path: '/bar',
+          publicPath: 'http://localhost/css/',
+        },
+      ],
+      url: '/css/sample.js',
       expected: '/foo/sample.js',
     },
     {
