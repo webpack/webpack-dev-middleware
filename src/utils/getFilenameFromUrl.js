@@ -71,6 +71,7 @@ export default function getFilenameFromUrl(context, url, stats) {
     return false;
   }
 
+  // Absolute and
   // The `publicPath` option has the `protocol` property that is not the same as request url's, should fail
   // The `publicPath` option has the `auth` property that is not the same as request url's, should fail
   // The `publicPath` option has the `host` property that is not the same as request url's, should fail
@@ -99,24 +100,16 @@ export default function getFilenameFromUrl(context, url, stats) {
     return false;
   }
 
-  // publicPath is not in url, so it should fail
-  // TODO test
-  if (
-    publicPath &&
-    publicPathObject.host === urlObject.host &&
-    url.indexOf(publicPath) !== 0
-  ) {
+  // The `pathname` property of the requested url doesn't start with `pathname` property of `publicPath`, should fail
+  if (!urlObject.pathname.startsWith(publicPathObject.pathname)) {
     return false;
   }
 
   let uri = outputPath;
-  let filename;
 
   // Strip the `pathname` property from the `publicPath` option from the start of requested url
   // `/complex/foo.js` => `foo.js`
-  if (urlObject.pathname.startsWith(publicPathObject.pathname)) {
-    filename = urlObject.pathname.substr(publicPathObject.pathname.length);
-  }
+  const filename = urlObject.pathname.substr(publicPathObject.pathname.length);
 
   // Forming the path to the file
   if (filename) {
