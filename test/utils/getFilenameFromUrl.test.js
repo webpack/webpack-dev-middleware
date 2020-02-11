@@ -3,543 +3,457 @@ import getFilenameFromUrl from '../../src/utils/getFilenameFromUrl';
 const isWindows = process.platform === 'win32';
 
 function testUrl(test) {
-  const url = getFilenameFromUrl(test.context, test.url);
+  const context = { options: {} };
+  const stats = getStatsMock(test.outputOptions);
 
-  expect(url).toBe(test.expected);
+  expect(getFilenameFromUrl(context, test.url, stats)).toBe(test.expected);
+}
+
+function getStatsMock(outputOptions) {
+  if (Array.isArray(outputOptions)) {
+    return {
+      stats: outputOptions.map((item) => {
+        return {
+          compilation: { getPath: (path) => path, outputOptions: item },
+        };
+      }),
+    };
+  }
+
+  return {
+    compilation: { getPath: (path) => path, outputOptions },
+  };
 }
 
 describe('GetFilenameFromUrl', () => {
   const tests = [
     {
-      context: {
-        options: {
-          publicPath: '/',
-        },
-        compiler: {
-          outputPath: '/',
-        },
+      outputOptions: {
+        path: '/',
+        publicPath: '/',
       },
       url: '/foo.js',
       expected: '/foo.js',
     },
     {
+      outputOptions: {
+        // eslint-disable-next-line no-undefined
+        path: undefined,
+        // eslint-disable-next-line no-undefined
+        publicPath: undefined,
+      },
+      url: '/foo.js',
+      expected: '/foo.js',
+    },
+    {
+      outputOptions: {},
+      url: '/foo.js',
+      expected: '/foo.js',
+    },
+    {
       // Express encodes the URI component, so we do the same
-      context: {
-        options: {
-          publicPath: '/',
-        },
-        compiler: {
-          outputPath: '/',
-        },
+      outputOptions: {
+        path: '/',
+        publicPath: '/',
       },
       url: '/f%C3%B6%C3%B6.js',
       expected: '/föö.js',
     },
     {
       // Filenames can contain characters not allowed in URIs
-      url: '/%foo%/%foo%.js',
-      context: {
-        options: {
-          publicPath: '/',
-        },
-        compiler: {
-          outputPath: '/',
-        },
+      outputOptions: {
+        path: '/',
+        publicPath: '/',
       },
+      url: '/%foo%/%foo%.js',
       expected: '/%foo%/%foo%.js',
     },
     {
-      url: '/0.19dc5d417382d73dd190.hot-update.js',
-      context: {
-        options: {
-          publicPath: 'http://localhost:8080/',
-        },
-        compiler: {
-          outputPath: '/',
-        },
+      outputOptions: {
+        path: '/',
+        publicPath: 'http://localhost:8080/',
       },
+      url: '/0.19dc5d417382d73dd190.hot-update.js',
       expected: '/0.19dc5d417382d73dd190.hot-update.js',
     },
     {
-      url: '/bar.js',
-      context: {
-        options: {
-          publicPath: 'http://localhost:8080/',
-        },
-        compiler: {
-          outputPath: '/',
-        },
+      outputOptions: {
+        path: '/',
+        publicPath: 'http://localhost:8080/',
       },
+      url: '/bar.js',
       expected: '/bar.js',
     },
     {
-      url: '/test.html?foo=bar',
-      context: {
-        options: {
-          publicPath: '/',
-        },
-        compiler: {
-          outputPath: '/',
-        },
+      outputOptions: {
+        path: '/',
+        publicPath: '/',
       },
+      url: '/test.html?foo=bar',
       expected: '/test.html',
     },
     {
-      url: '/a.js',
-      context: {
-        options: {
-          publicPath: '/',
-        },
-        compiler: {
-          outputPath: '/dist',
-        },
+      outputOptions: {
+        path: '/dist',
+        publicPath: '/',
       },
+      url: '/a.js',
       expected: '/dist/a.js',
     },
     {
-      url: '/b.js',
-      context: {
-        options: {
-          // eslint-disable-next-line no-undefined
-          publicPath: undefined,
-        },
-        compiler: {
-          outputPath: '/',
-        },
+      outputOptions: {
+        path: '/',
+        // eslint-disable-next-line no-undefined
+        publicPath: undefined,
       },
+      url: '/b.js',
       expected: '/b.js',
     },
     {
-      url: '/c.js',
-      context: {
-        options: {
-          // eslint-disable-next-line no-undefined
-          publicPath: undefined,
-        },
-        compiler: {
-          // eslint-disable-next-line no-undefined
-          outputPath: undefined,
-        },
+      outputOptions: {
+        // eslint-disable-next-line no-undefined
+        path: undefined,
+        // eslint-disable-next-line no-undefined
+        publicPath: undefined,
       },
+      url: '/c.js',
       expected: '/c.js',
     },
     {
-      url: '/more/complex/path.js',
-      context: {
-        options: {
-          publicPath: '/',
-        },
-        compiler: {
-          outputPath: '/a',
-        },
+      outputOptions: {
+        path: '/a',
+        publicPath: '/',
       },
+      url: '/more/complex/path.js',
       expected: '/a/more/complex/path.js',
     },
     {
       url: '/more/complex/path.js',
-      context: {
-        options: {
-          publicPath: '/complex',
-        },
-        compiler: {
-          outputPath: '/a',
-        },
+      outputOptions: {
+        path: '/a',
+        publicPath: '/complex',
       },
       expected: false,
     },
     {
       url: 'c.js',
-      context: {
-        options: {
-          publicPath: '/',
-        },
-        compiler: {
-          outputPath: '/dist',
-        },
+      outputOptions: {
+        path: '/dist',
+        publicPath: '/',
       },
       // publicPath is not in url, so it should fail
       expected: false,
     },
     {
       url: '/bar/',
-      context: {
-        options: {
-          publicPath: '/bar/',
-        },
-        compiler: {
-          outputPath: '/foo',
-        },
+      outputOptions: {
+        path: '/foo',
+        publicPath: '/bar/',
       },
       expected: '/foo',
     },
     {
       url: '/bar/',
-      context: {
-        options: {
-          publicPath: 'http://localhost/foo/',
-        },
-        compiler: {
-          outputPath: '/',
-        },
+      outputOptions: {
+        path: '/',
+        publicPath: 'http://localhost/foo/',
       },
       expected: false,
     },
     {
       url: 'http://test.domain/test/sample.js',
-      context: {
-        options: {
-          publicPath: '/test/',
-        },
-        compiler: {
-          outputPath: '/',
-        },
+      outputOptions: {
+        path: '/',
+        publicPath: '/test/',
       },
       expected: '/sample.js',
     },
     {
       url: 'http://test.domain/test/sample.js',
-      context: {
-        options: {
-          publicPath: 'http://other.domain/test/',
-        },
-        compiler: {
-          outputPath: '/',
-        },
+      outputOptions: {
+        path: '/',
+        publicPath: 'http://other.domain/test/',
       },
       expected: false,
     },
     {
       url: '/protocol/relative/sample.js',
-      context: {
-        options: {
-          publicPath: '//test.domain/protocol/relative/',
-        },
-        compiler: {
-          outputPath: '/',
-        },
+      outputOptions: {
+        path: '/',
+        publicPath: '//test.domain/protocol/relative/',
       },
       expected: '/sample.js',
     },
     {
       url: '/pathname%20with%20spaces.js',
-      context: {
-        options: {
-          publicPath: '/',
-        },
-        compiler: {
-          outputPath: '/',
-        },
+      outputOptions: {
+        path: '/',
+        publicPath: '/',
       },
       expected: '/pathname with spaces.js',
     },
     {
       url: '/js/sample.js',
-      context: {
-        options: {
-          publicPath: '/',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: '/js/',
         },
-        compiler: {
-          compilers: [
-            { outputPath: '/foo', options: { output: { publicPath: '/js/' } } },
-            {
-              outputPath: '/bar',
-              options: { output: { publicPath: '/css/' } },
-            },
-          ],
-          outputPath: '/root',
+        {
+          path: '/bar',
+          publicPath: '/css/',
         },
-      },
+      ],
       expected: '/foo/sample.js',
     },
     {
       url: '/js/sample.js',
-      context: {
-        options: {
-          publicPath: '/',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: 'http://localhost/js/',
         },
-        compiler: {
-          compilers: [
-            {
-              outputPath: '/foo',
-              options: { output: { publicPath: 'http://localhost/js/' } },
-            },
-            {
-              outputPath: '/bar',
-              options: { output: { publicPath: 'http://localhost/css/' } },
-            },
-          ],
-          outputPath: '/root',
+        {
+          path: '/bar',
+          publicPath: 'http://localhost/css/',
         },
-      },
+      ],
       expected: '/foo/sample.js',
     },
     {
       url: '/css/sample.css',
-      context: {
-        options: {
-          publicPath: '/',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: '/js/',
         },
-        compiler: {
-          compilers: [
-            { outputPath: '/foo', options: { output: { publicPath: '/js/' } } },
-            {
-              outputPath: '/bar',
-              options: { output: { publicPath: '/css/' } },
-            },
-          ],
-          outputPath: '/root',
+        {
+          path: '/bar',
+          publicPath: '/css/',
         },
-      },
+      ],
       expected: '/bar/sample.css',
     },
     {
       url: '/css/sample.css',
-      context: {
-        options: {
-          publicPath: '/',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: 'http://localhost/js/',
         },
-        compiler: {
-          compilers: [
-            {
-              outputPath: '/foo',
-              options: { output: { publicPath: 'http://localhost/js/' } },
-            },
-            {
-              outputPath: '/bar',
-              options: { output: { publicPath: 'http://localhost/css/' } },
-            },
-          ],
-          outputPath: '/root',
+        {
+          path: '/bar',
+          publicPath: 'http://localhost/css/',
         },
-      },
+      ],
       expected: '/bar/sample.css',
     },
     {
       url: '/other/sample.txt',
-      context: {
-        options: {
-          publicPath: '/',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: '/js/',
         },
-        compiler: {
-          compilers: [
-            { outputPath: '/foo', options: { output: { publicPath: '/js/' } } },
-            {
-              outputPath: '/bar',
-              options: { output: { publicPath: '/css/' } },
-            },
-          ],
-          outputPath: '/root',
+        {
+          path: '/bar',
+          publicPath: '/css/',
         },
-      },
-      expected: '/root/other/sample.txt',
-    },
-    {
-      url: '/other/sample.txt',
-      context: {
-        options: {
-          publicPath: '/',
-        },
-        compiler: {
-          compilers: [
-            {
-              outputPath: '/foo',
-              options: { output: { publicPath: 'http://localhost/js/' } },
-            },
-            {
-              outputPath: '/bar',
-              options: { output: { publicPath: 'http://localhost/css/' } },
-            },
-          ],
-          outputPath: '/root',
-        },
-      },
-      expected: '/root/other/sample.txt',
-    },
-    {
-      url: '/js/sample.js',
-      context: {
-        options: {
-          publicPath: '/test/',
-        },
-        compiler: {
-          compilers: [
-            { outputPath: '/foo', options: { output: { publicPath: '/js/' } } },
-            {
-              outputPath: '/bar',
-              options: { output: { publicPath: '/css/' } },
-            },
-          ],
-          outputPath: '/root',
-        },
-      },
-      expected: '/foo/sample.js',
-    },
-    {
-      url: '/js/sample.js',
-      context: {
-        options: {
-          publicPath: '/test/',
-        },
-        compiler: {
-          compilers: [
-            {
-              outputPath: '/foo',
-              options: { output: { publicPath: 'http://localhost/js/' } },
-            },
-            {
-              outputPath: '/bar',
-              options: { output: { publicPath: 'http://localhost/css/' } },
-            },
-          ],
-          outputPath: '/root',
-        },
-      },
-      expected: '/foo/sample.js',
-    },
-    {
-      url: '/css/sample.css',
-      context: {
-        options: {
-          publicPath: '/test/',
-        },
-        compiler: {
-          compilers: [
-            { outputPath: '/foo', options: { output: { publicPath: '/js/' } } },
-            {
-              outputPath: '/bar',
-              options: { output: { publicPath: '/css/' } },
-            },
-          ],
-          outputPath: '/root',
-        },
-      },
-      expected: '/bar/sample.css',
-    },
-    {
-      url: '/css/sample.css',
-      context: {
-        options: {
-          publicPath: '/test/',
-        },
-        compiler: {
-          compilers: [
-            {
-              outputPath: '/foo',
-              options: { output: { publicPath: 'http://localhost/js/' } },
-            },
-            {
-              outputPath: '/bar',
-              options: { output: { publicPath: 'http://localhost/css/' } },
-            },
-          ],
-          outputPath: '/root',
-        },
-      },
-      expected: '/bar/sample.css',
-    },
-    {
-      url: '/other/sample.txt',
-      context: {
-        options: {
-          publicPath: '/test/',
-        },
-        compiler: {
-          compilers: [
-            { outputPath: '/foo', options: { output: { publicPath: '/js/' } } },
-            {
-              outputPath: '/bar',
-              options: { output: { publicPath: '/css/' } },
-            },
-          ],
-          outputPath: '/root',
-        },
-      },
+      ],
       expected: false,
     },
     {
       url: '/other/sample.txt',
-      context: {
-        options: {
-          publicPath: '/test/',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: 'http://localhost/js/',
         },
-        compiler: {
-          compilers: [
-            {
-              outputPath: '/foo',
-              options: { output: { publicPath: 'http://localhost/js/' } },
-            },
-            {
-              outputPath: '/bar',
-              options: { output: { publicPath: 'http://localhost/css/' } },
-            },
-          ],
-          outputPath: '/root',
+        {
+          path: '/bar',
+          publicPath: 'http://localhost/css/',
         },
-      },
+      ],
+      expected: false,
+    },
+
+    {
+      url: '/js/sample.js',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: '/js/',
+        },
+        {
+          path: '/bar',
+        },
+      ],
+      expected: '/foo/sample.js',
+    },
+    {
+      url: '/css/sample.css',
+      outputOptions: [
+        {
+          path: '/foo',
+        },
+        {
+          path: '/bar',
+          publicPath: '/css/',
+        },
+      ],
+      expected: '/bar/sample.css',
+    },
+    {
+      url: '/js/sample.js',
+      outputOptions: [
+        {
+          publicPath: '/js/',
+        },
+        {
+          path: '/bar',
+          publicPath: '/css/',
+        },
+      ],
+      expected: '/sample.js',
+    },
+    {
+      url: '/css/sample.css',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: '/js/',
+        },
+        {
+          publicPath: '/css/',
+        },
+      ],
+      expected: '/sample.css',
+    },
+    {
+      url: '/js/sample.js',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: '/js/',
+        },
+        {
+          path: '/bar',
+          publicPath: '/css/',
+        },
+      ],
+      expected: '/foo/sample.js',
+    },
+    {
+      url: '/js/sample.js',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: 'http://localhost/js/',
+        },
+        {
+          path: '/bar',
+          publicPath: 'http://localhost/css/',
+        },
+      ],
+      expected: '/foo/sample.js',
+    },
+    {
+      url: '/css/sample.css',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: '/js/',
+        },
+        {
+          path: '/bar',
+          publicPath: '/css/',
+        },
+      ],
+      expected: '/bar/sample.css',
+    },
+    {
+      url: '/css/sample.css',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: 'http://localhost/js/',
+        },
+        {
+          path: '/bar',
+          publicPath: 'http://localhost/css/',
+        },
+      ],
+      expected: '/bar/sample.css',
+    },
+    {
+      url: '/other/sample.txt',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: '/js/',
+        },
+        {
+          path: '/bar',
+          publicPath: '/css/',
+        },
+      ],
+      expected: false,
+    },
+    {
+      url: '/other/sample.txt',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: 'http://localhost/js/',
+        },
+        {
+          path: '/bar',
+          publicPath: 'http://localhost/css/',
+        },
+      ],
       expected: false,
     },
     {
       url: '/test/sample.txt',
-      context: {
-        options: {
-          publicPath: '/test/',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: '/js/',
         },
-        compiler: {
-          compilers: [
-            { outputPath: '/foo', options: { output: { publicPath: '/js/' } } },
-            {
-              outputPath: '/bar',
-              options: { output: { publicPath: '/css/' } },
-            },
-          ],
-          outputPath: '/root',
+        {
+          path: '/bar',
+          publicPath: '/css/',
         },
-      },
-      expected: '/root/sample.txt',
+      ],
+      expected: false,
     },
     {
       url: '/test/sample.txt',
-      context: {
-        options: {
-          publicPath: '/test/',
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: 'http://localhost/js/',
         },
-        compiler: {
-          compilers: [
-            {
-              outputPath: '/foo',
-              options: { output: { publicPath: 'http://localhost/js/' } },
-            },
-            {
-              outputPath: '/bar',
-              options: { output: { publicPath: 'http://localhost/css/' } },
-            },
-          ],
-          outputPath: '/root',
+        {
+          path: '/bar',
+          publicPath: 'http://localhost/css/',
         },
-      },
-      expected: '/root/sample.txt',
+      ],
+      expected: false,
     },
     {
       url: '/test/sample.txt',
-      context: {
-        options: {
-          publicPath: '/',
-        },
-        compiler: {
-          outputPath: '/test/#leadinghash',
-        },
+      outputOptions: {
+        path: '/test/#leadinghash',
+        publicPath: '/',
       },
       expected: '/test/#leadinghash/test/sample.txt',
     },
     {
       url: '/folder-name-with-dots/mono-v6.x.x',
-      context: {
-        options: {
-          publicPath: '/',
-        },
-        compiler: {
-          outputPath: '/',
-        },
+      outputOptions: {
+        path: '/',
+        publicPath: '/',
       },
       expected: '/folder-name-with-dots/mono-v6.x.x',
     },
@@ -556,76 +470,52 @@ describe('GetFilenameFromUrl', () => {
     const windowsTests = [
       {
         url: '/test/windows.txt',
-        context: {
-          options: {
-            publicPath: '/test',
-          },
-          compiler: {
-            outputPath: 'c:\\foo',
-          },
+        outputOptions: {
+          path: 'c:\\foo',
+          publicPath: '/test',
         },
         expected: 'c:\\foo/windows.txt',
       },
       // Tests for #284
       {
         url: '/test/windows.txt',
-        context: {
-          options: {
-            publicPath: '/test',
-          },
-          compiler: {
-            outputPath: 'C:\\My%20Path\\wwwroot',
-          },
+        outputOptions: {
+          path: 'C:\\My%20Path\\wwwroot',
+          publicPath: '/test',
         },
         expected: 'C:\\My%20Path\\wwwroot/windows.txt',
       },
       {
         url: '/test/windows%202.txt',
-        context: {
-          options: {
-            publicPath: '/test',
-          },
-          compiler: {
-            outputPath: 'C:\\My%20Path\\wwwroot',
-          },
+        outputOptions: {
+          path: 'C:\\My%20Path\\wwwroot',
+          publicPath: '/test',
         },
         expected: 'C:\\My%20Path\\wwwroot/windows 2.txt',
       },
       // Tests for #297
       {
         url: '/test/windows.txt',
-        context: {
-          options: {
-            publicPath: '/test',
-          },
-          compiler: {
-            outputPath: 'C:\\My Path\\wwwroot',
-          },
+        outputOptions: {
+          path: 'C:\\My Path\\wwwroot',
+          publicPath: '/test',
         },
         expected: 'C:\\My Path\\wwwroot/windows.txt',
       },
       {
         url: '/test/windows%202.txt',
-        context: {
-          options: {
-            publicPath: '/test',
-          },
-          compiler: {
-            outputPath: 'C:\\My Path\\wwwroot',
-          },
+        outputOptions: {
+          path: 'C:\\My Path\\wwwroot',
+          publicPath: '/test',
         },
         expected: 'C:\\My Path\\wwwroot/windows 2.txt',
       },
       // Tests for #284 & #297
       {
         url: '/windows%20test/test%20%26%20test%20%26%20%2520.txt',
-        context: {
-          options: {
-            publicPath: '/windows%20test',
-          },
-          compiler: {
-            outputPath: 'C:\\My %20 Path\\wwwroot',
-          },
+        outputOptions: {
+          path: 'C:\\My %20 Path\\wwwroot',
+          publicPath: '/windows%20test',
         },
         expected: 'C:\\My %20 Path\\wwwroot/test & test & %20.txt',
       },
