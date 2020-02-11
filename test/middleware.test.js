@@ -458,7 +458,7 @@ describe('middleware', () => {
           output: {
             filename: 'bundle.js',
             publicPath: '/static/',
-            path: path.resolve(__dirname, '../outputs/other-basic'),
+            path: path.resolve(__dirname, './outputs/other-basic'),
           },
         });
 
@@ -501,8 +501,8 @@ describe('middleware', () => {
               ? '/static/[fullhash]/'
               : '/static/[hash]/',
             path: isWebpack5()
-              ? path.resolve(__dirname, '../outputs/other-basic-[fullhash]')
-              : path.resolve(__dirname, '../outputs/other-basic-[hash]'),
+              ? path.resolve(__dirname, './outputs/other-basic-[fullhash]')
+              : path.resolve(__dirname, './outputs/other-basic-[hash]'),
           },
         });
 
@@ -870,6 +870,55 @@ describe('middleware', () => {
         request(app)
           .get('/')
           .expect(404, done);
+      });
+    });
+
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration with same "path"', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler([
+          {
+            ...webpackClientServerConfig[0],
+            output: {
+              filename: 'bundle-one.js',
+              path: path.resolve(__dirname, './outputs/client-server/same'),
+              publicPath: '/static/',
+            },
+          },
+          {
+            ...webpackClientServerConfig[1],
+            output: {
+              filename: 'bundle-two.js',
+              path: path.resolve(__dirname, './outputs/client-server/same'),
+            },
+          },
+        ]);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return 200 code for GET request to the bundle file', (done) => {
+        request(app)
+          .get('/static/bundle-one.js')
+          .expect(200, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file', (done) => {
+        request(app)
+          .get('/static/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 404 code for GET request to non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect(200, done);
       });
     });
 
