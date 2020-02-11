@@ -28,10 +28,7 @@ function getStatsMock(outputOptions) {
 describe('GetFilenameFromUrl', () => {
   const tests = [
     {
-      outputOptions: {
-        path: '/',
-        publicPath: '/',
-      },
+      outputOptions: {},
       url: '/foo.js',
       expected: '/foo.js',
     },
@@ -46,7 +43,20 @@ describe('GetFilenameFromUrl', () => {
       expected: '/foo.js',
     },
     {
-      outputOptions: {},
+      outputOptions: {
+        // eslint-disable-next-line no-undefined
+        path: undefined,
+        // eslint-disable-next-line no-undefined
+        publicPath: undefined,
+      },
+      url: '/complex/foo.js',
+      expected: '/complex/foo.js',
+    },
+    {
+      outputOptions: {
+        path: '/',
+        publicPath: '/',
+      },
       url: '/foo.js',
       expected: '/foo.js',
     },
@@ -67,6 +77,38 @@ describe('GetFilenameFromUrl', () => {
       },
       url: '/%foo%/%foo%.js',
       expected: '/%foo%/%foo%.js',
+    },
+    {
+      outputOptions: {
+        path: '/',
+        publicPath: '/complex',
+      },
+      url: '/complex/foo.js',
+      expected: '/foo.js',
+    },
+    {
+      outputOptions: {
+        path: '/',
+        publicPath: 'http://localhost:8081/complex/',
+      },
+      url: 'http://localhost:8080/complex/foo.js',
+      expected: false,
+    },
+    {
+      outputOptions: {
+        path: '/',
+        publicPath: 'http://localhost:8080/complex/',
+      },
+      url: 'https://localhost:8080/complex/foo.js',
+      expected: false,
+    },
+    {
+      outputOptions: {
+        path: '/',
+        publicPath: 'http://foo:pass@localhost:8080/complex/',
+      },
+      url: 'http://bar:pass@localhost:8080/complex/foo.js',
+      expected: false,
     },
     {
       outputOptions: {
@@ -136,84 +178,84 @@ describe('GetFilenameFromUrl', () => {
       expected: '/a/more/complex/path.js',
     },
     {
-      url: '/more/complex/path.js',
       outputOptions: {
         path: '/a',
         publicPath: '/complex',
       },
+      url: '/more/complex/path.js',
       expected: false,
     },
     {
-      url: 'c.js',
+      // publicPath is not in url, so it should fail
       outputOptions: {
         path: '/dist',
         publicPath: '/',
       },
-      // publicPath is not in url, so it should fail
+      url: 'c.js',
       expected: false,
     },
     {
-      url: '/bar/',
       outputOptions: {
         path: '/foo',
         publicPath: '/bar/',
       },
+      url: '/bar/',
       expected: '/foo',
     },
     {
-      url: '/bar/',
       outputOptions: {
         path: '/',
         publicPath: 'http://localhost/foo/',
       },
+      url: '/bar/',
       expected: false,
     },
     {
-      url: 'http://test.domain/test/sample.js',
       outputOptions: {
         path: '/',
         publicPath: '/test/',
       },
+      url: 'http://test.domain/test/sample.js',
       expected: '/sample.js',
     },
     {
-      url: 'http://test.domain/test/sample.js',
       outputOptions: {
         path: '/',
         publicPath: 'http://other.domain/test/',
       },
+      url: 'http://test.domain/test/sample.js',
       expected: false,
     },
     {
-      url: '/protocol/relative/sample.js',
       outputOptions: {
         path: '/',
         publicPath: '//test.domain/protocol/relative/',
       },
+      url: '/protocol/relative/sample.js',
       expected: '/sample.js',
     },
     {
-      url: '/pathname%20with%20spaces.js',
       outputOptions: {
         path: '/',
         publicPath: '/',
       },
+      url: '/pathname%20with%20spaces.js',
       expected: '/pathname with spaces.js',
     },
     {
-      url: '/dirname%20with%20spaces/filename%20with%20spaces.js',
       outputOptions: {
         path: '/',
         publicPath: '/',
       },
+      url: '/dirname%20with%20spaces/filename%20with%20spaces.js',
       expected: '/dirname with spaces/filename with spaces.js',
     },
     {
-      url: '/dirname%20with%20spaces/filename%20with%20spaces.js',
       outputOptions: {
         path: '/',
         publicPath: '/',
       },
+      url: '/dirname%20with%20spaces/filename%20with%20spaces.js',
       expected: '/dirname with spaces/filename with spaces.js',
     },
     {
@@ -225,7 +267,6 @@ describe('GetFilenameFromUrl', () => {
       expected: '/static/foo.js',
     },
     {
-      url: '/js/sample.js',
       outputOptions: [
         {
           path: '/foo',
@@ -236,10 +277,10 @@ describe('GetFilenameFromUrl', () => {
           publicPath: '/css/',
         },
       ],
+      url: '/js/sample.js',
       expected: '/foo/sample.js',
     },
     {
-      url: '/js/sample.js',
       outputOptions: [
         {
           path: '/foo',
@@ -250,10 +291,10 @@ describe('GetFilenameFromUrl', () => {
           publicPath: 'http://localhost/css/',
         },
       ],
+      url: '/js/sample.js',
       expected: '/foo/sample.js',
     },
     {
-      url: '/css/sample.css',
       outputOptions: [
         {
           path: '/foo',
@@ -264,10 +305,10 @@ describe('GetFilenameFromUrl', () => {
           publicPath: '/css/',
         },
       ],
+      url: '/css/sample.css',
       expected: '/bar/sample.css',
     },
     {
-      url: '/css/sample.css',
       outputOptions: [
         {
           path: '/foo',
@@ -278,24 +319,24 @@ describe('GetFilenameFromUrl', () => {
           publicPath: 'http://localhost/css/',
         },
       ],
+      url: '/css/sample.css',
       expected: '/bar/sample.css',
     },
     {
+      outputOptions: [
+        {
+          path: '/foo',
+          publicPath: '/js/',
+        },
+        {
+          path: '/bar',
+          publicPath: '/css/',
+        },
+      ],
       url: '/other/sample.txt',
-      outputOptions: [
-        {
-          path: '/foo',
-          publicPath: '/js/',
-        },
-        {
-          path: '/bar',
-          publicPath: '/css/',
-        },
-      ],
       expected: false,
     },
     {
-      url: '/other/sample.txt',
       outputOptions: [
         {
           path: '/foo',
@@ -306,11 +347,11 @@ describe('GetFilenameFromUrl', () => {
           publicPath: 'http://localhost/css/',
         },
       ],
+      url: '/other/sample.txt',
       expected: false,
     },
 
     {
-      url: '/js/sample.js',
       outputOptions: [
         {
           path: '/foo',
@@ -320,10 +361,10 @@ describe('GetFilenameFromUrl', () => {
           path: '/bar',
         },
       ],
+      url: '/js/sample.js',
       expected: '/foo/sample.js',
     },
     {
-      url: '/css/sample.css',
       outputOptions: [
         {
           path: '/foo',
@@ -333,10 +374,10 @@ describe('GetFilenameFromUrl', () => {
           publicPath: '/css/',
         },
       ],
+      url: '/css/sample.css',
       expected: '/bar/sample.css',
     },
     {
-      url: '/js/sample.js',
       outputOptions: [
         {
           publicPath: '/js/',
@@ -346,10 +387,10 @@ describe('GetFilenameFromUrl', () => {
           publicPath: '/css/',
         },
       ],
+      url: '/js/sample.js',
       expected: '/sample.js',
     },
     {
-      url: '/css/sample.css',
       outputOptions: [
         {
           path: '/foo',
@@ -359,10 +400,10 @@ describe('GetFilenameFromUrl', () => {
           publicPath: '/css/',
         },
       ],
+      url: '/css/sample.css',
       expected: '/sample.css',
     },
     {
-      url: '/js/sample.js',
       outputOptions: [
         {
           path: '/foo',
@@ -373,10 +414,10 @@ describe('GetFilenameFromUrl', () => {
           publicPath: '/css/',
         },
       ],
+      url: '/js/sample.js',
       expected: '/foo/sample.js',
     },
     {
-      url: '/js/sample.js',
       outputOptions: [
         {
           path: '/foo',
@@ -387,10 +428,10 @@ describe('GetFilenameFromUrl', () => {
           publicPath: 'http://localhost/css/',
         },
       ],
+      url: '/js/sample.js',
       expected: '/foo/sample.js',
     },
     {
-      url: '/css/sample.css',
       outputOptions: [
         {
           path: '/foo',
@@ -401,10 +442,10 @@ describe('GetFilenameFromUrl', () => {
           publicPath: '/css/',
         },
       ],
+      url: '/css/sample.css',
       expected: '/bar/sample.css',
     },
     {
-      url: '/css/sample.css',
       outputOptions: [
         {
           path: '/foo',
@@ -415,10 +456,10 @@ describe('GetFilenameFromUrl', () => {
           publicPath: 'http://localhost/css/',
         },
       ],
+      url: '/css/sample.css',
       expected: '/bar/sample.css',
     },
     {
-      url: '/other/sample.txt',
       outputOptions: [
         {
           path: '/foo',
@@ -429,10 +470,10 @@ describe('GetFilenameFromUrl', () => {
           publicPath: '/css/',
         },
       ],
+      url: '/other/sample.txt',
       expected: false,
     },
     {
-      url: '/other/sample.txt',
       outputOptions: [
         {
           path: '/foo',
@@ -443,10 +484,10 @@ describe('GetFilenameFromUrl', () => {
           publicPath: 'http://localhost/css/',
         },
       ],
+      url: '/other/sample.txt',
       expected: false,
     },
     {
-      url: '/test/sample.txt',
       outputOptions: [
         {
           path: '/foo',
@@ -457,10 +498,10 @@ describe('GetFilenameFromUrl', () => {
           publicPath: '/css/',
         },
       ],
+      url: '/test/sample.txt',
       expected: false,
     },
     {
-      url: '/test/sample.txt',
       outputOptions: [
         {
           path: '/foo',
@@ -471,80 +512,122 @@ describe('GetFilenameFromUrl', () => {
           publicPath: 'http://localhost/css/',
         },
       ],
+      url: '/test/sample.txt',
       expected: false,
     },
     {
-      url: '/test/sample.txt',
       outputOptions: {
         path: '/test/#leadinghash',
         publicPath: '/',
       },
+      url: '/test/sample.txt',
       expected: '/test/#leadinghash/test/sample.txt',
     },
     {
-      url: '/folder-name-with-dots/mono-v6.x.x',
       outputOptions: {
         path: '/',
         publicPath: '/',
       },
+      url: '/folder-name-with-dots/mono-v6.x.x',
       expected: '/folder-name-with-dots/mono-v6.x.x',
     },
+    {
+      outputOptions: {
+        path: '/',
+        publicPath: '/',
+      },
+      url: '%',
+      expected: false,
+    },
+    {
+      outputOptions: {
+        path: '/',
+        publicPath: '/',
+      },
+      url: '\uD800',
+      expected: false,
+    },
+    {
+      outputOptions: {
+        path: '/bar/',
+        publicPath: '/foo/',
+      },
+      url: '/foo/\x46\x6F\x6F',
+      expected: '/bar/Foo',
+    },
+    {
+      outputOptions: {
+        path: '/',
+        publicPath: '/complex/',
+      },
+      url: 'https://test:malfor%5Med@test.example.com',
+      expected: false,
+    },
+    {
+      outputOptions: {
+        path: '/',
+        publicPath: 'https://test:malfor%5Med@test.example.com',
+      },
+      url: '/foo/bar',
+      expected: false,
+    },
+
     // Windows tests
     {
       condition: isWindows,
-      url: '/test/windows.txt',
       outputOptions: {
         path: 'c:\\foo',
         publicPath: '/test',
       },
+      url: '/test/windows.txt',
       expected: 'c:\\foo\\windows.txt',
     },
     // Tests for #284
     {
       condition: isWindows,
-      url: '/test/windows.txt',
       outputOptions: {
         path: 'C:\\My%20Path\\wwwroot',
         publicPath: '/test',
       },
+      url: '/test/windows.txt',
       expected: 'C:\\My%20Path\\wwwroot\\windows.txt',
     },
     {
       condition: isWindows,
-      url: '/test/windows%202.txt',
       outputOptions: {
         path: 'C:\\My%20Path\\wwwroot',
         publicPath: '/test',
       },
+      url: '/test/windows%202.txt',
       expected: 'C:\\My%20Path\\wwwroot\\windows 2.txt',
     },
     // Tests for #297
     {
       condition: isWindows,
-      url: '/test/windows.txt',
       outputOptions: {
         path: 'C:\\My Path\\wwwroot',
         publicPath: '/test',
       },
+      url: '/test/windows.txt',
       expected: 'C:\\My Path\\wwwroot\\windows.txt',
     },
     {
       condition: isWindows,
-      url: '/test/windows%202.txt',
       outputOptions: {
         path: 'C:\\My Path\\wwwroot',
         publicPath: '/test',
       },
+      url: '/test/windows%202.txt',
       expected: 'C:\\My Path\\wwwroot\\windows 2.txt',
     },
     // Tests for #284 & #297
     {
       condition: isWindows,
-      url: '/windows%20test/test%20%26%20test%20%26%20%2520.txt',
       outputOptions: {
         path: 'C:\\My %20 Path\\wwwroot',
         publicPath: '/windows%20test',
       },
+      url: '/windows%20test/test%20%26%20test%20%26%20%2520.txt',
       expected: 'C:\\My %20 Path\\wwwroot\\test & test & %20.txt',
     },
   ];

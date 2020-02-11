@@ -23,6 +23,7 @@ function getPaths(stats, options, url) {
           : '';
 
         // Handle the case where publicPath is a URL with hostname
+        // TODO what the fuck ?!
         const publicPathPathname =
           publicPath.indexOf('/') === 0
             ? publicPath
@@ -53,44 +54,69 @@ function getPaths(stats, options, url) {
 export default function getFilenameFromUrl(context, url, stats) {
   const { options } = context;
   const { outputPath, publicPath } = getPaths(stats, options, url);
-  // localPrefix is the folder our bundle should be in
-  // TODO catch error
-  const localPrefix = parse(publicPath || '/', false, true);
-  const urlObject = parse(url);
-  const hostNameIsTheSame = localPrefix.hostname === urlObject.hostname;
 
-  // publicPath has the hostname that is not the same as request url's, should fail
+  let publicPathObject;
+
+  try {
+    publicPathObject = parse(publicPath || '/', false, true);
+  } catch (_ignoreError) {
+    return false;
+  }
+
+  let urlObject;
+
+  try {
+    urlObject = parse(url);
+  } catch (_ignoreError) {
+    return false;
+  }
+
   if (
-    localPrefix.hostname !== null &&
-    urlObject.hostname !== null &&
-    !hostNameIsTheSame
+    // The `publicPath` option has the `protocol` that is not the same as request url's, should fail
+    (publicPathObject.protocol !== null &&
+      urlObject.protocol !== null &&
+      publicPathObject.protocol !== urlObject.protocol) ||
+    // The `publicPath` option has the `auth` that is not the same as request url's, should fail
+    (publicPathObject.auth !== null &&
+      urlObject.auth !== null &&
+      publicPathObject.auth !== urlObject.auth) ||
+    // The `publicPath` option has the `host` that is not the same as request url's, should fail
+    (publicPathObject.host !== null &&
+      urlObject.host !== null &&
+      publicPathObject.host !== urlObject.host)
   ) {
     return false;
   }
 
   // publicPath is not in url, so it should fail
-  if (publicPath && hostNameIsTheSame && url.indexOf(publicPath) !== 0) {
+  // TODO test
+  if (
+    publicPath &&
+    publicPathObject.host === urlObject.host &&
+    url.indexOf(publicPath) !== 0
+  ) {
     return false;
   }
 
-  let filename;
-
-  // strip localPrefix from the start of url
-  if (urlObject.pathname.indexOf(localPrefix.pathname) === 0) {
-    filename = urlObject.pathname.substr(localPrefix.pathname.length);
-  }
-
+  // TODO test
   if (
     !urlObject.hostname &&
-    localPrefix.hostname &&
-    url.indexOf(localPrefix.path) !== 0
+    publicPathObject.hostname &&
+    url.indexOf(publicPathObject.path) !== 0
   ) {
     return false;
   }
 
   let uri = outputPath;
+  let filename;
 
-  // Path Handling for all other operating systems
+  // Strip the `pathname` property from the `publicPath` option from the start of requested url
+  // `/complex/foo.js` => `foo.js`
+  if (urlObject.pathname.startsWith(publicPathObject.pathname)) {
+    filename = urlObject.pathname.substr(publicPathObject.pathname.length);
+  }
+
+  // Forming the path to the file
   if (filename) {
     uri = path.join(outputPath, querystring.unescape(filename));
 
