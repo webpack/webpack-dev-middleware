@@ -28,37 +28,20 @@ function getStatsMock(outputOptions) {
 describe('GetFilenameFromUrl', () => {
   const tests = [
     {
-      outputOptions: {},
-      url: '/foo.js',
-      expected: '/foo.js',
-    },
-    {
       outputOptions: {
-        // eslint-disable-next-line no-undefined
-        path: undefined,
-        // eslint-disable-next-line no-undefined
-        publicPath: undefined,
+        path: '/',
+        publicPath: '',
       },
       url: '/foo.js',
       expected: '/foo.js',
-    },
-    {
-      outputOptions: {
-        // eslint-disable-next-line no-undefined
-        path: undefined,
-        // eslint-disable-next-line no-undefined
-        publicPath: undefined,
-      },
-      url: '/complex/foo.js',
-      expected: '/complex/foo.js',
     },
     {
       outputOptions: {
         path: '/',
-        publicPath: '/',
+        publicPath: '',
       },
-      url: '/foo.js',
-      expected: '/foo.js',
+      url: '/complex/foo.js',
+      expected: '/complex/foo.js',
     },
     {
       // Express encodes the URI component, so we do the same
@@ -86,30 +69,6 @@ describe('GetFilenameFromUrl', () => {
       url: '/complex/foo.js',
       expected: '/foo.js',
     },
-    // {
-    //  outputOptions: {
-    //    path: '/',
-    //    publicPath: 'http://localhost:8081/complex/',
-    //  },
-    //  url: 'http://localhost:8080/complex/foo.js',
-    //  expected: false,
-    // },
-    // {
-    //  outputOptions: {
-    //    path: '/',
-    //    publicPath: 'http://localhost:8080/complex/',
-    //  },
-    //  url: 'https://localhost:8080/complex/foo.js',
-    //  expected: false,
-    // },
-    // {
-    //  outputOptions: {
-    //    path: '/',
-    //    publicPath: 'http://foo:pass@localhost:8080/complex/',
-    //  },
-    //  url: 'http://bar:pass@localhost:8080/complex/foo.js',
-    //  expected: false,
-    // },
     {
       outputOptions: {
         path: '/',
@@ -153,18 +112,15 @@ describe('GetFilenameFromUrl', () => {
     {
       outputOptions: {
         path: '/',
-        // eslint-disable-next-line no-undefined
-        publicPath: undefined,
+        publicPath: '',
       },
       url: '/b.js',
       expected: '/b.js',
     },
     {
       outputOptions: {
-        // eslint-disable-next-line no-undefined
-        path: undefined,
-        // eslint-disable-next-line no-undefined
-        publicPath: undefined,
+        path: '/',
+        publicPath: '',
       },
       url: '/c.js',
       expected: '/c.js',
@@ -250,14 +206,6 @@ describe('GetFilenameFromUrl', () => {
       url: 'http://test.domain/test/sample.js',
       expected: '/sample.js',
     },
-    // {
-    //  outputOptions: {
-    //    path: '/',
-    //    publicPath: 'http://other.domain/test/',
-    //  },
-    //  url: 'http://test.domain/test/sample.js',
-    //  expected: false,
-    // },
     {
       outputOptions: {
         path: '/',
@@ -371,6 +319,28 @@ describe('GetFilenameFromUrl', () => {
     {
       outputOptions: [
         {
+          path: '/one',
+          publicPath: 'http://localhost/one/',
+        },
+        {
+          path: '/two',
+          publicPath: 'http://localhost/two/',
+        },
+        {
+          path: '/three',
+          publicPath: 'http://localhost/three/',
+        },
+        {
+          path: '/four',
+          publicPath: 'http://localhost/four/',
+        },
+      ],
+      url: '/five/sample.css',
+      expected: false,
+    },
+    {
+      outputOptions: [
+        {
           path: '/foo',
           publicPath: '/js/',
         },
@@ -413,6 +383,7 @@ describe('GetFilenameFromUrl', () => {
       outputOptions: [
         {
           path: '/foo',
+          publicPath: '',
         },
         {
           path: '/bar',
@@ -425,6 +396,7 @@ describe('GetFilenameFromUrl', () => {
     {
       outputOptions: [
         {
+          path: '/',
           publicPath: '/js/',
         },
         {
@@ -442,6 +414,7 @@ describe('GetFilenameFromUrl', () => {
           publicPath: '/js/',
         },
         {
+          path: '/',
           publicPath: '/css/',
         },
       ],

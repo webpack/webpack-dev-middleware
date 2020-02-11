@@ -13,7 +13,7 @@ function getPaths(stats, options, url) {
       const { compilation } = stats.stats[i];
 
       publicPath = options.publicPath
-        ? options.publicPath
+        ? compilation.getPath(options.publicPath)
         : compilation.outputOptions.publicPath
         ? compilation.getPath(compilation.outputOptions.publicPath)
         : '';
@@ -43,7 +43,7 @@ function getPaths(stats, options, url) {
       ? compilation.getPath(compilation.outputOptions.path)
       : '';
     publicPath = options.publicPath
-      ? options.publicPath
+      ? compilation.getPath(options.publicPath)
       : compilation.outputOptions.publicPath
       ? compilation.getPath(compilation.outputOptions.publicPath)
       : '';
@@ -89,10 +89,6 @@ export default function getFilenameFromUrl(context, url, stats) {
   // Forming the path to the file
   if (filename) {
     uri = path.join(outputPath, querystring.unescape(filename));
-
-    if (!path.isAbsolute(uri)) {
-      uri = `/${uri}`;
-    }
   }
 
   return uri;
