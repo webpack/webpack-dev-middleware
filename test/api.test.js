@@ -201,7 +201,7 @@ describe('API', () => {
 
   describe('getFilenameFromUrl method', () => {
     it('use publicPath and compiler.outputPath to parse the filename', () => {
-      const filename = instance.getFilenameFromUrl('/public/index.html', {
+      const [filename] = instance.getFilenameFromUrl('/public/index.html', {
         compilation: {
           getPath: (value) => value,
           outputOptions: {
