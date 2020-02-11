@@ -213,6 +213,30 @@ describe('GetFilenameFromUrl', () => {
     {
       outputOptions: {
         path: '/',
+        publicPath: 'http://localhost:8080/foo/',
+      },
+      url: '/bar/',
+      expected: false,
+    },
+    {
+      outputOptions: {
+        path: '/',
+        publicPath: 'http://localhost:8080/foo/',
+      },
+      url: 'http://localhost:8080/foo/index.html',
+      expected: '/index.html',
+    },
+    {
+      outputOptions: {
+        path: '/',
+        publicPath: 'http://localhost:8080/foo/',
+      },
+      url: 'http://localhost:8080/bar/index.html',
+      expected: false,
+    },
+    {
+      outputOptions: {
+        path: '/',
         publicPath: '/test/',
       },
       url: 'http://test.domain/test/sample.js',

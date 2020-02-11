@@ -88,21 +88,23 @@ export default function getFilenameFromUrl(context, url, stats) {
     return false;
   }
 
+  // The `publicPath` option has the `host` property.
+  // The requested url doesn't contain the `host` property.
+  // But the `pathname` property of the requested url doesn't start with `pathname` property of `publicPath`.
+  if (
+    publicPathObject.host &&
+    !urlObject.host &&
+    !urlObject.pathname.startsWith(publicPathObject.pathname)
+  ) {
+    return false;
+  }
+
   // publicPath is not in url, so it should fail
   // TODO test
   if (
     publicPath &&
     publicPathObject.host === urlObject.host &&
     url.indexOf(publicPath) !== 0
-  ) {
-    return false;
-  }
-
-  // TODO test
-  if (
-    !urlObject.hostname &&
-    publicPathObject.hostname &&
-    url.indexOf(publicPathObject.path) !== 0
   ) {
     return false;
   }
