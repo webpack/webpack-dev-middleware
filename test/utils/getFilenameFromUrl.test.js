@@ -160,7 +160,7 @@ describe('GetFilenameFromUrl', () => {
     },
     {
       outputOptions: {
-        path: '/foo',
+        path: isWindows ? '\\foo' : '/foo',
         publicPath: '/bar/',
       },
       url: '/bar/',
