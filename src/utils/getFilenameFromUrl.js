@@ -25,18 +25,21 @@ function getPaths(stats, options) {
 
 const memoizedParse = mem(parse);
 
+// TODO rename
 export default function getFilenameFromUrl(context, url, stats) {
   const { options } = context;
   const paths = getPaths(stats, options);
 
   let urlObject;
-  let pathToFile;
+
+  const pathToFiles = [];
 
   try {
     // The `url` property of the `request` is contains only  `pathname`, `search` and `hash`
     urlObject = memoizedParse(url, false, true);
   } catch (_ignoreError) {
-    return pathToFile;
+    // eslint-disable-next-line no-undefined
+    return pathToFiles;
   }
 
   for (const { publicPath, outputPath } of paths) {
@@ -50,7 +53,7 @@ export default function getFilenameFromUrl(context, url, stats) {
     }
 
     if (urlObject.pathname.startsWith(publicPathObject.pathname)) {
-      pathToFile = outputPath;
+      let pathToFile = outputPath;
 
       // Strip the `pathname` property from the `publicPath` option from the start of requested url
       // `/complex/foo.js` => `foo.js`
@@ -63,9 +66,9 @@ export default function getFilenameFromUrl(context, url, stats) {
         pathToFile = path.join(outputPath, querystring.unescape(filename));
       }
 
-      break;
+      pathToFiles.push(pathToFile);
     }
   }
 
-  return pathToFile;
+  return pathToFiles;
 }

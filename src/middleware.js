@@ -44,15 +44,27 @@ export default function wrapper(context) {
     return new Promise((resolve) => {
       // eslint-disable-next-line consistent-return
       function processRequest(stats) {
-        let filename = getFilenameFromUrl(context, req.url, stats);
+        const possibleFilePaths = getFilenameFromUrl(context, req.url, stats);
 
-        if (!filename) {
+        if (possibleFilePaths.length === 0) {
           return goNext();
         }
 
-        try {
-          let stat = context.outputFileSystem.statSync(filename);
+        let filePath;
+        let stat;
 
+        for (const possibleFilePath of possibleFilePaths) {
+          try {
+            stat = context.outputFileSystem.statSync(possibleFilePath);
+          } catch (_ignoreError) {
+            // eslint-disable-next-line no-continue
+            continue;
+          }
+
+          filePath = possibleFilePath;
+        }
+
+        try {
           if (!stat.isFile()) {
             if (stat.isDirectory()) {
               let { index } = context.options;
@@ -64,8 +76,8 @@ export default function wrapper(context) {
                 throw new DevMiddlewareError('next');
               }
 
-              filename = path.posix.join(filename, index);
-              stat = context.outputFileSystem.statSync(filename);
+              filePath = path.join(filePath, index);
+              stat = context.outputFileSystem.statSync(filePath);
 
               if (!stat.isFile()) {
                 throw new DevMiddlewareError('next');
@@ -82,7 +94,7 @@ export default function wrapper(context) {
         let content;
 
         try {
-          content = context.outputFileSystem.readFileSync(filename);
+          content = context.outputFileSystem.readFileSync(filePath);
         } catch (_ignoreError) {
           return resolve(goNext());
         }
@@ -90,7 +102,7 @@ export default function wrapper(context) {
         content = handleRangeHeaders(content, req, res);
 
         if (!res.get('Content-Type')) {
-          const contentType = mime.contentType(path.extname(filename));
+          const contentType = mime.contentType(path.extname(filePath));
 
           if (contentType) {
             res.set('Content-Type', contentType);

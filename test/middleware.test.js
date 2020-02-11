@@ -491,7 +491,55 @@ describe('middleware', () => {
       });
     });
 
-    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode', () => {
+    describe('should respect "output.publicPath" and "output.path" options with hash substitutions', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            publicPath: isWebpack5()
+              ? '/static/[fullhash]/'
+              : '/static/[hash]/',
+            path: isWebpack5()
+              ? path.resolve(__dirname, '../outputs/other-basic-[fullhash]')
+              : path.resolve(__dirname, '../outputs/other-basic-[hash]'),
+          },
+        });
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return 200 code for GET request to the bundle file', (done) => {
+        request(app)
+          .get(
+            isWebpack5()
+              ? '/static/45c13f171499f5100d88/bundle.js'
+              : '/static/4c347cd8af8b39e58cbf/bundle.js'
+          )
+          .expect(200, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file', (done) => {
+        request(app)
+          .get('/static/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 404 code for GET request to non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect(404, done);
+      });
+    });
+
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with difference "publicPath" and "path"', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackMultiConfig);
 
@@ -542,20 +590,26 @@ describe('middleware', () => {
       });
     });
 
-    describe('should respect "output.publicPath" and "output.path" options with hash substitutions', () => {
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with same "publicPath"', () => {
       beforeAll((done) => {
-        const compiler = getCompiler({
-          ...webpackConfig,
-          output: {
-            filename: 'bundle.js',
-            publicPath: isWebpack5()
-              ? '/static/[fullhash]/'
-              : '/static/[hash]/',
-            path: isWebpack5()
-              ? path.resolve(__dirname, '../outputs/other-basic-[fullhash]')
-              : path.resolve(__dirname, '../outputs/other-basic-[hash]'),
+        const compiler = getCompiler([
+          {
+            ...webpackMultiConfig[0],
+            output: {
+              filename: 'bundle-one.js',
+              path: path.resolve(__dirname, './outputs/array/js1'),
+              publicPath: '/my-public/',
+            },
           },
-        });
+          {
+            ...webpackMultiConfig[1],
+            output: {
+              filename: 'bundle-two.js',
+              path: path.resolve(__dirname, './outputs/array/js2'),
+              publicPath: '/my-public/',
+            },
+          },
+        ]);
 
         instance = middleware(compiler);
 
@@ -567,14 +621,90 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return 200 code for GET request to the bundle file', (done) => {
+      it('should return 200 code for GET request to the first bundle file', (done) => {
         request(app)
-          .get(
-            isWebpack5()
-              ? '/static/45c13f171499f5100d88/bundle.js'
-              : '/static/4c347cd8af8b39e58cbf/bundle.js'
-          )
+          .get('/my-public/bundle-one.js')
           .expect(200, done);
+      });
+
+      it('should return 200 code for GET request to the second bundle file', (done) => {
+        request(app)
+          .get('/my-public/bundle-two.js')
+          .expect(200, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file', (done) => {
+        request(app)
+          .get('/my-public/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file', (done) => {
+        request(app)
+          .get('/static/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 404 code for GET request to non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect(404, done);
+      });
+    });
+
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with same "path"', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler([
+          {
+            ...webpackMultiConfig[0],
+            output: {
+              filename: 'bundle-one.js',
+              path: path.resolve(__dirname, './outputs/array/js1'),
+              publicPath: '/one-public/',
+            },
+          },
+          {
+            ...webpackMultiConfig[1],
+            output: {
+              filename: 'bundle-two.js',
+              path: path.resolve(__dirname, './outputs/array/js1'),
+              publicPath: '/two-public/',
+            },
+          },
+        ]);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return 200 code for GET request to the first bundle file', (done) => {
+        request(app)
+          .get('/one-public/bundle-one.js')
+          .expect(200, done);
+      });
+
+      it('should return 200 code for GET request to the second bundle file', (done) => {
+        request(app)
+          .get('/two-public/bundle-two.js')
+          .expect(200, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file to the first bundle file', (done) => {
+        request(app)
+          .get('/one-public/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file to the second bundle file', (done) => {
+        request(app)
+          .get('/two-public/invalid.js')
+          .expect(404, done);
       });
 
       it('should return 404 code for GET request to nonexistent file', (done) => {
@@ -674,9 +804,45 @@ describe('middleware', () => {
       });
     });
 
-    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration', () => {
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration (in first)', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackClientServerConfig);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return 200 code for GET request to the bundle file', (done) => {
+        request(app)
+          .get('/static/bundle.js')
+          .expect(200, done);
+      });
+
+      it('should return 404 code for GET request to nonexistent file', (done) => {
+        request(app)
+          .get('/static/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return 404 code for GET request to non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect(404, done);
+      });
+    });
+
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration (in second)', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler([
+          webpackClientServerConfig[1],
+          webpackClientServerConfig[0],
+        ]);
 
         instance = middleware(compiler);
 
