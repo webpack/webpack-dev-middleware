@@ -71,7 +71,6 @@ export default function getFilenameFromUrl(context, url, stats) {
     return false;
   }
 
-  // Absolute and
   // The `publicPath` option has the `protocol` property that is not the same as request url's, should fail
   // The `publicPath` option has the `auth` property that is not the same as request url's, should fail
   // The `publicPath` option has the `host` property that is not the same as request url's, should fail
@@ -85,17 +84,6 @@ export default function getFilenameFromUrl(context, url, stats) {
     (publicPathObject.host !== null &&
       urlObject.host !== null &&
       publicPathObject.host !== urlObject.host)
-  ) {
-    return false;
-  }
-
-  // The `publicPath` option has the `host` property.
-  // The requested url doesn't contain the `host` property.
-  // But the `pathname` property of the requested url doesn't start with `pathname` property of `publicPath`, should fail
-  if (
-    publicPathObject.host &&
-    !urlObject.host &&
-    !urlObject.pathname.startsWith(publicPathObject.pathname)
   ) {
     return false;
   }
