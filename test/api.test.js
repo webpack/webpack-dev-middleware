@@ -211,7 +211,13 @@ describe('API', () => {
         },
       });
 
-      expect(filename.endsWith('/public/index.html')).toBe(true);
+      const isWindows = process.platform === 'win32';
+
+      expect(
+        isWindows
+          ? filename.endsWith('\\public\\index.html')
+          : filename.endsWith('/public/index.html')
+      ).toBe(true);
     });
   });
 
