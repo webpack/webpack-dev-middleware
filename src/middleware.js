@@ -3,7 +3,7 @@ import path from 'path';
 import mime from 'mime-types';
 
 import DevMiddlewareError from './DevMiddlewareError';
-import getFilenameFromUrl from './utils/getFilenameFromUrl';
+import getPossibleFilePaths from './utils/getPossibleFilePaths';
 import handleRangeHeaders from './utils/handleRangeHeaders';
 import ready from './utils/ready';
 
@@ -44,7 +44,7 @@ export default function wrapper(context) {
     return new Promise((resolve) => {
       // eslint-disable-next-line consistent-return
       function processRequest(stats) {
-        const possibleFilePaths = getFilenameFromUrl(context, req.url, stats);
+        const possibleFilePaths = getPossibleFilePaths(context, req.url, stats);
 
         if (possibleFilePaths.length === 0) {
           return goNext();

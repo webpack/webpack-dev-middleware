@@ -25,8 +25,7 @@ function getPaths(stats, options) {
 
 const memoizedParse = mem(parse);
 
-// TODO rename
-export default function getFilenameFromUrl(context, url, stats) {
+export default (context, url, stats) => {
   const { options } = context;
   const paths = getPaths(stats, options);
 
@@ -71,4 +70,4 @@ export default function getFilenameFromUrl(context, url, stats) {
   }
 
   return pathToFiles;
-}
+};

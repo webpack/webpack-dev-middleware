@@ -1,5 +1,3 @@
-import path from 'path';
-
 import express from 'express';
 import { Stats } from 'webpack';
 
@@ -196,28 +194,6 @@ describe('API', () => {
           done();
         });
       });
-    });
-  });
-
-  describe('getFilenameFromUrl method', () => {
-    it('use publicPath and compiler.outputPath to parse the filename', () => {
-      const [filename] = instance.getFilenameFromUrl('/public/index.html', {
-        compilation: {
-          getPath: (value) => value,
-          outputOptions: {
-            path: path.resolve(__dirname, 'foo/bar'),
-            outputPath: '/',
-          },
-        },
-      });
-
-      const isWindows = process.platform === 'win32';
-
-      expect(
-        isWindows
-          ? filename.endsWith('\\public\\index.html')
-          : filename.endsWith('/public/index.html')
-      ).toBe(true);
     });
   });
 

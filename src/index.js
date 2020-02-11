@@ -6,7 +6,6 @@ import setupHooks from './utils/setupHooks';
 import setupLogger from './utils/setupLogger';
 import setupWriteToDisk from './utils/setupWriteToDisk';
 import setupOutputFileSystem from './utils/setupOutputFileSystem';
-import getFilenameFromUrl from './utils/getFilenameFromUrl';
 import ready from './utils/ready';
 import schema from './options.json';
 
@@ -88,8 +87,6 @@ export default function wdm(compiler, options = {}) {
 
       context.watching.close(callback);
     },
-
-    getFilenameFromUrl: getFilenameFromUrl.bind(this, context),
 
     context,
   });

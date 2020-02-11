@@ -1,4 +1,4 @@
-import getFilenameFromUrl from '../../src/utils/getFilenameFromUrl';
+import getFilenameFromUrl from '../../src/utils/getPossibleFilePaths';
 
 const isWindows = process.platform === 'win32';
 
@@ -8,8 +8,8 @@ function testUrl(test) {
 
   let { expected } = test;
 
-  if (typeof expected !== 'undefined' && isWindows) {
-    expected = expected.replace(/\//g, '\\');
+  if (isWindows) {
+    expected = expected.map((item) => item.replace(/\//g, '\\'));
   }
 
   expect(getFilenameFromUrl(context, test.url, stats)).toEqual(expected);
