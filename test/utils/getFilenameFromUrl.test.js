@@ -94,6 +94,14 @@ describe('GetFilenameFromUrl', () => {
     },
     {
       outputOptions: {
+        path: '/',
+        publicPath: '/',
+      },
+      url: '/test.html?foo=bar#hash',
+      expected: '/test.html',
+    },
+    {
+      outputOptions: {
         path: '/dist',
         publicPath: '/',
       },
@@ -191,6 +199,22 @@ describe('GetFilenameFromUrl', () => {
         publicPath: '/',
       },
       expected: '/pathname with spaces.js',
+    },
+    {
+      url: '/dirname%20with%20spaces/filename%20with%20spaces.js',
+      outputOptions: {
+        path: '/',
+        publicPath: '/',
+      },
+      expected: '/dirname with spaces/filename with spaces.js',
+    },
+    {
+      url: '/dirname%20with%20spaces/filename%20with%20spaces.js',
+      outputOptions: {
+        path: '/',
+        publicPath: '/',
+      },
+      expected: '/dirname with spaces/filename with spaces.js',
     },
     {
       url: '/js/sample.js',

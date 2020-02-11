@@ -54,6 +54,7 @@ export default function getFilenameFromUrl(context, url, stats) {
   const { options } = context;
   const { outputPath, publicPath } = getPaths(stats, options, url);
   // localPrefix is the folder our bundle should be in
+  // TODO catch error
   const localPrefix = parse(publicPath || '/', false, true);
   const urlObject = parse(url);
   const hostNameIsTheSame = localPrefix.hostname === urlObject.hostname;
@@ -89,29 +90,18 @@ export default function getFilenameFromUrl(context, url, stats) {
 
   let uri = outputPath;
 
-  /* istanbul ignore if */
-  if (process.platform === 'win32') {
-    // Path Handling for Microsoft Windows
-    if (filename) {
-      uri = path.posix.join(outputPath, querystring.unescape(filename));
+  // Path Handling for all other operating systems
+  if (filename) {
+    uri = path.posix.join(outputPath, querystring.unescape(filename));
 
+    if (process.platform === 'win32') {
       if (!path.win32.isAbsolute(uri)) {
         uri = `/${uri}`;
       }
-    }
-
-    return uri;
-  }
-
-  // Path Handling for all other operating systems
-  if (filename) {
-    uri = path.posix.join(outputPath, filename);
-
-    if (!path.posix.isAbsolute(uri)) {
+    } else if (!path.posix.isAbsolute(uri)) {
       uri = `/${uri}`;
     }
   }
 
-  // if no matches, use outputPath as filename
-  return querystring.unescape(uri);
+  return uri;
 }
