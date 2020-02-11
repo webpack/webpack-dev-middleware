@@ -92,13 +92,9 @@ export default function getFilenameFromUrl(context, url, stats) {
 
   // Path Handling for all other operating systems
   if (filename) {
-    uri = path.posix.join(outputPath, querystring.unescape(filename));
+    uri = path.join(outputPath, querystring.unescape(filename));
 
-    if (process.platform === 'win32') {
-      if (!path.win32.isAbsolute(uri)) {
-        uri = `/${uri}`;
-      }
-    } else if (!path.posix.isAbsolute(uri)) {
+    if (!path.isAbsolute(uri)) {
       uri = `/${uri}`;
     }
   }

@@ -217,6 +217,14 @@ describe('GetFilenameFromUrl', () => {
       expected: '/dirname with spaces/filename with spaces.js',
     },
     {
+      outputOptions: {
+        path: '/static/',
+        publicPath: '/public/',
+      },
+      url: '/public/foobar/../foo.js',
+      expected: '/static/foo.js',
+    },
+    {
       url: '/js/sample.js',
       outputOptions: [
         {
@@ -481,72 +489,72 @@ describe('GetFilenameFromUrl', () => {
       },
       expected: '/folder-name-with-dots/mono-v6.x.x',
     },
+    // Windows tests
+    {
+      condition: isWindows,
+      url: '/test/windows.txt',
+      outputOptions: {
+        path: 'c:\\foo',
+        publicPath: '/test',
+      },
+      expected: 'c:\\foo\\windows.txt',
+    },
+    // Tests for #284
+    {
+      condition: isWindows,
+      url: '/test/windows.txt',
+      outputOptions: {
+        path: 'C:\\My%20Path\\wwwroot',
+        publicPath: '/test',
+      },
+      expected: 'C:\\My%20Path\\wwwroot\\windows.txt',
+    },
+    {
+      condition: isWindows,
+      url: '/test/windows%202.txt',
+      outputOptions: {
+        path: 'C:\\My%20Path\\wwwroot',
+        publicPath: '/test',
+      },
+      expected: 'C:\\My%20Path\\wwwroot\\windows 2.txt',
+    },
+    // Tests for #297
+    {
+      condition: isWindows,
+      url: '/test/windows.txt',
+      outputOptions: {
+        path: 'C:\\My Path\\wwwroot',
+        publicPath: '/test',
+      },
+      expected: 'C:\\My Path\\wwwroot\\windows.txt',
+    },
+    {
+      condition: isWindows,
+      url: '/test/windows%202.txt',
+      outputOptions: {
+        path: 'C:\\My Path\\wwwroot',
+        publicPath: '/test',
+      },
+      expected: 'C:\\My Path\\wwwroot\\windows 2.txt',
+    },
+    // Tests for #284 & #297
+    {
+      condition: isWindows,
+      url: '/windows%20test/test%20%26%20test%20%26%20%2520.txt',
+      outputOptions: {
+        path: 'C:\\My %20 Path\\wwwroot',
+        publicPath: '/windows%20test',
+      },
+      expected: 'C:\\My %20 Path\\wwwroot\\test & test & %20.txt',
+    },
   ];
 
   for (const test of tests) {
-    it(`should process ${test.url} -> ${test.expected}`, () => {
-      testUrl(test);
-    });
-  }
-
-  // Explicit Tests for Microsoft Windows
-  if (isWindows) {
-    const windowsTests = [
-      {
-        url: '/test/windows.txt',
-        outputOptions: {
-          path: 'c:\\foo',
-          publicPath: '/test',
-        },
-        expected: 'c:\\foo/windows.txt',
-      },
-      // Tests for #284
-      {
-        url: '/test/windows.txt',
-        outputOptions: {
-          path: 'C:\\My%20Path\\wwwroot',
-          publicPath: '/test',
-        },
-        expected: 'C:\\My%20Path\\wwwroot/windows.txt',
-      },
-      {
-        url: '/test/windows%202.txt',
-        outputOptions: {
-          path: 'C:\\My%20Path\\wwwroot',
-          publicPath: '/test',
-        },
-        expected: 'C:\\My%20Path\\wwwroot/windows 2.txt',
-      },
-      // Tests for #297
-      {
-        url: '/test/windows.txt',
-        outputOptions: {
-          path: 'C:\\My Path\\wwwroot',
-          publicPath: '/test',
-        },
-        expected: 'C:\\My Path\\wwwroot/windows.txt',
-      },
-      {
-        url: '/test/windows%202.txt',
-        outputOptions: {
-          path: 'C:\\My Path\\wwwroot',
-          publicPath: '/test',
-        },
-        expected: 'C:\\My Path\\wwwroot/windows 2.txt',
-      },
-      // Tests for #284 & #297
-      {
-        url: '/windows%20test/test%20%26%20test%20%26%20%2520.txt',
-        outputOptions: {
-          path: 'C:\\My %20 Path\\wwwroot',
-          publicPath: '/windows%20test',
-        },
-        expected: 'C:\\My %20 Path\\wwwroot/test & test & %20.txt',
-      },
-    ];
-
-    for (const test of windowsTests) {
-      it(`windows: should process ${test.url} -> ${test.expected}`, () => {
+    if (
+      typeof test.condition === 'undefined' ||
+      (typeof test.condition !== 'undefined' && test.condition)
+    ) {
+      it(`should process ${test.url} -> ${test.expected}`, () => {
         testUrl(test);
       });
     }
