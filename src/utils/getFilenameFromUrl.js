@@ -3,59 +3,59 @@ import { parse } from 'url';
 
 import querystring from 'querystring';
 
-// support for multi-compiler configuration
-// see: https://github.com/webpack/webpack-dev-server/issues/641
-function getPaths(publicPath, compiler, url) {
-  const compilers = compiler && compiler.compilers;
+function getPaths(stats, options, url) {
+  let outputPath;
+  let publicPath;
 
-  if (Array.isArray(compilers)) {
-    let compilerPublicPath;
+  if (stats.stats) {
+    for (let i = 0; i < stats.stats.length; i++) {
+      const { compilation } = stats.stats[i];
 
-    // the path portion of compilerPublicPath
-    let compilerPublicPathBase;
+      publicPath = options.publicPath
+        ? options.publicPath
+        : compilation.outputOptions.publicPath
+        ? compilation.getPath(compilation.outputOptions.publicPath)
+        : '';
 
-    for (let i = 0; i < compilers.length; i++) {
-      compilerPublicPath =
-        compilers[i].options &&
-        compilers[i].options.output &&
-        compilers[i].options.output.publicPath;
+      if (publicPath) {
+        outputPath = compilation.outputOptions.path
+          ? compilation.getPath(compilation.outputOptions.path)
+          : '';
 
-      if (compilerPublicPath) {
-        compilerPublicPathBase =
-          compilerPublicPath.indexOf('/') === 0
-            ? compilerPublicPath // eslint-disable-next-line
-            : // handle the case where compilerPublicPath is a URL with hostname
-              parse(compilerPublicPath).pathname;
+        // Handle the case where publicPath is a URL with hostname
+        const publicPathPathname =
+          publicPath.indexOf('/') === 0
+            ? publicPath
+            : parse(publicPath).pathname;
 
-        // check the url vs the path part of the compilerPublicPath
-        if (url.indexOf(compilerPublicPathBase) === 0) {
-          return {
-            publicPath: compilerPublicPath,
-            outputPath: compilers[i].outputPath,
-          };
+        // Check the url vs the path part of the publicPath
+        if (url.indexOf(publicPathPathname) === 0) {
+          return { publicPath, outputPath };
         }
       }
     }
+  } else {
+    const { compilation } = stats;
+
+    outputPath = compilation.outputOptions.path
+      ? compilation.getPath(compilation.outputOptions.path)
+      : '';
+    publicPath = options.publicPath
+      ? options.publicPath
+      : compilation.outputOptions.publicPath
+      ? compilation.getPath(compilation.outputOptions.publicPath)
+      : '';
   }
 
-  return {
-    publicPath,
-    outputPath: compiler.outputPath,
-  };
+  return { outputPath, publicPath };
 }
 
-export default function getFilenameFromUrl(context, url) {
-  const { options, compiler } = context;
-  const { outputPath, publicPath } = getPaths(
-    options.publicPath,
-    compiler,
-    url
-  );
+export default function getFilenameFromUrl(context, url, stats) {
+  const { options } = context;
+  const { outputPath, publicPath } = getPaths(stats, options, url);
   // localPrefix is the folder our bundle should be in
   const localPrefix = parse(publicPath || '/', false, true);
   const urlObject = parse(url);
-  let filename;
-
   const hostNameIsTheSame = localPrefix.hostname === urlObject.hostname;
 
   // publicPath has the hostname that is not the same as request url's, should fail
@@ -71,6 +71,8 @@ export default function getFilenameFromUrl(context, url) {
   if (publicPath && hostNameIsTheSame && url.indexOf(publicPath) !== 0) {
     return false;
   }
+
+  let filename;
 
   // strip localPrefix from the start of url
   if (urlObject.pathname.indexOf(localPrefix.pathname) === 0) {
@@ -91,7 +93,7 @@ export default function getFilenameFromUrl(context, url) {
   if (process.platform === 'win32') {
     // Path Handling for Microsoft Windows
     if (filename) {
-      uri = path.posix.join(outputPath || '', querystring.unescape(filename));
+      uri = path.posix.join(outputPath, querystring.unescape(filename));
 
       if (!path.win32.isAbsolute(uri)) {
         uri = `/${uri}`;
@@ -103,7 +105,7 @@ export default function getFilenameFromUrl(context, url) {
 
   // Path Handling for all other operating systems
   if (filename) {
-    uri = path.posix.join(outputPath || '', filename);
+    uri = path.posix.join(outputPath, filename);
 
     if (!path.posix.isAbsolute(uri)) {
       uri = `/${uri}`;

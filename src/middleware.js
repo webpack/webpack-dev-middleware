@@ -7,8 +7,6 @@ import getFilenameFromUrl from './utils/getFilenameFromUrl';
 import handleRangeHeaders from './utils/handleRangeHeaders';
 import ready from './utils/ready';
 
-const HASH_REGEXP = /[0-9a-f]{10,}/;
-
 export default function wrapper(context) {
   return function middleware(req, res, next) {
     // fixes #282. credit @cexoso. in certain edge situations res.locals is
@@ -44,15 +42,15 @@ export default function wrapper(context) {
       return goNext();
     }
 
-    let filename = getFilenameFromUrl(context, req.url);
-
-    if (filename === false) {
-      return goNext();
-    }
-
     return new Promise((resolve) => {
       // eslint-disable-next-line consistent-return
-      function processRequest() {
+      function processRequest(stats) {
+        let filename = getFilenameFromUrl(context, req.url, stats);
+
+        if (filename === false) {
+          return goNext();
+        }
+
         try {
           let stat = context.outputFileSystem.statSync(filename);
 
@@ -113,18 +111,6 @@ export default function wrapper(context) {
         res.send(content);
 
         resolve();
-      }
-
-      if (HASH_REGEXP.test(filename)) {
-        try {
-          if (context.outputFileSystem.statSync(filename).isFile()) {
-            processRequest();
-
-            return;
-          }
-        } catch (_ignoreError) {
-          // Ignore error
-        }
       }
 
       ready(context, processRequest, req);
