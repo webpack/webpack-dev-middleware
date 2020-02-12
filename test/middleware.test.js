@@ -595,6 +595,64 @@ describe('middleware', () => {
         },
       ];
 
+      const isWindows = process.platform === 'win32';
+
+      if (isWindows) {
+        files.push(
+          {
+            file: 'windows.txt',
+            data: 'windows.txt content',
+          },
+          {
+            file: 'windows 2.txt',
+            data: 'windows 2.txt content',
+          },
+          {
+            file: 'test & test & %20.txt',
+            data: 'test & test & %20.txt content',
+          }
+        );
+
+        requests.push(
+          {
+            value: 'windows.txt',
+            expected: 200,
+          },
+          {
+            value: 'windows%202.txt',
+            expected: 200,
+          },
+          {
+            value: 'test%20%26%20test%20%26%20%2520.txt',
+            expected: 200,
+          }
+        );
+
+        configurations.push(
+          {
+            output: {
+              path: path.join(basicOutputPath, 'my static'),
+              publicPath: '/static/',
+            },
+            publicPathForRequest: '/static/',
+          },
+          {
+            output: {
+              path: path.join(basicOutputPath, 'my%20static'),
+              publicPath: '/static/',
+            },
+            publicPathForRequest: '/static/',
+          },
+          {
+            output: {
+              path: path.join(basicOutputPath, 'my %20 static'),
+              publicPath: '/my%20static/',
+            },
+            publicPathForRequest: '/my%20static/',
+          }
+        );
+      }
+
       for (const configuration of configurations) {
         // eslint-disable-next-line no-loop-func
         describe('should work handle requests', () => {
