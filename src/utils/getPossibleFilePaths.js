@@ -53,7 +53,10 @@ export default (context, url, stats) => {
 
     let pathToFile = outputPath;
 
-    if (urlObject.pathname.startsWith(publicPathObject.pathname)) {
+    if (
+      urlObject.pathname &&
+      urlObject.pathname.startsWith(publicPathObject.pathname)
+    ) {
       // Strip the `pathname` property from the `publicPath` option from the start of requested url
       // `/complex/foo.js` => `foo.js`
       const filename = urlObject.pathname.substr(

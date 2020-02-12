@@ -52,8 +52,9 @@ describe('middleware', () => {
   }
 
   describe('basic', () => {
-    describe('should work with difference requests', () => {
+    describe('should work without options', () => {
       let compiler;
+
       const outputPath = path.resolve(__dirname, './outputs/basic');
 
       beforeAll((done) => {
@@ -65,7 +66,7 @@ describe('middleware', () => {
           },
         });
 
-        instance = middleware(compiler, { publicPath: '/public/' });
+        instance = middleware(compiler);
 
         app = express();
         app.use(instance);
@@ -76,26 +77,16 @@ describe('middleware', () => {
           recursive: true,
         });
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(outputPath, '123a123412.hot-update.json'),
-          '["hi"]'
+          path.resolve(outputPath, 'image.svg'),
+          'svg image'
         );
         instance.context.outputFileSystem.mkdirSync(
-          path.resolve(outputPath, 'reference')
-        );
-        instance.context.outputFileSystem.mkdirSync(
-          path.resolve(outputPath, 'reference/mono-v6.x.x')
+          path.resolve(outputPath, 'directory/nested-directory'),
+          { recursive: true }
         );
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(outputPath, 'reference/mono-v6.x.x/index.html'),
+          path.resolve(outputPath, 'directory/nested-directory/index.html'),
           'My Index.'
-        );
-        instance.context.outputFileSystem.writeFileSync(
-          path.resolve(outputPath, 'hello.wasm'),
-          'welcome'
-        );
-        instance.context.outputFileSystem.writeFileSync(
-          path.resolve(outputPath, '3dAr.usdz'),
-          '010101'
         );
         instance.context.outputFileSystem.writeFileSync(
           path.resolve(outputPath, 'throw-an-exception-on-readFileSync.txt'),
@@ -109,9 +100,9 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should not find a bundle file on disk', (done) => {
+      it('should not find the bundle file on disk', (done) => {
         request(app)
-          .get('/public/bundle.js')
+          .get('/bundle.js')
           .expect('Content-Type', 'application/javascript; charset=utf-8')
           .expect(200, (error) => {
             if (error) {
@@ -132,7 +123,7 @@ describe('middleware', () => {
         );
 
         request(app)
-          .get('/public/bundle.js')
+          .get('/bundle.js')
           .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'application/javascript; charset=utf-8')
           .expect(200, fileData.toString(), done);
@@ -140,7 +131,7 @@ describe('middleware', () => {
 
       it('should return the "200" code for the "HEAD" request to the bundle file', (done) => {
         request(app)
-          .head('/public/bundle.js')
+          .head('/bundle.js')
           .expect(
             'Content-Length',
             instance.context.outputFileSystem
@@ -154,39 +145,20 @@ describe('middleware', () => {
 
       it('should return the "404" code for the "POST" request to the bundle file', (done) => {
         request(app)
-          .post('/public/bundle.js')
+          .post('/bundle.js')
           .expect(404, done);
       });
 
-      it('should return the "200" code for the "GET" request to the image file', (done) => {
+      it('should return the "200" code for the "GET" request to the "image.svg" file', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(outputPath, 'svg.svg')
+          path.resolve(outputPath, 'image.svg')
         );
 
         request(app)
-          .get('/public/svg.svg')
+          .get('/image.svg')
           .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'image/svg+xml')
           .expect(200, fileData, done);
-      });
-
-      it('should return the "404" code for the "GET" request to a nonexisting file', (done) => {
-        request(app)
-          .get('/public/nope')
-          .expect('Content-Type', 'text/html; charset=utf-8')
-          .expect(404, done);
-      });
-
-      it('should return the "200" code for the "GET" request to the hot module replacement file', (done) => {
-        const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(outputPath, '123a123412.hot-update.json')
-        );
-
-        request(app)
-          .get('/public/123a123412.hot-update.json')
-          .expect('Content-Length', fileData.byteLength.toString())
-          .expect('Content-Type', 'application/json; charset=utf-8')
-          .expect(200, fileData.toString(), done);
       });
 
       it('should return the "200" code for the "GET" request to the directory', (done) => {
@@ -195,19 +167,43 @@ describe('middleware', () => {
         );
 
         request(app)
-          .get('/public/')
+          .get('/')
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect('Content-Length', fileData.byteLength.toString())
           .expect(200, fileData.toString(), done);
       });
 
-      it('should return the "200" code for the "GET" request to the subdirectory without trailing slash', (done) => {
+      it('should return the "200" code for the "GET" request to the subdirectory with "index.html"', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(outputPath, 'reference/mono-v6.x.x/index.html')
+          path.resolve(outputPath, 'directory/nested-directory/index.html')
         );
 
         request(app)
-          .get('/public/reference/mono-v6.x.x')
+          .get('/directory/nested-directory/')
+          .expect('Content-Length', fileData.byteLength.toString())
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, fileData.toString(), done);
+      });
+
+      it('should return the "200" code for the "GET" request to the subdirectory with "index.html" without trailing slash', (done) => {
+        const fileData = instance.context.outputFileSystem.readFileSync(
+          path.resolve(outputPath, 'directory/nested-directory/index.html')
+        );
+
+        request(app)
+          .get('/directory/nested-directory')
+          .expect('Content-Length', fileData.byteLength.toString())
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, fileData.toString(), done);
+      });
+
+      it('should return the "200" code for the "GET" request to the subdirectory with "index.html"', (done) => {
+        const fileData = instance.context.outputFileSystem.readFileSync(
+          path.resolve(outputPath, 'directory/nested-directory/index.html')
+        );
+
+        request(app)
+          .get('/directory/nested-directory/index.html')
           .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, fileData.toString(), done);
@@ -215,17 +211,17 @@ describe('middleware', () => {
 
       it('should return the "416" code for the "GET" request with the invalid range header', (done) => {
         request(app)
-          .get('/public/svg.svg')
+          .get('/bundle.js')
           .set('Range', 'bytes=6000-')
           .expect(416, done);
       });
 
       it('should return the "206" code for the "GET" request with the valid range header', (done) => {
         request(app)
-          .get('/public/svg.svg')
+          .get('/bundle.js')
           .set('Range', 'bytes=3000-3500')
           .expect('Content-Length', '501')
-          .expect('Content-Range', 'bytes 3000-3500/4778')
+          .expect('Content-Range', 'bytes 3000-3500/4875')
           .expect(206, done);
       });
 
@@ -234,31 +230,6 @@ describe('middleware', () => {
           .get('/nonpublic/')
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(404, done);
-      });
-
-      it('should return the "200" code for the "GET" request to "hello.wasm"', (done) => {
-        const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(outputPath, 'hello.wasm')
-        );
-
-        request(app)
-          .get('/public/hello.wasm')
-          .expect('Content-Length', fileData.byteLength.toString())
-          .expect('Content-Type', 'application/wasm')
-          .expect(200, fileData.toString(), done);
-      });
-
-      it('should return the "200" code for the "GET" request to "3dAr.usdz"', (done) => {
-        const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(outputPath, '3dAr.usdz')
-        );
-
-        request(app)
-          .get('/public/3dAr.usdz')
-          .expect('Content-Length', fileData.byteLength.toString())
-          .expect('Content-Type', 'model/vnd.usdz+zip')
-          .expect('010101')
-          .expect(200, fileData.toString(), done);
       });
 
       it('should return the "404" code for the "GET" request to the deleted file', (done) => {
@@ -287,11 +258,315 @@ describe('middleware', () => {
         );
 
         request(app)
-          .get('/public/unknown')
+          .get('/unknown')
           .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'application/octet-stream')
           .expect(200, done);
       });
+
+      // TODO publicPath and url - https://test:malfor%5Med@test.example.com
+    });
+
+    describe('should work with difference requests #2', () => {
+      const basicOutputPath = path.resolve(__dirname, './outputs/basic');
+      const files = [
+        {
+          file: 'index.html',
+          data: '<div>Test</div>',
+        },
+        {
+          file: 'config.json',
+          data: JSON.stringify({ foo: 'bar' }),
+        },
+        {
+          file: 'svg.svg',
+          data: 'svg file',
+        },
+        {
+          file: 'foo.js',
+          data: 'console.log("foo");',
+        },
+        {
+          file: '/complex/foo.js',
+          data: 'console.log("foo");',
+        },
+        {
+          file: '/complex/complex/foo.js',
+          data: 'console.log("foo");',
+        },
+        {
+          file: '/föö.js',
+          data: 'console.log("foo");',
+        },
+        {
+          file: '/%foo%/%foo%.js',
+          data: 'console.log("foo");',
+        },
+        {
+          file: 'test.html',
+          data: '<div>test</div>',
+        },
+        {
+          file: 'pathname with spaces.js',
+          data: 'console.log("foo");',
+        },
+        {
+          file: 'dirname with spaces/filename with spaces.js',
+          data: 'console.log("foo");',
+        },
+        {
+          file: 'folder-name-with-dots/mono-v6.x.x',
+          data: 'content with .',
+        },
+        {
+          file: 'noextension',
+          data: 'noextension content',
+        },
+        {
+          file: '3dAr.usdz',
+          data: '3dAr.usdz content',
+        },
+        {
+          file: 'hello.wasm',
+          data: 'hello.wasm content',
+        },
+      ];
+      // TODO .expect('Content-Length', fileData.byteLength.toString())
+      // TODO .expect('Content-Type', 'application/octet-stream')
+      const requests = [
+        {
+          value: '',
+          expected: 200,
+        },
+        {
+          value: 'index.html',
+          expected: 200,
+        },
+        {
+          value: 'foo.js',
+          expected: 200,
+        },
+        {
+          value: 'config.json',
+          expected: 200,
+        },
+        {
+          value: 'svg.svg',
+          expected: 200,
+        },
+        {
+          value: 'complex/foo.js',
+          expected: 200,
+        },
+        {
+          value: 'complex/./foo.js',
+          expected: 200,
+        },
+        {
+          value: 'complex/foo/../foo.js',
+          expected: 200,
+        },
+        {
+          value: 'complex/complex/foo.js',
+          expected: 200,
+        },
+        // Express encodes the URI component, so we do the same
+        {
+          value: 'f%C3%B6%C3%B6.js',
+          expected: 200,
+        },
+        // Filenames can contain characters not allowed in URIs
+        {
+          value: '%foo%/%foo%.js',
+          expected: 200,
+        },
+        {
+          value: 'test.html?foo=bar',
+          expected: 200,
+        },
+        {
+          value: 'test.html?foo=bar#hash',
+          expected: 200,
+        },
+        {
+          value: 'pathname%20with%20spaces.js',
+          expected: 200,
+        },
+        {
+          value: 'dirname%20with%20spaces/filename%20with%20spaces.js',
+          expected: 200,
+        },
+        {
+          value: 'folder-name-with-dots/mono-v6.x.x',
+          expected: 200,
+        },
+        {
+          value: 'noextension',
+          expected: 200,
+        },
+        {
+          value: '3dAr.usdz',
+          expected: 200,
+        },
+        {
+          value: 'hello.wasm',
+          expected: 200,
+        },
+        {
+          value: 'invalid.js',
+          expected: 404,
+        },
+        {
+          value: 'complex',
+          expected: 404,
+        },
+        {
+          value: 'complex/invalid.js',
+          expected: 404,
+        },
+        {
+          value: 'complex/complex',
+          expected: 404,
+        },
+        {
+          value: 'complex/complex/invalid.js',
+          expected: 404,
+        },
+        {
+          value: '%',
+          expected: 404,
+        },
+      ];
+
+      const configurations = [
+        {
+          output: { path: basicOutputPath, publicPath: '' },
+          publicPathForRequest: '/',
+        },
+        {
+          output: { path: path.join(basicOutputPath, 'dist'), publicPath: '' },
+          publicPathForRequest: '/',
+        },
+        {
+          output: { path: basicOutputPath, publicPath: '/' },
+          publicPathForRequest: '/',
+        },
+        {
+          output: { path: path.join(basicOutputPath, 'dist'), publicPath: '/' },
+          publicPathForRequest: '/',
+        },
+        {
+          output: { path: basicOutputPath, publicPath: '/static' },
+          publicPathForRequest: '/static/',
+        },
+        {
+          output: {
+            path: path.join(basicOutputPath, 'dist'),
+            publicPath: '/static',
+          },
+          publicPathForRequest: '/static/',
+        },
+        {
+          output: { path: basicOutputPath, publicPath: '/static/' },
+          publicPathForRequest: '/static/',
+        },
+        {
+          output: {
+            path: path.join(basicOutputPath, 'dist'),
+            publicPath: '/static/',
+          },
+          publicPathForRequest: '/static/',
+        },
+        {
+          output: {
+            path: path.join(basicOutputPath, 'dist/#leadinghash'),
+            publicPath: '/',
+          },
+          publicPathForRequest: '/',
+        },
+        {
+          output: {
+            path: basicOutputPath,
+            publicPath: 'http://127.0.0.1/',
+          },
+          publicPathForRequest: '/',
+        },
+        {
+          output: {
+            path: basicOutputPath,
+            publicPath: 'http://127.0.0.1:3000/',
+          },
+          publicPathForRequest: '/',
+        },
+        {
+          output: {
+            path: basicOutputPath,
+            publicPath: '//test.domain/',
+          },
+          publicPathForRequest: '/',
+        },
+      ];
+
+      for (const configuration of configurations) {
+        // eslint-disable-next-line no-loop-func
+        describe('should work handle requests', () => {
+          const { output, publicPathForRequest } = configuration;
+          const { path: outputPath, publicPath } = output;
+
+          let compiler;
+
+          beforeAll((done) => {
+            compiler = getCompiler({
+              ...webpackConfig,
+              output: {
+                filename: 'bundle.js',
+                path: outputPath,
+                publicPath,
+              },
+            });
+
+            instance = middleware(compiler);
+
+            app = express();
+            app.use(instance);
+
+            listen = listenShorthand(done);
+
+            const {
+              context: {
+                outputFileSystem: { mkdirSync, writeFileSync },
+              },
+            } = instance;
+
+            for (const { file, data } of files) {
+              const fullPath = path.join(outputPath, file);
+
+              mkdirSync(path.dirname(fullPath), { recursive: true });
+              writeFileSync(fullPath, data);
+            }
+          });
+
+          afterAll(close);
+
+          it('should return the "200" code for the "GET" request to the bundle file', (done) => {
+            request(app)
+              .get(`${publicPathForRequest}bundle.js`)
+              .expect('Content-Type', 'application/javascript; charset=utf-8')
+              .expect(200, done);
+          });
+
+          for (const { value, expected } of requests) {
+            // eslint-disable-next-line no-loop-func
+            it(`should return the "${expected}" code for the "GET" request for the "${value}" url`, (done) => {
+              const fullUrl = `${publicPathForRequest}${value}`;
+
+              request(app)
+                .get(fullUrl)
+                .expect(expected, done);
+            });
+          }
+        });
+      }
     });
 
     describe('should respect the value of the "Content-Type" header from other middleware', () => {
