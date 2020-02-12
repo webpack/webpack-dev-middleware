@@ -51,21 +51,53 @@ export default (context, url, stats) => {
       continue;
     }
 
-    if (urlObject.pathname.startsWith(publicPathObject.pathname)) {
-      let pathToFile = outputPath;
+    let pathToFile = outputPath;
 
+    if (urlObject.pathname.startsWith(publicPathObject.pathname)) {
       // Strip the `pathname` property from the `publicPath` option from the start of requested url
       // `/complex/foo.js` => `foo.js`
       const filename = urlObject.pathname.substr(
         publicPathObject.pathname.length
       );
 
-      // Forming the path to the file
       if (filename) {
         pathToFile = path.join(outputPath, querystring.unescape(filename));
       }
 
-      pathToFiles.push(pathToFile);
+      let fsStats;
+
+      try {
+        fsStats = context.outputFileSystem.statSync(pathToFile);
+      } catch (_ignoreError) {
+        // eslint-disable-next-line no-continue
+        continue;
+      }
+
+      if (fsStats.isFile()) {
+        pathToFiles.push(pathToFile);
+      } else if (
+        fsStats.isDirectory() &&
+        (typeof options.index === 'undefined' || options.index)
+      ) {
+        const indexValue =
+          typeof options.index === 'undefined' ||
+          typeof options.index === 'boolean'
+            ? 'index.html'
+            : options.index;
+
+        pathToFile = path.join(pathToFile, indexValue);
+
+        try {
+          fsStats = context.outputFileSystem.statSync(pathToFile);
+        } catch (__ignoreError) {
+          // eslint-disable-next-line no-continue
+          continue;
+        }
+
+        if (fsStats.isFile()) {
+          pathToFiles.push(pathToFile);
+        }
+      }
     }
   }
 

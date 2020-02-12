@@ -2,7 +2,6 @@ import path from 'path';
 
 import mime from 'mime-types';
 
-import DevMiddlewareError from './DevMiddlewareError';
 import getPossibleFilePaths from './utils/getPossibleFilePaths';
 import handleRangeHeaders from './utils/handleRangeHeaders';
 import ready from './utils/ready';
@@ -47,48 +46,10 @@ export default function wrapper(context) {
         const possibleFilePaths = getPossibleFilePaths(context, req.url, stats);
 
         if (possibleFilePaths.length === 0) {
-          return goNext();
-        }
-
-        let filePath;
-        let stat;
-
-        for (const possibleFilePath of possibleFilePaths) {
-          try {
-            stat = context.outputFileSystem.statSync(possibleFilePath);
-          } catch (_ignoreError) {
-            // eslint-disable-next-line no-continue
-            continue;
-          }
-
-          filePath = possibleFilePath;
-        }
-
-        try {
-          if (!stat.isFile()) {
-            if (stat.isDirectory()) {
-              let { index } = context.options;
-
-              // eslint-disable-next-line no-undefined
-              if (index === undefined || index === true) {
-                index = 'index.html';
-              } else if (!index) {
-                throw new DevMiddlewareError('next');
-              }
-
-              filePath = path.join(filePath, index);
-              stat = context.outputFileSystem.statSync(filePath);
-
-              if (!stat.isFile()) {
-                throw new DevMiddlewareError('next');
-              }
-            } else {
-              throw new DevMiddlewareError('next');
-            }
-          }
-        } catch (_ignoreError) {
           return resolve(goNext());
         }
+
+        const [filePath] = possibleFilePaths;
 
         // server content
         let content;
