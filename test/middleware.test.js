@@ -383,9 +383,8 @@ describe('middleware', () => {
       });
     });
 
-    describe.only('should work with difference requests', () => {
+    describe('should work with difference requests', () => {
       // TODO .expect('Content-Length', fileData.byteLength.toString())
-      // TODO url - https://test:malfor%5Med@test.example.com
       // TODO do multi-compiler mode
       const basicOutputPath = path.resolve(__dirname, './outputs/basic');
       const files = [
@@ -452,18 +451,6 @@ describe('middleware', () => {
       ];
 
       const requests = [
-        {
-          value: '',
-          contentType: 'text/html; charset=utf-8',
-          contentLength: '10',
-          code: 200,
-        },
-        {
-          value: 'index.html',
-          contentType: 'text/html; charset=utf-8',
-          contentLength: '10',
-          code: 200,
-        },
         {
           value: 'foo.js',
           contentType: 'application/javascript; charset=utf-8',
