@@ -453,6 +453,18 @@ describe('middleware', () => {
 
       const requests = [
         {
+          value: '',
+          contentType: 'text/html; charset=utf-8',
+          contentLength: '10',
+          code: 200,
+        },
+        {
+          value: 'index.html',
+          contentType: 'text/html; charset=utf-8',
+          contentLength: '10',
+          code: 200,
+        },
+        {
           value: 'foo.js',
           contentType: 'application/javascript; charset=utf-8',
           contentLength: '19',
