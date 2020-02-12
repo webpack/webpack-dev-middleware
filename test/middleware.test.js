@@ -263,8 +263,6 @@ describe('middleware', () => {
           .expect('Content-Type', 'application/octet-stream')
           .expect(200, done);
       });
-
-      // TODO url - https://test:malfor%5Med@test.example.com
     });
 
     describe('should not work with the broken "publicPath"', () => {
@@ -313,7 +311,9 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      // TODO do `should work` and `should work in multi-compiler mode` union
+      // TODO .expect('Content-Length', fileData.byteLength.toString())
+      // TODO url - https://test:malfor%5Med@test.example.com
+      // TODO do multi-compiler mode
       it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
         request(app)
           .get('/static-one/bundle.js')
@@ -450,110 +450,134 @@ describe('middleware', () => {
           data: 'hello.wasm content',
         },
       ];
-      // TODO .expect('Content-Length', fileData.byteLength.toString())
-      // TODO .expect('Content-Type', 'application/octet-stream')
+
       const requests = [
         {
           value: '',
-          expected: 200,
+          contentType: 'text/html; charset=utf-8',
+          code: 200,
         },
         {
           value: 'index.html',
-          expected: 200,
+          contentType: 'text/html; charset=utf-8',
+          code: 200,
         },
         {
           value: 'foo.js',
-          expected: 200,
+          contentType: 'application/javascript; charset=utf-8',
+          code: 200,
         },
         {
           value: 'config.json',
-          expected: 200,
+          contentType: 'application/json; charset=utf-8',
+          code: 200,
         },
         {
           value: 'svg.svg',
-          expected: 200,
+          contentType: 'image/svg+xml',
+          code: 200,
         },
         {
           value: 'complex/foo.js',
-          expected: 200,
+          contentType: 'application/javascript; charset=utf-8',
+          code: 200,
         },
         {
           value: 'complex/./foo.js',
-          expected: 200,
+          contentType: 'application/javascript; charset=utf-8',
+          code: 200,
         },
         {
           value: 'complex/foo/../foo.js',
-          expected: 200,
+          contentType: 'application/javascript; charset=utf-8',
+          code: 200,
         },
         {
           value: 'complex/complex/foo.js',
-          expected: 200,
+          contentType: 'application/javascript; charset=utf-8',
+          code: 200,
         },
         // Express encodes the URI component, so we do the same
         {
           value: 'f%C3%B6%C3%B6.js',
-          expected: 200,
+          contentType: 'application/javascript; charset=utf-8',
+          code: 200,
         },
         // Filenames can contain characters not allowed in URIs
         {
           value: '%foo%/%foo%.js',
-          expected: 200,
+          contentType: 'application/javascript; charset=utf-8',
+          code: 200,
         },
         {
           value: 'test.html?foo=bar',
-          expected: 200,
+          contentType: 'text/html; charset=utf-8',
+          code: 200,
         },
         {
           value: 'test.html?foo=bar#hash',
-          expected: 200,
+          contentType: 'text/html; charset=utf-8',
+          code: 200,
         },
         {
           value: 'pathname%20with%20spaces.js',
-          expected: 200,
+          contentType: 'application/javascript; charset=utf-8',
+          code: 200,
         },
         {
           value: 'dirname%20with%20spaces/filename%20with%20spaces.js',
-          expected: 200,
+          contentType: 'application/javascript; charset=utf-8',
+          code: 200,
         },
         {
           value: 'folder-name-with-dots/mono-v6.x.x',
-          expected: 200,
+          contentType: 'application/octet-stream',
+          code: 200,
         },
         {
           value: 'noextension',
-          expected: 200,
+          contentType: 'application/octet-stream',
+          code: 200,
         },
         {
           value: '3dAr.usdz',
-          expected: 200,
+          contentType: 'model/vnd.usdz+zip',
+          code: 200,
         },
         {
           value: 'hello.wasm',
-          expected: 200,
+          contentType: 'application/wasm',
+          code: 200,
         },
         {
           value: 'invalid.js',
-          expected: 404,
+          contentType: 'text/html; charset=utf-8',
+          code: 404,
         },
         {
           value: 'complex',
-          expected: 404,
+          contentType: 'text/html; charset=utf-8',
+          code: 404,
         },
         {
           value: 'complex/invalid.js',
-          expected: 404,
+          contentType: 'text/html; charset=utf-8',
+          code: 404,
         },
         {
           value: 'complex/complex',
-          expected: 404,
+          contentType: 'text/html; charset=utf-8',
+          code: 404,
         },
         {
           value: 'complex/complex/invalid.js',
-          expected: 404,
+          contentType: 'text/html; charset=utf-8',
+          code: 404,
         },
         {
           value: '%',
-          expected: 404,
+          contentType: 'text/html; charset=utf-8',
+          code: 404,
         },
       ];
 
@@ -647,15 +671,18 @@ describe('middleware', () => {
         requests.push(
           {
             value: 'windows.txt',
-            expected: 200,
+            contentType: '',
+            code: 200,
           },
           {
             value: 'windows%202.txt',
-            expected: 200,
+            contentType: '',
+            code: 200,
           },
           {
             value: 'test%20%26%20test%20%26%20%2520.txt',
-            expected: 200,
+            contentType: '',
+            code: 200,
           }
         );
 
@@ -732,14 +759,13 @@ describe('middleware', () => {
               .expect(200, done);
           });
 
-          for (const { value, expected } of requests) {
+          for (const { value, contentType, code } of requests) {
             // eslint-disable-next-line no-loop-func
-            it(`should return the "${expected}" code for the "GET" request for the "${value}" url`, (done) => {
-              const fullUrl = `${publicPathForRequest}${value}`;
-
+            it(`should return the "${code}" code for the "GET" request for the "${value}" url`, (done) => {
               request(app)
-                .get(fullUrl)
-                .expect(expected, done);
+                .get(`${publicPathForRequest}${value}`)
+                .expect('Content-Type', contentType)
+                .expect(code, done);
             });
           }
         });
