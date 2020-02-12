@@ -264,7 +264,39 @@ describe('middleware', () => {
           .expect(200, done);
       });
 
-      // TODO publicPath and url - https://test:malfor%5Med@test.example.com
+      // TODO url - https://test:malfor%5Med@test.example.com
+    });
+
+    describe('should not work with the broken "publicPath"', () => {
+      let compiler;
+
+      const outputPath = path.resolve(__dirname, './outputs/basic');
+
+      beforeAll((done) => {
+        compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+            publicPath: 'https://test:malfor%5Med@test.example.com',
+          },
+        });
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return the "400" code for the "GET" request to the bundle file', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(404, done);
+      });
     });
 
     describe('should work in multi-compiler mode', () => {
