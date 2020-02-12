@@ -384,8 +384,9 @@ describe('middleware', () => {
     });
 
     describe('should work with difference requests', () => {
-      // TODO .expect('Content-Length', fileData.byteLength.toString())
-      // TODO do multi-compiler mode
+      // TODO .expect('Content-Length', fileData.byteLength.toString()) and content
+      // TODO do multi-compiler mode + one publish path (with empty)
+      // TODO try to use full url
       const basicOutputPath = path.resolve(__dirname, './outputs/basic');
       const files = [
         {
