@@ -383,7 +383,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should work with difference requests', () => {
+    describe.only('should work with difference requests', () => {
       // TODO .expect('Content-Length', fileData.byteLength.toString())
       // TODO url - https://test:malfor%5Med@test.example.com
       // TODO do multi-compiler mode
@@ -455,98 +455,117 @@ describe('middleware', () => {
         {
           value: '',
           contentType: 'text/html; charset=utf-8',
+          contentLength: '10',
           code: 200,
         },
         {
           value: 'index.html',
           contentType: 'text/html; charset=utf-8',
+          contentLength: '10',
           code: 200,
         },
         {
           value: 'foo.js',
           contentType: 'application/javascript; charset=utf-8',
+          contentLength: '19',
           code: 200,
         },
         {
           value: 'config.json',
           contentType: 'application/json; charset=utf-8',
+          contentLength: '13',
           code: 200,
         },
         {
           value: 'svg.svg',
           contentType: 'image/svg+xml',
+          contentLength: '4778',
           code: 200,
         },
         {
           value: 'complex/foo.js',
           contentType: 'application/javascript; charset=utf-8',
+          contentLength: '19',
           code: 200,
         },
         {
           value: 'complex/./foo.js',
           contentType: 'application/javascript; charset=utf-8',
+          contentLength: '19',
           code: 200,
         },
         {
           value: 'complex/foo/../foo.js',
           contentType: 'application/javascript; charset=utf-8',
+          contentLength: '19',
           code: 200,
         },
         {
           value: 'complex/complex/foo.js',
           contentType: 'application/javascript; charset=utf-8',
+          contentLength: '19',
           code: 200,
         },
         // Express encodes the URI component, so we do the same
         {
           value: 'f%C3%B6%C3%B6.js',
           contentType: 'application/javascript; charset=utf-8',
+          contentLength: '19',
           code: 200,
         },
         // Filenames can contain characters not allowed in URIs
         {
           value: '%foo%/%foo%.js',
           contentType: 'application/javascript; charset=utf-8',
+          contentLength: '19',
           code: 200,
         },
         {
           value: 'test.html?foo=bar',
           contentType: 'text/html; charset=utf-8',
+          contentLength: '15',
           code: 200,
         },
         {
           value: 'test.html?foo=bar#hash',
           contentType: 'text/html; charset=utf-8',
+          contentLength: '15',
           code: 200,
         },
         {
           value: 'pathname%20with%20spaces.js',
           contentType: 'application/javascript; charset=utf-8',
+          contentLength: '19',
           code: 200,
         },
         {
           value: 'dirname%20with%20spaces/filename%20with%20spaces.js',
           contentType: 'application/javascript; charset=utf-8',
+          contentLength: '19',
           code: 200,
         },
         {
           value: 'folder-name-with-dots/mono-v6.x.x',
           contentType: 'application/octet-stream',
+          contentLength: '14',
           code: 200,
         },
         {
           value: 'noextension',
           contentType: 'application/octet-stream',
+          contentLength: '19',
           code: 200,
         },
         {
           value: '3dAr.usdz',
           contentType: 'model/vnd.usdz+zip',
+          contentLength: '17',
           code: 200,
         },
         {
           value: 'hello.wasm',
           contentType: 'application/wasm',
+          contentLength: '18',
           code: 200,
         },
         {
@@ -671,17 +690,20 @@ describe('middleware', () => {
         requests.push(
           {
             value: 'windows.txt',
-            contentType: '',
+            contentType: 'text/html; charset=utf-8',
+            contentLength: '18',
             code: 200,
           },
           {
             value: 'windows%202.txt',
-            contentType: '',
+            contentType: 'text/html; charset=utf-8',
+            contentLength: '18',
             code: 200,
           },
           {
             value: 'test%20%26%20test%20%26%20%2520.txt',
-            contentType: '',
+            contentType: 'text/html; charset=utf-8',
+            contentLength: '18',
             code: 200,
           }
         );
@@ -759,12 +781,13 @@ describe('middleware', () => {
               .expect(200, done);
           });
 
-          for (const { value, contentType, code } of requests) {
+          for (const { value, contentType, contentLength, code } of requests) {
             // eslint-disable-next-line no-loop-func
             it(`should return the "${code}" code for the "GET" request for the "${value}" url`, (done) => {
               request(app)
                 .get(`${publicPathForRequest}${value}`)
                 .expect('Content-Type', contentType)
+                .expect('Content-Length', contentLength || /\d+/)
                 .expect(code, done);
             });
           }
