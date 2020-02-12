@@ -10,7 +10,7 @@ module.exports = [
     output: {
       filename: 'bundle.js',
       path: path.resolve(__dirname, '../outputs/array-watch-options/js1'),
-      publicPath: '/js1/',
+      publicPath: '/static-one/',
     },
     module: {
       rules: [
@@ -36,7 +36,7 @@ module.exports = [
     output: {
       filename: 'bundle.js',
       path: path.resolve(__dirname, '../outputs/array-watch-options/js2'),
-      publicPath: '/js2/',
+      publicPath: '/static-two/',
     },
     infrastructureLogging: {
       level: 'none'

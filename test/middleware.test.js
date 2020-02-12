@@ -282,67 +282,66 @@ describe('middleware', () => {
       afterAll(close);
 
       // TODO do `should work` and `should work in multi-compiler mode` union
-      // TODO change all on `static`
       it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, done);
       });
 
       it('should return "404" code for GET request to a non existing file for the first compiler', (done) => {
         request(app)
-          .get('/js1/invalid.js')
+          .get('/static-one/invalid.js')
           .expect(404, done);
       });
 
       it('should return "200" code for GET request to the "public" path for the first compiler', (done) => {
         request(app)
-          .get('/js1/')
+          .get('/static-one/')
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
 
       it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
         request(app)
-          .get('/js1/index.html')
+          .get('/static-one/index.html')
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
 
       it('should return "200" code for GET request for the bundle file for the second compiler', (done) => {
         request(app)
-          .get('/js2/bundle.js')
+          .get('/static-two/bundle.js')
           .expect(200, done);
       });
 
       it('should return "404" code for GET request to a non existing file for the second compiler', (done) => {
         request(app)
-          .get('/js2/invalid.js')
+          .get('/static-two/invalid.js')
           .expect(404, done);
       });
 
       it('should return "404" code for GET request to the "public" path for the second compiler', (done) => {
         request(app)
-          .get('/js2/')
+          .get('/static-two/')
           .expect(404, done);
       });
 
       it('should return "404" code for GET request to the "index" option for the second compiler', (done) => {
         request(app)
-          .get('/js2/index.html')
+          .get('/static-two/index.html')
           .expect(404, done);
       });
 
       it('should return "404" code for GET request to the non-public path', (done) => {
         request(app)
-          .get('/js3/')
+          .get('/static-three/')
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(404, done);
       });
 
       it('should return "404" code for GET request to the non-public path', (done) => {
         request(app)
-          .get('/js3/invalid.js')
+          .get('/static-three/invalid.js')
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(404, done);
       });
@@ -1032,8 +1031,11 @@ describe('middleware', () => {
             output: {
               filename: 'bundle.js',
               path: isWebpack5()
-                ? path.resolve(__dirname, './outputs/array-[fullhash]/js1')
-                : path.resolve(__dirname, './outputs/array-[hash]/js1'),
+                ? path.resolve(
+                    __dirname,
+                    './outputs/array-[fullhash]/static-one'
+                  )
+                : path.resolve(__dirname, './outputs/array-[hash]/static-one'),
               publicPath: isWebpack5()
                 ? '/static-one/[fullhash]/'
                 : '/static-one/[hash]/',
@@ -1044,8 +1046,11 @@ describe('middleware', () => {
             output: {
               filename: 'bundle.js',
               path: isWebpack5()
-                ? path.resolve(__dirname, './outputs/array-[fullhash]/js2')
-                : path.resolve(__dirname, './outputs/array-[hash]/js2'),
+                ? path.resolve(
+                    __dirname,
+                    './outputs/array-[fullhash]/static-two'
+                  )
+                : path.resolve(__dirname, './outputs/array-[hash]/static-two'),
               publicPath: isWebpack5()
                 ? '/static-two/[fullhash]/'
                 : '/static-two/[hash]/',
@@ -1168,51 +1173,51 @@ describe('middleware', () => {
 
       it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, done);
       });
 
       it('should return "404" code for GET request to nonexistent file for the first compiler', (done) => {
         request(app)
-          .get('/js1/invalid.js')
+          .get('/static-one/invalid.js')
           .expect(404, done);
       });
 
       it('should return "200" code for GET request to the "public" path for the first compiler', (done) => {
         request(app)
-          .get('/js1/')
+          .get('/static-one/')
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
 
       it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
         request(app)
-          .get('/js1/index.html')
+          .get('/static-one/index.html')
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
 
       it('should return "200" code for GET request to the second bundle file', (done) => {
         request(app)
-          .get('/js2/bundle.js')
+          .get('/static-two/bundle.js')
           .expect(200, done);
       });
 
       it('should return "404" code for GET request to nonexistent file for the second compiler', (done) => {
         request(app)
-          .get('/js2/invalid.js')
+          .get('/static-two/invalid.js')
           .expect(404, done);
       });
 
       it('should return "200" code for GET request to the "public" path for the second compiler', (done) => {
         request(app)
-          .get('/js2/')
+          .get('/static-two/')
           .expect(404, done);
       });
 
       it('should return "200" code for GET request to the "index" option for the second compiler', (done) => {
         request(app)
-          .get('/js2/index.html')
+          .get('/static-two/index.html')
           .expect(404, done);
       });
 
@@ -1236,7 +1241,7 @@ describe('middleware', () => {
             ...webpackMultiConfig[0],
             output: {
               filename: 'bundle-one.js',
-              path: path.resolve(__dirname, './outputs/array/js1'),
+              path: path.resolve(__dirname, './outputs/array/static-one'),
               publicPath: '/my-public/',
             },
           },
@@ -1244,7 +1249,7 @@ describe('middleware', () => {
             ...webpackMultiConfig[1],
             output: {
               filename: 'bundle-two.js',
-              path: path.resolve(__dirname, './outputs/array/js2'),
+              path: path.resolve(__dirname, './outputs/array/static-two'),
               publicPath: '/my-public/',
             },
           },
@@ -1312,7 +1317,7 @@ describe('middleware', () => {
             ...webpackMultiConfig[0],
             output: {
               filename: 'bundle-one.js',
-              path: path.resolve(__dirname, './outputs/array/js1'),
+              path: path.resolve(__dirname, './outputs/array/static-one'),
               publicPath: '/one-public/',
             },
           },
@@ -1320,7 +1325,7 @@ describe('middleware', () => {
             ...webpackMultiConfig[1],
             output: {
               filename: 'bundle-two.js',
-              path: path.resolve(__dirname, './outputs/array/js1'),
+              path: path.resolve(__dirname, './outputs/array/static-one'),
               publicPath: '/two-public/',
             },
           },
@@ -1518,7 +1523,7 @@ describe('middleware', () => {
           },
         ]);
 
-        instance = middleware(compiler, { writeToDisk: true });
+        instance = middleware(compiler);
 
         app = express();
         app.use(instance);
@@ -1688,21 +1693,21 @@ describe('middleware', () => {
 
       it('should return the "200" code for the "GET" requests to bundles file', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (firstError) => {
             if (firstError) {
               return done(firstError);
             }
 
             return request(app)
-              .get('/js2/bundle.js')
+              .get('/static-two/bundle.js')
               .expect(200, (secondError) => {
                 if (secondError) {
                   return done(secondError);
                 }
 
                 return request(app)
-                  .get('/js3/bundle.js')
+                  .get('/static-three/bundle.js')
                   .expect(200, (thirdError) => {
                     if (thirdError) {
                       return done(thirdError);
@@ -1777,14 +1782,14 @@ describe('middleware', () => {
 
       it('should return the "200" code for the "GET" request to bundle files', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (firstError) => {
             if (firstError) {
               return done(firstError);
             }
 
             return request(app)
-              .get('/js2/bundle.js')
+              .get('/static-two/bundle.js')
               .expect(200, (secondError) => {
                 if (secondError) {
                   return done(secondError);
@@ -1822,21 +1827,21 @@ describe('middleware', () => {
 
       it('should return the "200" code for "GET" requests to bundle files', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (firstError) => {
             if (firstError) {
               return done(firstError);
             }
 
             return request(app)
-              .get('/js2/bundle.js')
+              .get('/static-two/bundle.js')
               .expect(200, (secondError) => {
                 if (secondError) {
                   return done(secondError);
                 }
 
                 return request(app)
-                  .get('/js3/bundle.js')
+                  .get('/static-three/bundle.js')
                   .expect(200, (thirdError) => {
                     if (thirdError) {
                       return done(thirdError);
@@ -2185,14 +2190,14 @@ describe('middleware', () => {
 
       it('should pass arguments to the "watch" method', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (firstError) => {
             if (firstError) {
               return done(firstError);
             }
 
             return request(app)
-              .get('/js2/bundle.js')
+              .get('/static-two/bundle.js')
               .expect(200, (secondError) => {
                 if (secondError) {
                   return done(secondError);
@@ -2507,9 +2512,9 @@ describe('middleware', () => {
               filename: 'bundle.js',
               path: path.resolve(
                 __dirname,
-                './outputs/write-to-disk-multi-compiler/js1'
+                './outputs/write-to-disk-multi-compiler/static-one'
               ),
-              publicPath: '/js1/',
+              publicPath: '/static-one/',
             },
           },
           {
@@ -2518,9 +2523,9 @@ describe('middleware', () => {
               filename: 'bundle.js',
               path: path.resolve(
                 __dirname,
-                './outputs/write-to-disk-multi-compiler/js2'
+                './outputs/write-to-disk-multi-compiler/static-two'
               ),
-              publicPath: '/js2/',
+              publicPath: '/static-two/',
             },
           },
         ]);
@@ -2546,23 +2551,23 @@ describe('middleware', () => {
 
       it('should find the bundle files on disk', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (firstError) => {
             if (firstError) {
               return done(firstError);
             }
 
             return request(app)
-              .get('/js2/bundle.js')
+              .get('/static-two/bundle.js')
               .expect(200, (secondError) => {
                 if (secondError) {
                   return done(secondError);
                 }
                 const bundleFiles = [
-                  './outputs/write-to-disk-multi-compiler/js1/bundle.js',
-                  './outputs/write-to-disk-multi-compiler/js1/index.html',
-                  './outputs/write-to-disk-multi-compiler/js1/svg.svg',
-                  './outputs/write-to-disk-multi-compiler/js2/bundle.js',
+                  './outputs/write-to-disk-multi-compiler/static-one/bundle.js',
+                  './outputs/write-to-disk-multi-compiler/static-one/index.html',
+                  './outputs/write-to-disk-multi-compiler/static-one/svg.svg',
+                  './outputs/write-to-disk-multi-compiler/static-two/bundle.js',
                 ];
 
                 for (const bundleFile of bundleFiles) {
@@ -3297,7 +3302,7 @@ describe('middleware', () => {
 
       it('should logging', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (error) => {
             if (error) {
               return done(error);
@@ -3375,7 +3380,7 @@ describe('middleware', () => {
 
       it('should logging', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (error) => {
             if (error) {
               return done(error);
@@ -3453,7 +3458,7 @@ describe('middleware', () => {
 
       it('should logging', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (error) => {
             if (error) {
               return done(error);
