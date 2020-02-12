@@ -69,20 +69,6 @@ describe('GetFilenameFromUrl', () => {
       outputOptions: [
         {
           path: '/foo',
-          publicPath: '/js/',
-        },
-        {
-          path: '/bar',
-          publicPath: '/css/',
-        },
-      ],
-      url: '/js/sample.js',
-      expected: ['/foo/sample.js'],
-    },
-    {
-      outputOptions: [
-        {
-          path: '/foo',
           publicPath: 'http://localhost/js/',
         },
         {
@@ -111,20 +97,6 @@ describe('GetFilenameFromUrl', () => {
       outputOptions: [
         {
           path: '/foo',
-          publicPath: '/js/',
-        },
-        {
-          path: '/bar',
-          publicPath: '/css/',
-        },
-      ],
-      url: '/css/sample.css',
-      expected: ['/bar/sample.css'],
-    },
-    {
-      outputOptions: [
-        {
-          path: '/foo',
           publicPath: 'http://localhost/js/',
         },
         {
@@ -134,42 +106,6 @@ describe('GetFilenameFromUrl', () => {
       ],
       url: '/css/sample.css',
       expected: ['/bar/sample.css'],
-    },
-    {
-      outputOptions: [
-        {
-          path: '/one',
-          publicPath: 'http://localhost/one/',
-        },
-        {
-          path: '/two',
-          publicPath: 'http://localhost/two/',
-        },
-        {
-          path: '/three',
-          publicPath: 'http://localhost/three/',
-        },
-        {
-          path: '/four',
-          publicPath: 'http://localhost/four/',
-        },
-      ],
-      url: '/five/sample.css',
-      expected: [],
-    },
-    {
-      outputOptions: [
-        {
-          path: '/foo',
-          publicPath: '/js/',
-        },
-        {
-          path: '/bar',
-          publicPath: '/css/',
-        },
-      ],
-      url: '/other/sample.txt',
-      expected: [],
     },
     {
       outputOptions: [
@@ -230,34 +166,6 @@ describe('GetFilenameFromUrl', () => {
       outputOptions: [
         {
           path: '/foo',
-          publicPath: '/js/',
-        },
-        {
-          path: '/',
-          publicPath: '/css/',
-        },
-      ],
-      url: '/css/sample.css',
-      expected: ['/sample.css'],
-    },
-    {
-      outputOptions: [
-        {
-          path: '/foo',
-          publicPath: '/js/',
-        },
-        {
-          path: '/bar',
-          publicPath: '/css/',
-        },
-      ],
-      url: '/js/sample.js',
-      expected: ['/foo/sample.js'],
-    },
-    {
-      outputOptions: [
-        {
-          path: '/foo',
           publicPath: 'http://localhost/js/',
         },
         {
@@ -267,20 +175,6 @@ describe('GetFilenameFromUrl', () => {
       ],
       url: '/js/sample.js',
       expected: ['/foo/sample.js'],
-    },
-    {
-      outputOptions: [
-        {
-          path: '/foo',
-          publicPath: '/js/',
-        },
-        {
-          path: '/bar',
-          publicPath: '/css/',
-        },
-      ],
-      url: '/css/sample.css',
-      expected: ['/bar/sample.css'],
     },
     {
       outputOptions: [
@@ -300,20 +194,6 @@ describe('GetFilenameFromUrl', () => {
       outputOptions: [
         {
           path: '/foo',
-          publicPath: '/js/',
-        },
-        {
-          path: '/bar',
-          publicPath: '/css/',
-        },
-      ],
-      url: '/other/sample.txt',
-      expected: [],
-    },
-    {
-      outputOptions: [
-        {
-          path: '/foo',
           publicPath: 'http://localhost/js/',
         },
         {
@@ -324,20 +204,7 @@ describe('GetFilenameFromUrl', () => {
       url: '/other/sample.txt',
       expected: [],
     },
-    {
-      outputOptions: [
-        {
-          path: '/foo',
-          publicPath: '/js/',
-        },
-        {
-          path: '/bar',
-          publicPath: '/css/',
-        },
-      ],
-      url: '/test/sample.txt',
-      expected: [],
-    },
+
     {
       outputOptions: [
         {

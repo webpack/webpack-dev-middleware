@@ -52,7 +52,7 @@ describe('middleware', () => {
   }
 
   describe('basic', () => {
-    describe('should work without options', () => {
+    describe('should work', () => {
       let compiler;
 
       const outputPath = path.resolve(__dirname, './outputs/basic');
@@ -265,6 +265,94 @@ describe('middleware', () => {
       });
 
       // TODO publicPath and url - https://test:malfor%5Med@test.example.com
+    });
+
+    describe('should work in multi-compiler mode', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackMultiConfig);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      // TODO do `should work` and `should work in multi-compiler mode` union
+      // TODO change all on `static`
+      it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
+        request(app)
+          .get('/js1/bundle.js')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to a non existing file for the first compiler', (done) => {
+        request(app)
+          .get('/js1/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return "200" code for GET request to the "public" path for the first compiler', (done) => {
+        request(app)
+          .get('/js1/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
+        request(app)
+          .get('/js1/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request for the bundle file for the second compiler', (done) => {
+        request(app)
+          .get('/js2/bundle.js')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to a non existing file for the second compiler', (done) => {
+        request(app)
+          .get('/js2/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the "public" path for the second compiler', (done) => {
+        request(app)
+          .get('/js2/')
+          .expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the "index" option for the second compiler', (done) => {
+        request(app)
+          .get('/js2/index.html')
+          .expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the non-public path', (done) => {
+        request(app)
+          .get('/js3/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the non-public path', (done) => {
+        request(app)
+          .get('/js3/invalid.js')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(404, done);
+      });
     });
 
     describe('should work with difference requests #2', () => {
@@ -874,78 +962,6 @@ describe('middleware', () => {
       it('should return "404" code for GET request to the non-public path', (done) => {
         request(app)
           .get('/')
-          .expect(404, done);
-      });
-    });
-
-    describe('should work in multi-compiler mode', () => {
-      beforeAll((done) => {
-        const compiler = getCompiler(webpackMultiConfig);
-
-        instance = middleware(compiler);
-
-        app = express();
-        app.use(instance);
-
-        listen = listenShorthand(done);
-      });
-
-      afterAll(close);
-
-      it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
-        request(app)
-          .get('/js1/bundle.js')
-          .expect(200, done);
-      });
-
-      it('should return "404" code for GET request to a non existing file for the first compiler', (done) => {
-        request(app)
-          .get('/js1/invalid.js')
-          .expect(404, done);
-      });
-
-      it('should return "200" code for GET request to the "public" path for the first compiler', (done) => {
-        request(app)
-          .get('/js1/')
-          .expect('Content-Type', 'text/html; charset=utf-8')
-          .expect(200, done);
-      });
-
-      it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
-        request(app)
-          .get('/js1/index.html')
-          .expect('Content-Type', 'text/html; charset=utf-8')
-          .expect(200, done);
-      });
-
-      it('should return "200" code for GET request for the bundle file for the second compiler', (done) => {
-        request(app)
-          .get('/js2/bundle.js')
-          .expect(200, done);
-      });
-
-      it('should return "404" code for GET request to a non existing file for the second compiler', (done) => {
-        request(app)
-          .get('/js2/invalid.js')
-          .expect(404, done);
-      });
-
-      it('should return "404" code for GET request to the "public" path for the second compiler', (done) => {
-        request(app)
-          .get('/js2/')
-          .expect(404, done);
-      });
-
-      it('should return "404" code for GET request to the "index" option for the second compiler', (done) => {
-        request(app)
-          .get('/js2/index.html')
-          .expect(404, done);
-      });
-
-      it('should return "404" code for GET request to the non-public path', (done) => {
-        request(app)
-          .get('/')
-          .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(404, done);
       });
     });
