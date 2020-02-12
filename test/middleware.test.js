@@ -265,7 +265,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should not work with the broken "publicPath"', () => {
+    describe('should not work with the broken "publicPath" option', () => {
       let compiler;
 
       const outputPath = path.resolve(__dirname, './outputs/basic');
@@ -311,9 +311,6 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      // TODO .expect('Content-Length', fileData.byteLength.toString())
-      // TODO url - https://test:malfor%5Med@test.example.com
-      // TODO do multi-compiler mode
       it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
         request(app)
           .get('/static-one/bundle.js')
@@ -386,7 +383,10 @@ describe('middleware', () => {
       });
     });
 
-    describe('should work with difference requests #2', () => {
+    describe('should work with difference requests', () => {
+      // TODO .expect('Content-Length', fileData.byteLength.toString())
+      // TODO url - https://test:malfor%5Med@test.example.com
+      // TODO do multi-compiler mode
       const basicOutputPath = path.resolve(__dirname, './outputs/basic');
       const files = [
         {
