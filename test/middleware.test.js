@@ -387,7 +387,6 @@ describe('middleware', () => {
     });
 
     describe('should work with difference requests', () => {
-      // TODO do multi-compiler mode + one publish path (with empty)
       const basicOutputPath = path.resolve(__dirname, './outputs/basic');
       const fixtures = [
         {
