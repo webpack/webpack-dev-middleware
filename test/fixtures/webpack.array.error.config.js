@@ -10,7 +10,7 @@ module.exports = [
     output: {
       filename: 'bundle.js',
       path: path.resolve(__dirname, '../outputs/array-error'),
-      publicPath: '/js1/',
+      publicPath: '/static-one/',
     },
     stats: 'errors-warnings'
   },
@@ -21,7 +21,7 @@ module.exports = [
     output: {
       filename: 'bundle.js',
       path: path.resolve(__dirname, '../outputs/array-error'),
-      publicPath: '/js2/',
+      publicPath: '/static-two/',
     },
     stats: 'errors-warnings'
   }

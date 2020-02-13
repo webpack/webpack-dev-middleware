@@ -52,8 +52,9 @@ describe('middleware', () => {
   }
 
   describe('basic', () => {
-    describe('should work with difference requests', () => {
+    describe('should work', () => {
       let compiler;
+
       const outputPath = path.resolve(__dirname, './outputs/basic');
 
       beforeAll((done) => {
@@ -65,7 +66,7 @@ describe('middleware', () => {
           },
         });
 
-        instance = middleware(compiler, { publicPath: '/public/' });
+        instance = middleware(compiler);
 
         app = express();
         app.use(instance);
@@ -76,28 +77,16 @@ describe('middleware', () => {
           recursive: true,
         });
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(outputPath, '123a123412.hot-update.json'),
-          '["hi"]'
-        );
-        // Add a nested directory and index.html inside
-        // Add a nested directory and index.html inside
-        instance.context.outputFileSystem.mkdirSync(
-          path.resolve(outputPath, 'reference')
+          path.resolve(outputPath, 'image.svg'),
+          'svg image'
         );
         instance.context.outputFileSystem.mkdirSync(
-          path.resolve(outputPath, 'reference/mono-v6.x.x')
+          path.resolve(outputPath, 'directory/nested-directory'),
+          { recursive: true }
         );
         instance.context.outputFileSystem.writeFileSync(
-          path.resolve(outputPath, 'reference/mono-v6.x.x/index.html'),
+          path.resolve(outputPath, 'directory/nested-directory/index.html'),
           'My Index.'
-        );
-        instance.context.outputFileSystem.writeFileSync(
-          path.resolve(outputPath, 'hello.wasm'),
-          'welcome'
-        );
-        instance.context.outputFileSystem.writeFileSync(
-          path.resolve(outputPath, '3dAr.usdz'),
-          '010101'
         );
         instance.context.outputFileSystem.writeFileSync(
           path.resolve(outputPath, 'throw-an-exception-on-readFileSync.txt'),
@@ -111,9 +100,9 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should not find a bundle file on disk', (done) => {
+      it('should not find the bundle file on disk', (done) => {
         request(app)
-          .get('/public/bundle.js')
+          .get('/bundle.js')
           .expect('Content-Type', 'application/javascript; charset=utf-8')
           .expect(200, (error) => {
             if (error) {
@@ -134,7 +123,7 @@ describe('middleware', () => {
         );
 
         request(app)
-          .get('/public/bundle.js')
+          .get('/bundle.js')
           .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'application/javascript; charset=utf-8')
           .expect(200, fileData.toString(), done);
@@ -142,7 +131,7 @@ describe('middleware', () => {
 
       it('should return the "200" code for the "HEAD" request to the bundle file', (done) => {
         request(app)
-          .head('/public/bundle.js')
+          .head('/bundle.js')
           .expect(
             'Content-Length',
             instance.context.outputFileSystem
@@ -156,39 +145,20 @@ describe('middleware', () => {
 
       it('should return the "404" code for the "POST" request to the bundle file', (done) => {
         request(app)
-          .post('/public/bundle.js')
+          .post('/bundle.js')
           .expect(404, done);
       });
 
-      it('should return the "200" code for the "GET" request to the image file', (done) => {
+      it('should return the "200" code for the "GET" request to the "image.svg" file', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(outputPath, 'svg.svg')
+          path.resolve(outputPath, 'image.svg')
         );
 
         request(app)
-          .get('/public/svg.svg')
+          .get('/image.svg')
           .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'image/svg+xml')
           .expect(200, fileData, done);
-      });
-
-      it('should return the "404" code for the "GET" request to a nonexisting file', (done) => {
-        request(app)
-          .get('/public/nope')
-          .expect('Content-Type', 'text/html; charset=utf-8')
-          .expect(404, done);
-      });
-
-      it('should return the "200" code for the "GET" request to the hot module replacement file', (done) => {
-        const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(outputPath, '123a123412.hot-update.json')
-        );
-
-        request(app)
-          .get('/public/123a123412.hot-update.json')
-          .expect('Content-Length', fileData.byteLength.toString())
-          .expect('Content-Type', 'application/json; charset=utf-8')
-          .expect(200, fileData.toString(), done);
       });
 
       it('should return the "200" code for the "GET" request to the directory', (done) => {
@@ -197,19 +167,43 @@ describe('middleware', () => {
         );
 
         request(app)
-          .get('/public/')
+          .get('/')
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect('Content-Length', fileData.byteLength.toString())
           .expect(200, fileData.toString(), done);
       });
 
-      it('should return the "200" code for the "GET" request to the subdirectory without trailing slash', (done) => {
+      it('should return the "200" code for the "GET" request to the subdirectory with "index.html"', (done) => {
         const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(outputPath, 'reference/mono-v6.x.x/index.html')
+          path.resolve(outputPath, 'directory/nested-directory/index.html')
         );
 
         request(app)
-          .get('/public/reference/mono-v6.x.x')
+          .get('/directory/nested-directory/')
+          .expect('Content-Length', fileData.byteLength.toString())
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, fileData.toString(), done);
+      });
+
+      it('should return the "200" code for the "GET" request to the subdirectory with "index.html" without trailing slash', (done) => {
+        const fileData = instance.context.outputFileSystem.readFileSync(
+          path.resolve(outputPath, 'directory/nested-directory/index.html')
+        );
+
+        request(app)
+          .get('/directory/nested-directory')
+          .expect('Content-Length', fileData.byteLength.toString())
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, fileData.toString(), done);
+      });
+
+      it('should return the "200" code for the "GET" request to the subdirectory with "index.html"', (done) => {
+        const fileData = instance.context.outputFileSystem.readFileSync(
+          path.resolve(outputPath, 'directory/nested-directory/index.html')
+        );
+
+        request(app)
+          .get('/directory/nested-directory/index.html')
           .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, fileData.toString(), done);
@@ -217,17 +211,20 @@ describe('middleware', () => {
 
       it('should return the "416" code for the "GET" request with the invalid range header', (done) => {
         request(app)
-          .get('/public/svg.svg')
+          .get('/bundle.js')
           .set('Range', 'bytes=6000-')
           .expect(416, done);
       });
 
       it('should return the "206" code for the "GET" request with the valid range header', (done) => {
         request(app)
-          .get('/public/svg.svg')
+          .get('/bundle.js')
           .set('Range', 'bytes=3000-3500')
           .expect('Content-Length', '501')
-          .expect('Content-Range', 'bytes 3000-3500/4778')
+          .expect(
+            'Content-Range',
+            isWebpack5() ? 'bytes 3000-3500/5204' : 'bytes 3000-3500/4875'
+          )
           .expect(206, done);
       });
 
@@ -236,31 +233,6 @@ describe('middleware', () => {
           .get('/nonpublic/')
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(404, done);
-      });
-
-      it('should return the "200" code for the "GET" request to "hello.wasm"', (done) => {
-        const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(outputPath, 'hello.wasm')
-        );
-
-        request(app)
-          .get('/public/hello.wasm')
-          .expect('Content-Length', fileData.byteLength.toString())
-          .expect('Content-Type', 'application/wasm')
-          .expect(200, fileData.toString(), done);
-      });
-
-      it('should return the "200" code for the "GET" request to "3dAr.usdz"', (done) => {
-        const fileData = instance.context.outputFileSystem.readFileSync(
-          path.resolve(outputPath, '3dAr.usdz')
-        );
-
-        request(app)
-          .get('/public/3dAr.usdz')
-          .expect('Content-Length', fileData.byteLength.toString())
-          .expect('Content-Type', 'model/vnd.usdz+zip')
-          .expect('010101')
-          .expect(200, fileData.toString(), done);
       });
 
       it('should return the "404" code for the "GET" request to the deleted file', (done) => {
@@ -289,11 +261,546 @@ describe('middleware', () => {
         );
 
         request(app)
-          .get('/public/unknown')
+          .get('/unknown')
           .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'application/octet-stream')
           .expect(200, done);
       });
+    });
+
+    describe('should not work with the broken "publicPath" option', () => {
+      let compiler;
+
+      const outputPath = path.resolve(__dirname, './outputs/basic');
+
+      beforeAll((done) => {
+        compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+            publicPath: 'https://test:malfor%5Med@test.example.com',
+          },
+        });
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return the "400" code for the "GET" request to the bundle file', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(404, done);
+      });
+    });
+
+    describe('should work in multi-compiler mode', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackMultiConfig);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
+        request(app)
+          .get('/static-one/bundle.js')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to a non existing file for the first compiler', (done) => {
+        request(app)
+          .get('/static-one/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return "200" code for GET request to the "public" path for the first compiler', (done) => {
+        request(app)
+          .get('/static-one/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
+        request(app)
+          .get('/static-one/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request for the bundle file for the second compiler', (done) => {
+        request(app)
+          .get('/static-two/bundle.js')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to a non existing file for the second compiler', (done) => {
+        request(app)
+          .get('/static-two/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the "public" path for the second compiler', (done) => {
+        request(app)
+          .get('/static-two/')
+          .expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the "index" option for the second compiler', (done) => {
+        request(app)
+          .get('/static-two/index.html')
+          .expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the non-public path', (done) => {
+        request(app)
+          .get('/static-three/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the non-public path', (done) => {
+        request(app)
+          .get('/static-three/invalid.js')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(404, done);
+      });
+    });
+
+    describe('should work with difference requests', () => {
+      const basicOutputPath = path.resolve(__dirname, './outputs/basic');
+      const fixtures = [
+        {
+          urls: [
+            {
+              value: 'bundle.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+            {
+              value: '',
+              contentType: 'text/html; charset=utf-8',
+              code: 200,
+            },
+            {
+              value: 'index.html',
+              contentType: 'text/html; charset=utf-8',
+              code: 200,
+            },
+            {
+              value: 'invalid.js',
+              contentType: 'text/html; charset=utf-8',
+              code: 404,
+            },
+            {
+              value: 'complex',
+              contentType: 'text/html; charset=utf-8',
+              code: 404,
+            },
+            {
+              value: 'complex/invalid.js',
+              contentType: 'text/html; charset=utf-8',
+              code: 404,
+            },
+            {
+              value: 'complex/complex',
+              contentType: 'text/html; charset=utf-8',
+              code: 404,
+            },
+            {
+              value: 'complex/complex/invalid.js',
+              contentType: 'text/html; charset=utf-8',
+              code: 404,
+            },
+            {
+              value: '%',
+              contentType: 'text/html; charset=utf-8',
+              code: 404,
+            },
+          ],
+        },
+        {
+          file: 'config.json',
+          data: JSON.stringify({ foo: 'bar' }),
+          urls: [
+            {
+              value: 'config.json',
+              contentType: 'application/json; charset=utf-8',
+              code: 200,
+            },
+          ],
+        },
+        {
+          file: 'image.svg',
+          data: '<svg>SVG</svg>',
+          urls: [
+            {
+              value: 'image.svg',
+              contentType: 'image/svg+xml',
+              code: 200,
+            },
+          ],
+        },
+        {
+          file: 'foo.js',
+          data: 'console.log("foo");',
+          urls: [
+            {
+              value: 'foo.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+          ],
+        },
+        {
+          file: '/complex/foo.js',
+          data: 'console.log("foo");',
+          urls: [
+            {
+              value: 'complex/foo.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+            {
+              value: 'complex/./foo.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+            {
+              value: 'complex/foo/../foo.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+          ],
+        },
+        {
+          file: '/complex/complex/foo.js',
+          data: 'console.log("foo");',
+          urls: [
+            {
+              value: 'complex/complex/foo.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+          ],
+        },
+        {
+          file: '/föö.js',
+          data: 'console.log("foo");',
+          urls: [
+            // Express encodes the URI component, so we do the same
+            {
+              value: 'f%C3%B6%C3%B6.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+          ],
+        },
+        {
+          file: '/%foo%/%foo%.js',
+          data: 'console.log("foo");',
+          urls: [
+            // Filenames can contain characters not allowed in URIs
+            {
+              value: '%foo%/%foo%.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+          ],
+        },
+        {
+          file: 'test.html',
+          data: '<div>test</div>',
+          urls: [
+            {
+              value: 'test.html?foo=bar',
+              contentType: 'text/html; charset=utf-8',
+              code: 200,
+            },
+            {
+              value: 'test.html?foo=bar#hash',
+              contentType: 'text/html; charset=utf-8',
+              code: 200,
+            },
+          ],
+        },
+        {
+          file: 'pathname with spaces.js',
+          data: 'console.log("foo");',
+          urls: [
+            {
+              value: 'pathname%20with%20spaces.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+          ],
+        },
+        {
+          file: 'dirname with spaces/filename with spaces.js',
+          data: 'console.log("foo");',
+          urls: [
+            {
+              value: 'dirname%20with%20spaces/filename%20with%20spaces.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+          ],
+        },
+        {
+          file: 'filename-name-with-dots/mono-v6.x.x',
+          data: 'content with .',
+          urls: [
+            {
+              value: 'filename-name-with-dots/mono-v6.x.x',
+              contentType: 'application/octet-stream',
+              code: 200,
+            },
+          ],
+        },
+        {
+          file: 'noextension',
+          data: 'noextension content',
+          urls: [
+            {
+              value: 'noextension',
+              contentType: 'application/octet-stream',
+              code: 200,
+            },
+          ],
+        },
+        {
+          file: '3dAr.usdz',
+          data: '3dAr.usdz content',
+          urls: [
+            {
+              value: '3dAr.usdz',
+              contentType: 'model/vnd.usdz+zip',
+              code: 200,
+            },
+          ],
+        },
+        {
+          file: 'hello.wasm',
+          data: 'hello.wasm content',
+          urls: [
+            {
+              value: 'hello.wasm',
+              contentType: 'application/wasm',
+              code: 200,
+            },
+          ],
+        },
+      ];
+
+      const configurations = [
+        {
+          output: { path: basicOutputPath, publicPath: '' },
+          publicPathForRequest: '/',
+        },
+        {
+          output: { path: path.join(basicOutputPath, 'dist'), publicPath: '' },
+          publicPathForRequest: '/',
+        },
+        {
+          output: { path: basicOutputPath, publicPath: '/' },
+          publicPathForRequest: '/',
+        },
+        {
+          output: { path: path.join(basicOutputPath, 'dist'), publicPath: '/' },
+          publicPathForRequest: '/',
+        },
+        {
+          output: { path: basicOutputPath, publicPath: '/static' },
+          publicPathForRequest: '/static/',
+        },
+        {
+          output: {
+            path: path.join(basicOutputPath, 'dist'),
+            publicPath: '/static',
+          },
+          publicPathForRequest: '/static/',
+        },
+        {
+          output: { path: basicOutputPath, publicPath: '/static/' },
+          publicPathForRequest: '/static/',
+        },
+        {
+          output: {
+            path: path.join(basicOutputPath, 'dist'),
+            publicPath: '/static/',
+          },
+          publicPathForRequest: '/static/',
+        },
+        {
+          output: {
+            path: path.join(basicOutputPath, 'dist/#leadinghash'),
+            publicPath: '/',
+          },
+          publicPathForRequest: '/',
+        },
+        {
+          output: {
+            path: basicOutputPath,
+            publicPath: 'http://127.0.0.1/',
+          },
+          publicPathForRequest: '/',
+        },
+        {
+          output: {
+            path: basicOutputPath,
+            publicPath: 'http://127.0.0.1:3000/',
+          },
+          publicPathForRequest: '/',
+        },
+        {
+          output: {
+            path: basicOutputPath,
+            publicPath: '//test.domain/',
+          },
+          publicPathForRequest: '/',
+        },
+      ];
+
+      const isWindows = process.platform === 'win32';
+
+      if (isWindows) {
+        fixtures.push(
+          {
+            file: 'windows.txt',
+            data: 'windows.txt content',
+            urls: [
+              {
+                value: 'windows.txt',
+                contentType: 'text/plain; charset=utf-8',
+                code: 200,
+              },
+            ],
+          },
+          {
+            file: 'windows 2.txt',
+            data: 'windows 2.txt content',
+            urls: [
+              {
+                value: 'windows%202.txt',
+                contentType: 'text/plain; charset=utf-8',
+                code: 200,
+              },
+            ],
+          },
+          {
+            file: 'test & test & %20.txt',
+            data: 'test & test & %20.txt content',
+            urls: [
+              {
+                value: 'test%20%26%20test%20%26%20%2520.txt',
+                contentType: 'text/plain; charset=utf-8',
+                code: 200,
+              },
+            ],
+          }
+        );
+
+        configurations.push(
+          {
+            output: {
+              path: path.join(basicOutputPath, 'my static'),
+              publicPath: '/static/',
+            },
+            publicPathForRequest: '/static/',
+          },
+          {
+            output: {
+              path: path.join(basicOutputPath, 'my%20static'),
+              publicPath: '/static/',
+            },
+            publicPathForRequest: '/static/',
+          },
+          {
+            output: {
+              path: path.join(basicOutputPath, 'my %20 static'),
+              publicPath: '/my%20static/',
+            },
+            publicPathForRequest: '/my%20static/',
+          }
+        );
+      }
+
+      for (const configuration of configurations) {
+        // eslint-disable-next-line no-loop-func
+        describe('should work handle requests', () => {
+          const { output, publicPathForRequest } = configuration;
+          const { path: outputPath, publicPath } = output;
+
+          let compiler;
+
+          beforeAll((done) => {
+            compiler = getCompiler({
+              ...webpackConfig,
+              output: {
+                filename: 'bundle.js',
+                path: outputPath,
+                publicPath,
+              },
+            });
+
+            instance = middleware(compiler);
+
+            app = express();
+            app.use(instance);
+
+            listen = listenShorthand(done);
+
+            const {
+              context: {
+                outputFileSystem: { mkdirSync, writeFileSync },
+              },
+            } = instance;
+
+            for (const { file, data } of fixtures) {
+              if (file) {
+                const fullPath = path.join(outputPath, file);
+
+                mkdirSync(path.dirname(fullPath), { recursive: true });
+                writeFileSync(fullPath, data);
+              }
+            }
+          });
+
+          afterAll(close);
+
+          for (const { data, urls } of fixtures) {
+            for (const { value, contentType, code } of urls) {
+              // eslint-disable-next-line no-loop-func
+              it(`should return the "${code}" code for the "GET" request for the "${value}" url`, (done) => {
+                request(app)
+                  .get(`${publicPathForRequest}${value}`)
+                  .expect('Content-Type', contentType)
+                  .expect('Content-Length', data ? String(data.length) : /\d+/)
+                  .expect(code, done);
+              });
+            }
+          }
+        });
+      }
     });
 
     describe('should respect the value of the "Content-Type" header from other middleware', () => {
@@ -350,33 +857,6 @@ describe('middleware', () => {
       });
     });
 
-    describe('should work in multi-compiler mode', () => {
-      beforeAll((done) => {
-        const compiler = getCompiler(webpackMultiConfig);
-
-        instance = middleware(compiler);
-
-        app = express();
-        app.use(instance);
-
-        listen = listenShorthand(done);
-      });
-
-      afterAll(close);
-
-      it('should return 200 code for GET request to the first bundle file', (done) => {
-        request(app)
-          .get('/js1/bundle.js')
-          .expect(200, done);
-      });
-
-      it('should return 200 code for GET request to the second bundle file', (done) => {
-        request(app)
-          .get('/js2/bundle.js')
-          .expect(200, done);
-      });
-    });
-
     describe('should work without "output" options', () => {
       beforeAll((done) => {
         // eslint-disable-next-line no-undefined
@@ -392,28 +872,35 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return 200 code for GET request to the bundle file', (done) => {
+      it('should return "200" code for GET request to the bundle file', (done) => {
         request(app)
           .get('/main.js')
           .expect(200, done);
       });
 
-      it('should return 404 code for GET request to nonexistent file', (done) => {
+      it('should return "404" code for GET request to a nonexistent file', (done) => {
         request(app)
           .get('/invalid.js')
           .expect(404, done);
       });
 
-      it('should return 200 code for GET request to non-public path', (done) => {
+      it('should return "200" code for GET request to the non-public path', (done) => {
         request(app)
           .get('/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
     });
 
     describe('should work with trailing slash at the end of the "option.path" option', () => {
       beforeAll((done) => {
-        // eslint-disable-next-line no-undefined
         const compiler = getCompiler({
           ...webpackConfig,
           output: {
@@ -432,21 +919,70 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return 200 code for GET request to the bundle file', (done) => {
+      it('should return "200" code for GET request to the bundle file', (done) => {
         request(app)
           .get('/bundle.js')
           .expect(200, done);
       });
 
-      it('should return 404 code for GET request to nonexistent file', (done) => {
+      it('should return "404" code for GET request to a nonexistent file', (done) => {
         request(app)
           .get('/invalid.js')
           .expect(404, done);
       });
 
-      it('should return 200 code for GET request to non-public path', (done) => {
+      it('should return "200" code for GET request to the non-public path', (done) => {
         request(app)
           .get('/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+    });
+
+    describe('should respect empty "output.publicPath" and "output.path" options', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return "200" code for GET request to the bundle file', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to a nonexistent file', (done) => {
+        request(app)
+          .get('/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return "200" code for GET request to the non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
     });
@@ -472,21 +1008,36 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return 200 code for GET request to the bundle file', (done) => {
+      it('should return "200" code for GET request to the bundle file', (done) => {
         request(app)
           .get('/static/bundle.js')
           .expect(200, done);
       });
 
-      it('should return 404 code for GET request to nonexistent file', (done) => {
+      it('should return "404" code for GET request to a nonexistent file', (done) => {
         request(app)
           .get('/static/invalid.js')
           .expect(404, done);
       });
 
-      it('should return 404 code for GET request to non-public path', (done) => {
+      it('should return "200" code for GET request to the public path', (done) => {
+        request(app)
+          .get('/static/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/static/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to the non-public path', (done) => {
         request(app)
           .get('/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(404, done);
       });
     });
@@ -516,7 +1067,7 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return 200 code for GET request to the bundle file', (done) => {
+      it('should return "200" code for GET request to the bundle file', (done) => {
         request(app)
           .get(
             isWebpack5()
@@ -526,13 +1077,169 @@ describe('middleware', () => {
           .expect(200, done);
       });
 
-      it('should return 404 code for GET request to nonexistent file', (done) => {
+      it('should return "404" code for GET request to a nonexistent file', (done) => {
         request(app)
           .get('/static/invalid.js')
           .expect(404, done);
       });
 
-      it('should return 404 code for GET request to non-public path', (done) => {
+      it('should return "200" code for GET request to the public path', (done) => {
+        request(app)
+          .get(
+            isWebpack5()
+              ? '/static/45c13f171499f5100d88/'
+              : '/static/4c347cd8af8b39e58cbf/'
+          )
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get(
+            isWebpack5()
+              ? '/static/45c13f171499f5100d88/index.html'
+              : '/static/4c347cd8af8b39e58cbf/index.html'
+          )
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to the non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect(404, done);
+      });
+    });
+
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with hash substitutions', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler([
+          {
+            ...webpackMultiConfig[0],
+            output: {
+              filename: 'bundle.js',
+              path: isWebpack5()
+                ? path.resolve(
+                    __dirname,
+                    './outputs/array-[fullhash]/static-one'
+                  )
+                : path.resolve(__dirname, './outputs/array-[hash]/static-one'),
+              publicPath: isWebpack5()
+                ? '/static-one/[fullhash]/'
+                : '/static-one/[hash]/',
+            },
+          },
+          {
+            ...webpackMultiConfig[1],
+            output: {
+              filename: 'bundle.js',
+              path: isWebpack5()
+                ? path.resolve(
+                    __dirname,
+                    './outputs/array-[fullhash]/static-two'
+                  )
+                : path.resolve(__dirname, './outputs/array-[hash]/static-two'),
+              publicPath: isWebpack5()
+                ? '/static-two/[fullhash]/'
+                : '/static-two/[hash]/',
+            },
+          },
+        ]);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
+        request(app)
+          .get(
+            isWebpack5()
+              ? '/static-one/a9739b1fa1e4eb31790f/bundle.js'
+              : '/static-one/7ed325c92a1d0fe4ce64/bundle.js'
+          )
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file for the first compiler', (done) => {
+        request(app)
+          .get(
+            isWebpack5()
+              ? '/static-one/a9739b1fa1e4eb31790f/invalid.js'
+              : '/static-one/7ed325c92a1d0fe4ce64/invalid.js'
+          )
+          .expect(404, done);
+      });
+
+      it('should return "200" code for GET request for the second bundle file', (done) => {
+        request(app)
+          .get(
+            isWebpack5()
+              ? '/static-one/a9739b1fa1e4eb31790f/'
+              : '/static-one/7ed325c92a1d0fe4ce64/'
+          )
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
+        request(app)
+          .get(
+            isWebpack5()
+              ? '/static-one/a9739b1fa1e4eb31790f/index.html'
+              : '/static-one/7ed325c92a1d0fe4ce64/index.html'
+          )
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the bundle file for the second compiler', (done) => {
+        request(app)
+          .get(
+            isWebpack5()
+              ? '/static-two/a819fc976c8e917e69c6/bundle.js'
+              : '/static-two/db47aa827bb52e5f2e6b/bundle.js'
+          )
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file for the second compiler', (done) => {
+        request(app)
+          .get(
+            isWebpack5()
+              ? '/static-two/a819fc976c8e917e69c6/invalid.js'
+              : '/static-two/db47aa827bb52e5f2e6b/invalid.js'
+          )
+          .expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the "public" path for the second compiler', (done) => {
+        request(app)
+          .get(
+            isWebpack5()
+              ? '/static-two/a819fc976c8e917e69c6/'
+              : '/static-two/db47aa827bb52e5f2e6b/'
+          )
+          .expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the "index" option for the second compiler', (done) => {
+        request(app)
+          .get(
+            isWebpack5()
+              ? '/static-two/a819fc976c8e917e69c6/index.html'
+              : '/static-two/db47aa827bb52e5f2e6b/index.html'
+          )
+          .expect(404, done);
+      });
+
+      it('should return "404" code for GET request to non-public path', (done) => {
         request(app)
           .get('/')
           .expect(404, done);
@@ -553,37 +1260,63 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return 200 code for GET request to the first bundle file', (done) => {
+      it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, done);
       });
 
-      it('should return 200 code for GET request to the second bundle file', (done) => {
+      it('should return "404" code for GET request to nonexistent file for the first compiler', (done) => {
         request(app)
-          .get('/js2/bundle.js')
+          .get('/static-one/invalid.js')
+          .expect(404, done);
+      });
+
+      it('should return "200" code for GET request to the "public" path for the first compiler', (done) => {
+        request(app)
+          .get('/static-one/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
 
-      it('should return 404 code for GET request to nonexistent file for the first compiler', (done) => {
+      it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
         request(app)
-          .get('/js1/invalid.js')
+          .get('/static-one/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the second bundle file', (done) => {
+        request(app)
+          .get('/static-two/bundle.js')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file for the second compiler', (done) => {
+        request(app)
+          .get('/static-two/invalid.js')
           .expect(404, done);
       });
 
-      it('should return 404 code for GET request to nonexistent file for the second compiler', (done) => {
+      it('should return "200" code for GET request to the "public" path for the second compiler', (done) => {
         request(app)
-          .get('/js2/invalid.js')
+          .get('/static-two/')
           .expect(404, done);
       });
 
-      it('should return 404 code for GET request to nonexistent file', (done) => {
+      it('should return "200" code for GET request to the "index" option for the second compiler', (done) => {
+        request(app)
+          .get('/static-two/index.html')
+          .expect(404, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file', (done) => {
         request(app)
           .get('/static/invalid.js')
           .expect(404, done);
       });
 
-      it('should return 404 code for GET request to non-public path', (done) => {
+      it('should return "404" code for GET request to non-public path', (done) => {
         request(app)
           .get('/')
           .expect(404, done);
@@ -597,7 +1330,7 @@ describe('middleware', () => {
             ...webpackMultiConfig[0],
             output: {
               filename: 'bundle-one.js',
-              path: path.resolve(__dirname, './outputs/array/js1'),
+              path: path.resolve(__dirname, './outputs/array/static-one'),
               publicPath: '/my-public/',
             },
           },
@@ -605,7 +1338,7 @@ describe('middleware', () => {
             ...webpackMultiConfig[1],
             output: {
               filename: 'bundle-two.js',
-              path: path.resolve(__dirname, './outputs/array/js2'),
+              path: path.resolve(__dirname, './outputs/array/static-two'),
               publicPath: '/my-public/',
             },
           },
@@ -621,31 +1354,45 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return 200 code for GET request to the first bundle file', (done) => {
+      it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
         request(app)
           .get('/my-public/bundle-one.js')
           .expect(200, done);
       });
 
-      it('should return 200 code for GET request to the second bundle file', (done) => {
+      it('should return "200" code for GET request to the bundle file for the second compiler', (done) => {
         request(app)
           .get('/my-public/bundle-two.js')
           .expect(200, done);
       });
 
-      it('should return 404 code for GET request to nonexistent file', (done) => {
+      it('should return "404" code for GET request to nonexistent file', (done) => {
         request(app)
           .get('/my-public/invalid.js')
           .expect(404, done);
       });
 
-      it('should return 404 code for GET request to nonexistent file', (done) => {
+      it('should return "200" code for GET request to the "public" path', (done) => {
+        request(app)
+          .get('/my-public/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/my-public/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file', (done) => {
         request(app)
           .get('/static/invalid.js')
           .expect(404, done);
       });
 
-      it('should return 404 code for GET request to non-public path', (done) => {
+      it('should return "404" code for GET request to non-public path', (done) => {
         request(app)
           .get('/')
           .expect(404, done);
@@ -659,7 +1406,7 @@ describe('middleware', () => {
             ...webpackMultiConfig[0],
             output: {
               filename: 'bundle-one.js',
-              path: path.resolve(__dirname, './outputs/array/js1'),
+              path: path.resolve(__dirname, './outputs/array/static-one'),
               publicPath: '/one-public/',
             },
           },
@@ -667,7 +1414,7 @@ describe('middleware', () => {
             ...webpackMultiConfig[1],
             output: {
               filename: 'bundle-two.js',
-              path: path.resolve(__dirname, './outputs/array/js1'),
+              path: path.resolve(__dirname, './outputs/array/static-one'),
               publicPath: '/two-public/',
             },
           },
@@ -683,121 +1430,65 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return 200 code for GET request to the first bundle file', (done) => {
+      it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
         request(app)
           .get('/one-public/bundle-one.js')
           .expect(200, done);
       });
 
-      it('should return 200 code for GET request to the second bundle file', (done) => {
-        request(app)
-          .get('/two-public/bundle-two.js')
-          .expect(200, done);
-      });
-
-      it('should return 404 code for GET request to nonexistent file to the first bundle file', (done) => {
+      it('should return "404" code for GET request to nonexistent file to the first bundle file', (done) => {
         request(app)
           .get('/one-public/invalid.js')
           .expect(404, done);
       });
 
-      it('should return 404 code for GET request to nonexistent file to the second bundle file', (done) => {
+      it('should return "200" code for GET request to the "public" path for the first compiler', (done) => {
+        request(app)
+          .get('/one-public/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
+        request(app)
+          .get('/one-public/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the bundle file for the second compiler', (done) => {
+        request(app)
+          .get('/two-public/bundle-two.js')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file to the second bundle file', (done) => {
         request(app)
           .get('/two-public/invalid.js')
           .expect(404, done);
       });
 
-      it('should return 404 code for GET request to nonexistent file', (done) => {
+      it('should return "200" code for GET request to the "public" path for the second compiler', (done) => {
+        request(app)
+          .get('/two-public/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option for the second compiler', (done) => {
+        request(app)
+          .get('/two-public/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file', (done) => {
         request(app)
           .get('/static/invalid.js')
           .expect(404, done);
       });
 
-      it('should return 404 code for GET request to non-public path', (done) => {
-        request(app)
-          .get('/')
-          .expect(404, done);
-      });
-    });
-
-    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with hash substitutions', () => {
-      beforeAll((done) => {
-        const compiler = getCompiler([
-          {
-            ...webpackMultiConfig[0],
-            output: {
-              filename: 'bundle.js',
-              path: isWebpack5()
-                ? path.resolve(__dirname, './outputs/array-[fullhash]/js1')
-                : path.resolve(__dirname, './outputs/array-[hash]/js1'),
-              publicPath: isWebpack5()
-                ? '/static-one/[fullhash]/'
-                : '/static-one/[hash]/',
-            },
-          },
-          {
-            ...webpackMultiConfig[1],
-            output: {
-              filename: 'bundle.js',
-              path: isWebpack5()
-                ? path.resolve(__dirname, './outputs/array-[fullhash]/js2')
-                : path.resolve(__dirname, './outputs/array-[hash]/js2'),
-              publicPath: isWebpack5()
-                ? '/static-two/[fullhash]/'
-                : '/static-two/[hash]/',
-            },
-          },
-        ]);
-
-        instance = middleware(compiler);
-
-        app = express();
-        app.use(instance);
-
-        listen = listenShorthand(done);
-      });
-
-      afterAll(close);
-
-      it('should return 200 code for GET request to the first bundle file', (done) => {
-        request(app)
-          .get(
-            isWebpack5()
-              ? '/static-one/a9739b1fa1e4eb31790f/bundle.js'
-              : '/static-one/7ed325c92a1d0fe4ce64/bundle.js'
-          )
-          .expect(200, done);
-      });
-
-      it('should return 200 code for GET request to the second bundle file', (done) => {
-        request(app)
-          .get(
-            isWebpack5()
-              ? '/static-two/a819fc976c8e917e69c6/bundle.js'
-              : '/static-two/db47aa827bb52e5f2e6b/bundle.js'
-          )
-          .expect(200, done);
-      });
-
-      it('should return 404 code for GET request to nonexistent file for the first compiler', (done) => {
-        request(app)
-          .get('/static-one/invalid.js')
-          .expect(404, done);
-      });
-
-      it('should return 404 code for GET request to nonexistent file for the second compiler', (done) => {
-        request(app)
-          .get('/static-two/db47aa827bb52e5f2e6b/invalid.js')
-          .expect(404, done);
-      });
-
-      it('should return 404 code for GET request to nonexistent file', (done) => {
-        request(app)
-          .get('/static/invalid.js')
-          .expect(404, done);
-      });
-
-      it('should return 404 code for GET request to non-public path', (done) => {
+      it('should return "404" code for GET request to non-public path', (done) => {
         request(app)
           .get('/')
           .expect(404, done);
@@ -818,19 +1509,33 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return 200 code for GET request to the bundle file', (done) => {
+      it('should return "200" code for GET request to the bundle file', (done) => {
         request(app)
           .get('/static/bundle.js')
           .expect(200, done);
       });
 
-      it('should return 404 code for GET request to nonexistent file', (done) => {
+      it('should return "404" code for GET request to nonexistent file', (done) => {
         request(app)
           .get('/static/invalid.js')
           .expect(404, done);
       });
 
-      it('should return 404 code for GET request to non-public path', (done) => {
+      it('should return "404" code for GET request to the public path', (done) => {
+        request(app)
+          .get('/static/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/static/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to non-public path', (done) => {
         request(app)
           .get('/')
           .expect(404, done);
@@ -854,19 +1559,33 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return 200 code for GET request to the bundle file', (done) => {
+      it('should return "200" code for GET request to the bundle file', (done) => {
         request(app)
           .get('/static/bundle.js')
           .expect(200, done);
       });
 
-      it('should return 404 code for GET request to nonexistent file', (done) => {
+      it('should return "404" code for GET request to nonexistent file', (done) => {
         request(app)
           .get('/static/invalid.js')
           .expect(404, done);
       });
 
-      it('should return 404 code for GET request to non-public path', (done) => {
+      it('should return "404" code for GET request to the public path', (done) => {
+        request(app)
+          .get('/static/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/static/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to non-public path', (done) => {
         request(app)
           .get('/')
           .expect(404, done);
@@ -903,21 +1622,35 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return 200 code for GET request to the bundle file', (done) => {
+      it('should return "200" code for GET request to the bundle file', (done) => {
         request(app)
           .get('/static/bundle-one.js')
           .expect(200, done);
       });
 
-      it('should return 404 code for GET request to nonexistent file', (done) => {
+      it('should return "404" code for GET request to a nonexistent file', (done) => {
         request(app)
           .get('/static/invalid.js')
           .expect(404, done);
       });
 
-      it('should return 404 code for GET request to non-public path', (done) => {
+      it('should return "404" code for GET request to the public path', (done) => {
+        request(app)
+          .get('/static/')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the non-public path', (done) => {
         request(app)
           .get('/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/static/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
     });
@@ -1049,21 +1782,21 @@ describe('middleware', () => {
 
       it('should return the "200" code for the "GET" requests to bundles file', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (firstError) => {
             if (firstError) {
               return done(firstError);
             }
 
             return request(app)
-              .get('/js2/bundle.js')
+              .get('/static-two/bundle.js')
               .expect(200, (secondError) => {
                 if (secondError) {
                   return done(secondError);
                 }
 
                 return request(app)
-                  .get('/js3/bundle.js')
+                  .get('/static-three/bundle.js')
                   .expect(200, (thirdError) => {
                     if (thirdError) {
                       return done(thirdError);
@@ -1138,14 +1871,14 @@ describe('middleware', () => {
 
       it('should return the "200" code for the "GET" request to bundle files', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (firstError) => {
             if (firstError) {
               return done(firstError);
             }
 
             return request(app)
-              .get('/js2/bundle.js')
+              .get('/static-two/bundle.js')
               .expect(200, (secondError) => {
                 if (secondError) {
                   return done(secondError);
@@ -1183,21 +1916,21 @@ describe('middleware', () => {
 
       it('should return the "200" code for "GET" requests to bundle files', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (firstError) => {
             if (firstError) {
               return done(firstError);
             }
 
             return request(app)
-              .get('/js2/bundle.js')
+              .get('/static-two/bundle.js')
               .expect(200, (secondError) => {
                 if (secondError) {
                   return done(secondError);
                 }
 
                 return request(app)
-                  .get('/js3/bundle.js')
+                  .get('/static-three/bundle.js')
                   .expect(200, (thirdError) => {
                     if (thirdError) {
                       return done(thirdError);
@@ -1546,14 +2279,14 @@ describe('middleware', () => {
 
       it('should pass arguments to the "watch" method', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (firstError) => {
             if (firstError) {
               return done(firstError);
             }
 
             return request(app)
-              .get('/js2/bundle.js')
+              .get('/static-two/bundle.js')
               .expect(200, (secondError) => {
                 if (secondError) {
                   return done(secondError);
@@ -1868,9 +2601,9 @@ describe('middleware', () => {
               filename: 'bundle.js',
               path: path.resolve(
                 __dirname,
-                './outputs/write-to-disk-multi-compiler/js1'
+                './outputs/write-to-disk-multi-compiler/static-one'
               ),
-              publicPath: '/js1/',
+              publicPath: '/static-one/',
             },
           },
           {
@@ -1879,9 +2612,9 @@ describe('middleware', () => {
               filename: 'bundle.js',
               path: path.resolve(
                 __dirname,
-                './outputs/write-to-disk-multi-compiler/js2'
+                './outputs/write-to-disk-multi-compiler/static-two'
               ),
-              publicPath: '/js2/',
+              publicPath: '/static-two/',
             },
           },
         ]);
@@ -1907,23 +2640,23 @@ describe('middleware', () => {
 
       it('should find the bundle files on disk', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (firstError) => {
             if (firstError) {
               return done(firstError);
             }
 
             return request(app)
-              .get('/js2/bundle.js')
+              .get('/static-two/bundle.js')
               .expect(200, (secondError) => {
                 if (secondError) {
                   return done(secondError);
                 }
                 const bundleFiles = [
-                  './outputs/write-to-disk-multi-compiler/js1/bundle.js',
-                  './outputs/write-to-disk-multi-compiler/js1/index.html',
-                  './outputs/write-to-disk-multi-compiler/js1/svg.svg',
-                  './outputs/write-to-disk-multi-compiler/js2/bundle.js',
+                  './outputs/write-to-disk-multi-compiler/static-one/bundle.js',
+                  './outputs/write-to-disk-multi-compiler/static-one/index.html',
+                  './outputs/write-to-disk-multi-compiler/static-one/svg.svg',
+                  './outputs/write-to-disk-multi-compiler/static-two/bundle.js',
                 ];
 
                 for (const bundleFile of bundleFiles) {
@@ -2313,11 +3046,18 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('request to directory', (done) => {
+      it('should return the "404" code for the "GET" request to the public path', (done) => {
         request(app)
           .get('/')
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(404, done);
+      });
+
+      it('should return the "200" code for the "GET" request to the "index.html" file', (done) => {
+        request(app)
+          .get('/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
       });
     });
 
@@ -2335,9 +3075,16 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return the "404" code for the "GET" request to the directory', (done) => {
+      it('should return the "200" code for the "GET" request to the public path', (done) => {
         request(app)
           .get('/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return the "200" code for the "GET" request to the public path', (done) => {
+        request(app)
+          .get('/index.html')
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
@@ -2375,7 +3122,7 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return the "200" code for the "GET" request to the directory', (done) => {
+      it('should return the "200" code for the "GET" request to the public path', (done) => {
         request(app)
           .get('/')
           .expect('Content-Type', 'text/html; charset=utf-8')
@@ -2415,7 +3162,7 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return the "200" code for the "GET" request to the directory', (done) => {
+      it('should return the "200" code for the "GET" request to the public path', (done) => {
         request(app)
           .get('/')
           .expect('Content-Type', 'application/octet-stream')
@@ -2458,7 +3205,7 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return the "200" code for the "GET" request to the directory', (done) => {
+      it('should return the "200" code for the "GET" request to the public path', (done) => {
         request(app)
           .get('/')
           .expect('Content-Type', 'text/html; charset=utf-8')
@@ -2495,7 +3242,7 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return the "200" code for the "GET" request to the directory', (done) => {
+      it('should return the "200" code for the "GET" request to the public path', (done) => {
         request(app)
           .get('/')
           .expect('Content-Type', 'application/octet-stream')
@@ -2534,7 +3281,7 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return the "404" code for the "GET" request to the', (done) => {
+      it('should return the "404" code for the "GET" request to the public path', (done) => {
         request(app)
           .get('/')
           .expect(404, done);
@@ -2574,7 +3321,7 @@ describe('middleware', () => {
         close();
       });
 
-      it('should logging an error', (done) => {
+      it('should return the "404" code for the "GET" request to the public path', (done) => {
         request(app)
           .get('/')
           .expect(404, done);
@@ -2644,7 +3391,7 @@ describe('middleware', () => {
 
       it('should logging', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (error) => {
             if (error) {
               return done(error);
@@ -2722,7 +3469,7 @@ describe('middleware', () => {
 
       it('should logging', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (error) => {
             if (error) {
               return done(error);
@@ -2800,7 +3547,7 @@ describe('middleware', () => {
 
       it('should logging', (done) => {
         request(app)
-          .get('/js1/bundle.js')
+          .get('/static-one/bundle.js')
           .expect(200, (error) => {
             if (error) {
               return done(error);

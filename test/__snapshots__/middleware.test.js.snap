@@ -6,7 +6,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /js1/bundle.js",
+      "wait until bundle finished: /static-one/bundle.js",
     ],
   ],
   Array [
@@ -57,7 +57,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /js1/bundle.js",
+      "wait until bundle finished: /static-one/bundle.js",
     ],
   ],
   Array [
@@ -97,7 +97,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /js1/bundle.js",
+      "wait until bundle finished: /static-one/bundle.js",
     ],
   ],
   Array [
@@ -334,7 +334,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /js1/bundle.js",
+      "wait until bundle finished: /static-one/bundle.js",
     ],
   ],
   Array [
@@ -428,7 +428,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /js1/bundle.js",
+      "wait until bundle finished: /static-one/bundle.js",
     ],
   ],
   Array [
@@ -588,7 +588,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "wait until bundle finished: /js1/bundle.js",
+      "wait until bundle finished: /static-one/bundle.js",
     ],
   ],
   Array [

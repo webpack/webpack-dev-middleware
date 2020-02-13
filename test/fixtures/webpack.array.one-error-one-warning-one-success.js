@@ -10,7 +10,7 @@ module.exports = [
     output: {
       filename: 'bundle.js',
       path: path.resolve(__dirname, '../outputs/one-error-one-warning-one-success/js1'),
-      publicPath: '/js1/',
+      publicPath: '/static-one/',
     },
     infrastructureLogging: {
       level: 'none'
@@ -24,7 +24,7 @@ module.exports = [
     output: {
       filename: 'bundle.js',
       path: path.resolve(__dirname, '../outputs/one-error-one-warning-one-success/js2'),
-      publicPath: '/js2/',
+      publicPath: '/static-two/',
     },
     plugins: [
       {
@@ -49,7 +49,7 @@ module.exports = [
     output: {
       filename: 'bundle.js',
       path: path.resolve(__dirname, 'js3'),
-      publicPath: '/js3/',
+      publicPath: '/static-three/',
     },
     module: {
       rules: [
