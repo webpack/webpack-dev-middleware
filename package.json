@@ -55,11 +55,11 @@
     "del-cli": "^3.0.0",
     "eslint": "^6.8.0",
     "eslint-config-prettier": "^6.10.0",
-    "eslint-plugin-import": "^2.20.0",
+    "eslint-plugin-import": "^2.20.1",
     "eslint-plugin-prettier": "^3.1.2",
     "express": "^4.17.1",
     "file-loader": "^5.0.2",
-    "husky": "^4.2.1",
+    "husky": "^4.2.3",
     "jest": "^25.1.0",
     "jest-junit": "^10.0.0",
     "lint-staged": "^10.0.7",
@@ -67,7 +67,7 @@
     "prettier": "^1.19.1",
     "standard-version": "^7.1.0",
     "supertest": "^4.0.2",
-    "webpack": "^4.41.5"
+    "webpack": "^4.41.6"
   },
   "keywords": [
     "webpack",
