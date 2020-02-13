@@ -1,0 +1,47 @@
+{
+  "type": "object",
+  "properties": {
+    "mimeTypes": {
+      "type": "object"
+    },
+    "writeToDisk": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "instanceof": "Function"
+        }
+      ]
+    },
+    "methods": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "headers": {
+      "type": "object"
+    },
+    "publicPath": {
+      "type": "string"
+    },
+    "serverSideRender": {
+      "type": "boolean"
+    },
+    "outputFileSystem": {
+      "type": "object"
+    },
+    "index": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false
+}

@@ -25,11 +25,6 @@ Some of the benefits of using this middleware include:
   has completed.
 - Supports hot module reload (HMR).
 
-## Requirements
-
-This module requires a minimum of Node v6.9.0 and Webpack v4.0.0, and must be used with a
-server that accepts express-style middleware.
-
 ## Getting Started
 
 First thing's first, install the module:
@@ -62,10 +57,7 @@ app.listen(3000, () => console.log('Example app listening on port 3000!'));
 
 ## Options
 
-The middleware accepts an `options` Object. The following is a property reference
-for the Object.
-
-_Note: The `publicPath` property is required, whereas all other options are optional_
+The middleware accepts an `options` Object. The following is a property reference for the Object.
 
 ### methods
 
@@ -79,109 +71,34 @@ This property allows a user to pass the list of HTTP request methods accepted by
 Type: `Object`  
 Default: `undefined`
 
-This property allows a user to pass custom HTTP headers on each request. eg.
-`{ "X-Custom-Header": "yes" }`
+This property allows a user to pass custom HTTP headers on each request.
+eg. `{ "X-Custom-Header": "yes" }`
 
 ### index
 
-Type: `String`  
-Default: `undefined`
+Type: `Boolean|String`  
+Default: `index.html`
 
-"index.html",
-// The index path for web server, defaults to "index.html".
-// If falsy (but not undefined), the server will not respond to requests to the root URL.
-
-### lazy
-
-Type: `Boolean`  
-Default: `undefined`
-
-This option instructs the module to operate in 'lazy' mode, meaning that it won't
-recompile when files change, but rather on each request.
-
-### logger
-
-Type: `Object`  
-Default: [`webpack-log`](https://github.com/webpack-contrib/webpack-log/blob/master/index.js)
-
-In the rare event that a user would like to provide a custom logging interface,
-this property allows the user to assign one. The module leverages
-[`webpack-log`](https://github.com/webpack-contrib/webpack-log#readme)
-for creating the [`loglevelnext`](https://github.com/shellscape/loglevelnext#readme)
-logging management by default. Any custom logger must adhere to the same
-exports for compatibility. Specifically, all custom loggers must have the
-following exported methods at a minimum:
-
-- `log.trace`
-- `log.debug`
-- `log.info`
-- `log.warn`
-- `log.error`
-
-Please see the documentation for `loglevel` for more information.
-
-### logLevel
-
-Type: `String`  
-Default: `'info'`
-
-This property defines the level of messages that the module will log. Valid levels
-include:
-
-- `trace`
-- `debug`
-- `info`
-- `warn`
-- `error`
-- `silent`
-
-Setting a log level means that all other levels below it will be visible in the
-console. Setting `logLevel: 'silent'` will hide all console output. The module
-leverages [`webpack-log`](https://github.com/webpack-contrib/webpack-log#readme)
-for logging management, and more information can be found on its page.
-
-### logTime
-
-Type: `Boolean`  
-Default: `false`
-
-If `true` the log output of the module will be prefixed by a timestamp in the
-`HH:mm:ss` format.
+If `false` (but not `undefined`), the server will not respond to requests to the root URL.
 
 ### mimeTypes
 
 Type: `Object`  
-Default: `null`
+Default: `undefined`
 
 This property allows a user to register custom mime types or extension mappings.
-eg. `mimeTypes: { 'text/html': [ 'phtml' ] }`.
+eg. `mimeTypes: { phtml: 'text/html' }`.
 
-By default node-mime will throw an error if you try to map a type to an extension
-that is already assigned to another type. Passing `force: true` will suppress this behavior
-(overriding any previous mapping).
-eg. `mimeTypes: { typeMap: { 'text/html': [ 'phtml' ] }, force: true }`.
-
-Please see the documentation for
-[`node-mime`](https://github.com/broofa/node-mime#mimedefinetypemap-force--false) for more information.
+Please see the documentation for [`mime-types`](https://github.com/jshttp/mime-types) for more information.
 
 ### publicPath
 
-Type: `String`  
-_Required_
+Type: `String`
+Default: `output.publicPath`
 
-The public path that the middleware is bound to. _Best Practice: use the same
-`publicPath` defined in your webpack config. For more information about
-`publicPath`, please see
-[the webpack documentation](https://webpack.js.org/guides/public-path)._
-
-### reporter
-
-Type: `Object`  
-Default: `undefined`
-
-Allows users to provide a custom reporter to handle logging within the module.
-Please see the [default reporter](/lib/utils/reporter.js)
-for an example.
+The public path that the middleware is bound to.
+_Best Practice: use the same `publicPath` defined in your webpack config.
+For more information about `publicPath`, please see [the webpack documentation](https://webpack.js.org/guides/public-path)._
 
 ### serverSideRender
 
@@ -190,24 +107,6 @@ Default: `undefined`
 
 Instructs the module to enable or disable the server-side rendering mode. Please
 see [Server-Side Rendering](#server-side-rendering) for more information.
-
-### stats
-
-Type: `Object`  
-Default: `{ context: process.cwd() }`
-
-Options for formatting statistics displayed during and after compile. For more
-information and property details, please see the
-[webpack documentation](https://webpack.js.org/configuration/stats/#stats).
-
-### watchOptions
-
-Type: `Object`  
-Default: `{ aggregateTimeout: 200 }`
-
-The module accepts an `Object` containing options for file watching, which is
-passed directly to the compiler provided. For more information on watch options
-please see the [webpack documentation](https://webpack.js.org/configuration/watch/#watchoptions)
 
 ### writeToDisk
 
@@ -228,24 +127,45 @@ in which a return value of `false` _will not_ write the file, and a return value
 of `true` _will_ write the file to disk. eg.
 
 ```js
-{
+const webpack = require('webpack');
+const configuration = {
+  /* Webpack configuration */
+};
+const compiler = webpack(configuration);
+
+middleware(compiler, {
   writeToDisk: (filePath) => {
     return /superman\.css$/.test(filePath);
-  };
-}
+  },
+});
 ```
 
-### fs
+### outputFileSystem
 
 Type: `Object`  
-Default: `MemoryFileSystem`
+Default: [memfs](https://github.com/streamich/memfs)
 
-Set the default file system which will be used by webpack as primary destination of generated files. Default is set to webpack's default file system: [memory-fs](https://github.com/webpack/memory-fs). This option isn't affected by the [writeToDisk](#writeToDisk) option.
+Set the default file system which will be used by webpack as primary destination of generated files.
+This option isn't affected by the [writeToDisk](#writeToDisk) option.
 
-**Note:** As of 3.5.x version of the middleware you have to provide `.join()` method to the `fs` instance manually. This can be done simply by using `path.join`:
+You have to provide `.join()` and `mkdirp` method to the `outputFileSystem` instance manually for compatibility with `webpack@4`.
+
+This can be done simply by using `path.join`:
 
 ```js
-fs.join = path.join; // no need to bind
+const webpack = require('webpack');
+const path = require('path');
+const myOutputFileSystem = require('my-fs');
+const mkdirp = require('mkdirp');
+
+myOutputFileSystem.join = path.join.bind(path); // no need to bind
+myOutputFileSystem.mkdirp = mkdirp.bind(mkdirp); // no need to bind
+
+const compiler = webpack({
+  /* Webpack configuration */
+});
+
+middleware(compiler, { outputFileSystem: myOutputFileSystem });
 ```
 
 ## API
@@ -319,7 +239,7 @@ instance.waitUntilValid(() => {
 
 ### Multiple Successive Builds
 
-Watching (by means of `lazy: false`) will frequently cause multiple compilations
+Watching will frequently cause multiple compilations
 as the bundle changes during compilation. This is due in part to cross-platform
 differences in file watchers, so that webpack doesn't loose file changes when
 watched files change rapidly. If you run into this situation, please make use of
@@ -333,9 +253,9 @@ In order to develop an app using server-side rendering, we need access to the
 [`stats`](https://github.com/webpack/docs/wiki/node.js-api#stats), which is
 generated with each build.
 
-With server-side rendering enabled, `webpack-dev-middleware` sets the `stat` to
-`res.locals.webpackStats` and the memory filesystem to `res.locals.fs` before invoking the next middleware, allowing a
-developer to render the page body and manage the response to clients.
+With server-side rendering enabled, `webpack-dev-middleware` sets the `stats` to `res.locals.webpack.devMiddleware.stats`
+and the filesystem to `res.locals.webpack.devMiddleware.outputFileSystem` before invoking the next middleware,
+allowing a developer to render the page body and manage the response to clients.
 
 _Note: Requests for bundle files will still be handled by
 `webpack-dev-middleware` and all requests will be pending until the build
@@ -364,11 +284,12 @@ app.use(middleware(compiler, { serverSideRender: true }));
 
 // The following middleware would not be invoked until the latest build is finished.
 app.use((req, res) => {
-  const assetsByChunkName = res.locals.webpackStats.toJson().assetsByChunkName;
-  const fs = res.locals.fs;
-  const outputPath = res.locals.webpackStats.toJson().outputPath;
+  const { devMiddleware } = res.locals.webpack;
+  const outputFileSystem = devMiddleware.outputFileSystem;
+  const jsonWebpackStats = devMiddleware.stats.toJson();
+  const { assetsByChunkName, outputPath } = jsonWebpackStats;
 
-  // then use `assetsByChunkName` for server-sider rendering
+  // Then use `assetsByChunkName` for server-side rendering
   // For example, if you have only one main chunk:
   res.send(`
 <html>
@@ -377,7 +298,7 @@ app.use((req, res) => {
     <style>
     ${normalizeAssets(assetsByChunkName.main)
       .filter((path) => path.endsWith('.css'))
-      .map((path) => fs.readFileSync(outputPath + '/' + path))
+      .map((path) => outputFileSystem.readFileSync(path.join(outputPath, path)))
       .join('\n')}
     </style>
   </head>
@@ -447,5 +368,4 @@ Please take a moment to read our contributing guidelines if you haven't yet done
 [hash-url]: https://twitter.com/search?q=webpack
 [middleware-url]: https://github.com/webpack/webpack-dev-middleware
 [stack-url]: https://stackoverflow.com/questions/tagged/webpack-dev-middleware
-[uglify-url]: https://github.com/webpack-contrib/uglifyjs-webpack-plugin
 [wjo-url]: https://github.com/webpack/webpack.js.org

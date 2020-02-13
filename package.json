@@ -7,36 +7,38 @@
   "author": "Tobias Koppers @sokra",
   "homepage": "https://github.com/webpack/webpack-dev-middleware",
   "bugs": "https://github.com/webpack/webpack-dev-middleware/issues",
-  "main": "lib/index.js",
+  "main": "dist/index.js",
   "engines": {
-    "node": ">= 6"
+    "node": ">= 10.13"
   },
   "scripts": {
     "commitlint": "commitlint --from=master",
     "lint:prettier": "prettier \"{**/*,*}.{js,json,md,yml,css}\" --list-different",
-    "lint:js": "eslint --cache lib test",
+    "lint:js": "eslint --cache src test",
     "lint": "npm-run-all -l -p \"lint:**\"",
+    "prepare": "npm run build",
+    "build": "del dist && babel src -d dist",
     "release": "standard-version",
     "security": "npm audit",
     "test:only": "cross-env NODE_ENV=test jest",
-    "test:watch": "cross-env NODE_ENV=test jest --watch",
-    "test:coverage": "cross-env NODE_ENV=test jest --collectCoverageFrom=\"lib/**/*.js\" --coverage",
+    "test:watch": "npm run test:only -- --watch",
+    "test:coverage": "npm run test:only -- --collectCoverageFrom=\"src/**/*.js\" --coverage",
     "pretest": "npm run lint",
-    "test": "cross-env NODE_ENV=test npm run test:coverage",
+    "test": "npm run test:coverage",
     "defaults": "webpack-defaults"
   },
   "files": [
-    "lib"
+    "dist"
   ],
   "peerDependencies": {
     "webpack": "^4.0.0"
   },
   "dependencies": {
-    "memory-fs": "^0.5.0",
-    "mime": "^2.4.4",
-    "mkdirp": "^0.5.1",
+    "mem": "^6.0.1",
+    "memfs": "^3.0.4",
+    "mime-types": "^2.1.26",
     "range-parser": "^1.2.1",
-    "webpack-log": "^2.0.0"
+    "schema-utils": "^2.6.4"
   },
   "devDependencies": {
     "@babel/cli": "^7.8.4",
@@ -44,11 +46,11 @@
     "@babel/preset-env": "^7.8.4",
     "@commitlint/cli": "^8.3.5",
     "@commitlint/config-conventional": "^8.3.4",
-    "@webpack-contrib/defaults": "^5.1.1",
+    "@webpack-contrib/defaults": "^6.3.0",
     "@webpack-contrib/eslint-config-webpack": "^3.0.0",
-    "babel-jest": "^24.9.0",
+    "babel-jest": "^25.1.0",
     "commitlint-azure-pipelines-cli": "^1.0.3",
-    "cross-env": "^6.0.0",
+    "cross-env": "^7.0.0",
     "del": "^5.1.0",
     "del-cli": "^3.0.0",
     "eslint": "^6.8.0",
@@ -58,7 +60,7 @@
     "express": "^4.17.1",
     "file-loader": "^5.0.2",
     "husky": "^4.2.3",
-    "jest": "^24.9.0",
+    "jest": "^25.1.0",
     "jest-junit": "^10.0.0",
     "lint-staged": "^10.0.7",
     "npm-run-all": "^4.1.5",

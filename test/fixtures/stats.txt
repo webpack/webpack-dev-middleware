@@ -1,9 +1,0 @@
-Hash: aac5ce00b41486d235c4
-Version: webpack 2.1.0-beta.22
-Time: 18ms
-    Asset     Size  Chunks             Chunk Names
-  svg.svg  4.78 kB          [emitted]
-bundle.js  2.63 kB       0  [emitted]  main
-chunk    {0} bundle.js (main) 97 bytes [entry] [rendered]
-    [0] ./test/fixtures/server-test/svg.svg 53 bytes {0} [built]
-    [1] ./test/fixtures/server-test/index.js 44 bytes {0} [built]
