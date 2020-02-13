@@ -384,219 +384,228 @@ describe('middleware', () => {
     });
 
     describe('should work with difference requests', () => {
-      // TODO .expect('Content-Length', fileData.byteLength.toString()) and content
       // TODO do multi-compiler mode + one publish path (with empty)
-      // TODO try to use full url
       const basicOutputPath = path.resolve(__dirname, './outputs/basic');
-      const files = [
+      const fixtures = [
         {
-          file: 'index.html',
-          data: '<div>Test</div>',
+          urls: [
+            {
+              value: 'bundle.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+            {
+              value: '',
+              contentType: 'text/html; charset=utf-8',
+              code: 200,
+            },
+            {
+              value: 'index.html',
+              contentType: 'text/html; charset=utf-8',
+              code: 200,
+            },
+            {
+              value: 'invalid.js',
+              contentType: 'text/html; charset=utf-8',
+              code: 404,
+            },
+            {
+              value: 'complex',
+              contentType: 'text/html; charset=utf-8',
+              code: 404,
+            },
+            {
+              value: 'complex/invalid.js',
+              contentType: 'text/html; charset=utf-8',
+              code: 404,
+            },
+            {
+              value: 'complex/complex',
+              contentType: 'text/html; charset=utf-8',
+              code: 404,
+            },
+            {
+              value: 'complex/complex/invalid.js',
+              contentType: 'text/html; charset=utf-8',
+              code: 404,
+            },
+            {
+              value: '%',
+              contentType: 'text/html; charset=utf-8',
+              code: 404,
+            },
+          ],
         },
         {
           file: 'config.json',
           data: JSON.stringify({ foo: 'bar' }),
+          urls: [
+            {
+              value: 'config.json',
+              contentType: 'application/json; charset=utf-8',
+              code: 200,
+            },
+          ],
         },
         {
-          file: 'svg.svg',
-          data: 'svg file',
+          file: 'image.svg',
+          data: '<svg>SVG</svg>',
+          urls: [
+            {
+              value: 'image.svg',
+              contentType: 'image/svg+xml',
+              code: 200,
+            },
+          ],
         },
         {
           file: 'foo.js',
           data: 'console.log("foo");',
+          urls: [
+            {
+              value: 'foo.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+          ],
         },
         {
           file: '/complex/foo.js',
           data: 'console.log("foo");',
+          urls: [
+            {
+              value: 'complex/foo.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+            {
+              value: 'complex/./foo.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+            {
+              value: 'complex/foo/../foo.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+          ],
         },
         {
           file: '/complex/complex/foo.js',
           data: 'console.log("foo");',
+          urls: [
+            {
+              value: 'complex/complex/foo.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+          ],
         },
         {
           file: '/föö.js',
           data: 'console.log("foo");',
+          urls: [
+            // Express encodes the URI component, so we do the same
+            {
+              value: 'f%C3%B6%C3%B6.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+          ],
         },
         {
           file: '/%foo%/%foo%.js',
           data: 'console.log("foo");',
+          urls: [
+            // Filenames can contain characters not allowed in URIs
+            {
+              value: '%foo%/%foo%.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+          ],
         },
         {
           file: 'test.html',
           data: '<div>test</div>',
+          urls: [
+            {
+              value: 'test.html?foo=bar',
+              contentType: 'text/html; charset=utf-8',
+              code: 200,
+            },
+            {
+              value: 'test.html?foo=bar#hash',
+              contentType: 'text/html; charset=utf-8',
+              code: 200,
+            },
+          ],
         },
         {
           file: 'pathname with spaces.js',
           data: 'console.log("foo");',
+          urls: [
+            {
+              value: 'pathname%20with%20spaces.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+          ],
         },
         {
           file: 'dirname with spaces/filename with spaces.js',
           data: 'console.log("foo");',
+          urls: [
+            {
+              value: 'dirname%20with%20spaces/filename%20with%20spaces.js',
+              contentType: 'application/javascript; charset=utf-8',
+              code: 200,
+            },
+          ],
         },
         {
-          file: 'folder-name-with-dots/mono-v6.x.x',
+          file: 'filename-name-with-dots/mono-v6.x.x',
           data: 'content with .',
+          urls: [
+            {
+              value: 'filename-name-with-dots/mono-v6.x.x',
+              contentType: 'application/octet-stream',
+              code: 200,
+            },
+          ],
         },
         {
           file: 'noextension',
           data: 'noextension content',
+          urls: [
+            {
+              value: 'noextension',
+              contentType: 'application/octet-stream',
+              code: 200,
+            },
+          ],
         },
         {
           file: '3dAr.usdz',
           data: '3dAr.usdz content',
+          urls: [
+            {
+              value: '3dAr.usdz',
+              contentType: 'model/vnd.usdz+zip',
+              code: 200,
+            },
+          ],
         },
         {
           file: 'hello.wasm',
           data: 'hello.wasm content',
-        },
-      ];
-
-      const requests = [
-        {
-          value: '',
-          contentType: 'text/html; charset=utf-8',
-          contentLength: '10',
-          code: 200,
-        },
-        {
-          value: 'index.html',
-          contentType: 'text/html; charset=utf-8',
-          contentLength: '10',
-          code: 200,
-        },
-        {
-          value: 'foo.js',
-          contentType: 'application/javascript; charset=utf-8',
-          contentLength: '19',
-          code: 200,
-        },
-        {
-          value: 'config.json',
-          contentType: 'application/json; charset=utf-8',
-          contentLength: '13',
-          code: 200,
-        },
-        {
-          value: 'svg.svg',
-          contentType: 'image/svg+xml',
-          contentLength: '4778',
-          code: 200,
-        },
-        {
-          value: 'complex/foo.js',
-          contentType: 'application/javascript; charset=utf-8',
-          contentLength: '19',
-          code: 200,
-        },
-        {
-          value: 'complex/./foo.js',
-          contentType: 'application/javascript; charset=utf-8',
-          contentLength: '19',
-          code: 200,
-        },
-        {
-          value: 'complex/foo/../foo.js',
-          contentType: 'application/javascript; charset=utf-8',
-          contentLength: '19',
-          code: 200,
-        },
-        {
-          value: 'complex/complex/foo.js',
-          contentType: 'application/javascript; charset=utf-8',
-          contentLength: '19',
-          code: 200,
-        },
-        // Express encodes the URI component, so we do the same
-        {
-          value: 'f%C3%B6%C3%B6.js',
-          contentType: 'application/javascript; charset=utf-8',
-          contentLength: '19',
-          code: 200,
-        },
-        // Filenames can contain characters not allowed in URIs
-        {
-          value: '%foo%/%foo%.js',
-          contentType: 'application/javascript; charset=utf-8',
-          contentLength: '19',
-          code: 200,
-        },
-        {
-          value: 'test.html?foo=bar',
-          contentType: 'text/html; charset=utf-8',
-          contentLength: '15',
-          code: 200,
-        },
-        {
-          value: 'test.html?foo=bar#hash',
-          contentType: 'text/html; charset=utf-8',
-          contentLength: '15',
-          code: 200,
-        },
-        {
-          value: 'pathname%20with%20spaces.js',
-          contentType: 'application/javascript; charset=utf-8',
-          contentLength: '19',
-          code: 200,
-        },
-        {
-          value: 'dirname%20with%20spaces/filename%20with%20spaces.js',
-          contentType: 'application/javascript; charset=utf-8',
-          contentLength: '19',
-          code: 200,
-        },
-        {
-          value: 'folder-name-with-dots/mono-v6.x.x',
-          contentType: 'application/octet-stream',
-          contentLength: '14',
-          code: 200,
-        },
-        {
-          value: 'noextension',
-          contentType: 'application/octet-stream',
-          contentLength: '19',
-          code: 200,
-        },
-        {
-          value: '3dAr.usdz',
-          contentType: 'model/vnd.usdz+zip',
-          contentLength: '17',
-          code: 200,
-        },
-        {
-          value: 'hello.wasm',
-          contentType: 'application/wasm',
-          contentLength: '18',
-          code: 200,
-        },
-        {
-          value: 'invalid.js',
-          contentType: 'text/html; charset=utf-8',
-          code: 404,
-        },
-        {
-          value: 'complex',
-          contentType: 'text/html; charset=utf-8',
-          code: 404,
-        },
-        {
-          value: 'complex/invalid.js',
-          contentType: 'text/html; charset=utf-8',
-          code: 404,
-        },
-        {
-          value: 'complex/complex',
-          contentType: 'text/html; charset=utf-8',
-          code: 404,
-        },
-        {
-          value: 'complex/complex/invalid.js',
-          contentType: 'text/html; charset=utf-8',
-          code: 404,
-        },
-        {
-          value: '%',
-          contentType: 'text/html; charset=utf-8',
-          code: 404,
+          urls: [
+            {
+              value: 'hello.wasm',
+              contentType: 'application/wasm',
+              code: 200,
+            },
+          ],
         },
       ];
 
@@ -672,39 +681,39 @@ describe('middleware', () => {
       const isWindows = process.platform === 'win32';
 
       if (isWindows) {
-        files.push(
+        fixtures.push(
           {
             file: 'windows.txt',
             data: 'windows.txt content',
+            urls: [
+              {
+                value: 'windows.txt',
+                contentType: 'text/html; charset=utf-8',
+                code: 200,
+              },
+            ],
           },
           {
             file: 'windows 2.txt',
             data: 'windows 2.txt content',
+            urls: [
+              {
+                value: 'windows%202.txt',
+                contentType: 'text/html; charset=utf-8',
+                code: 200,
+              },
+            ],
           },
           {
             file: 'test & test & %20.txt',
             data: 'test & test & %20.txt content',
-          }
-        );
-
-        requests.push(
-          {
-            value: 'windows.txt',
-            contentType: 'text/html; charset=utf-8',
-            contentLength: '18',
-            code: 200,
-          },
-          {
-            value: 'windows%202.txt',
-            contentType: 'text/html; charset=utf-8',
-            contentLength: '18',
-            code: 200,
-          },
-          {
-            value: 'test%20%26%20test%20%26%20%2520.txt',
-            contentType: 'text/html; charset=utf-8',
-            contentLength: '18',
-            code: 200,
+            urls: [
+              {
+                value: 'test%20%26%20test%20%26%20%2520.txt',
+                contentType: 'text/html; charset=utf-8',
+                code: 200,
+              },
+            ],
           }
         );
 
@@ -764,32 +773,29 @@ describe('middleware', () => {
               },
             } = instance;
 
-            for (const { file, data } of files) {
-              const fullPath = path.join(outputPath, file);
+            for (const { file, data } of fixtures) {
+              if (file) {
+                const fullPath = path.join(outputPath, file);
 
-              mkdirSync(path.dirname(fullPath), { recursive: true });
-              writeFileSync(fullPath, data);
+                mkdirSync(path.dirname(fullPath), { recursive: true });
+                writeFileSync(fullPath, data);
+              }
             }
           });
 
           afterAll(close);
 
-          it('should return the "200" code for the "GET" request to the bundle file', (done) => {
-            request(app)
-              .get(`${publicPathForRequest}bundle.js`)
-              .expect('Content-Type', 'application/javascript; charset=utf-8')
-              .expect(200, done);
-          });
-
-          for (const { value, contentType, contentLength, code } of requests) {
-            // eslint-disable-next-line no-loop-func
-            it(`should return the "${code}" code for the "GET" request for the "${value}" url`, (done) => {
-              request(app)
-                .get(`${publicPathForRequest}${value}`)
-                .expect('Content-Type', contentType)
-                .expect('Content-Length', contentLength || /\d+/)
-                .expect(code, done);
-            });
+          for (const { data, urls } of fixtures) {
+            for (const { value, contentType, code } of urls) {
+              // eslint-disable-next-line no-loop-func
+              it(`should return the "${code}" code for the "GET" request for the "${value}" url`, (done) => {
+                request(app)
+                  .get(`${publicPathForRequest}${value}`)
+                  .expect('Content-Type', contentType)
+                  .expect('Content-Length', data ? String(data.length) : /\d+/)
+                  .expect(code, done);
+              });
+            }
           }
         });
       }

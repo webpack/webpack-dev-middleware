@@ -75,7 +75,7 @@ export default function wrapper(context) {
         if (headers) {
           for (const name in headers) {
             if ({}.hasOwnProperty.call(headers, name)) {
-              res.setHeader(name, context.options.headers[name]);
+              res.set(name, context.options.headers[name]);
             }
           }
         }
