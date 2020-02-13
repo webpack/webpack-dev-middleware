@@ -221,7 +221,10 @@ describe('middleware', () => {
           .get('/bundle.js')
           .set('Range', 'bytes=3000-3500')
           .expect('Content-Length', '501')
-          .expect('Content-Range', 'bytes 3000-3500/4875')
+          .expect(
+            'Content-Range',
+            isWebpack5() ? 'bytes 3000-3500/5204' : 'bytes 3000-3500/4875'
+          )
           .expect(206, done);
       });
 
@@ -688,7 +691,7 @@ describe('middleware', () => {
             urls: [
               {
                 value: 'windows.txt',
-                contentType: 'text/html; charset=utf-8',
+                contentType: 'text/plain; charset=utf-8',
                 code: 200,
               },
             ],
@@ -699,7 +702,7 @@ describe('middleware', () => {
             urls: [
               {
                 value: 'windows%202.txt',
-                contentType: 'text/html; charset=utf-8',
+                contentType: 'text/plain; charset=utf-8',
                 code: 200,
               },
             ],
@@ -710,7 +713,7 @@ describe('middleware', () => {
             urls: [
               {
                 value: 'test%20%26%20test%20%26%20%2520.txt',
-                contentType: 'text/html; charset=utf-8',
+                contentType: 'text/plain; charset=utf-8',
                 code: 200,
               },
             ],
