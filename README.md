@@ -253,8 +253,8 @@ In order to develop an app using server-side rendering, we need access to the
 [`stats`](https://github.com/webpack/docs/wiki/node.js-api#stats), which is
 generated with each build.
 
-With server-side rendering enabled, `webpack-dev-middleware` sets the `stat` to
-`res.locals.webpack.stats` and the filesystem to `res.locals.webpack.outputFileSystem` before invoking the next middleware,
+With server-side rendering enabled, `webpack-dev-middleware` sets the `stats` to `res.locals.webpack.devMiddleware.stats`
+and the filesystem to `res.locals.webpack.devMiddleware.outputFileSystem` before invoking the next middleware,
 allowing a developer to render the page body and manage the response to clients.
 
 _Note: Requests for bundle files will still be handled by
@@ -284,12 +284,12 @@ app.use(middleware(compiler, { serverSideRender: true }));
 
 // The following middleware would not be invoked until the latest build is finished.
 app.use((req, res) => {
-  const webpackLocals = res.locals.webpack;
-  const fs = webpackLocals.outputFileSystem;
-  const jsonWebpackStats = webpackLocals.stats.toJson();
+  const { devMiddleware } = res.locals.webpack;
+  const outputFileSystem = devMiddleware.outputFileSystem;
+  const jsonWebpackStats = devMiddleware.stats.toJson();
   const { assetsByChunkName, outputPath } = jsonWebpackStats;
 
-  // then use `assetsByChunkName` for server-sider rendering
+  // Then use `assetsByChunkName` for server-side rendering
   // For example, if you have only one main chunk:
   res.send(`
 <html>
@@ -298,7 +298,7 @@ app.use((req, res) => {
     <style>
     ${normalizeAssets(assetsByChunkName.main)
       .filter((path) => path.endsWith('.css'))
-      .map((path) => fs.readFileSync(outputPath + '/' + path))
+      .map((path) => outputFileSystem.readFileSync(path.join(outputPath, path)))
       .join('\n')}
     </style>
   </head>

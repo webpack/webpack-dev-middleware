@@ -22,10 +22,7 @@ export default function wrapper(context) {
           context,
           () => {
             // eslint-disable-next-line no-param-reassign
-            res.locals.webpack = {
-              stats: context.stats,
-              outputFileSystem: context.outputFileSystem,
-            };
+            res.locals.webpack = { devMiddleware: context };
 
             resolve(next());
           },
@@ -42,8 +39,8 @@ export default function wrapper(context) {
 
     return new Promise((resolve) => {
       // eslint-disable-next-line consistent-return
-      function processRequest(stats) {
-        const filename = getFilenameFromUrl(context, req.url, stats);
+      function processRequest() {
+        const filename = getFilenameFromUrl(context, req.url);
 
         if (!filename) {
           return resolve(goNext());
