@@ -10,7 +10,7 @@ module.exports = [
     output: {
       filename: 'bundle.js',
       path: path.resolve(__dirname, '../../outputs/array-warning/js1'),
-      publicPath: '/js1/',
+      publicPath: '/static-one/',
     },
     plugins: [
       {
@@ -32,7 +32,7 @@ module.exports = [
     output: {
       filename: 'bundle.js',
       path: path.resolve(__dirname, '../outputs/array-warning/js2'),
-      publicPath: '/js2/',
+      publicPath: '/static-two/',
     },
     plugins: [
       {

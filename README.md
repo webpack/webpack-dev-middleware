@@ -71,17 +71,15 @@ This property allows a user to pass the list of HTTP request methods accepted by
 Type: `Object`  
 Default: `undefined`
 
-This property allows a user to pass custom HTTP headers on each request. eg.
-`{ "X-Custom-Header": "yes" }`
+This property allows a user to pass custom HTTP headers on each request.
+eg. `{ "X-Custom-Header": "yes" }`
 
 ### index
 
-Type: `String`  
-Default: `undefined`
+Type: `Boolean|String`  
+Default: `index.html`
 
-"index.html",
-// The index path for web server, defaults to "index.html".
-// If falsy (but not undefined), the server will not respond to requests to the root URL.
+If `false` (but not `undefined`), the server will not respond to requests to the root URL.
 
 ### mimeTypes
 
