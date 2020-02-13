@@ -2858,8 +2858,7 @@ describe('middleware', () => {
             return done(error);
           }
 
-          expect(locals.webpack.stats).toBeDefined();
-          expect(locals.webpack.outputFileSystem).toBeDefined();
+          expect(locals.webpack.devMiddleware).toBeDefined();
 
           return done();
         });
