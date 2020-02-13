@@ -2,7 +2,7 @@ import path from 'path';
 
 import mime from 'mime-types';
 
-import getPossibleFilePaths from './utils/getPossibleFilePaths';
+import getFilenameFromUrl from './utils/getFilenameFromUrl';
 import handleRangeHeaders from './utils/handleRangeHeaders';
 import ready from './utils/ready';
 
@@ -43,19 +43,16 @@ export default function wrapper(context) {
     return new Promise((resolve) => {
       // eslint-disable-next-line consistent-return
       function processRequest(stats) {
-        const possibleFilePaths = getPossibleFilePaths(context, req.url, stats);
+        const filename = getFilenameFromUrl(context, req.url, stats);
 
-        if (possibleFilePaths.length === 0) {
+        if (!filename) {
           return resolve(goNext());
         }
 
-        const [filePath] = possibleFilePaths;
-
-        // server content
         let content;
 
         try {
-          content = context.outputFileSystem.readFileSync(filePath);
+          content = context.outputFileSystem.readFileSync(filename);
         } catch (_ignoreError) {
           return resolve(goNext());
         }
@@ -63,7 +60,7 @@ export default function wrapper(context) {
         content = handleRangeHeaders(content, req, res);
 
         if (!res.get('Content-Type')) {
-          const contentType = mime.contentType(path.extname(filePath));
+          const contentType = mime.contentType(path.extname(filename));
 
           if (contentType) {
             res.set('Content-Type', contentType);

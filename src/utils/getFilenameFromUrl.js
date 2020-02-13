@@ -29,16 +29,14 @@ export default (context, url, stats) => {
   const { options } = context;
   const paths = getPaths(stats, options);
 
+  let filename;
   let urlObject;
-
-  const pathToFiles = [];
 
   try {
     // The `url` property of the `request` is contains only  `pathname`, `search` and `hash`
     urlObject = memoizedParse(url, false, true);
   } catch (_ignoreError) {
-    // eslint-disable-next-line no-undefined
-    return pathToFiles;
+    return filename;
   }
 
   for (const { publicPath, outputPath } of paths) {
@@ -51,33 +49,33 @@ export default (context, url, stats) => {
       continue;
     }
 
-    let pathToFile = outputPath;
-
     if (
       urlObject.pathname &&
       urlObject.pathname.startsWith(publicPathObject.pathname)
     ) {
+      filename = outputPath;
+
       // Strip the `pathname` property from the `publicPath` option from the start of requested url
       // `/complex/foo.js` => `foo.js`
-      const filename = urlObject.pathname.substr(
+      const pathname = urlObject.pathname.substr(
         publicPathObject.pathname.length
       );
 
-      if (filename) {
-        pathToFile = path.join(outputPath, querystring.unescape(filename));
+      if (pathname) {
+        filename = path.join(outputPath, querystring.unescape(pathname));
       }
 
       let fsStats;
 
       try {
-        fsStats = context.outputFileSystem.statSync(pathToFile);
+        fsStats = context.outputFileSystem.statSync(filename);
       } catch (_ignoreError) {
         // eslint-disable-next-line no-continue
         continue;
       }
 
       if (fsStats.isFile()) {
-        pathToFiles.push(pathToFile);
+        break;
       } else if (
         fsStats.isDirectory() &&
         (typeof options.index === 'undefined' || options.index)
@@ -88,21 +86,21 @@ export default (context, url, stats) => {
             ? 'index.html'
             : options.index;
 
-        pathToFile = path.join(pathToFile, indexValue);
+        filename = path.join(filename, indexValue);
 
         try {
-          fsStats = context.outputFileSystem.statSync(pathToFile);
+          fsStats = context.outputFileSystem.statSync(filename);
         } catch (__ignoreError) {
           // eslint-disable-next-line no-continue
           continue;
         }
 
         if (fsStats.isFile()) {
-          pathToFiles.push(pathToFile);
+          break;
         }
       }
     }
   }
 
-  return pathToFiles;
+  return filename;
 };
