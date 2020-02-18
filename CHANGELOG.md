@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.0-rc.0](https://github.com/webpack/webpack-dev-middleware/compare/v3.7.2...v4.0.0-rc.0) (2020-02-19)
+
+### Bug Fixes
+
+* respect `output.path` and `output.publicPath` options from the configuration
+* respect the `stats` option from the configuration
+* respect the `watchOptions` option from the configuration
+* the `writeToDisk` option now correctly works in multi-compiler mode
+* the `outputFileSystem` option now correctly works in multi-compiler mode
+* respect `[hash]`/`[fullhash]` in `output.path` and `output.publicPath`
+* handle exceptions for filesystem operations
+* the `Content-Type` header doesn't have `charset=utf-8` value for custom MIME types and MIME types which can be non `utf-8`
+
+### Features
+
+* validate options
+* migrate on the `webpack` logger
+* migrate on the `memfs` package
+* improve performance
+
+### BREAKING CHANGES
+
+* minimum supported Node.js version is `10.13.0`
+* the default value of the option `publicPath` is taken from the value of the `output.publicPath` option from the configuration (`webpack.config.js`)
+* the `stats` option was removed, the default value of the `stats` option is taken from the value of the `stats` option from the configuration (`webpack.config.js`)
+* the `watchOptions` was removed, the default value of the `watchOptions` option is taken from the value of the `watchOptions` option from the configuration (`webpack.config.js`)
+* the `Content-Type` header doesn't have `charset=utf-8` value for custom MIME types and MIME types which can be non `utf-8`
+* the `fs` option was renamed to the `outputFileSystem` option
+* the `lazy` option was removed without replacement
+* the `logger`, `logLevel` and `logTime` options were removed without replacement. You can setup the `level` value using `{ infrastructureLogging: { level: 'warn' } }`, please read https://webpack.js.org/configuration/other-options/#infrastructurelogging. You can use the `infrastructurelog` (`infrastructureLog` in `webpack@5`) hook to customize logs. The `log` property in the middleware context was renamed to `logger`
+* the `mimeTypes` option first requires you to specify an extension and then a content-type - `{ mimeTypes: { phtml: 'text/html' } }`
+* the `force` option from the `mimeTypes` option was removed without replacement 
+* the `reporter` option was removed without replacement
+* the `getFilenameFromUrl` method was removed from the API
+* the middleware `locals` now under `res.locals.webpack` - use `res.locals.webpack.stats` for access `stats` and `res.locals.webpack.outputFileSystem` to access `outputFileSystem`
+
 ### [3.7.2](https://github.com/webpack/webpack-dev-middleware/compare/v3.7.1...v3.7.2) (2019-09-28)
 
 
