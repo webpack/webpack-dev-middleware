@@ -17,7 +17,7 @@
     "lint:js": "eslint --cache src test",
     "lint": "npm-run-all -l -p \"lint:**\"",
     "prepare": "npm run build",
-    "build": "del dist && babel src -d dist",
+    "build": "del dist && babel src -d dist --copy-files",
     "release": "standard-version",
     "security": "npm audit",
     "test:only": "cross-env NODE_ENV=test jest",
