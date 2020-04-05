@@ -1,0 +1,41 @@
+name: test
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+        node-version: [13.x, 12.x, 10.x]
+        webpack-version: [next, 4]
+        exclude:
+          - node-version: 13.x
+            webpack-version: 4
+          - node-version: 12.x
+            webpack-version: 4
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Use Npm@latest
+        run: npm i -g npm
+      - name: Print versions
+        run: |
+          node -v
+          npm -v
+      - name: Install dependencies
+        run: npm ci
+      - name: Install webpack@${{ matrix.webpack-version }}
+        run: npm i webpack@${{ matrix.webpack-version }}
+      - name: Run tests with coverage
+        run: npm run test:coverage -- --ci --reporters="default" --reporters="jest-junit"
+      - name: Submit coverage data to codecov
+        uses: codecov/codecov-action@v1.0.6
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: '**/junit.xml'

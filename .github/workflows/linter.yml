@@ -1,0 +1,30 @@
+name: linter
+
+on: [push]
+
+env:
+  NODE_VERSION: 10.x
+
+jobs:
+  linter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Use Npm@latest
+        run: npm i -g npm
+      - name: Print versions
+        run: |
+          node -v
+          npm -v
+      - name: Install dependencies
+        run: npm ci
+      - name: 'Run lint'
+        run: npm run lint
+      - name: 'Run NPM audit'
+        run: npm run security
+      - name: Check commit message
+        uses: wagoid/commitlint-github-action@v1
