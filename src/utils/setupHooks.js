@@ -1,3 +1,5 @@
+import { pluginName } from '../constants';
+
 export default function setupHooks(context) {
   function invalid() {
     if (context.state) {
@@ -73,7 +75,7 @@ export default function setupHooks(context) {
     });
   }
 
-  context.compiler.hooks.watchRun.tap('DevMiddleware', invalid);
-  context.compiler.hooks.invalid.tap('DevMiddleware', invalid);
-  context.compiler.hooks.done.tap('DevMiddleware', done);
+  context.compiler.hooks.watchRun.tap(pluginName, invalid);
+  context.compiler.hooks.invalid.tap(pluginName, invalid);
+  context.compiler.hooks.done.tap(pluginName, done);
 }

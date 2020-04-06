@@ -5,7 +5,7 @@ import querystring from 'querystring';
 import mem from 'mem';
 
 function getPaths(stats, options) {
-  const childStats = stats.stats ? stats.stats : [stats];
+  const childStats = Array.isArray(stats.stats) ? stats.stats : [stats];
   const publicPaths = [];
 
   for (const { compilation } of childStats) {
@@ -23,11 +23,10 @@ function getPaths(stats, options) {
   return publicPaths;
 }
 
-const memoizedParse = mem(parse);
-
-export default (context, url) => {
+export default function getFilenameFromUrl(context, url) {
   const { options } = context;
   const paths = getPaths(context.stats, options);
+  const memoizedParse = mem(parse);
 
   let filename;
   let urlObject;
@@ -103,4 +102,4 @@ export default (context, url) => {
   }
 
   return filename;
-};
+}
