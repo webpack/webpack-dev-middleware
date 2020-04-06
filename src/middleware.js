@@ -56,9 +56,11 @@ export default function wrapper(context) {
         return;
       }
 
+      // Buffer
       content = handleRangeHeaders(content, req, res);
 
       if (!res.get('Content-Type')) {
+        // content-type name(like application/javascript; charset=utf-8) or false
         const contentType = mime.contentType(path.extname(filename));
 
         if (contentType) {
@@ -67,13 +69,12 @@ export default function wrapper(context) {
       }
 
       if (headers) {
-        for (const name in headers) {
-          if (Reflect.has(headers, name)) {
-            res.set(name, headers[name]);
-          }
+        for (const name of Object.keys(headers)) {
+          res.set(name, headers[name]);
         }
       }
 
+      // send Buffer
       res.send(content);
     }
   };

@@ -1,19 +1,17 @@
 import fs from 'fs';
 import path from 'path';
 
-import { pluginName } from '../constants';
-
 export default function setupWriteToDisk(context) {
   const compilers = context.compiler.compilers || [context.compiler];
 
   for (const compiler of compilers) {
-    compiler.hooks.emit.tap(pluginName, (compilation) => {
+    compiler.hooks.emit.tap('DevMiddleware', (compilation) => {
       if (compiler.hasWebpackDevMiddlewareAssetEmittedCallback) {
         return;
       }
 
       compiler.hooks.assetEmitted.tapAsync(
-        pluginName,
+        'DevMiddleware',
         (file, info, callback) => {
           let targetPath = null;
           let content = null;
