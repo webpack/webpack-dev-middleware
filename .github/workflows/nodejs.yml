@@ -30,7 +30,7 @@ jobs:
           node-version: ${{ env.node-version }}
 
       - name: Use latest NPM
-        run: npm i -g npm
+        run: sudo npm i -g npm
 
       - name: Install dependencies
         run: npm ci
@@ -64,7 +64,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Use latest NPM
-        run: npm i -g npm
+        run: sudo npm i -g npm
 
       - name: Install dependencies
         run: npm ci
