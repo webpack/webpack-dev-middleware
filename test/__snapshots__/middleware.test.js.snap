@@ -1,17 +1,5 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`middleware logger should logging an error in "watch" method should logging on startup 1`] = `
-Array [
-  Array [
-    "webpack-dev-middleware",
-    "error",
-    Array [
-      "Error: Error in Watch method",
-    ],
-  ],
-]
-`;
-
 exports[`middleware logger should logging an warning should logging 1`] = `
 Array [
   Array [
@@ -108,6 +96,46 @@ Array [
     "info",
     Array [
       "Compiled successfully.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled successfully.",
+    ],
+  ],
+]
+`;
+
+exports[`middleware logger should logging on successfully build should logging 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled successfully.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiling...",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished",
     ],
   ],
   Array [

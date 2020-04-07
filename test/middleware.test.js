@@ -3182,44 +3182,44 @@ describe('middleware', () => {
   //});
 
   describe('logger', () => {
-    //describe('should logging on successfully build', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler(webpackConfig);
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should logging', (done) => {
-    //    request(app)
-    //      .get('/bundle.js')
-    //      .expect(200, (error) => {
-    //        if (error) {
-    //          return done(error);
-    //        }
-    //
-    //        instance.invalidate();
-    //
-    //        return instance.waitUntilValid(() => {
-    //          expect(getLogsPlugin.logs).toMatchSnapshot();
-    //
-    //          done();
-    //        });
-    //      });
-    //  });
-    //});
+    describe('should logging on successfully build', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should logging', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            instance.invalidate();
+
+            return instance.waitUntilValid(() => {
+              expect(getLogsPlugin.logs).toMatchSnapshot();
+
+              done();
+            });
+          });
+      });
+    });
 
     describe('should logging on successfully build in multi-compiler mode', () => {
       let compiler;
@@ -3416,36 +3416,36 @@ describe('middleware', () => {
       });
     });
 
-    describe('should logging an error in "watch" method', () => {
-      let getLogsPlugin;
-
-      it('should logging on startup', () => {
-        const compiler = getCompiler(webpackConfig);
-
-        const watchSpy = jest
-          .spyOn(compiler, 'watch')
-          .mockImplementation((watchOptions, callback) => {
-            const error = new Error('Error in Watch method');
-
-            error.stack = '';
-
-            callback(error);
-
-            return { close: () => {} };
-          });
-
-        getLogsPlugin = new GetLogsPlugin();
-        getLogsPlugin.apply(compiler);
-
-        instance = middleware(compiler);
-
-        expect(getLogsPlugin.logs).toMatchSnapshot();
-
-        instance.close();
-
-        watchSpy.mockRestore();
-      });
-    });
+    //describe('should logging an error in "watch" method', () => {
+    //  let getLogsPlugin;
+    //
+    //  it('should logging on startup', () => {
+    //    const compiler = getCompiler(webpackConfig);
+    //
+    //    const watchSpy = jest
+    //      .spyOn(compiler, 'watch')
+    //      .mockImplementation((watchOptions, callback) => {
+    //        const error = new Error('Error in Watch method');
+    //
+    //        error.stack = '';
+    //
+    //        callback(error);
+    //
+    //        return { close: () => {} };
+    //      });
+    //
+    //    getLogsPlugin = new GetLogsPlugin();
+    //    getLogsPlugin.apply(compiler);
+    //
+    //    instance = middleware(compiler);
+    //
+    //    expect(getLogsPlugin.logs).toMatchSnapshot();
+    //
+    //    instance.close();
+    //
+    //    watchSpy.mockRestore();
+    //  });
+    //});
 
     //describe('should logging an error from the "fs.mkdir" method when the "writeToDisk" option is "true" ', () => {
     //  let compiler;
