@@ -3249,9 +3249,13 @@ describe('middleware', () => {
               return done(error);
             }
 
+            fs.writeFile(path.resolve(process.cwd(), './1-1'), 'HERE');
+
             instance.invalidate();
 
             return instance.waitUntilValid(() => {
+              fs.writeFile(path.resolve(process.cwd(), './1-2'), 'HERE');
+
               expect(getLogsPlugin.logs).toMatchSnapshot();
 
               done();
@@ -3327,9 +3331,13 @@ describe('middleware', () => {
               return done(error);
             }
 
+            fs.writeFile(path.resolve(process.cwd(), './2-1'), 'HERE');
+
             instance.invalidate();
 
             return instance.waitUntilValid(() => {
+              fs.writeFile(path.resolve(process.cwd(), './2-2'), 'HERE');
+
               expect(getLogsPlugin.logs).toMatchSnapshot();
 
               done();
@@ -3405,9 +3413,13 @@ describe('middleware', () => {
               return done(error);
             }
 
+            fs.writeFile(path.resolve(process.cwd(), './3-1'), 'HERE');
+
             instance.invalidate();
 
             return instance.waitUntilValid(() => {
+              fs.writeFile(path.resolve(process.cwd(), './3-2'), 'HERE');
+
               expect(getLogsPlugin.logs).toMatchSnapshot();
 
               done();
