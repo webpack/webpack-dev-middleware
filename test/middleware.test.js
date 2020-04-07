@@ -3182,44 +3182,44 @@ describe('middleware', () => {
   //});
 
   describe('logger', () => {
-    //describe('should logging on successfully build', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler(webpackConfig);
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should logging', (done) => {
-    //    request(app)
-    //      .get('/bundle.js')
-    //      .expect(200, (error) => {
-    //        if (error) {
-    //          return done(error);
-    //        }
-    //
-    //        instance.invalidate();
-    //
-    //        return instance.waitUntilValid(() => {
-    //          expect(getLogsPlugin.logs).toMatchSnapshot();
-    //
-    //          done();
-    //        });
-    //      });
-    //  });
-    //});
+    describe('should logging on successfully build', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should logging', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            instance.invalidate();
+
+            return instance.waitUntilValid(() => {
+              expect(getLogsPlugin.logs).toMatchSnapshot();
+
+              done();
+            });
+          });
+      });
+    });
 
     describe('should logging on successfully build in multi-compiler mode', () => {
       let compiler;
@@ -3249,13 +3249,9 @@ describe('middleware', () => {
               return done(error);
             }
 
-            fs.writeFile(path.resolve(process.cwd(), './1-1'), 'HERE');
-
             instance.invalidate();
 
             return instance.waitUntilValid(() => {
-              fs.writeFile(path.resolve(process.cwd(), './1-2'), 'HERE');
-
               expect(getLogsPlugin.logs).toMatchSnapshot();
 
               done();
