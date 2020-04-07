@@ -1,5 +1,97 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`middleware logger should logging an error from the "fs.mkdir" method when the "writeToDisk" option is "true"  should logging 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "Unable to write \\"/absolute/path/to/test/outputs/write-to-disk-mkdir-error\\" directory to disk:
+Error: Error in the \\"fs.mkdir\\" method.",
+    ],
+  ],
+]
+`;
+
+exports[`middleware logger should logging an error from the "fs.writeFile" method when the "writeToDisk" option is "true"  should logging 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "Unable to write \\"/absolute/path/to/test/outputs/write-to-disk-writeFile-error/bundle.js\\" asset to disk:
+Error: Error in the \\"fs.writeFile\\" method.",
+    ],
+  ],
+]
+`;
+
+exports[`middleware logger should logging an error in "watch" method should logging on startup 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "Error: Error in Watch method",
+    ],
+  ],
+]
+`;
+
+exports[`middleware logger should logging an warning should logging 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "warn",
+    Array [
+      "WARNING in Warning",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled with warnings.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiling...",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "warn",
+    Array [
+      "WARNING in Warning",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled with warnings.",
+    ],
+  ],
+]
+`;
+
 exports[`middleware logger should logging on successfully build in multi-compiler mode should logging 1`] = `
 Array [
   Array [
@@ -49,6 +141,248 @@ Array [
     "info",
     Array [
       "Compiled successfully.",
+    ],
+  ],
+]
+`;
+
+exports[`middleware logger should logging on unsuccessful build in multi-compiler  should logging 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /static-one/bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Failed to compile.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Failed to compile.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiling...",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Failed to compile.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Failed to compile.",
+    ],
+  ],
+]
+`;
+
+exports[`middleware logger should logging on unsuccessful build should logging 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Failed to compile.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiling...",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Failed to compile.",
+    ],
+  ],
+]
+`;
+
+exports[`middleware logger should logging warnings in multi-compiler mode should logging 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /static-one/bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "warn",
+    Array [
+      "WARNING in Warning",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled with warnings.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "warn",
+    Array [
+      "WARNING in Warning",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled with warnings.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiling...",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "warn",
+    Array [
+      "WARNING in Warning",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled with warnings.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "warn",
+    Array [
+      "WARNING in Warning",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled with warnings.",
     ],
   ],
 ]
