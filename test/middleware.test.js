@@ -3416,37 +3416,37 @@ describe('middleware', () => {
       });
     });
 
-    //describe('should logging an error in "watch" method', () => {
-    //  let getLogsPlugin;
-    //
-    //  it('should logging on startup', () => {
-    //    const compiler = getCompiler(webpackConfig);
-    //
-    //    const watchSpy = jest
-    //      .spyOn(compiler, 'watch')
-    //      .mockImplementation((watchOptions, callback) => {
-    //        const error = new Error('Error in Watch method');
-    //
-    //        error.stack = '';
-    //
-    //        callback(error);
-    //
-    //        return { close: () => {} };
-    //      });
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    expect(getLogsPlugin.logs).toMatchSnapshot();
-    //
-    //    instance.close();
-    //
-    //    watchSpy.mockRestore();
-    //  });
-    //});
-    //
+    describe('should logging an error in "watch" method', () => {
+      let getLogsPlugin;
+
+      it('should logging on startup', () => {
+        const compiler = getCompiler(webpackConfig);
+
+        const watchSpy = jest
+          .spyOn(compiler, 'watch')
+          .mockImplementation((watchOptions, callback) => {
+            const error = new Error('Error in Watch method');
+
+            error.stack = '';
+
+            callback(error);
+
+            return { close: () => {} };
+          });
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        expect(getLogsPlugin.logs).toMatchSnapshot();
+
+        instance.close();
+
+        watchSpy.mockRestore();
+      });
+    });
+
     //describe('should logging an error from the "fs.mkdir" method when the "writeToDisk" option is "true" ', () => {
     //  let compiler;
     //  let getLogsPlugin;
