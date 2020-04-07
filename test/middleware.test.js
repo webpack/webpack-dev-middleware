@@ -3221,44 +3221,44 @@ describe('middleware', () => {
     //  });
     //});
 
-    //describe('should logging on successfully build in multi-compiler mode', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler(webpackMultiConfig);
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should logging', (done) => {
-    //    request(app)
-    //      .get('/static-one/bundle.js')
-    //      .expect(200, (error) => {
-    //        if (error) {
-    //          return done(error);
-    //        }
-    //
-    //        instance.invalidate();
-    //
-    //        return instance.waitUntilValid(() => {
-    //          expect(getLogsPlugin.logs).toMatchSnapshot();
-    //
-    //          done();
-    //        });
-    //      });
-    //  });
-    //});
+    describe('should logging on successfully build in multi-compiler mode', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackMultiConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should logging', (done) => {
+        request(app)
+          .get('/static-one/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            instance.invalidate();
+
+            return instance.waitUntilValid(() => {
+              expect(getLogsPlugin.logs).toMatchSnapshot();
+
+              done();
+            });
+          });
+      });
+    });
 
     describe('should logging on unsuccessful build', () => {
       let compiler;
