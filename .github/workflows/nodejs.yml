@@ -80,7 +80,9 @@ jobs:
         run: npm i -g npm
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci
+          npm rebuild
 
       - name: Install webpack ${{ matrix.webpack-version }}
         run: npm i webpack@${{ matrix.webpack-version }}
