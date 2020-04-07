@@ -80,20 +80,17 @@ jobs:
         run: npm i -g npm
 
       - name: Install dependencies
-        run: |
-          npm ci
-          npm rebuild
+        run: npm ci
 
       - name: Install webpack ${{ matrix.webpack-version }}
         run: npm i webpack@${{ matrix.webpack-version }}
 
       - name: Run tests for webpack version ${{ matrix.webpack-version }}
-        run: node_modules/.bin/jest test/middleware.test.js -u --verbose
-
-      - name: Cat
-        run: cat crash.log
-
         # run: npm run test:coverage -- --ci
+        run: |
+          node --version
+          node_modules/.bin/jest test/middleware.test.js -u
+
       - name: Submit coverage data to codecov
         uses: codecov/codecov-action@v1
         with:
