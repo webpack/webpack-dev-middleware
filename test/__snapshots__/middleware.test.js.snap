@@ -1,5 +1,17 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`middleware logger should logging an error in "watch" method should logging on startup 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "Error: Error in Watch method",
+    ],
+  ],
+]
+`;
+
 exports[`middleware logger should logging an warning should logging 1`] = `
 Array [
   Array [
