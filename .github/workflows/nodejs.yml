@@ -90,6 +90,9 @@ jobs:
       - name: Run tests for webpack version ${{ matrix.webpack-version }}
         run: node_modules/.bin/jest test/middleware.test.js -u --verbose
 
+      - name: Cat
+        run: cat crash.log
+
         # run: npm run test:coverage -- --ci
       - name: Submit coverage data to codecov
         uses: codecov/codecov-action@v1
