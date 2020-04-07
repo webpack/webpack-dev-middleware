@@ -3182,51 +3182,12 @@ describe('middleware', () => {
   //});
 
   describe('logger', () => {
-    describe('should logging on successfully build', () => {
-      let compiler;
-      let getLogsPlugin;
-
-      beforeAll((done) => {
-        compiler = getCompiler(webpackConfig);
-
-        getLogsPlugin = new GetLogsPlugin();
-        getLogsPlugin.apply(compiler);
-
-        instance = middleware(compiler);
-
-        app = express();
-        app.use(instance);
-
-        listen = listenShorthand(done);
-      });
-
-      afterAll(close);
-
-      it('should logging', (done) => {
-        request(app)
-          .get('/bundle.js')
-          .expect(200, (error) => {
-            if (error) {
-              return done(error);
-            }
-
-            instance.invalidate();
-
-            return instance.waitUntilValid(() => {
-              expect(getLogsPlugin.logs).toMatchSnapshot();
-
-              done();
-            });
-          });
-      });
-    });
-
-    //describe('should logging on successfully build in multi-compiler mode', () => {
+    //describe('should logging on successfully build', () => {
     //  let compiler;
     //  let getLogsPlugin;
     //
     //  beforeAll((done) => {
-    //    compiler = getCompiler(webpackMultiConfig);
+    //    compiler = getCompiler(webpackConfig);
     //
     //    getLogsPlugin = new GetLogsPlugin();
     //    getLogsPlugin.apply(compiler);
@@ -3243,7 +3204,7 @@ describe('middleware', () => {
     //
     //  it('should logging', (done) => {
     //    request(app)
-    //      .get('/static-one/bundle.js')
+    //      .get('/bundle.js')
     //      .expect(200, (error) => {
     //        if (error) {
     //          return done(error);
@@ -3260,51 +3221,12 @@ describe('middleware', () => {
     //  });
     //});
 
-    describe('should logging on unsuccessful build', () => {
+    describe('should logging on successfully build in multi-compiler mode', () => {
       let compiler;
       let getLogsPlugin;
 
       beforeAll((done) => {
-        compiler = getCompiler(webpackErrorConfig);
-
-        getLogsPlugin = new GetLogsPlugin();
-        getLogsPlugin.apply(compiler);
-
-        instance = middleware(compiler);
-
-        app = express();
-        app.use(instance);
-
-        listen = listenShorthand(done);
-      });
-
-      afterAll(close);
-
-      it('should logging', (done) => {
-        request(app)
-          .get('/bundle.js')
-          .expect(200, (error) => {
-            if (error) {
-              return done(error);
-            }
-
-            instance.invalidate();
-
-            return instance.waitUntilValid(() => {
-              expect(getLogsPlugin.logs).toMatchSnapshot();
-
-              done();
-            });
-          });
-      });
-    });
-
-    describe('should logging on unsuccessful build in multi-compiler ', () => {
-      let compiler;
-      let getLogsPlugin;
-
-      beforeAll((done) => {
-        compiler = getCompiler(webpackMultiErrorConfig);
+        compiler = getCompiler(webpackMultiConfig);
 
         getLogsPlugin = new GetLogsPlugin();
         getLogsPlugin.apply(compiler);
@@ -3338,230 +3260,308 @@ describe('middleware', () => {
       });
     });
 
-    describe('should logging an warning', () => {
-      let compiler;
-      let getLogsPlugin;
-
-      beforeAll((done) => {
-        compiler = getCompiler(webpackWarningConfig);
-
-        getLogsPlugin = new GetLogsPlugin();
-        getLogsPlugin.apply(compiler);
-
-        instance = middleware(compiler);
-
-        app = express();
-        app.use(instance);
-
-        listen = listenShorthand(done);
-      });
-
-      afterAll(close);
-
-      it('should logging', (done) => {
-        request(app)
-          .get('/bundle.js')
-          .expect(200, (error) => {
-            if (error) {
-              return done(error);
-            }
-
-            instance.invalidate();
-
-            return instance.waitUntilValid(() => {
-              expect(getLogsPlugin.logs).toMatchSnapshot();
-
-              done();
-            });
-          });
-      });
-    });
-
-    describe('should logging warnings in multi-compiler mode', () => {
-      let compiler;
-      let getLogsPlugin;
-
-      beforeAll((done) => {
-        compiler = getCompiler(webpackMultiWarningConfig);
-
-        getLogsPlugin = new GetLogsPlugin();
-        getLogsPlugin.apply(compiler);
-
-        instance = middleware(compiler);
-
-        app = express();
-        app.use(instance);
-
-        listen = listenShorthand(done);
-      });
-
-      afterAll(close);
-
-      it('should logging', (done) => {
-        request(app)
-          .get('/static-one/bundle.js')
-          .expect(200, (error) => {
-            if (error) {
-              return done(error);
-            }
-
-            instance.invalidate();
-
-            return instance.waitUntilValid(() => {
-              expect(getLogsPlugin.logs).toMatchSnapshot();
-
-              done();
-            });
-          });
-      });
-    });
-
-    describe('should logging an error in "watch" method', () => {
-      let getLogsPlugin;
-
-      it('should logging on startup', () => {
-        const compiler = getCompiler(webpackConfig);
-
-        const watchSpy = jest
-          .spyOn(compiler, 'watch')
-          .mockImplementation((watchOptions, callback) => {
-            const error = new Error('Error in Watch method');
-
-            error.stack = '';
-
-            callback(error);
-
-            return { close: () => {} };
-          });
-
-        getLogsPlugin = new GetLogsPlugin();
-        getLogsPlugin.apply(compiler);
-
-        instance = middleware(compiler);
-
-        expect(getLogsPlugin.logs).toMatchSnapshot();
-
-        instance.close();
-
-        watchSpy.mockRestore();
-      });
-    });
-
-    describe('should logging an error from the "fs.mkdir" method when the "writeToDisk" option is "true" ', () => {
-      let compiler;
-      let getLogsPlugin;
-      let mkdirSpy;
-
-      beforeAll((done) => {
-        compiler = getCompiler({
-          ...webpackSimpleConfig,
-          output: {
-            filename: 'bundle.js',
-            path: path.resolve(
-              __dirname,
-              './outputs/write-to-disk-mkdir-error'
-            ),
-          },
-        });
-
-        mkdirSpy = jest.spyOn(fs, 'mkdir').mockImplementation((...args) => {
-          const callback = args[args.length - 1];
-
-          return callback(new Error('Error in the "fs.mkdir" method.'));
-        });
-
-        getLogsPlugin = new GetLogsPlugin();
-        getLogsPlugin.apply(compiler);
-
-        instance = middleware(compiler, { writeToDisk: true });
-
-        app = express();
-        app.use(instance);
-
-        listen = listenShorthand(done);
-      });
-
-      afterAll(() => {
-        del.sync(
-          path.posix.resolve(__dirname, './outputs/write-to-disk-mkdir-error')
-        );
-
-        mkdirSpy.mockRestore();
-      });
-
-      it('should logging', (done) => {
-        compiler.hooks.failed.tap('FailedCatcher', () => {
-          instance.close(() => {
-            expect(getLogsPlugin.logs).toMatchSnapshot();
-
-            listen.close(() => {
-              done();
-            });
-          });
-        });
-      });
-    });
-
-    describe('should logging an error from the "fs.writeFile" method when the "writeToDisk" option is "true" ', () => {
-      let compiler;
-      let getLogsPlugin;
-      let writeFileSpy;
-
-      beforeAll((done) => {
-        compiler = getCompiler({
-          ...webpackSimpleConfig,
-          output: {
-            filename: 'bundle.js',
-            path: path.resolve(
-              __dirname,
-              './outputs/write-to-disk-writeFile-error'
-            ),
-          },
-        });
-
-        writeFileSpy = jest
-          .spyOn(fs, 'writeFile')
-          .mockImplementation((...args) => {
-            const callback = args[args.length - 1];
-
-            return callback(new Error('Error in the "fs.writeFile" method.'));
-          });
-
-        getLogsPlugin = new GetLogsPlugin();
-        getLogsPlugin.apply(compiler);
-
-        instance = middleware(compiler, { writeToDisk: true });
-
-        app = express();
-        app.use(instance);
-
-        listen = listenShorthand(done);
-      });
-
-      afterAll(() => {
-        writeFileSpy.mockRestore();
-
-        del.sync(
-          path.posix.resolve(
-            __dirname,
-            './outputs/write-to-disk-writeFile-error'
-          )
-        );
-
-        close();
-      });
-
-      it('should logging', (done) => {
-        compiler.hooks.failed.tap('FailedCatcher', () => {
-          instance.close(() => {
-            expect(getLogsPlugin.logs).toMatchSnapshot();
-
-            listen.close(() => {
-              done();
-            });
-          });
-        });
-      });
-    });
+    //  describe('should logging on unsuccessful build', () => {
+    //    let compiler;
+    //    let getLogsPlugin;
+    //
+    //    beforeAll((done) => {
+    //      compiler = getCompiler(webpackErrorConfig);
+    //
+    //      getLogsPlugin = new GetLogsPlugin();
+    //      getLogsPlugin.apply(compiler);
+    //
+    //      instance = middleware(compiler);
+    //
+    //      app = express();
+    //      app.use(instance);
+    //
+    //      listen = listenShorthand(done);
+    //    });
+    //
+    //    afterAll(close);
+    //
+    //    it('should logging', (done) => {
+    //      request(app)
+    //        .get('/bundle.js')
+    //        .expect(200, (error) => {
+    //          if (error) {
+    //            return done(error);
+    //          }
+    //
+    //          instance.invalidate();
+    //
+    //          return instance.waitUntilValid(() => {
+    //            expect(getLogsPlugin.logs).toMatchSnapshot();
+    //
+    //            done();
+    //          });
+    //        });
+    //    });
+    //  });
+    //
+    //  describe('should logging on unsuccessful build in multi-compiler ', () => {
+    //    let compiler;
+    //    let getLogsPlugin;
+    //
+    //    beforeAll((done) => {
+    //      compiler = getCompiler(webpackMultiErrorConfig);
+    //
+    //      getLogsPlugin = new GetLogsPlugin();
+    //      getLogsPlugin.apply(compiler);
+    //
+    //      instance = middleware(compiler);
+    //
+    //      app = express();
+    //      app.use(instance);
+    //
+    //      listen = listenShorthand(done);
+    //    });
+    //
+    //    afterAll(close);
+    //
+    //    it('should logging', (done) => {
+    //      request(app)
+    //        .get('/static-one/bundle.js')
+    //        .expect(200, (error) => {
+    //          if (error) {
+    //            return done(error);
+    //          }
+    //
+    //          instance.invalidate();
+    //
+    //          return instance.waitUntilValid(() => {
+    //            expect(getLogsPlugin.logs).toMatchSnapshot();
+    //
+    //            done();
+    //          });
+    //        });
+    //    });
+    //  });
+    //
+    //  describe('should logging an warning', () => {
+    //    let compiler;
+    //    let getLogsPlugin;
+    //
+    //    beforeAll((done) => {
+    //      compiler = getCompiler(webpackWarningConfig);
+    //
+    //      getLogsPlugin = new GetLogsPlugin();
+    //      getLogsPlugin.apply(compiler);
+    //
+    //      instance = middleware(compiler);
+    //
+    //      app = express();
+    //      app.use(instance);
+    //
+    //      listen = listenShorthand(done);
+    //    });
+    //
+    //    afterAll(close);
+    //
+    //    it('should logging', (done) => {
+    //      request(app)
+    //        .get('/bundle.js')
+    //        .expect(200, (error) => {
+    //          if (error) {
+    //            return done(error);
+    //          }
+    //
+    //          instance.invalidate();
+    //
+    //          return instance.waitUntilValid(() => {
+    //            expect(getLogsPlugin.logs).toMatchSnapshot();
+    //
+    //            done();
+    //          });
+    //        });
+    //    });
+    //  });
+    //
+    //  describe('should logging warnings in multi-compiler mode', () => {
+    //    let compiler;
+    //    let getLogsPlugin;
+    //
+    //    beforeAll((done) => {
+    //      compiler = getCompiler(webpackMultiWarningConfig);
+    //
+    //      getLogsPlugin = new GetLogsPlugin();
+    //      getLogsPlugin.apply(compiler);
+    //
+    //      instance = middleware(compiler);
+    //
+    //      app = express();
+    //      app.use(instance);
+    //
+    //      listen = listenShorthand(done);
+    //    });
+    //
+    //    afterAll(close);
+    //
+    //    it('should logging', (done) => {
+    //      request(app)
+    //        .get('/static-one/bundle.js')
+    //        .expect(200, (error) => {
+    //          if (error) {
+    //            return done(error);
+    //          }
+    //
+    //          instance.invalidate();
+    //
+    //          return instance.waitUntilValid(() => {
+    //            expect(getLogsPlugin.logs).toMatchSnapshot();
+    //
+    //            done();
+    //          });
+    //        });
+    //    });
+    //  });
+    //
+    //  describe('should logging an error in "watch" method', () => {
+    //    let getLogsPlugin;
+    //
+    //    it('should logging on startup', () => {
+    //      const compiler = getCompiler(webpackConfig);
+    //
+    //      const watchSpy = jest
+    //        .spyOn(compiler, 'watch')
+    //        .mockImplementation((watchOptions, callback) => {
+    //          const error = new Error('Error in Watch method');
+    //
+    //          error.stack = '';
+    //
+    //          callback(error);
+    //
+    //          return { close: () => {} };
+    //        });
+    //
+    //      getLogsPlugin = new GetLogsPlugin();
+    //      getLogsPlugin.apply(compiler);
+    //
+    //      instance = middleware(compiler);
+    //
+    //      expect(getLogsPlugin.logs).toMatchSnapshot();
+    //
+    //      instance.close();
+    //
+    //      watchSpy.mockRestore();
+    //    });
+    //  });
+    //
+    //  describe('should logging an error from the "fs.mkdir" method when the "writeToDisk" option is "true" ', () => {
+    //    let compiler;
+    //    let getLogsPlugin;
+    //    let mkdirSpy;
+    //
+    //    beforeAll((done) => {
+    //      compiler = getCompiler({
+    //        ...webpackSimpleConfig,
+    //        output: {
+    //          filename: 'bundle.js',
+    //          path: path.resolve(
+    //            __dirname,
+    //            './outputs/write-to-disk-mkdir-error'
+    //          ),
+    //        },
+    //      });
+    //
+    //      mkdirSpy = jest.spyOn(fs, 'mkdir').mockImplementation((...args) => {
+    //        const callback = args[args.length - 1];
+    //
+    //        return callback(new Error('Error in the "fs.mkdir" method.'));
+    //      });
+    //
+    //      getLogsPlugin = new GetLogsPlugin();
+    //      getLogsPlugin.apply(compiler);
+    //
+    //      instance = middleware(compiler, { writeToDisk: true });
+    //
+    //      app = express();
+    //      app.use(instance);
+    //
+    //      listen = listenShorthand(done);
+    //    });
+    //
+    //    afterAll(() => {
+    //      del.sync(
+    //        path.posix.resolve(__dirname, './outputs/write-to-disk-mkdir-error')
+    //      );
+    //
+    //      mkdirSpy.mockRestore();
+    //    });
+    //
+    //    it('should logging', (done) => {
+    //      compiler.hooks.failed.tap('FailedCatcher', () => {
+    //        instance.close(() => {
+    //          expect(getLogsPlugin.logs).toMatchSnapshot();
+    //
+    //          listen.close(() => {
+    //            done();
+    //          });
+    //        });
+    //      });
+    //    });
+    //  });
+    //
+    //  describe('should logging an error from the "fs.writeFile" method when the "writeToDisk" option is "true" ', () => {
+    //    let compiler;
+    //    let getLogsPlugin;
+    //    let writeFileSpy;
+    //
+    //    beforeAll((done) => {
+    //      compiler = getCompiler({
+    //        ...webpackSimpleConfig,
+    //        output: {
+    //          filename: 'bundle.js',
+    //          path: path.resolve(
+    //            __dirname,
+    //            './outputs/write-to-disk-writeFile-error'
+    //          ),
+    //        },
+    //      });
+    //
+    //      writeFileSpy = jest
+    //        .spyOn(fs, 'writeFile')
+    //        .mockImplementation((...args) => {
+    //          const callback = args[args.length - 1];
+    //
+    //          return callback(new Error('Error in the "fs.writeFile" method.'));
+    //        });
+    //
+    //      getLogsPlugin = new GetLogsPlugin();
+    //      getLogsPlugin.apply(compiler);
+    //
+    //      instance = middleware(compiler, { writeToDisk: true });
+    //
+    //      app = express();
+    //      app.use(instance);
+    //
+    //      listen = listenShorthand(done);
+    //    });
+    //
+    //    afterAll(() => {
+    //      writeFileSpy.mockRestore();
+    //
+    //      del.sync(
+    //        path.posix.resolve(
+    //          __dirname,
+    //          './outputs/write-to-disk-writeFile-error'
+    //        )
+    //      );
+    //
+    //      close();
+    //    });
+    //
+    //    it('should logging', (done) => {
+    //      compiler.hooks.failed.tap('FailedCatcher', () => {
+    //        instance.close(() => {
+    //          expect(getLogsPlugin.logs).toMatchSnapshot();
+    //
+    //          listen.close(() => {
+    //            done();
+    //          });
+    //        });
+    //      });
+    //    });
+    //  });
   });
 });
