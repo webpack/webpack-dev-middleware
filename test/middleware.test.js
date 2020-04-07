@@ -3502,66 +3502,66 @@ describe('middleware', () => {
       });
     });
 
-    //describe('should logging an error from the "fs.writeFile" method when the "writeToDisk" option is "true" ', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //  let writeFileSpy;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler({
-    //      ...webpackSimpleConfig,
-    //      output: {
-    //        filename: 'bundle.js',
-    //        path: path.resolve(
-    //          __dirname,
-    //          './outputs/write-to-disk-writeFile-error'
-    //        ),
-    //      },
-    //    });
-    //
-    //    writeFileSpy = jest
-    //      .spyOn(fs, 'writeFile')
-    //      .mockImplementation((...args) => {
-    //        const callback = args[args.length - 1];
-    //
-    //        return callback(new Error('Error in the "fs.writeFile" method.'));
-    //      });
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler, { writeToDisk: true });
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(() => {
-    //    writeFileSpy.mockRestore();
-    //
-    //    del.sync(
-    //      path.posix.resolve(
-    //        __dirname,
-    //        './outputs/write-to-disk-writeFile-error'
-    //      )
-    //    );
-    //
-    //    close();
-    //  });
-    //
-    //  it('should logging', (done) => {
-    //    compiler.hooks.failed.tap('FailedCatcher', () => {
-    //      instance.close(() => {
-    //        expect(getLogsPlugin.logs).toMatchSnapshot();
-    //
-    //        listen.close(() => {
-    //          done();
-    //        });
-    //      });
-    //    });
-    //  });
-    //});
+    describe('should logging an error from the "fs.writeFile" method when the "writeToDisk" option is "true" ', () => {
+      let compiler;
+      let getLogsPlugin;
+      let writeFileSpy;
+
+      beforeAll((done) => {
+        compiler = getCompiler({
+          ...webpackSimpleConfig,
+          output: {
+            filename: 'bundle.js',
+            path: path.resolve(
+              __dirname,
+              './outputs/write-to-disk-writeFile-error'
+            ),
+          },
+        });
+
+        writeFileSpy = jest
+          .spyOn(fs, 'writeFile')
+          .mockImplementation((...args) => {
+            const callback = args[args.length - 1];
+
+            return callback(new Error('Error in the "fs.writeFile" method.'));
+          });
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler, { writeToDisk: true });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(() => {
+        writeFileSpy.mockRestore();
+
+        del.sync(
+          path.posix.resolve(
+            __dirname,
+            './outputs/write-to-disk-writeFile-error'
+          )
+        );
+
+        close();
+      });
+
+      it('should logging', (done) => {
+        compiler.hooks.failed.tap('FailedCatcher', () => {
+          instance.close(() => {
+            expect(getLogsPlugin.logs).toMatchSnapshot();
+
+            listen.close(() => {
+              done();
+            });
+          });
+        });
+      });
+    });
   });
 });
