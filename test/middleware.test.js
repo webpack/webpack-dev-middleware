@@ -3327,7 +3327,7 @@ describe('middleware', () => {
               return done(error);
             }
 
-            instance.invalidate();
+            // instance.invalidate();
 
             return instance.waitUntilValid(() => {
               expect(getLogsPlugin.logs).toMatchSnapshot();
