@@ -3338,84 +3338,84 @@ describe('middleware', () => {
       });
     });
 
-    //describe('should logging an warning', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler(webpackWarningConfig);
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should logging', (done) => {
-    //    request(app)
-    //      .get('/bundle.js')
-    //      .expect(200, (error) => {
-    //        if (error) {
-    //          return done(error);
-    //        }
-    //
-    //        instance.invalidate();
-    //
-    //        return instance.waitUntilValid(() => {
-    //          expect(getLogsPlugin.logs).toMatchSnapshot();
-    //
-    //          done();
-    //        });
-    //      });
-    //  });
-    //});
+    describe('should logging an warning', () => {
+      let compiler;
+      let getLogsPlugin;
 
-    //describe('should logging warnings in multi-compiler mode', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler(webpackMultiWarningConfig);
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should logging', (done) => {
-    //    request(app)
-    //      .get('/static-one/bundle.js')
-    //      .expect(200, (error) => {
-    //        if (error) {
-    //          return done(error);
-    //        }
-    //
-    //        instance.invalidate();
-    //
-    //        return instance.waitUntilValid(() => {
-    //          expect(getLogsPlugin.logs).toMatchSnapshot();
-    //
-    //          done();
-    //        });
-    //      });
-    //  });
-    //});
-    //
+      beforeAll((done) => {
+        compiler = getCompiler(webpackWarningConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should logging', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            instance.invalidate();
+
+            return instance.waitUntilValid(() => {
+              expect(getLogsPlugin.logs).toMatchSnapshot();
+
+              done();
+            });
+          });
+      });
+    });
+
+    describe('should logging warnings in multi-compiler mode', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackMultiWarningConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should logging', (done) => {
+        request(app)
+          .get('/static-one/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            instance.invalidate();
+
+            return instance.waitUntilValid(() => {
+              expect(getLogsPlugin.logs).toMatchSnapshot();
+
+              done();
+            });
+          });
+      });
+    });
+
     //describe('should logging an error in "watch" method', () => {
     //  let getLogsPlugin;
     //
