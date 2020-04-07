@@ -65,10 +65,10 @@ jobs:
 
       - name: Set environment variables
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
-        run: echo "::set-env name=MAYBE_NEED_SUDO::sudo"
+        run: echo "::set-env name=SUDO::sudo"
 
       - name: Use latest NPM
-        run: ${{ MAYBE_NEED_SUDO }} npm i -g npm
+        run: ${{ SUDO }} npm i -g npm
 
       - name: Install dependencies
         run: npm ci
