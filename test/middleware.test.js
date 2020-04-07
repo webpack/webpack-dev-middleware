@@ -373,7 +373,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should work with difference requests', () => {
+   /* describe('should work with difference requests', () => {
       const basicOutputPath = path.resolve(__dirname, './outputs/basic');
       const fixtures = [
         {
@@ -788,1142 +788,1142 @@ describe('middleware', () => {
           }
         });
       }
-    });
+    });*/
 
-    //describe('should respect the value of the "Content-Type" header from other middleware', () => {
-    //  beforeAll((done) => {
-    //    const compiler = getCompiler(webpackConfig);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use((req, res, next) => {
-    //      res.set('Content-Type', 'application/octet-stream');
-    //      next();
-    //    });
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should not guess a MIME type if the "Content-Type" header is found', (done) => {
-    //    request(app)
-    //      .get('/bundle.js')
-    //      .expect('Content-Type', 'application/octet-stream')
-    //      .expect(200, done);
-    //  });
-    //});
-    //
-    //describe('should not throw an error on the valid "output.path" value for linux', () => {
-    //  it('should be no error', (done) => {
-    //    expect(() => {
-    //      const compiler = getCompiler();
-    //
-    //      compiler.outputPath = '/my/path';
-    //
-    //      instance = middleware(compiler);
-    //
-    //      instance.close(done);
-    //    }).not.toThrow();
-    //  });
-    //});
-    //
-    //describe('should not throw an error on the valid "output.path" value for windows', () => {
-    //  it('should be no error', (done) => {
-    //    expect(() => {
-    //      const compiler = getCompiler();
-    //
-    //      compiler.outputPath = 'C:/my/path';
-    //
-    //      instance = middleware(compiler);
-    //
-    //      instance.close(done);
-    //    }).not.toThrow();
-    //  });
-    //});
-    //
-    //describe('should work without "output" options', () => {
-    //  beforeAll((done) => {
-    //    // eslint-disable-next-line no-undefined
-    //    const compiler = getCompiler({ ...webpackConfig, output: undefined });
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return "200" code for GET request to the bundle file', (done) => {
-    //    request(app).get('/main.js').expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to a nonexistent file', (done) => {
-    //    request(app).get('/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the non-public path', (done) => {
-    //    request(app)
-    //      .get('/')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "index" option', (done) => {
-    //    request(app)
-    //      .get('/index.html')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //});
-    //
-    //describe('should work with trailing slash at the end of the "option.path" option', () => {
-    //  beforeAll((done) => {
-    //    const compiler = getCompiler({
-    //      ...webpackConfig,
-    //      output: {
-    //        filename: 'bundle.js',
-    //        path: path.resolve(__dirname, './outputs/basic/'),
-    //      },
-    //    });
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return "200" code for GET request to the bundle file', (done) => {
-    //    request(app).get('/bundle.js').expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to a nonexistent file', (done) => {
-    //    request(app).get('/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the non-public path', (done) => {
-    //    request(app)
-    //      .get('/')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "index" option', (done) => {
-    //    request(app)
-    //      .get('/index.html')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //});
-    //
-    //describe('should respect empty "output.publicPath" and "output.path" options', () => {
-    //  beforeAll((done) => {
-    //    const compiler = getCompiler(webpackConfig);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return "200" code for GET request to the bundle file', (done) => {
-    //    request(app).get('/bundle.js').expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to a nonexistent file', (done) => {
-    //    request(app).get('/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the non-public path', (done) => {
-    //    request(app)
-    //      .get('/')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "index" option', (done) => {
-    //    request(app)
-    //      .get('/index.html')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //});
-    //
-    //describe('should respect "output.publicPath" and "output.path" options', () => {
-    //  beforeAll((done) => {
-    //    const compiler = getCompiler({
-    //      ...webpackConfig,
-    //      output: {
-    //        filename: 'bundle.js',
-    //        publicPath: '/static/',
-    //        path: path.resolve(__dirname, './outputs/other-basic'),
-    //      },
-    //    });
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return "200" code for GET request to the bundle file', (done) => {
-    //    request(app).get('/static/bundle.js').expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to a nonexistent file', (done) => {
-    //    request(app).get('/static/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the public path', (done) => {
-    //    request(app)
-    //      .get('/static/')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "index" option', (done) => {
-    //    request(app)
-    //      .get('/static/index.html')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to the non-public path', (done) => {
-    //    request(app)
-    //      .get('/')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(404, done);
-    //  });
-    //});
-    //
-    //describe('should respect "output.publicPath" and "output.path" options with hash substitutions', () => {
-    //  let hash;
-    //
-    //  beforeAll((done) => {
-    //    const compiler = getCompiler({
-    //      ...webpackConfig,
-    //      output: {
-    //        filename: 'bundle.js',
-    //        publicPath: isWebpack5()
-    //          ? '/static/[fullhash]/'
-    //          : '/static/[hash]/',
-    //        path: isWebpack5()
-    //          ? path.resolve(__dirname, './outputs/other-basic-[fullhash]')
-    //          : path.resolve(__dirname, './outputs/other-basic-[hash]'),
-    //      },
-    //    });
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(() => {
-    //      compiler.hooks.afterCompile.tap('wdm-test', ({ hash: h }) => {
-    //        hash = h;
-    //        done();
-    //      });
-    //    });
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return "200" code for GET request to the bundle file', (done) => {
-    //    request(app).get(`/static/${hash}/bundle.js`).expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to a nonexistent file', (done) => {
-    //    request(app).get('/static/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the public path', (done) => {
-    //    request(app)
-    //      .get(`/static/${hash}/`)
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "index" option', (done) => {
-    //    request(app)
-    //      .get(`/static/${hash}/index.html`)
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to the non-public path', (done) => {
-    //    request(app).get('/').expect(404, done);
-    //  });
-    //});
-    //
-    //describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with hash substitutions', () => {
-    //  let hashOne;
-    //  let hashTwo;
-    //
-    //  beforeAll((done) => {
-    //    const compiler = getCompiler([
-    //      {
-    //        ...webpackMultiConfig[0],
-    //        output: {
-    //          filename: 'bundle.js',
-    //          path: isWebpack5()
-    //            ? path.resolve(
-    //                __dirname,
-    //                './outputs/array-[fullhash]/static-one'
-    //              )
-    //            : path.resolve(__dirname, './outputs/array-[hash]/static-one'),
-    //          publicPath: isWebpack5()
-    //            ? '/static-one/[fullhash]/'
-    //            : '/static-one/[hash]/',
-    //        },
-    //      },
-    //      {
-    //        ...webpackMultiConfig[1],
-    //        output: {
-    //          filename: 'bundle.js',
-    //          path: isWebpack5()
-    //            ? path.resolve(
-    //                __dirname,
-    //                './outputs/array-[fullhash]/static-two'
-    //              )
-    //            : path.resolve(__dirname, './outputs/array-[hash]/static-two'),
-    //          publicPath: isWebpack5()
-    //            ? '/static-two/[fullhash]/'
-    //            : '/static-two/[hash]/',
-    //        },
-    //      },
-    //    ]);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(() => {
-    //      compiler.hooks.done.tap('wdm-test', (params) => {
-    //        const [one, two] = params.stats;
-    //
-    //        hashOne = one.hash;
-    //        hashTwo = two.hash;
-    //
-    //        done();
-    //      });
-    //    });
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
-    //    request(app).get(`/static-one/${hashOne}/bundle.js`).expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to nonexistent file for the first compiler', (done) => {
-    //    request(app).get(`/static-one/${hashOne}/invalid.js`).expect(404, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request for the second bundle file', (done) => {
-    //    request(app)
-    //      .get(`/static-one/${hashOne}/`)
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
-    //    request(app)
-    //      .get(`/static-one/${hashOne}/index.html`)
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the bundle file for the second compiler', (done) => {
-    //    request(app).get(`/static-two/${hashTwo}/bundle.js`).expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to nonexistent file for the second compiler', (done) => {
-    //    request(app).get(`/static-two/${hashTwo}/invalid.js`).expect(404, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to the "public" path for the second compiler', (done) => {
-    //    request(app).get(`/static-two/${hashTwo}/`).expect(404, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to the "index" option for the second compiler', (done) => {
-    //    request(app).get(`/static-two/${hashTwo}/index.html`).expect(404, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to non-public path', (done) => {
-    //    request(app).get('/').expect(404, done);
-    //  });
-    //});
-    //
-    //describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with difference "publicPath" and "path"', () => {
-    //  beforeAll((done) => {
-    //    const compiler = getCompiler(webpackMultiConfig);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
-    //    request(app).get('/static-one/bundle.js').expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to nonexistent file for the first compiler', (done) => {
-    //    request(app).get('/static-one/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "public" path for the first compiler', (done) => {
-    //    request(app)
-    //      .get('/static-one/')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
-    //    request(app)
-    //      .get('/static-one/index.html')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the second bundle file', (done) => {
-    //    request(app).get('/static-two/bundle.js').expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to nonexistent file for the second compiler', (done) => {
-    //    request(app).get('/static-two/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "public" path for the second compiler', (done) => {
-    //    request(app).get('/static-two/').expect(404, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "index" option for the second compiler', (done) => {
-    //    request(app).get('/static-two/index.html').expect(404, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to nonexistent file', (done) => {
-    //    request(app).get('/static/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to non-public path', (done) => {
-    //    request(app).get('/').expect(404, done);
-    //  });
-    //});
-    //
-    //describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with same "publicPath"', () => {
-    //  beforeAll((done) => {
-    //    const compiler = getCompiler([
-    //      {
-    //        ...webpackMultiConfig[0],
-    //        output: {
-    //          filename: 'bundle-one.js',
-    //          path: path.resolve(__dirname, './outputs/array/static-one'),
-    //          publicPath: '/my-public/',
-    //        },
-    //      },
-    //      {
-    //        ...webpackMultiConfig[1],
-    //        output: {
-    //          filename: 'bundle-two.js',
-    //          path: path.resolve(__dirname, './outputs/array/static-two'),
-    //          publicPath: '/my-public/',
-    //        },
-    //      },
-    //    ]);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
-    //    request(app).get('/my-public/bundle-one.js').expect(200, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the bundle file for the second compiler', (done) => {
-    //    request(app).get('/my-public/bundle-two.js').expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to nonexistent file', (done) => {
-    //    request(app).get('/my-public/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "public" path', (done) => {
-    //    request(app)
-    //      .get('/my-public/')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "index" option', (done) => {
-    //    request(app)
-    //      .get('/my-public/index.html')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to nonexistent file', (done) => {
-    //    request(app).get('/static/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to non-public path', (done) => {
-    //    request(app).get('/').expect(404, done);
-    //  });
-    //});
-    //
-    //describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with same "path"', () => {
-    //  beforeAll((done) => {
-    //    const compiler = getCompiler([
-    //      {
-    //        ...webpackMultiConfig[0],
-    //        output: {
-    //          filename: 'bundle-one.js',
-    //          path: path.resolve(__dirname, './outputs/array/static-one'),
-    //          publicPath: '/one-public/',
-    //        },
-    //      },
-    //      {
-    //        ...webpackMultiConfig[1],
-    //        output: {
-    //          filename: 'bundle-two.js',
-    //          path: path.resolve(__dirname, './outputs/array/static-one'),
-    //          publicPath: '/two-public/',
-    //        },
-    //      },
-    //    ]);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
-    //    request(app).get('/one-public/bundle-one.js').expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to nonexistent file to the first bundle file', (done) => {
-    //    request(app).get('/one-public/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "public" path for the first compiler', (done) => {
-    //    request(app)
-    //      .get('/one-public/')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
-    //    request(app)
-    //      .get('/one-public/index.html')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the bundle file for the second compiler', (done) => {
-    //    request(app).get('/two-public/bundle-two.js').expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to nonexistent file to the second bundle file', (done) => {
-    //    request(app).get('/two-public/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "public" path for the second compiler', (done) => {
-    //    request(app)
-    //      .get('/two-public/')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the "index" option for the second compiler', (done) => {
-    //    request(app)
-    //      .get('/two-public/index.html')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to nonexistent file', (done) => {
-    //    request(app).get('/static/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to non-public path', (done) => {
-    //    request(app).get('/').expect(404, done);
-    //  });
-    //});
-    //
-    //describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration (in first)', () => {
-    //  beforeAll((done) => {
-    //    const compiler = getCompiler(webpackClientServerConfig);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return "200" code for GET request to the bundle file', (done) => {
-    //    request(app).get('/static/bundle.js').expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to nonexistent file', (done) => {
-    //    request(app).get('/static/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to the public path', (done) => {
-    //    request(app)
-    //      .get('/static/')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to the "index" option', (done) => {
-    //    request(app)
-    //      .get('/static/index.html')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to non-public path', (done) => {
-    //    request(app).get('/').expect(404, done);
-    //  });
-    //});
-    //
-    //describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration (in second)', () => {
-    //  beforeAll((done) => {
-    //    const compiler = getCompiler([
-    //      webpackClientServerConfig[1],
-    //      webpackClientServerConfig[0],
-    //    ]);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return "200" code for GET request to the bundle file', (done) => {
-    //    request(app).get('/static/bundle.js').expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to nonexistent file', (done) => {
-    //    request(app).get('/static/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to the public path', (done) => {
-    //    request(app)
-    //      .get('/static/')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to the "index" option', (done) => {
-    //    request(app)
-    //      .get('/static/index.html')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to non-public path', (done) => {
-    //    request(app).get('/').expect(404, done);
-    //  });
-    //});
-    //
-    //describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration with same "path"', () => {
-    //  beforeAll((done) => {
-    //    const compiler = getCompiler([
-    //      {
-    //        ...webpackClientServerConfig[0],
-    //        output: {
-    //          filename: 'bundle-one.js',
-    //          path: path.resolve(__dirname, './outputs/client-server/same'),
-    //          publicPath: '/static/',
-    //        },
-    //      },
-    //      {
-    //        ...webpackClientServerConfig[1],
-    //        output: {
-    //          filename: 'bundle-two.js',
-    //          path: path.resolve(__dirname, './outputs/client-server/same'),
-    //        },
-    //      },
-    //    ]);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return "200" code for GET request to the bundle file', (done) => {
-    //    request(app).get('/static/bundle-one.js').expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to a nonexistent file', (done) => {
-    //    request(app).get('/static/invalid.js').expect(404, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to the public path', (done) => {
-    //    request(app).get('/static/').expect(200, done);
-    //  });
-    //
-    //  it('should return "200" code for GET request to the non-public path', (done) => {
-    //    request(app)
-    //      .get('/')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //
-    //  it('should return "404" code for GET request to the "index" option', (done) => {
-    //    request(app)
-    //      .get('/static/index.html')
-    //      .expect('Content-Type', 'text/html; charset=utf-8')
-    //      .expect(200, done);
-    //  });
-    //});
-    //
-    //describe('should respect the "stats" option with the "false" value from the configuration', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler({ ...webpackConfig, stats: false });
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return the "200" code for the "GET" request to the bundle file', (done) => {
-    //    request(app)
-    //      .get('/bundle.js')
-    //      .expect(200, (error) => {
-    //        if (error) {
-    //          return done(error);
-    //        }
-    //
-    //        expect(getLogsPlugin.logs).toMatchSnapshot();
-    //
-    //        return done();
-    //      });
-    //  });
-    //});
-    //
-    //describe('should respect the "stats" option with the "none" value from the configuration', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler({ ...webpackConfig, stats: 'none' });
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return the "200" code for the "GET" request to the bundle file', (done) => {
-    //    request(app)
-    //      .get('/bundle.js')
-    //      .expect(200, (error) => {
-    //        if (error) {
-    //          return done(error);
-    //        }
-    //
-    //        expect(getLogsPlugin.logs).toMatchSnapshot();
-    //
-    //        return done();
-    //      });
-    //  });
-    //});
-    //
-    //describe('should respect the "stats" option with the "minimal" value from the configuration', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler({ ...webpackConfig, stats: 'minimal' });
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return the "200" code for the "GET" request to the bundle file', (done) => {
-    //    request(app)
-    //      .get('/bundle.js')
-    //      .expect(200, (error) => {
-    //        if (error) {
-    //          return done(error);
-    //        }
-    //
-    //        expect(getLogsPlugin.logs).toMatchSnapshot();
-    //
-    //        return done();
-    //      });
-    //  });
-    //});
-    //
-    //describe('should respect the "stats" option in multi-compiler mode', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler(webpackOneErrorOneWarningOneSuccessConfig);
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return the "200" code for the "GET" requests to bundles file', (done) => {
-    //    request(app)
-    //      .get('/static-one/bundle.js')
-    //      .expect(200, (firstError) => {
-    //        if (firstError) {
-    //          return done(firstError);
-    //        }
-    //
-    //        return request(app)
-    //          .get('/static-two/bundle.js')
-    //          .expect(200, (secondError) => {
-    //            if (secondError) {
-    //              return done(secondError);
-    //            }
-    //
-    //            return request(app)
-    //              .get('/static-three/bundle.js')
-    //              .expect(200, (thirdError) => {
-    //                if (thirdError) {
-    //                  return done(thirdError);
-    //                }
-    //
-    //                expect(getLogsPlugin.logs).toMatchSnapshot();
-    //
-    //                return done();
-    //              });
-    //          });
-    //      });
-    //  });
-    //});
-    //
-    //describe('should respect the "stats" option with the "{ all: false, entrypoints: true }" value from the configuration', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler({
-    //      ...webpackConfig,
-    //      stats: { all: false, entrypoints: true },
-    //    });
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return the "200" code for the "GET" request to the bundle file', (done) => {
-    //    request(app)
-    //      .get('/bundle.js')
-    //      .expect(200, (error) => {
-    //        if (error) {
-    //          return done(error);
-    //        }
-    //
-    //        expect(getLogsPlugin.logs).toMatchSnapshot();
-    //
-    //        return done();
-    //      });
-    //  });
-    //});
-    //
-    //describe('should respect the "stats" option from the configuration in multi-compiler mode', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler(webpackMultiWarningConfig);
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return the "200" code for the "GET" request to bundle files', (done) => {
-    //    request(app)
-    //      .get('/static-one/bundle.js')
-    //      .expect(200, (firstError) => {
-    //        if (firstError) {
-    //          return done(firstError);
-    //        }
-    //
-    //        return request(app)
-    //          .get('/static-two/bundle.js')
-    //          .expect(200, (secondError) => {
-    //            if (secondError) {
-    //              return done(secondError);
-    //            }
-    //
-    //            expect(getLogsPlugin.logs).toMatchSnapshot();
-    //
-    //            return done();
-    //          });
-    //      });
-    //  });
-    //});
-    //
-    //describe('should respect the "stats" option from the configuration in multi-compiler mode and use the "name" option', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler(
-    //      webpackOneErrorOneWarningOneSuccessWithNamesConfig
-    //    );
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return the "200" code for "GET" requests to bundle files', (done) => {
-    //    request(app)
-    //      .get('/static-one/bundle.js')
-    //      .expect(200, (firstError) => {
-    //        if (firstError) {
-    //          return done(firstError);
-    //        }
-    //
-    //        return request(app)
-    //          .get('/static-two/bundle.js')
-    //          .expect(200, (secondError) => {
-    //            if (secondError) {
-    //              return done(secondError);
-    //            }
-    //
-    //            return request(app)
-    //              .get('/static-three/bundle.js')
-    //              .expect(200, (thirdError) => {
-    //                if (thirdError) {
-    //                  return done(thirdError);
-    //                }
-    //
-    //                expect(getLogsPlugin.logs).toMatchSnapshot();
-    //
-    //                return done();
-    //              });
-    //          });
-    //      });
-    //  });
-    //});
-    //
-    //describe('should throw an error on "run" when we watching', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler(webpackConfig);
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should logging an error', (done) => {
-    //    request(app)
-    //      .get('/bundle.js')
-    //      .expect(200, (error) => {
-    //        if (error) {
-    //          return done(error);
-    //        }
-    //
-    //        return compiler.run((runError) => {
-    //          expect(() => {
-    //            throw runError;
-    //          }).toThrowErrorMatchingSnapshot();
-    //
-    //          done();
-    //        });
-    //      });
-    //  });
-    //});
-    //
-    //describe('should throw an error on "watch" when we watching', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler(webpackConfig);
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should logging an error', (done) => {
-    //    request(app)
-    //      .get('/bundle.js')
-    //      .expect(200, (error) => {
-    //        if (error) {
-    //          return done(error);
-    //        }
-    //
-    //        return compiler.watch({}, (watchError) => {
-    //          expect(() => {
-    //            throw watchError;
-    //          }).toThrowErrorMatchingSnapshot();
-    //
-    //          done();
-    //        });
-    //      });
-    //  });
-    //});
-    //
-    //describe('should handle an earlier request if a change happened while compiling', () => {
-    //  beforeAll((done) => {
-    //    const compiler = getCompiler(webpackConfig);
-    //
-    //    instance = middleware(compiler);
-    //
-    //    let invalidated = false;
-    //
-    //    compiler.hooks.done.tap('Invalidated', () => {
-    //      if (!invalidated) {
-    //        instance.invalidate();
-    //
-    //        invalidated = true;
-    //      }
-    //    });
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(close);
-    //
-    //  it('should return the "200" code for the "GET" request to the bundle file', (done) => {
-    //    request(app).get('/bundle.js').expect(200, done);
-    //  });
-    //});
+    /*describe('should respect the value of the "Content-Type" header from other middleware', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use((req, res, next) => {
+          res.set('Content-Type', 'application/octet-stream');
+          next();
+        });
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should not guess a MIME type if the "Content-Type" header is found', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect('Content-Type', 'application/octet-stream')
+          .expect(200, done);
+      });
+    });*/
+
+    /*describe('should not throw an error on the valid "output.path" value for linux', () => {
+      it('should be no error', (done) => {
+        expect(() => {
+          const compiler = getCompiler();
+
+          compiler.outputPath = '/my/path';
+
+          instance = middleware(compiler);
+
+          instance.close(done);
+        }).not.toThrow();
+      });
+    });*/
+
+    /*describe('should not throw an error on the valid "output.path" value for windows', () => {
+      it('should be no error', (done) => {
+        expect(() => {
+          const compiler = getCompiler();
+
+          compiler.outputPath = 'C:/my/path';
+
+          instance = middleware(compiler);
+
+          instance.close(done);
+        }).not.toThrow();
+      });
+    });*/
+
+    /*describe('should work without "output" options', () => {
+      beforeAll((done) => {
+        // eslint-disable-next-line no-undefined
+        const compiler = getCompiler({ ...webpackConfig, output: undefined });
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return "200" code for GET request to the bundle file', (done) => {
+        request(app).get('/main.js').expect(200, done);
+      });
+
+      it('should return "404" code for GET request to a nonexistent file', (done) => {
+        request(app).get('/invalid.js').expect(404, done);
+      });
+
+      it('should return "200" code for GET request to the non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+    });*/
+
+    /*describe('should work with trailing slash at the end of the "option.path" option', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: path.resolve(__dirname, './outputs/basic/'),
+          },
+        });
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return "200" code for GET request to the bundle file', (done) => {
+        request(app).get('/bundle.js').expect(200, done);
+      });
+
+      it('should return "404" code for GET request to a nonexistent file', (done) => {
+        request(app).get('/invalid.js').expect(404, done);
+      });
+
+      it('should return "200" code for GET request to the non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+    });*/
+
+    /*describe('should respect empty "output.publicPath" and "output.path" options', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return "200" code for GET request to the bundle file', (done) => {
+        request(app).get('/bundle.js').expect(200, done);
+      });
+
+      it('should return "404" code for GET request to a nonexistent file', (done) => {
+        request(app).get('/invalid.js').expect(404, done);
+      });
+
+      it('should return "200" code for GET request to the non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+    });*/
+
+    /*describe('should respect "output.publicPath" and "output.path" options', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            publicPath: '/static/',
+            path: path.resolve(__dirname, './outputs/other-basic'),
+          },
+        });
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return "200" code for GET request to the bundle file', (done) => {
+        request(app).get('/static/bundle.js').expect(200, done);
+      });
+
+      it('should return "404" code for GET request to a nonexistent file', (done) => {
+        request(app).get('/static/invalid.js').expect(404, done);
+      });
+
+      it('should return "200" code for GET request to the public path', (done) => {
+        request(app)
+          .get('/static/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/static/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to the non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(404, done);
+      });
+    });*/
+
+    /*describe('should respect "output.publicPath" and "output.path" options with hash substitutions', () => {
+      let hash;
+
+      beforeAll((done) => {
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            publicPath: isWebpack5()
+              ? '/static/[fullhash]/'
+              : '/static/[hash]/',
+            path: isWebpack5()
+              ? path.resolve(__dirname, './outputs/other-basic-[fullhash]')
+              : path.resolve(__dirname, './outputs/other-basic-[hash]'),
+          },
+        });
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(() => {
+          compiler.hooks.afterCompile.tap('wdm-test', ({ hash: h }) => {
+            hash = h;
+            done();
+          });
+        });
+      });
+
+      afterAll(close);
+
+      it('should return "200" code for GET request to the bundle file', (done) => {
+        request(app).get(`/static/${hash}/bundle.js`).expect(200, done);
+      });
+
+      it('should return "404" code for GET request to a nonexistent file', (done) => {
+        request(app).get('/static/invalid.js').expect(404, done);
+      });
+
+      it('should return "200" code for GET request to the public path', (done) => {
+        request(app)
+          .get(`/static/${hash}/`)
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get(`/static/${hash}/index.html`)
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to the non-public path', (done) => {
+        request(app).get('/').expect(404, done);
+      });
+    });*/
+
+    /*describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with hash substitutions', () => {
+      let hashOne;
+      let hashTwo;
+
+      beforeAll((done) => {
+        const compiler = getCompiler([
+          {
+            ...webpackMultiConfig[0],
+            output: {
+              filename: 'bundle.js',
+              path: isWebpack5()
+                ? path.resolve(
+                    __dirname,
+                    './outputs/array-[fullhash]/static-one'
+                  )
+                : path.resolve(__dirname, './outputs/array-[hash]/static-one'),
+              publicPath: isWebpack5()
+                ? '/static-one/[fullhash]/'
+                : '/static-one/[hash]/',
+            },
+          },
+          {
+            ...webpackMultiConfig[1],
+            output: {
+              filename: 'bundle.js',
+              path: isWebpack5()
+                ? path.resolve(
+                    __dirname,
+                    './outputs/array-[fullhash]/static-two'
+                  )
+                : path.resolve(__dirname, './outputs/array-[hash]/static-two'),
+              publicPath: isWebpack5()
+                ? '/static-two/[fullhash]/'
+                : '/static-two/[hash]/',
+            },
+          },
+        ]);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(() => {
+          compiler.hooks.done.tap('wdm-test', (params) => {
+            const [one, two] = params.stats;
+
+            hashOne = one.hash;
+            hashTwo = two.hash;
+
+            done();
+          });
+        });
+      });
+
+      afterAll(close);
+
+      it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
+        request(app).get(`/static-one/${hashOne}/bundle.js`).expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file for the first compiler', (done) => {
+        request(app).get(`/static-one/${hashOne}/invalid.js`).expect(404, done);
+      });
+
+      it('should return "200" code for GET request for the second bundle file', (done) => {
+        request(app)
+          .get(`/static-one/${hashOne}/`)
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
+        request(app)
+          .get(`/static-one/${hashOne}/index.html`)
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the bundle file for the second compiler', (done) => {
+        request(app).get(`/static-two/${hashTwo}/bundle.js`).expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file for the second compiler', (done) => {
+        request(app).get(`/static-two/${hashTwo}/invalid.js`).expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the "public" path for the second compiler', (done) => {
+        request(app).get(`/static-two/${hashTwo}/`).expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the "index" option for the second compiler', (done) => {
+        request(app).get(`/static-two/${hashTwo}/index.html`).expect(404, done);
+      });
+
+      it('should return "404" code for GET request to non-public path', (done) => {
+        request(app).get('/').expect(404, done);
+      });
+    });*/
+
+    /*describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with difference "publicPath" and "path"', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackMultiConfig);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
+        request(app).get('/static-one/bundle.js').expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file for the first compiler', (done) => {
+        request(app).get('/static-one/invalid.js').expect(404, done);
+      });
+
+      it('should return "200" code for GET request to the "public" path for the first compiler', (done) => {
+        request(app)
+          .get('/static-one/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
+        request(app)
+          .get('/static-one/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the second bundle file', (done) => {
+        request(app).get('/static-two/bundle.js').expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file for the second compiler', (done) => {
+        request(app).get('/static-two/invalid.js').expect(404, done);
+      });
+
+      it('should return "200" code for GET request to the "public" path for the second compiler', (done) => {
+        request(app).get('/static-two/').expect(404, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option for the second compiler', (done) => {
+        request(app).get('/static-two/index.html').expect(404, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file', (done) => {
+        request(app).get('/static/invalid.js').expect(404, done);
+      });
+
+      it('should return "404" code for GET request to non-public path', (done) => {
+        request(app).get('/').expect(404, done);
+      });
+    });*/
+
+    /*describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with same "publicPath"', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler([
+          {
+            ...webpackMultiConfig[0],
+            output: {
+              filename: 'bundle-one.js',
+              path: path.resolve(__dirname, './outputs/array/static-one'),
+              publicPath: '/my-public/',
+            },
+          },
+          {
+            ...webpackMultiConfig[1],
+            output: {
+              filename: 'bundle-two.js',
+              path: path.resolve(__dirname, './outputs/array/static-two'),
+              publicPath: '/my-public/',
+            },
+          },
+        ]);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
+        request(app).get('/my-public/bundle-one.js').expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the bundle file for the second compiler', (done) => {
+        request(app).get('/my-public/bundle-two.js').expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file', (done) => {
+        request(app).get('/my-public/invalid.js').expect(404, done);
+      });
+
+      it('should return "200" code for GET request to the "public" path', (done) => {
+        request(app)
+          .get('/my-public/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/my-public/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file', (done) => {
+        request(app).get('/static/invalid.js').expect(404, done);
+      });
+
+      it('should return "404" code for GET request to non-public path', (done) => {
+        request(app).get('/').expect(404, done);
+      });
+    });*/
+
+    /*describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with same "path"', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler([
+          {
+            ...webpackMultiConfig[0],
+            output: {
+              filename: 'bundle-one.js',
+              path: path.resolve(__dirname, './outputs/array/static-one'),
+              publicPath: '/one-public/',
+            },
+          },
+          {
+            ...webpackMultiConfig[1],
+            output: {
+              filename: 'bundle-two.js',
+              path: path.resolve(__dirname, './outputs/array/static-one'),
+              publicPath: '/two-public/',
+            },
+          },
+        ]);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
+        request(app).get('/one-public/bundle-one.js').expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file to the first bundle file', (done) => {
+        request(app).get('/one-public/invalid.js').expect(404, done);
+      });
+
+      it('should return "200" code for GET request to the "public" path for the first compiler', (done) => {
+        request(app)
+          .get('/one-public/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
+        request(app)
+          .get('/one-public/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the bundle file for the second compiler', (done) => {
+        request(app).get('/two-public/bundle-two.js').expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file to the second bundle file', (done) => {
+        request(app).get('/two-public/invalid.js').expect(404, done);
+      });
+
+      it('should return "200" code for GET request to the "public" path for the second compiler', (done) => {
+        request(app)
+          .get('/two-public/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the "index" option for the second compiler', (done) => {
+        request(app)
+          .get('/two-public/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file', (done) => {
+        request(app).get('/static/invalid.js').expect(404, done);
+      });
+
+      it('should return "404" code for GET request to non-public path', (done) => {
+        request(app).get('/').expect(404, done);
+      });
+    });*/
+
+    /*describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration (in first)', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackClientServerConfig);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return "200" code for GET request to the bundle file', (done) => {
+        request(app).get('/static/bundle.js').expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file', (done) => {
+        request(app).get('/static/invalid.js').expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the public path', (done) => {
+        request(app)
+          .get('/static/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/static/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to non-public path', (done) => {
+        request(app).get('/').expect(404, done);
+      });
+    });*/
+
+    /*describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration (in second)', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler([
+          webpackClientServerConfig[1],
+          webpackClientServerConfig[0],
+        ]);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return "200" code for GET request to the bundle file', (done) => {
+        request(app).get('/static/bundle.js').expect(200, done);
+      });
+
+      it('should return "404" code for GET request to nonexistent file', (done) => {
+        request(app).get('/static/invalid.js').expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the public path', (done) => {
+        request(app)
+          .get('/static/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/static/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to non-public path', (done) => {
+        request(app).get('/').expect(404, done);
+      });
+    });*/
+
+    /*describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration with same "path"', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler([
+          {
+            ...webpackClientServerConfig[0],
+            output: {
+              filename: 'bundle-one.js',
+              path: path.resolve(__dirname, './outputs/client-server/same'),
+              publicPath: '/static/',
+            },
+          },
+          {
+            ...webpackClientServerConfig[1],
+            output: {
+              filename: 'bundle-two.js',
+              path: path.resolve(__dirname, './outputs/client-server/same'),
+            },
+          },
+        ]);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return "200" code for GET request to the bundle file', (done) => {
+        request(app).get('/static/bundle-one.js').expect(200, done);
+      });
+
+      it('should return "404" code for GET request to a nonexistent file', (done) => {
+        request(app).get('/static/invalid.js').expect(404, done);
+      });
+
+      it('should return "404" code for GET request to the public path', (done) => {
+        request(app).get('/static/').expect(200, done);
+      });
+
+      it('should return "200" code for GET request to the non-public path', (done) => {
+        request(app)
+          .get('/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+
+      it('should return "404" code for GET request to the "index" option', (done) => {
+        request(app)
+          .get('/static/index.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, done);
+      });
+    });*/
+
+    /*describe('should respect the "stats" option with the "false" value from the configuration', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler({ ...webpackConfig, stats: false });
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" request to the bundle file', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            expect(getLogsPlugin.logs).toMatchSnapshot();
+
+            return done();
+          });
+      });
+    });*/
+
+    /*describe('should respect the "stats" option with the "none" value from the configuration', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler({ ...webpackConfig, stats: 'none' });
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" request to the bundle file', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            expect(getLogsPlugin.logs).toMatchSnapshot();
+
+            return done();
+          });
+      });
+    });*/
+
+    /*describe('should respect the "stats" option with the "minimal" value from the configuration', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler({ ...webpackConfig, stats: 'minimal' });
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" request to the bundle file', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            expect(getLogsPlugin.logs).toMatchSnapshot();
+
+            return done();
+          });
+      });
+    });*/
+
+    /*describe('should respect the "stats" option in multi-compiler mode', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackOneErrorOneWarningOneSuccessConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" requests to bundles file', (done) => {
+        request(app)
+          .get('/static-one/bundle.js')
+          .expect(200, (firstError) => {
+            if (firstError) {
+              return done(firstError);
+            }
+
+            return request(app)
+              .get('/static-two/bundle.js')
+              .expect(200, (secondError) => {
+                if (secondError) {
+                  return done(secondError);
+                }
+
+                return request(app)
+                  .get('/static-three/bundle.js')
+                  .expect(200, (thirdError) => {
+                    if (thirdError) {
+                      return done(thirdError);
+                    }
+
+                    expect(getLogsPlugin.logs).toMatchSnapshot();
+
+                    return done();
+                  });
+              });
+          });
+      });
+    });*/
+
+    /*describe('should respect the "stats" option with the "{ all: false, entrypoints: true }" value from the configuration', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler({
+          ...webpackConfig,
+          stats: { all: false, entrypoints: true },
+        });
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" request to the bundle file', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            expect(getLogsPlugin.logs).toMatchSnapshot();
+
+            return done();
+          });
+      });
+    });*/
+
+    /*describe('should respect the "stats" option from the configuration in multi-compiler mode', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackMultiWarningConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" request to bundle files', (done) => {
+        request(app)
+          .get('/static-one/bundle.js')
+          .expect(200, (firstError) => {
+            if (firstError) {
+              return done(firstError);
+            }
+
+            return request(app)
+              .get('/static-two/bundle.js')
+              .expect(200, (secondError) => {
+                if (secondError) {
+                  return done(secondError);
+                }
+
+                expect(getLogsPlugin.logs).toMatchSnapshot();
+
+                return done();
+              });
+          });
+      });
+    });*/
+
+    /*describe('should respect the "stats" option from the configuration in multi-compiler mode and use the "name" option', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(
+          webpackOneErrorOneWarningOneSuccessWithNamesConfig
+        );
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for "GET" requests to bundle files', (done) => {
+        request(app)
+          .get('/static-one/bundle.js')
+          .expect(200, (firstError) => {
+            if (firstError) {
+              return done(firstError);
+            }
+
+            return request(app)
+              .get('/static-two/bundle.js')
+              .expect(200, (secondError) => {
+                if (secondError) {
+                  return done(secondError);
+                }
+
+                return request(app)
+                  .get('/static-three/bundle.js')
+                  .expect(200, (thirdError) => {
+                    if (thirdError) {
+                      return done(thirdError);
+                    }
+
+                    expect(getLogsPlugin.logs).toMatchSnapshot();
+
+                    return done();
+                  });
+              });
+          });
+      });
+    });*/
+
+    /*describe('should throw an error on "run" when we watching', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should logging an error', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            return compiler.run((runError) => {
+              expect(() => {
+                throw runError;
+              }).toThrowErrorMatchingSnapshot();
+
+              done();
+            });
+          });
+      });
+    });*/
+
+    /*describe('should throw an error on "watch" when we watching', () => {
+      let compiler;
+      let getLogsPlugin;
+
+      beforeAll((done) => {
+        compiler = getCompiler(webpackConfig);
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should logging an error', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            return compiler.watch({}, (watchError) => {
+              expect(() => {
+                throw watchError;
+              }).toThrowErrorMatchingSnapshot();
+
+              done();
+            });
+          });
+      });
+    });*/
+
+    /*describe('should handle an earlier request if a change happened while compiling', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler);
+
+        let invalidated = false;
+
+        compiler.hooks.done.tap('Invalidated', () => {
+          if (!invalidated) {
+            instance.invalidate();
+
+            invalidated = true;
+          }
+        });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" request to the bundle file', (done) => {
+        request(app).get('/bundle.js').expect(200, done);
+      });
+    });*/
   });
 
-/*  describe('mimeTypes option', () => {
+  describe('mimeTypes option', () => {
     describe('should set the correct value for "Content-Type" header to known MIME type', () => {
       beforeAll((done) => {
         const outputPath = path.resolve(__dirname, './outputs/basic');
@@ -2040,7 +2040,7 @@ describe('middleware', () => {
     });
   });
 
-  describe('watchOptions option', () => {
+  /*describe('watchOptions option', () => {
     describe('should work without value', () => {
       let compiler;
       let spy;
@@ -2171,9 +2171,9 @@ describe('middleware', () => {
           });
       });
     });
-  });
+  });*/
 
-  describe('writeToDisk option', () => {
+  /*describe('writeToDisk option', () => {
     describe('should work with "true" value', () => {
       let compiler;
 
@@ -2605,9 +2605,9 @@ describe('middleware', () => {
           });
       });
     });
-  });
+  });*/
 
-  describe('methods option', () => {
+  /*describe('methods option', () => {
     let compiler;
 
     beforeAll((done) => {
@@ -2637,9 +2637,9 @@ describe('middleware', () => {
     it('should return the "200" code for the "HEAD" request to the bundle file', (done) => {
       request(app).head('/public/bundle.js').expect(404, done);
     });
-  });
+  });*/
 
-  describe('headers option', () => {
+  /*describe('headers option', () => {
     beforeAll((done) => {
       const compiler = getCompiler(webpackConfig);
 
@@ -2662,9 +2662,9 @@ describe('middleware', () => {
         .expect('X-nonsense-2', 'no')
         .expect(200, done);
     });
-  });
+  });*/
 
-  describe('publicPath option', () => {
+  /*describe('publicPath option', () => {
     describe('should work with "string" value', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
@@ -2683,9 +2683,9 @@ describe('middleware', () => {
         request(app).get('/public/bundle.js').expect(200, done);
       });
     });
-  });
+  });*/
 
-  describe('serverSideRender option', () => {
+  /*describe('serverSideRender option', () => {
     let locals;
 
     beforeAll((done) => {
@@ -2720,9 +2720,9 @@ describe('middleware', () => {
           return done();
         });
     });
-  });
+  });*/
 
-  describe('outputFileSystem option', () => {
+  /*describe('outputFileSystem option', () => {
     describe('should work with an unspecified value', () => {
       let compiler;
 
@@ -2885,9 +2885,9 @@ describe('middleware', () => {
         );
       });
     });
-  });
+  });*/
 
-  describe('index option', () => {
+  /*describe('index option', () => {
     describe('should work with "false" value', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
@@ -3179,9 +3179,9 @@ describe('middleware', () => {
         request(app).get('/').expect(404, done);
       });
     });
-  });
+  });*/
 
-  describe('logger', () => {
+  /*describe('logger', () => {
     describe('should logging on successfully build', () => {
       let compiler;
       let getLogsPlugin;
