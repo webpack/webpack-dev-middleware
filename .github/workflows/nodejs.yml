@@ -86,7 +86,7 @@ jobs:
         run: npm i webpack@${{ matrix.webpack-version }}
 
       - name: Run tests for webpack version ${{ matrix.webpack-version }}
-        run: npm run test:coverage -- --ci
+        run: npm run test:coverage -- --ci --verbose
 
       - name: Submit coverage data to codecov
         uses: codecov/codecov-action@v1
