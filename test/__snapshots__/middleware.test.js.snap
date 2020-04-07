@@ -54,46 +54,6 @@ Array [
 ]
 `;
 
-exports[`middleware logger should logging on successfully build should logging 1`] = `
-Array [
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "wait until bundle finished: /bundle.js",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Compiled successfully.",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Compiling...",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "wait until bundle finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Compiled successfully.",
-    ],
-  ],
-]
-`;
-
 exports[`middleware logger should logging on unsuccessful build in multi-compiler  should logging 1`] = `
 Array [
   Array [
