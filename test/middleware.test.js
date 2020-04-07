@@ -3447,61 +3447,61 @@ describe('middleware', () => {
       });
     });
 
-    //describe('should logging an error from the "fs.mkdir" method when the "writeToDisk" option is "true" ', () => {
-    //  let compiler;
-    //  let getLogsPlugin;
-    //  let mkdirSpy;
-    //
-    //  beforeAll((done) => {
-    //    compiler = getCompiler({
-    //      ...webpackSimpleConfig,
-    //      output: {
-    //        filename: 'bundle.js',
-    //        path: path.resolve(
-    //          __dirname,
-    //          './outputs/write-to-disk-mkdir-error'
-    //        ),
-    //      },
-    //    });
-    //
-    //    mkdirSpy = jest.spyOn(fs, 'mkdir').mockImplementation((...args) => {
-    //      const callback = args[args.length - 1];
-    //
-    //      return callback(new Error('Error in the "fs.mkdir" method.'));
-    //    });
-    //
-    //    getLogsPlugin = new GetLogsPlugin();
-    //    getLogsPlugin.apply(compiler);
-    //
-    //    instance = middleware(compiler, { writeToDisk: true });
-    //
-    //    app = express();
-    //    app.use(instance);
-    //
-    //    listen = listenShorthand(done);
-    //  });
-    //
-    //  afterAll(() => {
-    //    del.sync(
-    //      path.posix.resolve(__dirname, './outputs/write-to-disk-mkdir-error')
-    //    );
-    //
-    //    mkdirSpy.mockRestore();
-    //  });
-    //
-    //  it('should logging', (done) => {
-    //    compiler.hooks.failed.tap('FailedCatcher', () => {
-    //      instance.close(() => {
-    //        expect(getLogsPlugin.logs).toMatchSnapshot();
-    //
-    //        listen.close(() => {
-    //          done();
-    //        });
-    //      });
-    //    });
-    //  });
-    //});
-    //
+    describe('should logging an error from the "fs.mkdir" method when the "writeToDisk" option is "true" ', () => {
+      let compiler;
+      let getLogsPlugin;
+      let mkdirSpy;
+
+      beforeAll((done) => {
+        compiler = getCompiler({
+          ...webpackSimpleConfig,
+          output: {
+            filename: 'bundle.js',
+            path: path.resolve(
+              __dirname,
+              './outputs/write-to-disk-mkdir-error'
+            ),
+          },
+        });
+
+        mkdirSpy = jest.spyOn(fs, 'mkdir').mockImplementation((...args) => {
+          const callback = args[args.length - 1];
+
+          return callback(new Error('Error in the "fs.mkdir" method.'));
+        });
+
+        getLogsPlugin = new GetLogsPlugin();
+        getLogsPlugin.apply(compiler);
+
+        instance = middleware(compiler, { writeToDisk: true });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(() => {
+        del.sync(
+          path.posix.resolve(__dirname, './outputs/write-to-disk-mkdir-error')
+        );
+
+        mkdirSpy.mockRestore();
+      });
+
+      it('should logging', (done) => {
+        compiler.hooks.failed.tap('FailedCatcher', () => {
+          instance.close(() => {
+            expect(getLogsPlugin.logs).toMatchSnapshot();
+
+            listen.close(() => {
+              done();
+            });
+          });
+        });
+      });
+    });
+
     //describe('should logging an error from the "fs.writeFile" method when the "writeToDisk" option is "true" ', () => {
     //  let compiler;
     //  let getLogsPlugin;
