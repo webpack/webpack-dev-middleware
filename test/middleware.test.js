@@ -3389,36 +3389,48 @@ describe('middleware', () => {
       let compiler;
       let getLogsPlugin;
 
+      fs.writeFile(path.resolve(process.cwd(), './3-1'), 'HERE');
+
       beforeAll((done) => {
+        fs.writeFile(path.resolve(process.cwd(), './3-2'), 'HERE');
         compiler = getCompiler(webpackMultiWarningConfig);
+        fs.writeFile(path.resolve(process.cwd(), './3-3'), 'HERE');
 
         getLogsPlugin = new GetLogsPlugin();
         getLogsPlugin.apply(compiler);
 
+        fs.writeFile(path.resolve(process.cwd(), './3-4'), 'HERE');
         instance = middleware(compiler);
 
+        fs.writeFile(path.resolve(process.cwd(), './3-5'), 'HERE');
         app = express();
         app.use(instance);
 
+        fs.writeFile(path.resolve(process.cwd(), './3-6'), 'HERE');
         listen = listenShorthand(done);
+        fs.writeFile(path.resolve(process.cwd(), './3-7'), 'HERE');
       });
 
       afterAll(close);
 
       it('should logging', (done) => {
+        fs.writeFile(path.resolve(process.cwd(), './3-8'), 'HERE');
+
         request(app)
           .get('/static-one/bundle.js')
           .expect(200, (error) => {
+            fs.writeFile(path.resolve(process.cwd(), './3-9'), 'HERE');
+
             if (error) {
               return done(error);
             }
 
-            fs.writeFile(path.resolve(process.cwd(), './3-1'), 'HERE');
+            fs.writeFile(path.resolve(process.cwd(), './3-10'), 'HERE');
 
             instance.invalidate();
 
             return instance.waitUntilValid(() => {
-              fs.writeFile(path.resolve(process.cwd(), './3-2'), 'HERE');
+              fs.writeFile(path.resolve(process.cwd(), './3-11'), 'HERE');
 
               expect(getLogsPlugin.logs).toMatchSnapshot();
 
