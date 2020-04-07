@@ -373,7 +373,7 @@ describe('middleware', () => {
       });
     });
 
-   /* describe('should work with difference requests', () => {
+    describe('should work with difference requests', () => {
       const basicOutputPath = path.resolve(__dirname, './outputs/basic');
       const fixtures = [
         {
@@ -788,9 +788,9 @@ describe('middleware', () => {
           }
         });
       }
-    });*/
+    });
 
-    /*describe('should respect the value of the "Content-Type" header from other middleware', () => {
+    describe('should respect the value of the "Content-Type" header from other middleware', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
@@ -814,9 +814,9 @@ describe('middleware', () => {
           .expect('Content-Type', 'application/octet-stream')
           .expect(200, done);
       });
-    });*/
+    });
 
-    /*describe('should not throw an error on the valid "output.path" value for linux', () => {
+    describe('should not throw an error on the valid "output.path" value for linux', () => {
       it('should be no error', (done) => {
         expect(() => {
           const compiler = getCompiler();
@@ -828,9 +828,9 @@ describe('middleware', () => {
           instance.close(done);
         }).not.toThrow();
       });
-    });*/
+    });
 
-    /*describe('should not throw an error on the valid "output.path" value for windows', () => {
+    describe('should not throw an error on the valid "output.path" value for windows', () => {
       it('should be no error', (done) => {
         expect(() => {
           const compiler = getCompiler();
@@ -842,9 +842,9 @@ describe('middleware', () => {
           instance.close(done);
         }).not.toThrow();
       });
-    });*/
+    });
 
-    /*describe('should work without "output" options', () => {
+    describe('should work without "output" options', () => {
       beforeAll((done) => {
         // eslint-disable-next-line no-undefined
         const compiler = getCompiler({ ...webpackConfig, output: undefined });
@@ -880,9 +880,9 @@ describe('middleware', () => {
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
-    });*/
+    });
 
-    /*describe('should work with trailing slash at the end of the "option.path" option', () => {
+    describe('should work with trailing slash at the end of the "option.path" option', () => {
       beforeAll((done) => {
         const compiler = getCompiler({
           ...webpackConfig,
@@ -923,9 +923,9 @@ describe('middleware', () => {
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
-    });*/
+    });
 
-    /*describe('should respect empty "output.publicPath" and "output.path" options', () => {
+    describe('should respect empty "output.publicPath" and "output.path" options', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
@@ -960,9 +960,9 @@ describe('middleware', () => {
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
-    });*/
+    });
 
-    /*describe('should respect "output.publicPath" and "output.path" options', () => {
+    describe('should respect "output.publicPath" and "output.path" options', () => {
       beforeAll((done) => {
         const compiler = getCompiler({
           ...webpackConfig,
@@ -1011,9 +1011,9 @@ describe('middleware', () => {
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(404, done);
       });
-    });*/
+    });
 
-    /*describe('should respect "output.publicPath" and "output.path" options with hash substitutions', () => {
+    describe('should respect "output.publicPath" and "output.path" options with hash substitutions', () => {
       let hash;
 
       beforeAll((done) => {
@@ -1070,9 +1070,9 @@ describe('middleware', () => {
       it('should return "404" code for GET request to the non-public path', (done) => {
         request(app).get('/').expect(404, done);
       });
-    });*/
+    });
 
-    /*describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with hash substitutions', () => {
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with hash substitutions', () => {
       let hashOne;
       let hashTwo;
 
@@ -1170,9 +1170,9 @@ describe('middleware', () => {
       it('should return "404" code for GET request to non-public path', (done) => {
         request(app).get('/').expect(404, done);
       });
-    });*/
+    });
 
-    /*describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with difference "publicPath" and "path"', () => {
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with difference "publicPath" and "path"', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackMultiConfig);
 
@@ -1231,9 +1231,9 @@ describe('middleware', () => {
       it('should return "404" code for GET request to non-public path', (done) => {
         request(app).get('/').expect(404, done);
       });
-    });*/
+    });
 
-    /*describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with same "publicPath"', () => {
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with same "publicPath"', () => {
       beforeAll((done) => {
         const compiler = getCompiler([
           {
@@ -1297,9 +1297,9 @@ describe('middleware', () => {
       it('should return "404" code for GET request to non-public path', (done) => {
         request(app).get('/').expect(404, done);
       });
-    });*/
+    });
 
-    /*describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with same "path"', () => {
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with same "path"', () => {
       beforeAll((done) => {
         const compiler = getCompiler([
           {
@@ -1381,9 +1381,9 @@ describe('middleware', () => {
       it('should return "404" code for GET request to non-public path', (done) => {
         request(app).get('/').expect(404, done);
       });
-    });*/
+    });
 
-    /*describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration (in first)', () => {
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration (in first)', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackClientServerConfig);
 
@@ -1422,9 +1422,9 @@ describe('middleware', () => {
       it('should return "404" code for GET request to non-public path', (done) => {
         request(app).get('/').expect(404, done);
       });
-    });*/
+    });
 
-    /*describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration (in second)', () => {
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration (in second)', () => {
       beforeAll((done) => {
         const compiler = getCompiler([
           webpackClientServerConfig[1],
@@ -1466,9 +1466,9 @@ describe('middleware', () => {
       it('should return "404" code for GET request to non-public path', (done) => {
         request(app).get('/').expect(404, done);
       });
-    });*/
+    });
 
-    /*describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration with same "path"', () => {
+    describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration with same "path"', () => {
       beforeAll((done) => {
         const compiler = getCompiler([
           {
@@ -1523,9 +1523,9 @@ describe('middleware', () => {
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
-    });*/
+    });
 
-    /*describe('should respect the "stats" option with the "false" value from the configuration', () => {
+    describe('should respect the "stats" option with the "false" value from the configuration', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -1558,9 +1558,9 @@ describe('middleware', () => {
             return done();
           });
       });
-    });*/
+    });
 
-    /*describe('should respect the "stats" option with the "none" value from the configuration', () => {
+    describe('should respect the "stats" option with the "none" value from the configuration', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -1593,9 +1593,9 @@ describe('middleware', () => {
             return done();
           });
       });
-    });*/
+    });
 
-    /*describe('should respect the "stats" option with the "minimal" value from the configuration', () => {
+    describe('should respect the "stats" option with the "minimal" value from the configuration', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -1628,9 +1628,9 @@ describe('middleware', () => {
             return done();
           });
       });
-    });*/
+    });
 
-    /*describe('should respect the "stats" option in multi-compiler mode', () => {
+    describe('should respect the "stats" option in multi-compiler mode', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -1679,9 +1679,9 @@ describe('middleware', () => {
               });
           });
       });
-    });*/
+    });
 
-    /*describe('should respect the "stats" option with the "{ all: false, entrypoints: true }" value from the configuration', () => {
+    describe('should respect the "stats" option with the "{ all: false, entrypoints: true }" value from the configuration', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -1717,9 +1717,9 @@ describe('middleware', () => {
             return done();
           });
       });
-    });*/
+    });
 
-    /*describe('should respect the "stats" option from the configuration in multi-compiler mode', () => {
+    describe('should respect the "stats" option from the configuration in multi-compiler mode', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -1760,9 +1760,9 @@ describe('middleware', () => {
               });
           });
       });
-    });*/
+    });
 
-    /*describe('should respect the "stats" option from the configuration in multi-compiler mode and use the "name" option', () => {
+    describe('should respect the "stats" option from the configuration in multi-compiler mode and use the "name" option', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -1813,9 +1813,9 @@ describe('middleware', () => {
               });
           });
       });
-    });*/
+    });
 
-    /*describe('should throw an error on "run" when we watching', () => {
+    describe('should throw an error on "run" when we watching', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -1852,9 +1852,9 @@ describe('middleware', () => {
             });
           });
       });
-    });*/
+    });
 
-    /*describe('should throw an error on "watch" when we watching', () => {
+    describe('should throw an error on "watch" when we watching', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -1891,9 +1891,9 @@ describe('middleware', () => {
             });
           });
       });
-    });*/
+    });
 
-    /*describe('should handle an earlier request if a change happened while compiling', () => {
+    describe('should handle an earlier request if a change happened while compiling', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
 
@@ -1920,127 +1920,127 @@ describe('middleware', () => {
       it('should return the "200" code for the "GET" request to the bundle file', (done) => {
         request(app).get('/bundle.js').expect(200, done);
       });
-    });*/
+    });
   });
 
-  //describe('mimeTypes option', () => {
-  //  describe('should set the correct value for "Content-Type" header to known MIME type', () => {
-  //    beforeAll((done) => {
-  //      const outputPath = path.resolve(__dirname, './outputs/basic');
-  //      const compiler = getCompiler({
-  //        ...webpackConfig,
-  //        output: {
-  //          filename: 'bundle.js',
-  //          path: outputPath,
-  //        },
-  //      });
-  //
-  //      instance = middleware(compiler);
-  //
-  //      app = express();
-  //      app.use(instance);
-  //
-  //      listen = listenShorthand(done);
-  //
-  //      instance.context.outputFileSystem.mkdirSync(outputPath, {
-  //        recursive: true,
-  //      });
-  //      instance.context.outputFileSystem.writeFileSync(
-  //        path.resolve(outputPath, 'file.html'),
-  //        'welcome'
-  //      );
-  //    });
-  //
-  //    afterAll(close);
-  //
-  //    it('should return the "200" code for the "GET" request to "file.html"', (done) => {
-  //      request(app)
-  //        .get('/file.html')
-  //        .expect('Content-Type', 'text/html; charset=utf-8')
-  //        .expect(200, 'welcome', done);
-  //    });
-  //  });
-  //
-  //  describe('should set the correct value for "Content-Type" header to unknown MIME type', () => {
-  //    beforeAll((done) => {
-  //      const outputPath = path.resolve(__dirname, './outputs/basic');
-  //      const compiler = getCompiler({
-  //        ...webpackConfig,
-  //        output: {
-  //          filename: 'bundle.js',
-  //          path: outputPath,
-  //        },
-  //      });
-  //
-  //      instance = middleware(compiler);
-  //
-  //      app = express();
-  //      app.use(instance);
-  //
-  //      listen = listenShorthand(done);
-  //
-  //      instance.context.outputFileSystem.mkdirSync(outputPath, {
-  //        recursive: true,
-  //      });
-  //      instance.context.outputFileSystem.writeFileSync(
-  //        path.resolve(outputPath, 'file.phtml'),
-  //        'welcome'
-  //      );
-  //    });
-  //
-  //    afterAll(close);
-  //
-  //    it('should return the "200" code for the "GET" request to "file.html"', (done) => {
-  //      request(app)
-  //        .get('/file.phtml')
-  //        .expect('Content-Type', 'application/octet-stream')
-  //        .expect(200, done);
-  //    });
-  //  });
-  //
-  //  describe('should set the correct value for "Content-Type" header to specified MIME type', () => {
-  //    beforeAll((done) => {
-  //      const outputPath = path.resolve(__dirname, './outputs/basic');
-  //      const compiler = getCompiler({
-  //        ...webpackConfig,
-  //        output: {
-  //          filename: 'bundle.js',
-  //          path: outputPath,
-  //        },
-  //      });
-  //
-  //      instance = middleware(compiler, {
-  //        mimeTypes: {
-  //          phtml: 'text/html',
-  //        },
-  //      });
-  //
-  //      app = express();
-  //      app.use(instance);
-  //
-  //      listen = listenShorthand(done);
-  //
-  //      instance.context.outputFileSystem.mkdirSync(outputPath, {
-  //        recursive: true,
-  //      });
-  //      instance.context.outputFileSystem.writeFileSync(
-  //        path.resolve(outputPath, 'file.phtml'),
-  //        'welcome'
-  //      );
-  //    });
-  //
-  //    afterAll(close);
-  //
-  //    it('should return the "200" code for the "GET" request "file.html"', (done) => {
-  //      request(app)
-  //        .get('/file.phtml')
-  //        .expect('Content-Type', 'text/html; charset=utf-8')
-  //        .expect(200, 'welcome', done);
-  //    });
-  //  });
-  //});
+  describe('mimeTypes option', () => {
+    describe('should set the correct value for "Content-Type" header to known MIME type', () => {
+      beforeAll((done) => {
+        const outputPath = path.resolve(__dirname, './outputs/basic');
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+          },
+        });
 
-  /*describe('watchOptions option', () => {
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+
+        instance.context.outputFileSystem.mkdirSync(outputPath, {
+          recursive: true,
+        });
+        instance.context.outputFileSystem.writeFileSync(
+          path.resolve(outputPath, 'file.html'),
+          'welcome'
+        );
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" request to "file.html"', (done) => {
+        request(app)
+          .get('/file.html')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, 'welcome', done);
+      });
+    });
+
+    describe('should set the correct value for "Content-Type" header to unknown MIME type', () => {
+      beforeAll((done) => {
+        const outputPath = path.resolve(__dirname, './outputs/basic');
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+          },
+        });
+
+        instance = middleware(compiler);
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+
+        instance.context.outputFileSystem.mkdirSync(outputPath, {
+          recursive: true,
+        });
+        instance.context.outputFileSystem.writeFileSync(
+          path.resolve(outputPath, 'file.phtml'),
+          'welcome'
+        );
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" request to "file.html"', (done) => {
+        request(app)
+          .get('/file.phtml')
+          .expect('Content-Type', 'application/octet-stream')
+          .expect(200, done);
+      });
+    });
+
+    describe('should set the correct value for "Content-Type" header to specified MIME type', () => {
+      beforeAll((done) => {
+        const outputPath = path.resolve(__dirname, './outputs/basic');
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+          },
+        });
+
+        instance = middleware(compiler, {
+          mimeTypes: {
+            phtml: 'text/html',
+          },
+        });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+
+        instance.context.outputFileSystem.mkdirSync(outputPath, {
+          recursive: true,
+        });
+        instance.context.outputFileSystem.writeFileSync(
+          path.resolve(outputPath, 'file.phtml'),
+          'welcome'
+        );
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" request "file.html"', (done) => {
+        request(app)
+          .get('/file.phtml')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, 'welcome', done);
+      });
+    });
+  });
+
+  describe('watchOptions option', () => {
     describe('should work without value', () => {
       let compiler;
       let spy;
@@ -2171,9 +2171,9 @@ describe('middleware', () => {
           });
       });
     });
-  });*/
+  });
 
-  /*describe('writeToDisk option', () => {
+  describe('writeToDisk option', () => {
     describe('should work with "true" value', () => {
       let compiler;
 
@@ -2605,9 +2605,9 @@ describe('middleware', () => {
           });
       });
     });
-  });*/
+  });
 
-  /*describe('methods option', () => {
+  describe('methods option', () => {
     let compiler;
 
     beforeAll((done) => {
@@ -2637,7 +2637,7 @@ describe('middleware', () => {
     it('should return the "200" code for the "HEAD" request to the bundle file', (done) => {
       request(app).head('/public/bundle.js').expect(404, done);
     });
-  });*/
+  });
 
   describe('headers option', () => {
     beforeAll((done) => {
@@ -2664,7 +2664,7 @@ describe('middleware', () => {
     });
   });
 
-  /*describe('publicPath option', () => {
+  describe('publicPath option', () => {
     describe('should work with "string" value', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
@@ -2683,9 +2683,9 @@ describe('middleware', () => {
         request(app).get('/public/bundle.js').expect(200, done);
       });
     });
-  });*/
+  });
 
-  /*describe('serverSideRender option', () => {
+  describe('serverSideRender option', () => {
     let locals;
 
     beforeAll((done) => {
@@ -2720,9 +2720,9 @@ describe('middleware', () => {
           return done();
         });
     });
-  });*/
+  });
 
-  /*describe('outputFileSystem option', () => {
+  describe('outputFileSystem option', () => {
     describe('should work with an unspecified value', () => {
       let compiler;
 
@@ -2885,9 +2885,9 @@ describe('middleware', () => {
         );
       });
     });
-  });*/
+  });
 
-  /*describe('index option', () => {
+  describe('index option', () => {
     describe('should work with "false" value', () => {
       beforeAll((done) => {
         const compiler = getCompiler(webpackConfig);
@@ -3179,9 +3179,9 @@ describe('middleware', () => {
         request(app).get('/').expect(404, done);
       });
     });
-  });*/
+  });
 
-  /*describe('logger', () => {
+  describe('logger', () => {
     describe('should logging on successfully build', () => {
       let compiler;
       let getLogsPlugin;
@@ -3563,5 +3563,5 @@ describe('middleware', () => {
         });
       });
     });
-  });*/
+  });
 });
