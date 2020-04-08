@@ -5,7 +5,6 @@ const path = require('path');
 module.exports = [
   {
     mode: 'development',
-    devtool: false,
     context: path.resolve(__dirname),
     entry: './warning.js',
     output: {
@@ -28,7 +27,6 @@ module.exports = [
   },
   {
     mode: 'development',
-    devtool: false,
     context: path.resolve(__dirname),
     entry: './warning.js',
     output: {
