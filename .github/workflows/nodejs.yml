@@ -57,6 +57,11 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         node-version: [10.x, 12.x, 13.x]
         webpack-version: [latest, next]
+        exclude:
+          # See https://github.com/fsevents/fsevents/issues/314
+          - os: macos-latest
+            node: 4
+            webpack-version: latest
 
     runs-on: ${{ matrix.os }}
 
