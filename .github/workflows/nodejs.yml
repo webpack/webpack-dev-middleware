@@ -60,7 +60,7 @@ jobs:
         exclude:
           # See https://github.com/fsevents/fsevents/issues/314
           - os: macos-latest
-            node: 4
+            node-version: 4
             webpack-version: latest
 
     runs-on: ${{ matrix.os }}
