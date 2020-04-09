@@ -1,7 +1,6 @@
 'use strict';
 
 module.exports = {
-  testURL: 'http://localhost/',
   collectCoverage: false,
   coveragePathIgnorePatterns: ['test'],
   moduleFileExtensions: ['js', 'json'],

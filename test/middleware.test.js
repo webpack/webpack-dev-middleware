@@ -54,6 +54,7 @@ describe('middleware', () => {
   describe('basic', () => {
     describe('should work', () => {
       let compiler;
+      let codeLength;
 
       const outputPath = path.resolve(__dirname, './outputs/basic');
 
@@ -71,7 +72,12 @@ describe('middleware', () => {
         app = express();
         app.use(instance);
 
-        listen = listenShorthand(done);
+        listen = listenShorthand(() => {
+          compiler.hooks.afterCompile.tap('wdm-test', (params) => {
+            codeLength = params.assets['bundle.js'].source().length;
+            done();
+          });
+        });
 
         instance.context.outputFileSystem.mkdirSync(outputPath, {
           recursive: true,
@@ -219,10 +225,7 @@ describe('middleware', () => {
           .get('/bundle.js')
           .set('Range', 'bytes=3000-3500')
           .expect('Content-Length', '501')
-          .expect(
-            'Content-Range',
-            isWebpack5() ? 'bytes 3000-3500/5204' : 'bytes 3000-3500/4875'
-          )
+          .expect('Content-Range', `bytes 3000-3500/${codeLength}`)
           .expect(206, done);
       });
 
@@ -1011,6 +1014,8 @@ describe('middleware', () => {
     });
 
     describe('should respect "output.publicPath" and "output.path" options with hash substitutions', () => {
+      let hash;
+
       beforeAll((done) => {
         const compiler = getCompiler({
           ...webpackConfig,
@@ -1030,19 +1035,18 @@ describe('middleware', () => {
         app = express();
         app.use(instance);
 
-        listen = listenShorthand(done);
+        listen = listenShorthand(() => {
+          compiler.hooks.afterCompile.tap('wdm-test', ({ hash: h }) => {
+            hash = h;
+            done();
+          });
+        });
       });
 
       afterAll(close);
 
       it('should return "200" code for GET request to the bundle file', (done) => {
-        request(app)
-          .get(
-            isWebpack5()
-              ? '/static/45c13f171499f5100d88/bundle.js'
-              : '/static/4c347cd8af8b39e58cbf/bundle.js'
-          )
-          .expect(200, done);
+        request(app).get(`/static/${hash}/bundle.js`).expect(200, done);
       });
 
       it('should return "404" code for GET request to a nonexistent file', (done) => {
@@ -1051,22 +1055,14 @@ describe('middleware', () => {
 
       it('should return "200" code for GET request to the public path', (done) => {
         request(app)
-          .get(
-            isWebpack5()
-              ? '/static/45c13f171499f5100d88/'
-              : '/static/4c347cd8af8b39e58cbf/'
-          )
+          .get(`/static/${hash}/`)
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
 
       it('should return "200" code for GET request to the "index" option', (done) => {
         request(app)
-          .get(
-            isWebpack5()
-              ? '/static/45c13f171499f5100d88/index.html'
-              : '/static/4c347cd8af8b39e58cbf/index.html'
-          )
+          .get(`/static/${hash}/index.html`)
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
@@ -1077,6 +1073,9 @@ describe('middleware', () => {
     });
 
     describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with hash substitutions', () => {
+      let hashOne;
+      let hashTwo;
+
       beforeAll((done) => {
         const compiler = getCompiler([
           {
@@ -1116,91 +1115,56 @@ describe('middleware', () => {
         app = express();
         app.use(instance);
 
-        listen = listenShorthand(done);
+        listen = listenShorthand(() => {
+          compiler.hooks.done.tap('wdm-test', (params) => {
+            const [one, two] = params.stats;
+
+            hashOne = one.hash;
+            hashTwo = two.hash;
+
+            done();
+          });
+        });
       });
 
       afterAll(close);
 
       it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
-        request(app)
-          .get(
-            isWebpack5()
-              ? '/static-one/a9739b1fa1e4eb31790f/bundle.js'
-              : '/static-one/7ed325c92a1d0fe4ce64/bundle.js'
-          )
-          .expect(200, done);
+        request(app).get(`/static-one/${hashOne}/bundle.js`).expect(200, done);
       });
 
       it('should return "404" code for GET request to nonexistent file for the first compiler', (done) => {
-        request(app)
-          .get(
-            isWebpack5()
-              ? '/static-one/a9739b1fa1e4eb31790f/invalid.js'
-              : '/static-one/7ed325c92a1d0fe4ce64/invalid.js'
-          )
-          .expect(404, done);
+        request(app).get(`/static-one/${hashOne}/invalid.js`).expect(404, done);
       });
 
       it('should return "200" code for GET request for the second bundle file', (done) => {
         request(app)
-          .get(
-            isWebpack5()
-              ? '/static-one/a9739b1fa1e4eb31790f/'
-              : '/static-one/7ed325c92a1d0fe4ce64/'
-          )
+          .get(`/static-one/${hashOne}/`)
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
 
       it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
         request(app)
-          .get(
-            isWebpack5()
-              ? '/static-one/a9739b1fa1e4eb31790f/index.html'
-              : '/static-one/7ed325c92a1d0fe4ce64/index.html'
-          )
+          .get(`/static-one/${hashOne}/index.html`)
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, done);
       });
 
       it('should return "200" code for GET request to the bundle file for the second compiler', (done) => {
-        request(app)
-          .get(
-            isWebpack5()
-              ? '/static-two/a819fc976c8e917e69c6/bundle.js'
-              : '/static-two/db47aa827bb52e5f2e6b/bundle.js'
-          )
-          .expect(200, done);
+        request(app).get(`/static-two/${hashTwo}/bundle.js`).expect(200, done);
       });
 
       it('should return "404" code for GET request to nonexistent file for the second compiler', (done) => {
-        request(app)
-          .get(
-            isWebpack5()
-              ? '/static-two/a819fc976c8e917e69c6/invalid.js'
-              : '/static-two/db47aa827bb52e5f2e6b/invalid.js'
-          )
-          .expect(404, done);
+        request(app).get(`/static-two/${hashTwo}/invalid.js`).expect(404, done);
       });
 
       it('should return "404" code for GET request to the "public" path for the second compiler', (done) => {
-        request(app)
-          .get(
-            isWebpack5()
-              ? '/static-two/a819fc976c8e917e69c6/'
-              : '/static-two/db47aa827bb52e5f2e6b/'
-          )
-          .expect(404, done);
+        request(app).get(`/static-two/${hashTwo}/`).expect(404, done);
       });
 
       it('should return "404" code for GET request to the "index" option for the second compiler', (done) => {
-        request(app)
-          .get(
-            isWebpack5()
-              ? '/static-two/a819fc976c8e917e69c6/index.html'
-              : '/static-two/db47aa827bb52e5f2e6b/index.html'
-          )
-          .expect(404, done);
+        request(app).get(`/static-two/${hashTwo}/index.html`).expect(404, done);
       });
 
       it('should return "404" code for GET request to non-public path', (done) => {
@@ -2577,6 +2541,7 @@ describe('middleware', () => {
 
     describe('should work with "[hash]"/"[fullhash]" in the "output.path" and "output.publicPath" option', () => {
       let compiler;
+      let hash;
 
       beforeAll((done) => {
         compiler = getCompiler({
@@ -2605,7 +2570,12 @@ describe('middleware', () => {
         app = express();
         app.use(instance);
 
-        listen = listenShorthand(done);
+        listen = listenShorthand(() => {
+          compiler.hooks.afterCompile.tap('wdm-test', ({ hash: h }) => {
+            hash = h;
+            done();
+          });
+        });
       });
 
       afterAll(() => {
@@ -2618,25 +2588,16 @@ describe('middleware', () => {
 
       it('should find the bundle file on disk', (done) => {
         request(app)
-          .get(
-            isWebpack5()
-              ? '/static/45c13f171499f5100d88/bundle.js'
-              : '/static/4c347cd8af8b39e58cbf/bundle.js'
-          )
+          .get(`/static/${hash}/bundle.js`)
           .expect(200, (error) => {
             if (error) {
               return done(error);
             }
 
-            const bundlePath = isWebpack5()
-              ? path.resolve(
-                  __dirname,
-                  './outputs/write-to-disk-with-hash/dist_45c13f171499f5100d88/bundle.js'
-                )
-              : path.resolve(
-                  __dirname,
-                  './outputs/write-to-disk-with-hash/dist_4c347cd8af8b39e58cbf/bundle.js'
-                );
+            const bundlePath = path.resolve(
+              __dirname,
+              `./outputs/write-to-disk-with-hash/dist_${hash}/bundle.js`
+            );
 
             expect(fs.existsSync(bundlePath)).toBe(true);
 

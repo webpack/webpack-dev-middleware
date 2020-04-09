@@ -8,6 +8,10 @@
   "homepage": "https://github.com/webpack/webpack-dev-middleware",
   "bugs": "https://github.com/webpack/webpack-dev-middleware/issues",
   "main": "dist/index.js",
+  "funding": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/webpack"
+  },
   "engines": {
     "node": ">= 10.13"
   },
@@ -49,7 +53,6 @@
     "@webpack-contrib/defaults": "^6.3.0",
     "@webpack-contrib/eslint-config-webpack": "^3.0.0",
     "babel-jest": "^25.2.6",
-    "commitlint-azure-pipelines-cli": "^1.0.3",
     "cross-env": "^7.0.2",
     "del": "^5.1.0",
     "del-cli": "^3.0.0",
@@ -61,7 +64,6 @@
     "file-loader": "^6.0.0",
     "husky": "^4.2.3",
     "jest": "^25.2.7",
-    "jest-junit": "^10.0.0",
     "lint-staged": "^10.1.2",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.0.3",
