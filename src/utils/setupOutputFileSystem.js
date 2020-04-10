@@ -26,7 +26,7 @@ export default function setupOutputFileSystem(context) {
     outputFileSystem = outputFileSystemFromOptions;
   } else {
     outputFileSystem = createFsFromVolume(new Volume());
-    // Todo remove when we drop webpack@4 support
+    // TODO: remove when we drop webpack@4 support
     outputFileSystem.join = path.join.bind(path);
   }
 
@@ -40,5 +40,3 @@ export default function setupOutputFileSystem(context) {
   // eslint-disable-next-line no-param-reassign
   context.outputFileSystem = outputFileSystem;
 }
-
-module.exports = setupOutputFileSystem;

@@ -25,7 +25,7 @@ function getPaths(stats, options) {
 
 const memoizedParse = mem(parse);
 
-export default (context, url) => {
+export default function getFilenameFromUrl(context, url) {
   const { options } = context;
   const paths = getPaths(context.stats, options);
 
@@ -103,4 +103,4 @@ export default (context, url) => {
   }
 
   return filename;
-};
+}
