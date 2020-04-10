@@ -1,4 +1,4 @@
-# Contributing in @webpack-contrib
+# Contributing in webpack-dev-middleware
 
 We'd always love contributions to further improve the webpack / webpack-contrib ecosystem!
 Here are the guidelines we'd like you to follow:
@@ -87,7 +87,7 @@ Must be one of the following:
 
 - **build**: Changes that affect the build system or external dependencies (example scopes: babel, npm)
 - **chore**: Changes that fall outside of build / docs that do not effect source code (example scopes: package, defaults)
-- **ci**: Changes to our CI configuration files and scripts (example scopes: circleci, travis)
+- **ci**: Changes to our CI configuration files and scripts (example scopes: github-actions)
 - **docs**: Documentation only changes (example scopes: readme, changelog)
 - **feat**: A new feature
 - **fix**: A bug fix
