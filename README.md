@@ -356,8 +356,8 @@ Please take a moment to read our contributing guidelines if you haven't yet done
 [node-url]: https://nodejs.org
 [deps]: https://david-dm.org/webpack/webpack-dev-middleware.svg
 [deps-url]: https://david-dm.org/webpack/webpack-dev-middleware
-[tests]: https://dev.azure.com/webpack/webpack-dev-middleware/_apis/build/status/webpack.webpack-dev-middleware?branchName=master
-[tests-url]: https://dev.azure.com/webpack/webpack-dev-middleware/_build/latest?definitionId=8&branchName=master
+[tests]: https://github.com/webpack/webpack-dev-middleware/workflows/webpack-dev-middleware/badge.svg
+[tests-url]: https://github.com/webpack/webpack-dev-middleware/actions
 [cover]: https://codecov.io/gh/webpack/webpack-dev-middleware/branch/master/graph/badge.svg
 [cover-url]: https://codecov.io/gh/webpack/webpack-dev-middleware
 [chat]: https://badges.gitter.im/webpack/webpack.svg
