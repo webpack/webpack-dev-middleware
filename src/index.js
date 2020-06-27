@@ -23,7 +23,6 @@ export default function wdm(compiler, options = {}) {
 
     mime.types = { ...types, ...mimeTypes };
   }
-  console.log(mime.types);
 
   const context = {
     state: false,
