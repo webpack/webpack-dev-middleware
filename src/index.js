@@ -21,6 +21,8 @@ export default function wdm(compiler, options = {}) {
   if (mimeTypes) {
     const { types } = mime;
 
+    // mimeTypes from user provided options should take priority
+    // over existing, known types
     mime.types = { ...types, ...mimeTypes };
   }
 
