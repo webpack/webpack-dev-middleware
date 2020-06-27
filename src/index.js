@@ -21,8 +21,9 @@ export default function wdm(compiler, options = {}) {
   if (mimeTypes) {
     const { types } = mime;
 
-    mime.types = { ...mimeTypes, ...types };
+    mime.types = { ...types, ...mimeTypes };
   }
+  console.log(mime.types);
 
   const context = {
     state: false,

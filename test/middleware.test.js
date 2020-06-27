@@ -1990,7 +1990,7 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return the "200" code for the "GET" request to "file.html"', (done) => {
+      it('should return the "200" code for the "GET" request to "file.phtml"', (done) => {
         request(app)
           .get('/file.phtml')
           .expect('Content-Type', 'application/octet-stream')
@@ -2031,11 +2031,52 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return the "200" code for the "GET" request "file.html"', (done) => {
+      it('should return the "200" code for the "GET" request "file.phtml"', (done) => {
         request(app)
           .get('/file.phtml')
           .expect('Content-Type', 'text/html; charset=utf-8')
           .expect(200, 'welcome', done);
+      });
+    });
+
+    describe('should override value for "Content-Type" header for known MIME type', () => {
+      beforeAll((done) => {
+        const outputPath = path.resolve(__dirname, './outputs/basic');
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+          },
+        });
+
+        instance = middleware(compiler, {
+          mimeTypes: {
+            jpg: 'application/octet-stream',
+          },
+        });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+
+        instance.context.outputFileSystem.mkdirSync(outputPath, {
+          recursive: true,
+        });
+        instance.context.outputFileSystem.writeFileSync(
+          path.resolve(outputPath, 'file.jpg'),
+          'welcome'
+        );
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" request "file.jpg"', (done) => {
+        request(app)
+          .get('/file.jpg')
+          .expect('Content-Type', 'application/octet-stream')
+          .expect(200, done);
       });
     });
   });
