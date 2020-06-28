@@ -2075,7 +2075,44 @@ describe('middleware', () => {
       it('should return the "200" code for the "GET" request "file.jpg"', (done) => {
         request(app)
           .get('/file.jpg')
-          .expect('Content-Type', 'application/octet-stream')
+          .expect('Content-Type', /application\/octet-stream/)
+          .expect(200, done);
+      });
+    });
+
+    describe('should set "Content-Type" header for route not from outputFileSystem', () => {
+      beforeAll((done) => {
+        const outputPath = path.resolve(__dirname, './outputs/basic');
+        const compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+          },
+        });
+
+        instance = middleware(compiler, {
+          mimeTypes: {
+            jpg: 'application/octet-stream',
+          },
+        });
+
+        app = express();
+        app.use(instance);
+
+        app.get('/file.jpg', (req, res) => {
+          res.send('welcome');
+        });
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" request "file.jpg"', (done) => {
+        request(app)
+          .get('/file.jpg')
+          .expect('Content-Type', /application\/octet-stream/)
           .expect(200, done);
       });
     });
@@ -2681,7 +2718,7 @@ describe('middleware', () => {
   });
 
   describe('headers option', () => {
-    beforeAll((done) => {
+    beforeEach((done) => {
       const compiler = getCompiler(webpackConfig);
 
       instance = middleware(compiler, {
@@ -2694,11 +2731,22 @@ describe('middleware', () => {
       listen = listenShorthand(done);
     });
 
-    afterAll(close);
+    afterEach(close);
 
     it('should return the "200" code for the "GET" request to the bundle file and return headers', (done) => {
       request(app)
         .get('/bundle.js')
+        .expect('X-nonsense-1', 'yes')
+        .expect('X-nonsense-2', 'no')
+        .expect(200, done);
+    });
+
+    it('should return the "200" code for the "GET" request to path not in outputFileSystem and return headers', (done) => {
+      app.get('/file.jpg', (req, res) => {
+        res.send('welcome');
+      });
+      request(app)
+        .get('/file.jpg')
         .expect('X-nonsense-1', 'yes')
         .expect('X-nonsense-2', 'no')
         .expect(200, done);
