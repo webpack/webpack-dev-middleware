@@ -49,15 +49,9 @@ export default function wrapper(context) {
         return;
       }
 
-      try {
-        content = context.outputFileSystem.readFileSync(filename);
-      } catch (_ignoreError) {
-        await goNext();
-        return;
-      }
-
-      // Buffer
-      content = handleRangeHeaders(content, req, res);
+      // Content-Type and headers need to be set before checking if
+      // the file is in the outputFileSystem, as these things should be
+      // applied to all files that are being served
 
       if (!res.get('Content-Type')) {
         // content-type name(like application/javascript; charset=utf-8) or false
@@ -73,6 +67,16 @@ export default function wrapper(context) {
           res.set(name, headers[name]);
         }
       }
+
+      try {
+        content = context.outputFileSystem.readFileSync(filename);
+      } catch (_ignoreError) {
+        await goNext();
+        return;
+      }
+
+      // Buffer
+      content = handleRangeHeaders(content, req, res);
 
       // send Buffer
       res.send(content);
