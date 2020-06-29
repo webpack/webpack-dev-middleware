@@ -59,7 +59,7 @@
     "del-cli": "^3.0.1",
     "eslint": "^7.3.1",
     "eslint-config-prettier": "^6.11.0",
-    "eslint-plugin-import": "^2.21.2",
+    "eslint-plugin-import": "^2.22.0",
     "eslint-plugin-prettier": "^3.1.4",
     "express": "^4.17.1",
     "file-loader": "^6.0.0",
