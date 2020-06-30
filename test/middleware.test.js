@@ -2080,7 +2080,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should set "Content-Type" header for route not from outputFileSystem', () => {
+    describe('should not set "Content-Type" header for route not from outputFileSystem', () => {
       beforeAll((done) => {
         const outputPath = path.resolve(__dirname, './outputs/basic');
         const compiler = getCompiler({
@@ -2109,10 +2109,10 @@ describe('middleware', () => {
 
       afterAll(close);
 
-      it('should return the "200" code for the "GET" request "file.jpg"', (done) => {
+      it('should return the "200" code for the "GET" request "file.jpg" with default content type', (done) => {
         request(app)
           .get('/file.jpg')
-          .expect('Content-Type', /application\/octet-stream/)
+          .expect('Content-Type', /text\/html/)
           .expect(200, done);
       });
     });
@@ -2741,15 +2741,15 @@ describe('middleware', () => {
         .expect(200, done);
     });
 
-    it('should return the "200" code for the "GET" request to path not in outputFileSystem and return headers', (done) => {
+    it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
       app.get('/file.jpg', (req, res) => {
         res.send('welcome');
       });
-      request(app)
-        .get('/file.jpg')
-        .expect('X-nonsense-1', 'yes')
-        .expect('X-nonsense-2', 'no')
-        .expect(200, done);
+
+      const res = await request(app).get('/file.jpg');
+      expect(res.statusCode).toEqual(200);
+      expect(res.headers['X-nonsense-1']).toBeUndefined();
+      expect(res.headers['X-nonsense-2']).toBeUndefined();
     });
   });
 
