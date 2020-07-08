@@ -18,9 +18,7 @@ export default (app, compiler, done) => {
   });
 
   compiler.hooks.done.tap('wdm-test', () => {
-    setTimeout(() => {
-      return progress();
-    }, 500);
+    return progress();
   });
 
   return listen;
