@@ -65,7 +65,7 @@ describe('getFilenameFromUrl', () => {
       config: webpackPublicPathConfig,
       middlewareConfig: {},
       url: '/',
-      expected: undefined,
+      expected: null,
     },
     {
       title: 'publicPath config with path /public/path/',
@@ -90,7 +90,7 @@ describe('getFilenameFromUrl', () => {
       config: webpackMultiConfig,
       middlewareConfig: {},
       url: '/',
-      expected: undefined,
+      expected: null,
     },
     {
       title: 'multi config with path /static-one/',
@@ -139,9 +139,13 @@ describe('getFilenameFromUrl', () => {
       });
 
       it('should return correct filename from url', () => {
-        expect(getFilenameFromUrl(instance.context, config.url)).toEqual(
-          config.expected
-        );
+        const filename = getFilenameFromUrl(instance.context, config.url);
+        const { expected } = config;
+        if (expected) {
+          expect(filename).toEqual(expected);
+        } else {
+          expect(filename).toBeUndefined();
+        }
       });
     });
   });
