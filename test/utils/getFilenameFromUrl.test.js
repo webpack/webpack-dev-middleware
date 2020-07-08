@@ -12,6 +12,7 @@ import webpackPublicPathConfig from '../fixtures/webpack.public-path.config';
 import webpackMultiConfig from '../fixtures/webpack.array.config';
 
 describe('getFilenameFromUrl', () => {
+  console.log(require('webpack/package.json').version);
   const configs = [
     {
       title: 'simple config with path /',
@@ -139,7 +140,7 @@ describe('getFilenameFromUrl', () => {
       });
 
       it('should return correct filename from url', () => {
-        console.log(instance.context.stats);
+        console.log(instance.context.stats ? 'stats' : 'no stats');
         const filename = getFilenameFromUrl(instance.context, config.url);
         const { expected } = config;
         if (expected) {
