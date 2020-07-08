@@ -7,7 +7,7 @@ import getCompiler from './helpers/getCompiler';
 import getCompilerHooks from './helpers/getCompilerHooks';
 import webpackConfig from './fixtures/webpack.config';
 
-describe.skip('API', () => {
+describe('API', () => {
   let instance;
   let listen;
   let app;
