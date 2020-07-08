@@ -198,12 +198,16 @@ describe('API', () => {
   });
 
   describe('context property', () => {
-    it('should contain public properties', () => {
+    it('should contain public properties', (done) => {
       expect(instance.context.state).toBeDefined();
       expect(instance.context.options).toBeDefined();
       expect(instance.context.compiler).toBeDefined();
       expect(instance.context.watching).toBeDefined();
       expect(instance.context.outputFileSystem).toBeDefined();
+
+      compiler.hooks.done.tap('wdm-test', () => {
+        done();
+      });
     });
   });
 });
