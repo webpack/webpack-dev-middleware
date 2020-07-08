@@ -12,11 +12,6 @@ import webpackPublicPathConfig from '../fixtures/webpack.public-path.config';
 import webpackMultiConfig from '../fixtures/webpack.array.config';
 
 describe('getPaths', () => {
-  let instance;
-  let listen;
-  let app;
-  let compiler;
-
   const configs = [
     {
       title: 'simple config',
@@ -56,6 +51,11 @@ describe('getPaths', () => {
 
   configs.forEach((config) => {
     describe(config.title, () => {
+      let instance;
+      let listen;
+      let app;
+      let compiler;
+
       beforeEach((done) => {
         compiler = getCompiler(config.config);
 
