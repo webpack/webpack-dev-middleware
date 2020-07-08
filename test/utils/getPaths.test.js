@@ -11,7 +11,7 @@ import webpackSimpleConfig from '../fixtures/webpack.simple.config';
 import webpackPublicPathConfig from '../fixtures/webpack.public-path.config';
 import webpackMultiConfig from '../fixtures/webpack.array.config';
 
-describe.skip('getPaths', () => {
+describe('getPaths', () => {
   const configs = [
     {
       title: 'simple config',

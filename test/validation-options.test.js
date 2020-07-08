@@ -2,7 +2,7 @@ import middleware from '../src';
 
 import getCompiler from './helpers/getCompiler';
 
-describe.skip('validation', () => {
+describe('validation', () => {
   const cases = {
     mimeTypes: {
       success: [{ phtml: ['text/html'] }],

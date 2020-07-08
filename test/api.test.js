@@ -205,6 +205,8 @@ describe('API', () => {
       expect(instance.context.watching).toBeDefined();
       expect(instance.context.outputFileSystem).toBeDefined();
 
+      // the compilation needs to finish, as it will still be running
+      // after the test is done if not finished, potentially impacting other tests
       compiler.hooks.done.tap('wdm-test', () => {
         done();
       });
