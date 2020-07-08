@@ -12,6 +12,7 @@ export default function setupHooks(context) {
   }
 
   function done(stats) {
+    console.log('done');
     // We are now on valid state
     // eslint-disable-next-line no-param-reassign
     context.state = true;

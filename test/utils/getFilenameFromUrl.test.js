@@ -12,7 +12,6 @@ import webpackPublicPathConfig from '../fixtures/webpack.public-path.config';
 import webpackMultiConfig from '../fixtures/webpack.array.config';
 
 describe('getFilenameFromUrl', () => {
-  console.log(require('webpack/package.json').version);
   const configs = [
     {
       title: 'simple config with path /',
