@@ -139,7 +139,7 @@ describe('getFilenameFromUrl', () => {
       });
 
       it('should return correct filename from url', () => {
-        console.log(instance.context);
+        console.log(instance.context.stats);
         const filename = getFilenameFromUrl(instance.context, config.url);
         const { expected } = config;
         if (expected) {
