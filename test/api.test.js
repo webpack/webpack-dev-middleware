@@ -198,12 +198,18 @@ describe('API', () => {
   });
 
   describe('context property', () => {
-    it('should contain public properties', () => {
+    it('should contain public properties', (done) => {
       expect(instance.context.state).toBeDefined();
       expect(instance.context.options).toBeDefined();
       expect(instance.context.compiler).toBeDefined();
       expect(instance.context.watching).toBeDefined();
       expect(instance.context.outputFileSystem).toBeDefined();
+
+      // the compilation needs to finish, as it will still be running
+      // after the test is done if not finished, potentially impacting other tests
+      compiler.hooks.done.tap('wdm-test', () => {
+        done();
+      });
     });
   });
 });

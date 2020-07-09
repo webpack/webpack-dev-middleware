@@ -4,30 +4,13 @@ import querystring from 'querystring';
 
 import mem from 'mem';
 
-function getPaths(stats, options) {
-  const childStats = stats.stats ? stats.stats : [stats];
-  const publicPaths = [];
-
-  for (const { compilation } of childStats) {
-    // The `output.path` is always present and always absolute
-    const outputPath = compilation.getPath(compilation.outputOptions.path);
-    const publicPath = options.publicPath
-      ? compilation.getPath(options.publicPath)
-      : compilation.outputOptions.publicPath
-      ? compilation.getPath(compilation.outputOptions.publicPath)
-      : '';
-
-    publicPaths.push({ outputPath, publicPath });
-  }
-
-  return publicPaths;
-}
+import getPaths from './getPaths';
 
 const memoizedParse = mem(parse);
 
 export default function getFilenameFromUrl(context, url) {
   const { options } = context;
-  const paths = getPaths(context.stats, options);
+  const paths = getPaths(context);
 
   let filename;
   let urlObject;
