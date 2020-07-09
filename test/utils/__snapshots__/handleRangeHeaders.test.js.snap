@@ -1,0 +1,45 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`handleRangeHeaders should handle malformed range header 1`] = `
+Array [
+  Array [
+    "Accept-Ranges",
+    "bytes",
+  ],
+]
+`;
+
+exports[`handleRangeHeaders should handle multiple ranges 1`] = `
+Array [
+  Array [
+    "Accept-Ranges",
+    "bytes",
+  ],
+]
+`;
+
+exports[`handleRangeHeaders should handle unsatisfiable range 1`] = `
+Array [
+  Array [
+    "Accept-Ranges",
+    "bytes",
+  ],
+  Array [
+    "Content-Range",
+    "bytes */6",
+  ],
+]
+`;
+
+exports[`handleRangeHeaders should return content in range with valid range header 1`] = `
+Array [
+  Array [
+    "Accept-Ranges",
+    "bytes",
+  ],
+  Array [
+    "Content-Range",
+    "bytes 1-4/6",
+  ],
+]
+`;
