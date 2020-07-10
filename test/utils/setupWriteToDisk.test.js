@@ -108,8 +108,8 @@ describe('setupWriteToDisk', () => {
     expect(getPath.mock.calls.length).toEqual(1);
 
     expect(filter.mock.calls.length).toEqual(1);
-    // need to resolve path for windows
-    expect(filter.mock.calls[0][0]).toEqual(path.resolve('/output/path/file'));
+    // need to fix path for windows test
+    expect(filter.mock.calls[0][0]).toEqual(path.join('/output/path/file'));
     // the callback should always be called
     expect(cb.mock.calls.length).toEqual(1);
     // the filter prevents a directory from being made
