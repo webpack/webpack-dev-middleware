@@ -229,6 +229,17 @@ describe('middleware', () => {
           .expect(206, done);
       });
 
+      it('should return the "200" code for the "GET" request with malformed range header which is ignored', (done) => {
+        request(app).get('/bundle.js').set('Range', 'abc').expect(200, done);
+      });
+
+      it('should return the "200" code for the "GET" request with multiple range header which is ignored', (done) => {
+        request(app)
+          .get('/bundle.js')
+          .set('Range', 'bytes=3000-3100,3200-3300')
+          .expect(200, done);
+      });
+
       it('should return the "404" code for the "GET" request with to the non-public path', (done) => {
         request(app)
           .get('/nonpublic/')
