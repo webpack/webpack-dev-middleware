@@ -72,7 +72,7 @@ export default function wrapper(context) {
       }
 
       // Buffer
-      content = handleRangeHeaders(content, req, res);
+      content = handleRangeHeaders(context, content, req, res);
 
       // send Buffer
       res.send(content);
