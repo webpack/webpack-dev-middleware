@@ -53,7 +53,7 @@
     "@webpack-contrib/defaults": "^6.3.0",
     "@webpack-contrib/eslint-config-webpack": "^3.0.0",
     "babel-jest": "^26.2.2",
-    "chokidar": "^3.4.1",
+    "chokidar": "^3.4.2",
     "cross-env": "^7.0.2",
     "del": "^5.1.0",
     "del-cli": "^3.0.1",
