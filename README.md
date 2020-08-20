@@ -362,8 +362,8 @@ Please take a moment to read our contributing guidelines if you haven't yet done
 [cover-url]: https://codecov.io/gh/webpack/webpack-dev-middleware
 [chat]: https://badges.gitter.im/webpack/webpack.svg
 [chat-url]: https://gitter.im/webpack/webpack
-[size]: https://packagephobia.now.sh/badge?p=webpack-dev-middleware
-[size-url]: https://packagephobia.now.sh/result?p=webpack-dev-middleware
+[size]: https://packagephobia.com/badge?p=webpack-dev-middleware
+[size-url]: https://packagephobia.com/result?p=webpack-dev-middleware
 [docs-url]: https://webpack.js.org/guides/development/#using-webpack-dev-middleware
 [hash-url]: https://twitter.com/search?q=webpack
 [middleware-url]: https://github.com/webpack/webpack-dev-middleware
