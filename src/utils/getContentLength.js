@@ -1,5 +1,5 @@
 export default function getContentLength(content) {
-  let len;
+  let len = 0;
   if (typeof content !== 'undefined') {
     if (Buffer.isBuffer(content)) {
       // get length of Buffer
