@@ -42,12 +42,12 @@
     "memfs": "^3.2.0",
     "mime-types": "^2.1.27",
     "range-parser": "^1.2.1",
-    "schema-utils": "^2.7.0"
+    "schema-utils": "^2.7.1"
   },
   "devDependencies": {
     "@babel/cli": "^7.10.5",
-    "@babel/core": "^7.11.4",
-    "@babel/preset-env": "^7.11.0",
+    "@babel/core": "^7.11.5",
+    "@babel/preset-env": "^7.11.5",
     "@commitlint/cli": "^10.0.0",
     "@commitlint/config-conventional": "^10.0.0",
     "@webpack-contrib/defaults": "^6.3.0",
