@@ -45,6 +45,15 @@ const frameworks = [
     defaultHeader: 'text/html; charset=utf-8',
   },
 ];
+
+const setupMiddleware = (frameworkObject, app, ...middleware) => {
+  if (frameworkObject.name === 'fastify') {
+    app.register(middie).then(() => app.use(middleware));
+  } else {
+    app.use(middleware);
+  }
+};
+
 for (const frameworkObject of frameworks) {
   describe(`middleware (${frameworkObject.name})`, () => {
     let instance;
@@ -91,11 +100,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(() => {
@@ -330,11 +335,8 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
+
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -354,11 +356,8 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
+
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -826,11 +825,8 @@ for (const frameworkObject of frameworks) {
               instance = middleware(compiler);
 
               app = frameworkObject.framework();
-              if (frameworkObject.name === 'fastify') {
-                app.register(middie).then(() => app.use(instance));
-              } else {
-                app.use(instance);
-              }
+              setupMiddleware(frameworkObject, app, instance);
+
               server = frameworkObject.name === 'fastify' ? app.server : app;
 
               listen = listenShorthand(done);
@@ -884,15 +880,7 @@ for (const frameworkObject of frameworks) {
           };
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => {
-              app.use(testMiddleware);
-              app.use(instance);
-            });
-          } else {
-            app.use(testMiddleware);
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, testMiddleware, instance);
 
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
@@ -945,11 +933,8 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
+
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -993,11 +978,8 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
+
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -1035,11 +1017,8 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
+
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -1084,11 +1063,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -1149,11 +1124,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(() => {
@@ -1240,11 +1211,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(() => {
@@ -1321,11 +1288,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -1404,11 +1367,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -1475,11 +1434,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -1547,11 +1502,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -1596,11 +1547,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -1658,11 +1605,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -1710,11 +1653,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -1750,11 +1689,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -1790,11 +1725,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -1830,11 +1761,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -1889,11 +1816,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -1929,11 +1852,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -1979,11 +1898,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2035,11 +1950,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2079,11 +1990,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2127,11 +2034,7 @@ for (const frameworkObject of frameworks) {
           });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2160,11 +2063,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2202,11 +2101,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2248,11 +2143,7 @@ for (const frameworkObject of frameworks) {
           });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2294,11 +2185,7 @@ for (const frameworkObject of frameworks) {
           });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2340,11 +2227,7 @@ for (const frameworkObject of frameworks) {
           });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           app.get('/file.jpg', (req, res) => {
@@ -2378,11 +2261,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2422,11 +2301,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2469,11 +2344,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2529,11 +2400,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler, { writeToDisk: true });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2600,11 +2467,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler, { writeToDisk: false });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2670,11 +2533,7 @@ for (const frameworkObject of frameworks) {
           });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2731,11 +2590,7 @@ for (const frameworkObject of frameworks) {
           });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2790,11 +2645,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler, { writeToDisk: true });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2863,11 +2714,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler, { writeToDisk: true });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -2946,11 +2793,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler, { writeToDisk: true });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(() => {
@@ -3078,11 +2921,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler, { publicPath: '/public/' });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3117,15 +2956,7 @@ for (const frameworkObject of frameworks) {
         };
 
         app = frameworkObject.framework();
-        if (frameworkObject.name === 'fastify') {
-          app.register(middie).then(() => {
-            app.use(instance);
-            app.use(testMiddleware);
-          });
-        } else {
-          app.use(instance);
-          app.use(testMiddleware);
-        }
+        setupMiddleware(frameworkObject, app, instance, testMiddleware);
         server = frameworkObject.name === 'fastify' ? app.server : app;
 
         listen = listenShorthand(done);
@@ -3158,11 +2989,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3198,11 +3025,7 @@ for (const frameworkObject of frameworks) {
           });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3237,11 +3060,7 @@ for (const frameworkObject of frameworks) {
           });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3277,11 +3096,7 @@ for (const frameworkObject of frameworks) {
           });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3341,11 +3156,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler, { index: false, publicPath: '/' });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3378,11 +3189,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler, { index: true, publicPath: '/' });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3422,11 +3229,7 @@ for (const frameworkObject of frameworks) {
           });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3467,11 +3270,7 @@ for (const frameworkObject of frameworks) {
           });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3515,11 +3314,7 @@ for (const frameworkObject of frameworks) {
           });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3557,11 +3352,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler, { index: 'noextension' });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3602,11 +3393,7 @@ for (const frameworkObject of frameworks) {
           });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3648,11 +3435,7 @@ for (const frameworkObject of frameworks) {
             });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3684,11 +3467,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3728,11 +3507,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3772,11 +3547,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3816,11 +3587,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3860,11 +3627,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3904,11 +3667,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler);
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -3995,11 +3754,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler, { writeToDisk: true });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
@@ -4060,11 +3815,7 @@ for (const frameworkObject of frameworks) {
           instance = middleware(compiler, { writeToDisk: true });
 
           app = frameworkObject.framework();
-          if (frameworkObject.name === 'fastify') {
-            app.register(middie).then(() => app.use(instance));
-          } else {
-            app.use(instance);
-          }
+          setupMiddleware(frameworkObject, app, instance);
           server = frameworkObject.name === 'fastify' ? app.server : app;
 
           listen = listenShorthand(done);
