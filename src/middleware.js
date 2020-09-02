@@ -56,12 +56,12 @@ export default function wrapper(context) {
         return;
       }
 
-      if (!res.get('Content-Type')) {
+      if (!res.getHeader('Content-Type')) {
         // content-type name(like application/javascript; charset=utf-8) or false
         const contentType = mime.contentType(path.extname(filename));
 
         if (contentType) {
-          res.set('Content-Type', contentType);
+          res.setHeader('Content-Type', contentType);
         }
       }
 

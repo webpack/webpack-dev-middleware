@@ -62,6 +62,7 @@
     "eslint-plugin-import": "^2.22.0",
     "eslint-plugin-prettier": "^3.1.4",
     "express": "^4.17.1",
+    "fastify": "^2.13.0",
     "file-loader": "^6.1.0",
     "husky": "^4.2.5",
     "jest": "^26.4.2",

@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 
 import express from 'express';
+import fastify from 'fastify';
+
 import request from 'supertest';
 import memfs, { createFsFromVolume, Volume } from 'memfs';
 import del from 'del';
@@ -277,6 +279,205 @@ describe('middleware', () => {
           .expect('Content-Length', fileData.byteLength.toString())
           .expect('Content-Type', 'application/octet-stream')
           .expect(200, done);
+      });
+    });
+
+    describe('should work with other framework', () => {
+      let compiler;
+
+      const outputPath = path.resolve(__dirname, './outputs/basic');
+
+      beforeAll((done) => {
+        compiler = getCompiler({
+          ...webpackConfig,
+          output: {
+            filename: 'bundle.js',
+            path: outputPath,
+          },
+        });
+
+        instance = middleware(compiler);
+
+        app = fastify();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+
+        instance.context.outputFileSystem.mkdirSync(outputPath, {
+          recursive: true,
+        });
+        instance.context.outputFileSystem.writeFileSync(
+          path.resolve(outputPath, 'image.svg'),
+          'svg image'
+        );
+        instance.context.outputFileSystem.mkdirSync(
+          path.resolve(outputPath, 'directory/nested-directory'),
+          { recursive: true }
+        );
+        instance.context.outputFileSystem.writeFileSync(
+          path.resolve(outputPath, 'directory/nested-directory/index.html'),
+          'My Index.'
+        );
+        instance.context.outputFileSystem.writeFileSync(
+          path.resolve(outputPath, 'throw-an-exception-on-readFileSync.txt'),
+          'exception'
+        );
+        instance.context.outputFileSystem.writeFileSync(
+          path.resolve(outputPath, 'unknown'),
+          'unknown'
+        );
+      });
+
+      afterAll(close);
+
+      it('should not find the bundle file on disk', (done) => {
+        request(app.server)
+          .get('/bundle.js')
+          .expect('Content-Type', 'application/javascript; charset=utf-8')
+          .expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            expect(fs.existsSync(path.resolve(outputPath, 'bundle.js'))).toBe(
+              false
+            );
+
+            return done();
+          });
+      });
+
+      it('should return the "200" code for the "GET" request to the bundle file', (done) => {
+        const fileData = instance.context.outputFileSystem.readFileSync(
+          path.resolve(outputPath, 'bundle.js')
+        );
+
+        request(app.server)
+          .get('/bundle.js')
+          .expect('Content-Type', 'application/javascript; charset=utf-8')
+          .expect(200, fileData.toString(), done);
+      });
+
+      it('should return the "200" code for the "HEAD" request to the bundle file', (done) => {
+        request(app.server)
+          .head('/bundle.js')
+          .expect('Content-Type', 'application/javascript; charset=utf-8')
+          // eslint-disable-next-line no-undefined
+          .expect(200, undefined, done);
+      });
+
+      it('should return the "404" code for the "POST" request to the bundle file', (done) => {
+        request(app.server).post('/bundle.js').expect(404, done);
+      });
+
+      it('should return the "200" code for the "GET" request to the "image.svg" file', (done) => {
+        const fileData = instance.context.outputFileSystem.readFileSync(
+          path.resolve(outputPath, 'image.svg')
+        );
+
+        request(app.server)
+          .get('/image.svg')
+
+          .expect('Content-Type', 'image/svg+xml')
+          .expect(200, fileData, done);
+      });
+
+      it('should return the "200" code for the "GET" request to the directory', (done) => {
+        const fileData = fs.readFileSync(
+          path.resolve(__dirname, './fixtures/index.html')
+        );
+
+        request(app.server)
+          .get('/')
+          .expect('Content-Type', 'text/html; charset=utf-8')
+
+          .expect(200, fileData.toString(), done);
+      });
+
+      it('should return the "200" code for the "GET" request to the subdirectory with "index.html"', (done) => {
+        const fileData = instance.context.outputFileSystem.readFileSync(
+          path.resolve(outputPath, 'directory/nested-directory/index.html')
+        );
+
+        request(app.server)
+          .get('/directory/nested-directory/')
+
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, fileData.toString(), done);
+      });
+
+      it('should return the "200" code for the "GET" request to the subdirectory with "index.html" without trailing slash', (done) => {
+        const fileData = instance.context.outputFileSystem.readFileSync(
+          path.resolve(outputPath, 'directory/nested-directory/index.html')
+        );
+
+        request(app.server)
+          .get('/directory/nested-directory')
+
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, fileData.toString(), done);
+      });
+
+      it('should return the "200" code for the "GET" request to the subdirectory with "index.html"', (done) => {
+        const fileData = instance.context.outputFileSystem.readFileSync(
+          path.resolve(outputPath, 'directory/nested-directory/index.html')
+        );
+
+        request(app.server)
+          .get('/directory/nested-directory/index.html')
+
+          .expect('Content-Type', 'text/html; charset=utf-8')
+          .expect(200, fileData.toString(), done);
+      });
+
+      it('should return the "416" code for the "GET" request with the invalid range header', (done) => {
+        request(app.server)
+          .get('/bundle.js')
+          .set('Range', 'bytes=6000-')
+          .expect(416, done);
+      });
+
+      it('should return the "206" code for the "GET" request with the valid range header', (done) => {
+        request(app.server)
+          .get('/bundle.js')
+          .set('Range', 'bytes=3000-3500')
+          .expect(
+            'Content-Range',
+            isWebpack5() ? 'bytes 3000-3500/5204' : 'bytes 3000-3500/4875'
+          )
+          .expect(206, done);
+      });
+
+      it('should return the "404" code for the "GET" request with to the non-public path', (done) => {
+        request(app.server)
+          .get('/nonpublic/')
+          // it's different how res.end() detect the content-type
+          .expect('Content-Type', 'application/json; charset=utf-8')
+          .expect(404, done);
+      });
+
+      it('should return the "404" code for the "GET" request to the deleted file', (done) => {
+        const spy = jest
+          .spyOn(instance.context.outputFileSystem, 'readFileSync')
+          .mockImplementation(() => {
+            throw new Error('error');
+          });
+
+        request(app.server)
+          .get('/public/throw-an-exception-on-readFileSync.txt')
+          .expect(404, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            spy.mockRestore();
+
+            return done();
+          });
+      });
+
+      it('should return "200" code code for the "GET" request to the file without extension', (done) => {
+        request(app.server).get('/unknown').expect(200, done);
       });
     });
 
@@ -2763,7 +2964,30 @@ describe('middleware', () => {
       expect(res.headers['X-nonsense-2']).toBeUndefined();
     });
   });
+  describe('headers option with other framework', () => {
+    beforeAll((done) => {
+      const compiler = getCompiler(webpackConfig);
 
+      instance = middleware(compiler, {
+        headers: { 'X-nonsense-1': 'yes', 'X-nonsense-2': 'no' },
+      });
+
+      app = fastify();
+      app.use(instance);
+
+      listen = listenShorthand(done);
+    });
+
+    afterAll(close);
+
+    it('should return the "200" code for the "GET" request to the bundle file and return headers', (done) => {
+      request(app.server)
+        .get('/bundle.js')
+        .expect('X-nonsense-1', 'yes')
+        .expect('X-nonsense-2', 'no')
+        .expect(200, done);
+    });
+  });
   describe('publicPath option', () => {
     describe('should work with "string" value', () => {
       beforeAll((done) => {
