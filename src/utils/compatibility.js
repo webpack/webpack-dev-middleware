@@ -1,17 +1,24 @@
 import mime from 'mime-types';
 
 export function resGetHeader(res, header) {
+  // for express
   if (res.get) {
     return res.get(header);
   }
+  // for fastify
   return res.getHeader(header);
 }
+
 export function resSetHeader(res, header, value) {
+  // for express
   if (res.set) {
     return res.set(header, value);
   }
+  // for fastify
   return res.setHeader(header, value);
 }
+
+// helper to get Content-Length for fastify
 export function getContentLength(content) {
   let len = 0;
   if (typeof content !== 'undefined') {
@@ -31,6 +38,7 @@ export function getContentLength(content) {
   return len;
 }
 
+// helper to get Content-Type for fastify
 export function getUnknownContentType(content) {
   return Buffer.isBuffer(content)
     ? mime.contentType('bin')
@@ -38,16 +46,18 @@ export function getUnknownContentType(content) {
 }
 
 export function sendContent(res, content) {
+  // for express
   if (res.send) {
     return res.send(content);
   }
 
+  // for fastify
   const contentLength = getContentLength(content);
-  res.setHeader('Content-Length', contentLength);
+  resSetHeader(res, 'Content-Length', contentLength);
 
-  if (!res.getHeader('Content-Type')) {
+  if (!resGetHeader(res, 'Content-Type')) {
     const unknownContentType = getUnknownContentType(content);
-    res.setHeader('Content-Type', unknownContentType);
+    resSetHeader(res, 'Content-Type', unknownContentType);
   }
 
   return res.end(content);
