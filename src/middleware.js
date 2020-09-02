@@ -5,11 +5,7 @@ import mime from 'mime-types';
 import getFilenameFromUrl from './utils/getFilenameFromUrl';
 import handleRangeHeaders from './utils/handleRangeHeaders';
 import ready from './utils/ready';
-import sendContent from './utils/sendContent';
-import compatibility from './utils/compatibility';
-
-const {resGetHeader} = compatibility;
-const {resSetHeader} = compatibility;
+import { resGetHeader, resSetHeader, sendContent } from './utils/compatibility';
 
 export default function wrapper(context) {
   return async function middleware(req, res, next) {
