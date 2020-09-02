@@ -5,6 +5,7 @@ import mime from 'mime-types';
 import getFilenameFromUrl from './utils/getFilenameFromUrl';
 import handleRangeHeaders from './utils/handleRangeHeaders';
 import ready from './utils/ready';
+import { resGetHeader, resSetHeader, sendContent } from './utils/compatibility';
 
 export default function wrapper(context) {
   return async function middleware(req, res, next) {
@@ -56,26 +57,26 @@ export default function wrapper(context) {
         return;
       }
 
-      if (!res.get('Content-Type')) {
+      if (!resGetHeader(res, 'Content-Type')) {
         // content-type name(like application/javascript; charset=utf-8) or false
         const contentType = mime.contentType(path.extname(filename));
 
         if (contentType) {
-          res.set('Content-Type', contentType);
+          resSetHeader(res, 'Content-Type', contentType);
         }
       }
 
       if (headers) {
         for (const name of Object.keys(headers)) {
-          res.set(name, headers[name]);
+          resSetHeader(res, name, headers[name]);
         }
       }
 
       // Buffer
       content = handleRangeHeaders(context, content, req, res);
 
-      // send Buffer
-      res.send(content);
+      // send buffer
+      sendContent(res, content);
     }
   };
 }
