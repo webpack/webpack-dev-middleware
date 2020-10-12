@@ -1,4 +1,4 @@
-'use strict';
+
 
 module.exports = {
   collectCoverage: false,
@@ -6,4 +6,5 @@ module.exports = {
   moduleFileExtensions: ['js', 'json'],
   testMatch: ['**/test/**/*.test.js'],
   setupFilesAfterEnv: ['<rootDir>/setupTest.js'],
+  snapshotResolver: './test/helpers/snapshotResolver.js',
 };
