@@ -5,6 +5,7 @@ import express from 'express';
 import middleware from '../../src';
 import getPaths from '../../src/utils/getPaths';
 
+import isWebpack5 from '../helpers/isWebpack5';
 import getCompiler from '../helpers/getCompiler';
 import listenAndCompile from '../helpers/listenAndCompile';
 import webpackSimpleConfig from '../fixtures/webpack.simple.config';
@@ -19,7 +20,7 @@ describe('getPaths', () => {
       expected: [
         {
           outputPath: path.resolve(__dirname, '../outputs/simple'),
-          publicPath: '',
+          publicPath: isWebpack5() ? 'auto' : '',
         },
       ],
     },
