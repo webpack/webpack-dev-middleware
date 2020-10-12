@@ -17,7 +17,9 @@ Array [
 Module parse failed: Unexpected token (1:3)
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
 > 1()2()3()
-|",
+|
+
+broken compiled with 1 error",
     ],
   ],
   Array [
@@ -31,7 +33,9 @@ You may need an appropriate loader to handle this file type, currently no loader
     "webpack-dev-middleware",
     "warn",
     Array [
-      "Child \\"warning\\": WARNING in Warning",
+      "Child \\"warning\\": WARNING in Warning
+
+warning compiled with 1 warning",
     ],
   ],
   Array [
@@ -64,7 +68,9 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING in Warning
+
+webpack compiled with 1 warning",
     ],
   ],
   Array [
@@ -78,7 +84,9 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING in Warning
+
+webpack compiled with 1 warning",
     ],
   ],
   Array [
@@ -108,7 +116,9 @@ Array [
 Module parse failed: Unexpected token (1:3)
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
 > 1()2()3()
-|",
+|
+
+webpack compiled with 1 error",
     ],
   ],
   Array [
@@ -122,7 +132,9 @@ You may need an appropriate loader to handle this file type, currently no loader
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING in Warning
+
+webpack compiled with 1 warning",
     ],
   ],
   Array [
@@ -155,7 +167,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Entrypoint main = bundle.js",
+      "Entrypoint main 6.38 KiB (4.68 KiB) = bundle.js 2 auxiliary assets",
     ],
   ],
   Array [
@@ -261,7 +273,9 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING in Warning
+
+webpack compiled with 1 warning",
     ],
   ],
   Array [
@@ -289,7 +303,9 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING in Warning
+
+webpack compiled with 1 warning",
     ],
   ],
   Array [
@@ -413,7 +429,9 @@ Array [
 Module parse failed: Unexpected token (1:3)
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
 > 1()2()3()
-|",
+|
+
+webpack compiled with 1 error",
     ],
   ],
   Array [
@@ -431,7 +449,9 @@ You may need an appropriate loader to handle this file type, currently no loader
 Module parse failed: Unexpected token (1:3)
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
 > 1()2()3()
-|",
+|
+
+webpack compiled with 1 error",
     ],
   ],
   Array [
@@ -463,7 +483,9 @@ You may need an appropriate loader to handle this file type, currently no loader
 Module parse failed: Unexpected token (1:3)
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
 > 1()2()3()
-|",
+|
+
+webpack compiled with 1 error",
     ],
   ],
   Array [
@@ -481,7 +503,9 @@ You may need an appropriate loader to handle this file type, currently no loader
 Module parse failed: Unexpected token (1:3)
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
 > 1()2()3()
-|",
+|
+
+webpack compiled with 1 error",
     ],
   ],
   Array [
@@ -511,7 +535,9 @@ Array [
 Module parse failed: Unexpected token (1:3)
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
 > 1()2()3()
-|",
+|
+
+webpack compiled with 1 error",
     ],
   ],
   Array [
@@ -543,7 +569,9 @@ You may need an appropriate loader to handle this file type, currently no loader
 Module parse failed: Unexpected token (1:3)
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
 > 1()2()3()
-|",
+|
+
+webpack compiled with 1 error",
     ],
   ],
   Array [
@@ -569,7 +597,9 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING in Warning
+
+webpack compiled with 1 warning",
     ],
   ],
   Array [
@@ -583,7 +613,9 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING in Warning
+
+webpack compiled with 1 warning",
     ],
   ],
   Array [
@@ -611,7 +643,9 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING in Warning
+
+webpack compiled with 1 warning",
     ],
   ],
   Array [
@@ -625,7 +659,9 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING in Warning
+
+webpack compiled with 1 warning",
     ],
   ],
   Array [

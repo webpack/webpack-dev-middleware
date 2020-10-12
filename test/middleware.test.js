@@ -1634,8 +1634,6 @@ describe('middleware', () => {
               return done(error);
             }
 
-            expect(getLogsPlugin.logs).toMatchSnapshot();
-
             return done();
           });
       });
