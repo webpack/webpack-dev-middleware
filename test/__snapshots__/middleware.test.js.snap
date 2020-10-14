@@ -147,7 +147,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Entrypoint main 6.38 KiB (4.68 KiB) = bundle.js 2 auxiliary assets",
+      "Entrypoint main = bundle.js",
     ],
   ],
   Array [

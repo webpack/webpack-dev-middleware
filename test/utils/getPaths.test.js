@@ -20,7 +20,7 @@ describe('getPaths', () => {
       expected: [
         {
           outputPath: path.resolve(__dirname, '../outputs/simple'),
-          publicPath: isWebpack5 ? 'auto' : '',
+          publicPath: isWebpack5() ? 'auto' : '',
         },
       ],
     },

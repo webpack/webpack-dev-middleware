@@ -20,8 +20,14 @@ export default class GetLogsPlugin {
       return 'WARNING';
     }
 
+    // TODO remove after webpack@4 dropping
     if (log.includes('modules')) {
       return 'compiled successfully';
+    }
+
+    // TODO remove after webpack@4 dropping
+    if (log.includes('Entrypoint')) {
+      return 'Entrypoint main = bundle.js';
     }
 
     return log
