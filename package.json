@@ -70,7 +70,7 @@
     "prettier": "^2.1.2",
     "standard-version": "^9.0.0",
     "supertest": "^5.0.0",
-    "webpack": "^4.44.2"
+    "webpack": "^5.1.0"
   },
   "keywords": [
     "webpack",
