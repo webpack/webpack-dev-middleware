@@ -13,7 +13,7 @@
     "url": "https://opencollective.com/webpack"
   },
   "engines": {
-    "node": ">= 10.13"
+    "node": ">= 10.13.0"
   },
   "scripts": {
     "commitlint": "commitlint --from=master",
@@ -38,11 +38,11 @@
     "webpack": "^4.0.0 || ^5.0.0"
   },
   "dependencies": {
-    "mem": "^6.1.1",
+    "mem": "^8.0.0",
     "memfs": "^3.2.0",
     "mime-types": "^2.1.27",
     "range-parser": "^1.2.1",
-    "schema-utils": "^2.7.1"
+    "schema-utils": "^3.0.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.11.6",
@@ -52,25 +52,25 @@
     "@commitlint/config-conventional": "^11.0.0",
     "@webpack-contrib/defaults": "^6.3.0",
     "@webpack-contrib/eslint-config-webpack": "^3.0.0",
-    "babel-jest": "^26.3.0",
-    "chokidar": "^3.4.2",
+    "babel-jest": "^26.5.2",
+    "chokidar": "^3.4.3",
     "cross-env": "^7.0.2",
-    "del": "^5.1.0",
+    "del": "^6.0.0",
     "del-cli": "^3.0.1",
-    "eslint": "^7.8.1",
-    "eslint-config-prettier": "^6.11.0",
-    "eslint-plugin-import": "^2.22.0",
+    "eslint": "^7.11.0",
+    "eslint-config-prettier": "^6.12.0",
+    "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-prettier": "^3.1.4",
     "express": "^4.17.1",
-    "file-loader": "^6.1.0",
+    "file-loader": "^6.1.1",
     "husky": "^4.3.0",
-    "jest": "^26.4.2",
-    "lint-staged": "^10.3.0",
+    "jest": "^26.5.3",
+    "lint-staged": "^10.4.0",
     "npm-run-all": "^4.1.5",
-    "prettier": "^2.1.1",
+    "prettier": "^2.1.2",
     "standard-version": "^9.0.0",
-    "supertest": "^4.0.2",
-    "webpack": "^4.44.1"
+    "supertest": "^5.0.0",
+    "webpack": "^4.44.2"
   },
   "keywords": [
     "webpack",

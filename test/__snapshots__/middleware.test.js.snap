@@ -13,11 +13,7 @@ Array [
     "webpack-dev-middleware",
     "error",
     Array [
-      "Child \\"broken\\": ERROR in ./broken.js 1:3
-Module parse failed: Unexpected token (1:3)
-You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|",
+      "ERROR",
     ],
   ],
   Array [
@@ -31,7 +27,7 @@ You may need an appropriate loader to handle this file type, currently no loader
     "webpack-dev-middleware",
     "warn",
     Array [
-      "Child \\"warning\\": WARNING in Warning",
+      "WARNING",
     ],
   ],
   Array [
@@ -64,7 +60,7 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING",
     ],
   ],
   Array [
@@ -78,7 +74,7 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING",
     ],
   ],
   Array [
@@ -104,11 +100,7 @@ Array [
     "webpack-dev-middleware",
     "error",
     Array [
-      "ERROR in ./broken.js 1:3
-Module parse failed: Unexpected token (1:3)
-You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|",
+      "ERROR",
     ],
   ],
   Array [
@@ -122,7 +114,7 @@ You may need an appropriate loader to handle this file type, currently no loader
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING",
     ],
   ],
   Array [
@@ -200,7 +192,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "X modules",
+      "compiled successfully",
     ],
   ],
   Array [
@@ -242,8 +234,7 @@ Array [
     "webpack-dev-middleware",
     "error",
     Array [
-      "Unable to write \\"/absolute/path/to/test/outputs/write-to-disk-mkdir-error\\" directory to disk:
-Error: Error in the \\"fs.mkdir\\" method.",
+      "ERROR",
     ],
   ],
 ]
@@ -255,8 +246,7 @@ Array [
     "webpack-dev-middleware",
     "error",
     Array [
-      "Unable to write \\"/absolute/path/to/test/outputs/write-to-disk-writeFile-error/bundle.js\\" asset to disk:
-Error: Error in the \\"fs.writeFile\\" method.",
+      "ERROR",
     ],
   ],
 ]
@@ -268,7 +258,7 @@ Array [
     "webpack-dev-middleware",
     "error",
     Array [
-      "Error: Error in Watch method",
+      "ERROR",
     ],
   ],
 ]
@@ -287,7 +277,7 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING",
     ],
   ],
   Array [
@@ -315,7 +305,7 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING",
     ],
   ],
   Array [
@@ -435,11 +425,7 @@ Array [
     "webpack-dev-middleware",
     "error",
     Array [
-      "ERROR in ./broken.js 1:3
-Module parse failed: Unexpected token (1:3)
-You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|",
+      "ERROR",
     ],
   ],
   Array [
@@ -453,11 +439,7 @@ You may need an appropriate loader to handle this file type, currently no loader
     "webpack-dev-middleware",
     "error",
     Array [
-      "ERROR in ./broken.js 1:3
-Module parse failed: Unexpected token (1:3)
-You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|",
+      "ERROR",
     ],
   ],
   Array [
@@ -485,11 +467,7 @@ You may need an appropriate loader to handle this file type, currently no loader
     "webpack-dev-middleware",
     "error",
     Array [
-      "ERROR in ./broken.js 1:3
-Module parse failed: Unexpected token (1:3)
-You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|",
+      "ERROR",
     ],
   ],
   Array [
@@ -503,11 +481,7 @@ You may need an appropriate loader to handle this file type, currently no loader
     "webpack-dev-middleware",
     "error",
     Array [
-      "ERROR in ./broken.js 1:3
-Module parse failed: Unexpected token (1:3)
-You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|",
+      "ERROR",
     ],
   ],
   Array [
@@ -533,11 +507,7 @@ Array [
     "webpack-dev-middleware",
     "error",
     Array [
-      "ERROR in ./broken.js 1:3
-Module parse failed: Unexpected token (1:3)
-You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|",
+      "ERROR",
     ],
   ],
   Array [
@@ -565,11 +535,7 @@ You may need an appropriate loader to handle this file type, currently no loader
     "webpack-dev-middleware",
     "error",
     Array [
-      "ERROR in ./broken.js 1:3
-Module parse failed: Unexpected token (1:3)
-You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|",
+      "ERROR",
     ],
   ],
   Array [
@@ -595,7 +561,7 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING",
     ],
   ],
   Array [
@@ -609,7 +575,7 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING",
     ],
   ],
   Array [
@@ -637,7 +603,7 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING",
     ],
   ],
   Array [
@@ -651,7 +617,7 @@ Array [
     "webpack-dev-middleware",
     "warn",
     Array [
-      "WARNING in Warning",
+      "WARNING",
     ],
   ],
   Array [

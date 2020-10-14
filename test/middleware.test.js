@@ -216,7 +216,7 @@ describe('middleware', () => {
       it('should return the "416" code for the "GET" request with the invalid range header', (done) => {
         request(app)
           .get('/bundle.js')
-          .set('Range', 'bytes=6000-')
+          .set('Range', 'bytes=9999999-')
           .expect(416, done);
       });
 

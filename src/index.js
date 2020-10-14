@@ -1,4 +1,4 @@
-import validateOptions from 'schema-utils';
+import { validate } from 'schema-utils';
 import mime from 'mime-types';
 
 import middleware from './middleware';
@@ -11,7 +11,7 @@ import schema from './options.json';
 const noop = () => {};
 
 export default function wdm(compiler, options = {}) {
-  validateOptions(schema, options, {
+  validate(schema, options, {
     name: 'Dev Middleware',
     baseDataPath: 'options',
   });

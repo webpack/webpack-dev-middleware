@@ -26,7 +26,11 @@ export default function getFilenameFromUrl(context, url) {
     let publicPathObject;
 
     try {
-      publicPathObject = memoizedParse(publicPath || '/', false, true);
+      publicPathObject = memoizedParse(
+        publicPath !== 'auto' && publicPath ? publicPath : '/',
+        false,
+        true
+      );
     } catch (_ignoreError) {
       // eslint-disable-next-line no-continue
       continue;

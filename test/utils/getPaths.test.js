@@ -10,6 +10,7 @@ import listenAndCompile from '../helpers/listenAndCompile';
 import webpackSimpleConfig from '../fixtures/webpack.simple.config';
 import webpackPublicPathConfig from '../fixtures/webpack.public-path.config';
 import webpackMultiConfig from '../fixtures/webpack.array.config';
+import isWebpack5 from '../helpers/isWebpack5';
 
 describe('getPaths', () => {
   const configs = [
@@ -19,7 +20,7 @@ describe('getPaths', () => {
       expected: [
         {
           outputPath: path.resolve(__dirname, '../outputs/simple'),
-          publicPath: '',
+          publicPath: isWebpack5() ? 'auto' : '',
         },
       ],
     },
