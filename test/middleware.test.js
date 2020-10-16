@@ -42,13 +42,23 @@ describe('middleware', () => {
   }
 
   function close(done) {
-    instance.close();
+    if (instance.context.watching.closed) {
+      if (listen) {
+        listen.close(done);
+      } else {
+        done();
+      }
 
-    if (listen) {
-      listen.close(done);
-    } else {
-      done();
+      return;
     }
+
+    instance.close(() => {
+      if (listen) {
+        listen.close(done);
+      } else {
+        done();
+      }
+    });
   }
 
   describe('basic', () => {
@@ -3282,7 +3292,7 @@ describe('middleware', () => {
   });
 
   describe('logger', () => {
-    describe('should logging on successfully build', () => {
+    describe.only('should logging on successfully build', () => {
       let compiler;
       let getLogsPlugin;
 
@@ -3581,12 +3591,14 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
+      afterAll((done) => {
         del.sync(
           path.posix.resolve(__dirname, './outputs/write-to-disk-mkdir-error')
         );
 
         mkdirSpy.mockRestore();
+
+        close(done);
       });
 
       it('should logging', (done) => {
@@ -3594,9 +3606,7 @@ describe('middleware', () => {
           instance.close(() => {
             expect(getLogsPlugin.logs).toMatchSnapshot();
 
-            listen.close(() => {
-              done();
-            });
+            done();
           });
         });
       });
@@ -3638,7 +3648,7 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
+      afterAll((done) => {
         writeFileSpy.mockRestore();
 
         del.sync(
@@ -3648,7 +3658,7 @@ describe('middleware', () => {
           )
         );
 
-        close();
+        close(done);
       });
 
       it('should logging', (done) => {
@@ -3656,9 +3666,7 @@ describe('middleware', () => {
           instance.close(() => {
             expect(getLogsPlugin.logs).toMatchSnapshot();
 
-            listen.close(() => {
-              done();
-            });
+            done();
           });
         });
       });
