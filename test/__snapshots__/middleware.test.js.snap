@@ -1,5 +1,233 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`middleware basic should respect the "stats" option from the configuration in multi-compiler mode and use the "name" option should return the "200" code for "GET" requests to bundle files 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /static-one/bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Child \\"broken\\": Failed to compile.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "warn",
+    Array [
+      "WARNING",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Child \\"warning\\": Compiled with warnings.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Child \\"success\\": Compiled successfully.",
+    ],
+  ],
+]
+`;
+
+exports[`middleware basic should respect the "stats" option from the configuration in multi-compiler mode should return the "200" code for the "GET" request to bundle files 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /static-one/bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "warn",
+    Array [
+      "WARNING",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled with warnings.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "warn",
+    Array [
+      "WARNING",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled with warnings.",
+    ],
+  ],
+]
+`;
+
+exports[`middleware basic should respect the "stats" option in multi-compiler mode should return the "200" code for the "GET" requests to bundles file 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /static-one/bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Failed to compile.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "warn",
+    Array [
+      "WARNING",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled with warnings.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled successfully.",
+    ],
+  ],
+]
+`;
+
+exports[`middleware basic should respect the "stats" option with the "{ all: false, entrypoints: true }" value from the configuration should return the "200" code for the "GET" request to the bundle file 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Entrypoint main = bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled successfully.",
+    ],
+  ],
+]
+`;
+
+exports[`middleware basic should respect the "stats" option with the "false" value from the configuration should return the "200" code for the "GET" request to the bundle file 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled successfully.",
+    ],
+  ],
+]
+`;
+
+exports[`middleware basic should respect the "stats" option with the "minimal" value from the configuration should return the "200" code for the "GET" request to the bundle file 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "compiled successfully",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled successfully.",
+    ],
+  ],
+]
+`;
+
+exports[`middleware basic should respect the "stats" option with the "none" value from the configuration should return the "200" code for the "GET" request to the bundle file 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiled successfully.",
+    ],
+  ],
+]
+`;
+
+exports[`middleware basic should throw an error on "run" when we watching should logging an error 1`] = `"You ran Webpack twice. Each instance only supports a single concurrent compilation at a time."`;
+
+exports[`middleware basic should throw an error on "watch" when we watching should logging an error 1`] = `"You ran Webpack twice. Each instance only supports a single concurrent compilation at a time."`;
+
 exports[`middleware logger should logging an error from the "fs.mkdir" method when the "writeToDisk" option is "true"  should logging 1`] = `
 Array [
   Array [
