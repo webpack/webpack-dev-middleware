@@ -42,13 +42,23 @@ describe('middleware', () => {
   }
 
   function close(done) {
-    instance.close();
+    if (instance.context.watching.closed) {
+      if (listen) {
+        listen.close(done);
+      } else {
+        done();
+      }
 
-    if (listen) {
-      listen.close(done);
-    } else {
-      done();
+      return;
     }
+
+    instance.close(() => {
+      if (listen) {
+        listen.close(done);
+      } else {
+        done();
+      }
+    });
   }
 
   describe('basic', () => {
@@ -2147,10 +2157,10 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
+      afterAll((done) => {
         spy.mockRestore();
 
-        close();
+        close(done);
       });
 
       it('should pass arguments to the "watch" method', (done) => {
@@ -2186,10 +2196,10 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
+      afterAll((done) => {
         spy.mockRestore();
 
-        close();
+        close(done);
       });
 
       it('should pass arguments to the "watch" method', (done) => {
@@ -2228,10 +2238,10 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
+      afterAll((done) => {
         spy.mockRestore();
 
-        close();
+        close(done);
       });
 
       it('should pass arguments to the "watch" method', (done) => {
@@ -2283,10 +2293,10 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
+      afterAll((done) => {
         del.sync(path.posix.resolve(__dirname, './outputs/write-to-disk-true'));
 
-        close();
+        close(done);
       });
 
       it('should find the bundle file on disk', (done) => {
@@ -2412,12 +2422,12 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
+      afterAll((done) => {
         del.sync(
           path.posix.resolve(__dirname, './outputs/write-to-disk-function-true')
         );
 
-        close();
+        close(done);
       });
 
       it('should find the bundle file on disk', (done) => {
@@ -2465,7 +2475,7 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
+      afterAll((done) => {
         del.sync(
           path.posix.resolve(
             __dirname,
@@ -2473,7 +2483,7 @@ describe('middleware', () => {
           )
         );
 
-        close();
+        close(done);
       });
 
       it('should not find the bundle file on disk', (done) => {
@@ -2519,12 +2529,12 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
+      afterAll((done) => {
         del.sync(
           path.posix.resolve(__dirname, './outputs/write-to-disk-query-string')
         );
 
-        close();
+        close(done);
       });
 
       it('should find the bundle file on disk with no querystring', (done) => {
@@ -2584,7 +2594,7 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
+      afterAll((done) => {
         del.sync(
           path.posix.resolve(
             __dirname,
@@ -2592,7 +2602,7 @@ describe('middleware', () => {
           )
         );
 
-        close();
+        close(done);
       });
 
       it('should find the bundle files on disk', (done) => {
@@ -2667,12 +2677,12 @@ describe('middleware', () => {
         });
       });
 
-      afterAll(() => {
+      afterAll((done) => {
         del.sync(
           path.posix.resolve(__dirname, './outputs/write-to-disk-with-hash/')
         );
 
-        close();
+        close(done);
       });
 
       it('should find the bundle file on disk', (done) => {
@@ -3269,10 +3279,10 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
+      afterAll((done) => {
         isDirectory.mockRestore();
 
-        close();
+        close(done);
       });
 
       it('should return the "404" code for the "GET" request to the public path', (done) => {
@@ -3581,12 +3591,14 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
+      afterAll((done) => {
         del.sync(
           path.posix.resolve(__dirname, './outputs/write-to-disk-mkdir-error')
         );
 
         mkdirSpy.mockRestore();
+
+        close(done);
       });
 
       it('should logging', (done) => {
@@ -3594,9 +3606,7 @@ describe('middleware', () => {
           instance.close(() => {
             expect(getLogsPlugin.logs).toMatchSnapshot();
 
-            listen.close(() => {
-              done();
-            });
+            done();
           });
         });
       });
@@ -3638,7 +3648,7 @@ describe('middleware', () => {
         listen = listenShorthand(done);
       });
 
-      afterAll(() => {
+      afterAll((done) => {
         writeFileSpy.mockRestore();
 
         del.sync(
@@ -3648,7 +3658,7 @@ describe('middleware', () => {
           )
         );
 
-        close();
+        close(done);
       });
 
       it('should logging', (done) => {
@@ -3656,9 +3666,7 @@ describe('middleware', () => {
           instance.close(() => {
             expect(getLogsPlugin.logs).toMatchSnapshot();
 
-            listen.close(() => {
-              done();
-            });
+            done();
           });
         });
       });
