@@ -3,16 +3,18 @@ import parseRange from 'range-parser';
 export default function handleRangeHeaders(context, content, req, res) {
   // assumes express API. For other servers, need to add logic to access
   // alternative header APIs
-  res.setHeader('Accept-Ranges', 'bytes');
-
-  if (req.headers.range) {
-    const ranges = parseRange(content.length, req.headers.range);
+  res.set('Accept-Ranges', 'bytes');
+  
+  const range = req.get('range');
+  
+  if (range) {
+    const ranges = parseRange(content.length, range);
 
     // unsatisfiable
     if (ranges === -1) {
-      res.setHeader('Content-Range', `bytes */${content.length}`);
+      res.set('Content-Range', `bytes */${content.length}`);
       // eslint-disable-next-line no-param-reassign
-      res.statusCode = 416;
+      res.status(416);
     } else if (ranges === -2) {
       // malformed header treated as regular response
       context.logger.error(
@@ -29,8 +31,8 @@ export default function handleRangeHeaders(context, content, req, res) {
 
       // Content-Range
       // eslint-disable-next-line no-param-reassign
-      res.statusCode = 206;
-      res.setHeader(
+      res.status(206);
+      res.set(
         'Content-Range',
         `bytes ${ranges[0].start}-${ranges[0].end}/${length}`
       );
