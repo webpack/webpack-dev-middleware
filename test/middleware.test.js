@@ -2793,6 +2793,25 @@ describe('middleware', () => {
         request(app).get('/public/bundle.js').expect(200, done);
       });
     });
+
+    describe('should work with "auto" value', () => {
+      beforeAll((done) => {
+        const compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler, { publicPath: 'auto' });
+
+        app = express();
+        app.use(instance);
+
+        listen = listenShorthand(done);
+      });
+
+      afterAll(close);
+
+      it('should return the "200" code for the "GET" request to the bundle file', (done) => {
+        request(app).get('/bundle.js').expect(200, done);
+      });
+    });
   });
 
   describe('serverSideRender option', () => {
