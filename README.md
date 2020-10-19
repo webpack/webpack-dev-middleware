@@ -55,6 +55,8 @@ app.use(
 app.listen(3000, () => console.log('Example app listening on port 3000!'));
 ```
 
+See [below](#other-servers) for an example of use with fastify.
+
 ## Options
 
 The middleware accepts an `options` Object. The following is a property reference for the Object.
@@ -339,6 +341,30 @@ If you have discovered a :bug:, have a feature suggestion, or would like to see
 a modification, please feel free to create an issue on Github. _Note: The issue
 template isn't optional, so please be sure not to remove it, and please fill it
 out completely._
+
+## Other servers
+
+Examples of use with other servers will follow here.
+
+### Fastify
+
+Fastify interop will require the use of `fastify-express` instead of `middie` for providing middleware support. As the authors of `fastify-express` recommend, this should only be used as a stopgap while full Fastify support is worked on.
+
+```js
+const fastify = require('fastify')()
+const webpack = require('webpack')
+const webpackConfig = require('./webpack.config.js')
+const devMiddleware = require('webpack-dev-middleware')
+
+const compiler = webpack(webpackConfig)
+const { publicPath } = webpackConfig.output
+
+;(async () => {
+  await fastify.register(require('fastify-express'))
+  await fastify.use(devMiddleware(compiler, { publicPath }))
+  await fastify.listen(3000)
+})()
+```
 
 ## Contributing
 
