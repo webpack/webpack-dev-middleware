@@ -59,40 +59,33 @@ export default function wdm(compiler, options = {}) {
   }
 
   // Start watching
-  context.watching = context.compiler.watch(watchOptions, (error) => {
-    if (error) {
-      // TODO: improve that in future
-      // For example - `writeToDisk` can throw an error and right now it is ends watching.
-      // We can improve that and keep watching active, but it is require API on webpack side.
-      // Let's implement that in webpack@5 because it is rare case.
-      context.logger.error(error);
-    }
-  });
+  context.watching =
+    context.compiler.watching ||
+    context.compiler.watch(watchOptions, (error) => {
+      if (error) {
+        // TODO: improve that in future
+        // For example - `writeToDisk` can throw an error and right now it is ends watching.
+        // We can improve that and keep watching active, but it is require API on webpack side.
+        // Let's implement that in webpack@5 because it is rare case.
+        context.logger.error(error);
+      }
+    });
 
-  return Object.assign(middleware(context), {
-    waitUntilValid(callback) {
-      // eslint-disable-next-line no-param-reassign
-      callback = callback || noop;
+  const instance = middleware(context);
 
-      ready(context, callback);
-    },
+  // API
+  instance.waitUntilValid = (callback = noop) => {
+    ready(context, callback);
+  };
+  instance.invalidate = (callback = noop) => {
+    ready(context, callback);
 
-    invalidate(callback) {
-      // eslint-disable-next-line no-param-reassign
-      callback = callback || noop;
+    context.watching.invalidate();
+  };
+  instance.close = (callback = noop) => {
+    context.watching.close(callback);
+  };
+  instance.context = context;
 
-      ready(context, callback);
-
-      context.watching.invalidate();
-    },
-
-    close(callback) {
-      // eslint-disable-next-line no-param-reassign
-      callback = callback || noop;
-
-      context.watching.close(callback);
-    },
-
-    context,
-  });
+  return instance;
 }
