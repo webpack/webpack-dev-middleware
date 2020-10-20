@@ -48,20 +48,21 @@ export default function wdm(compiler, options = {}) {
 
   setupOutputFileSystem(context);
 
-  let watchOptions;
-
-  if (Array.isArray(context.compiler.compilers)) {
-    watchOptions = context.compiler.compilers.map(
-      (childCompiler) => childCompiler.options.watchOptions || {}
-    );
-  } else {
-    watchOptions = context.compiler.options.watchOptions || {};
-  }
-
   // Start watching
-  context.watching =
-    context.compiler.watching ||
-    context.compiler.watch(watchOptions, (error) => {
+  if (context.compiler.watching) {
+    context.watching = context.compiler.watching;
+  } else {
+    let watchOptions;
+
+    if (Array.isArray(context.compiler.compilers)) {
+      watchOptions = context.compiler.compilers.map(
+        (childCompiler) => childCompiler.options.watchOptions || {}
+      );
+    } else {
+      watchOptions = context.compiler.options.watchOptions || {};
+    }
+
+    context.watching = context.compiler.watch(watchOptions, (error) => {
       if (error) {
         // TODO: improve that in future
         // For example - `writeToDisk` can throw an error and right now it is ends watching.
@@ -70,6 +71,7 @@ export default function wdm(compiler, options = {}) {
         context.logger.error(error);
       }
     });
+  }
 
   const instance = middleware(context);
 
