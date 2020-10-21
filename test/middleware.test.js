@@ -155,7 +155,6 @@ describe('middleware', () => {
               .byteLength.toString()
           )
           .expect('Content-Type', 'application/javascript; charset=utf-8')
-          // eslint-disable-next-line no-undefined
           .expect(200, undefined, done);
       });
 
@@ -753,7 +752,6 @@ describe('middleware', () => {
       }
 
       for (const configuration of configurations) {
-        // eslint-disable-next-line no-loop-func
         describe('should work handle requests', () => {
           const { output, publicPathForRequest } = configuration;
           const { path: outputPath, publicPath } = output;
@@ -797,7 +795,6 @@ describe('middleware', () => {
 
           for (const { data, urls } of fixtures) {
             for (const { value, contentType, code } of urls) {
-              // eslint-disable-next-line no-loop-func
               it(`should return the "${code}" code for the "GET" request for the "${value}" url`, (done) => {
                 request(app)
                   .get(`${publicPathForRequest}${value}`)
@@ -867,7 +864,6 @@ describe('middleware', () => {
 
     describe('should work without "output" options', () => {
       beforeAll((done) => {
-        // eslint-disable-next-line no-undefined
         const compiler = getCompiler({ ...webpackConfig, output: undefined });
 
         instance = middleware(compiler);
@@ -2825,7 +2821,6 @@ describe('middleware', () => {
       app = express();
       app.use(instance);
       app.use((req, res) => {
-        // eslint-disable-next-line prefer-destructuring
         locals = res.locals;
 
         res.sendStatus(200);

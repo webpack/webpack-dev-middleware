@@ -3,4 +3,5 @@
 /node_modules
 /test/fixtures
 /test/outputs
+/tsconfig.json
 CHANGELOG.md

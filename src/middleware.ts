@@ -1,16 +1,19 @@
 import path from 'path';
 
+import type express from 'express';
 import mime from 'mime-types';
 
 import getFilenameFromUrl from './utils/getFilenameFromUrl';
 import handleRangeHeaders from './utils/handleRangeHeaders';
 import ready from './utils/ready';
+import type { WebpackDevMiddlewareContext } from './types';
 
-export default function wrapper(context) {
+export default function wrapper(
+  context: WebpackDevMiddlewareContext
+): express.RequestHandler {
   return async function middleware(req, res, next) {
     const acceptedMethods = context.options.methods || ['GET', 'HEAD'];
     // fixes #282. credit @cexoso. in certain edge situations res.locals is undefined.
-    // eslint-disable-next-line no-param-reassign
     res.locals = res.locals || {};
 
     if (!acceptedMethods.includes(req.method)) {
@@ -18,6 +21,7 @@ export default function wrapper(context) {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     ready(context, processRequest, req);
 
     async function goNext() {
@@ -29,9 +33,7 @@ export default function wrapper(context) {
         ready(
           context,
           () => {
-            // eslint-disable-next-line no-param-reassign
             res.locals.webpack = { devMiddleware: context };
-
             resolve(next());
           },
           req
@@ -42,7 +44,7 @@ export default function wrapper(context) {
     async function processRequest() {
       const filename = getFilenameFromUrl(context, req.url);
       const { headers } = context.options;
-      let content;
+      let content: Buffer;
 
       if (!filename) {
         await goNext();
@@ -71,10 +73,7 @@ export default function wrapper(context) {
         }
       }
 
-      // Buffer
       content = handleRangeHeaders(context, content, req, res);
-
-      // send Buffer
       res.send(content);
     }
   };

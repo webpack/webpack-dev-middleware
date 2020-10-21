@@ -1,6 +1,13 @@
+import type express from 'express';
 import parseRange from 'range-parser';
+import type { WebpackDevMiddlewareContext } from '../types';
 
-export default function handleRangeHeaders(context, content, req, res) {
+export default function handleRangeHeaders(
+  context: WebpackDevMiddlewareContext,
+  content: Buffer,
+  req: express.Request,
+  res: express.Response
+): Buffer {
   // assumes express API. For other servers, need to add logic to access
   // alternative header APIs
   res.set('Accept-Ranges', 'bytes');
@@ -13,7 +20,6 @@ export default function handleRangeHeaders(context, content, req, res) {
     // unsatisfiable
     if (ranges === -1) {
       res.set('Content-Range', `bytes */${content.length}`);
-      // eslint-disable-next-line no-param-reassign
       res.status(416);
     } else if (ranges === -2) {
       // malformed header treated as regular response
@@ -30,15 +36,14 @@ export default function handleRangeHeaders(context, content, req, res) {
       const { length } = content;
 
       // Content-Range
-      // eslint-disable-next-line no-param-reassign
       res.status(206);
+      const [firstRange] = ranges;
       res.set(
         'Content-Range',
-        `bytes ${ranges[0].start}-${ranges[0].end}/${length}`
+        `bytes ${firstRange.start}-${firstRange.end}/${length}`
       );
 
-      // eslint-disable-next-line no-param-reassign
-      content = content.slice(ranges[0].start, ranges[0].end + 1);
+      content = content.slice(firstRange.start, firstRange.end + 1);
     }
   }
 

@@ -1,20 +1,33 @@
 import fs from 'fs';
 import path from 'path';
+import type webpack from 'webpack';
+import type { WebpackDevMiddlewareContext } from '../types';
+import { isMultiCompiler } from './isMultiCompiler';
 
-export default function setupWriteToDisk(context) {
-  const compilers = context.compiler.compilers || [context.compiler];
+interface HookedCompiler extends webpack.Compiler {
+  hasWebpackDevMiddlewareAssetEmittedCallback?: boolean;
+}
+
+export default function setupWriteToDisk(
+  context: WebpackDevMiddlewareContext
+): void {
+  const compilers = isMultiCompiler(context.compiler)
+    ? context.compiler.compilers
+    : [context.compiler];
 
   for (const compiler of compilers) {
     compiler.hooks.emit.tap('DevMiddleware', (compilation) => {
-      if (compiler.hasWebpackDevMiddlewareAssetEmittedCallback) {
+      if (
+        (compiler as HookedCompiler).hasWebpackDevMiddlewareAssetEmittedCallback
+      ) {
         return;
       }
 
       compiler.hooks.assetEmitted.tapAsync(
         'DevMiddleware',
         (file, info, callback) => {
-          let targetPath = null;
-          let content = null;
+          let targetPath: string;
+          let content: Buffer;
 
           // webpack@5
           if (info.compilation) {
@@ -31,7 +44,7 @@ export default function setupWriteToDisk(context) {
             let { outputPath } = compiler;
 
             outputPath = compilation.getPath(outputPath, {});
-            content = info;
+            content = (info as unknown) as Buffer;
             targetPath = path.join(outputPath, targetFile);
           }
 
@@ -75,7 +88,7 @@ export default function setupWriteToDisk(context) {
           });
         }
       );
-      compiler.hasWebpackDevMiddlewareAssetEmittedCallback = true;
+      (compiler as HookedCompiler).hasWebpackDevMiddlewareAssetEmittedCallback = true;
     });
   }
 }

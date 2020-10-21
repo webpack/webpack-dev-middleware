@@ -1,21 +1,21 @@
-export default function setupHooks(context) {
+import type webpack from 'webpack';
+import type { MultiStats, WebpackDevMiddlewareContext } from '../types';
+import { isMultiCompiler } from './isMultiCompiler';
+
+export default function setupHooks(context: WebpackDevMiddlewareContext): void {
   function invalid() {
     if (context.state) {
       context.logger.info('Compiling...');
     }
 
     // We are now in invalid state
-    // eslint-disable-next-line no-param-reassign
     context.state = false;
-    // eslint-disable-next-line no-param-reassign, no-undefined
-    context.stats = undefined;
+    context.stats = null;
   }
 
-  function done(stats) {
+  function done(stats: webpack.Stats | MultiStats) {
     // We are now on valid state
-    // eslint-disable-next-line no-param-reassign
     context.state = true;
-    // eslint-disable-next-line no-param-reassign
     context.stats = stats;
 
     // Do the stuff in nextTick, because bundle may be invalidated if a change happened while compiling
@@ -28,7 +28,10 @@ export default function setupHooks(context) {
       }
 
       // Print webpack output
-      const printStats = (childCompiler, childStats) => {
+      const printStats = (
+        childCompiler: webpack.Compiler,
+        childStats: webpack.Stats
+      ) => {
         const statsString = childStats.toString(childCompiler.options.stats);
         const name = childCompiler.options.name
           ? `Child "${childCompiler.options.name}": `
@@ -55,21 +58,29 @@ export default function setupHooks(context) {
         logger.info(message);
       };
 
-      if (compiler.compilers) {
+      if (isMultiCompiler(compiler)) {
         compiler.compilers.forEach((compilerFromMultiCompileMode, index) => {
-          printStats(compilerFromMultiCompileMode, stats.stats[index]);
+          printStats(
+            compilerFromMultiCompileMode,
+            (stats as MultiStats).stats[index]
+          );
         });
       } else {
-        printStats(compiler, stats);
+        printStats(compiler, stats as webpack.Stats);
       }
 
-      // eslint-disable-next-line no-param-reassign
       context.callbacks = [];
 
       // Execute callback that are delayed
-      callbacks.forEach((callback) => {
-        callback(stats);
-      });
+      callbacks.forEach(
+        (
+          callback:
+            | ((stats: webpack.Stats) => void)
+            | ((stats: MultiStats) => void)
+        ) => {
+          callback(stats as webpack.Stats & MultiStats);
+        }
+      );
     });
   }
 

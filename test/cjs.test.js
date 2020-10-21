@@ -1,5 +1,6 @@
 import src from '../src';
-import cjs from '../src/cjs';
+// using require directly to avoid implicit interop giving a false positive
+const cjs = require('../src/cjs');
 
 describe('cjs', () => {
   it('should work', () => {

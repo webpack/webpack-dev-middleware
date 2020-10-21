@@ -64,7 +64,7 @@ describe('setupHooks', () => {
     // this calls invalidate
     watchRunHook.mock.calls[0][1]();
     expect(context.state).toEqual(false);
-    expect(context.stats).toBeUndefined();
+    expect(context.stats).toBeNull();
     expect(loggerInfo.mock.calls.length).toEqual(0);
   });
 
@@ -73,7 +73,7 @@ describe('setupHooks', () => {
     // this calls invalidate
     invalidHook.mock.calls[0][1]();
     expect(context.state).toEqual(false);
-    expect(context.stats).toBeUndefined();
+    expect(context.stats).toBeNull();
     expect(loggerInfo.mock.calls.length).toEqual(0);
   });
 
@@ -83,7 +83,7 @@ describe('setupHooks', () => {
     // this calls invalidate
     invalidHook.mock.calls[0][1]();
     expect(context.state).toEqual(false);
-    expect(context.stats).toBeUndefined();
+    expect(context.stats).toBeNull();
     expect(loggerInfo.mock.calls[0][0]).toEqual('Compiling...');
   });
 
