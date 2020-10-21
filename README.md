@@ -351,19 +351,19 @@ Examples of use with other servers will follow here.
 Fastify interop will require the use of `fastify-express` instead of `middie` for providing middleware support. As the authors of `fastify-express` recommend, this should only be used as a stopgap while full Fastify support is worked on.
 
 ```js
-const fastify = require('fastify')()
-const webpack = require('webpack')
-const webpackConfig = require('./webpack.config.js')
-const devMiddleware = require('webpack-dev-middleware')
+const fastify = require('fastify')();
+const webpack = require('webpack');
+const webpackConfig = require('./webpack.config.js');
+const devMiddleware = require('webpack-dev-middleware');
 
-const compiler = webpack(webpackConfig)
-const { publicPath } = webpackConfig.output
+const compiler = webpack(webpackConfig);
+const { publicPath } = webpackConfig.output;
 
-;(async () => {
-  await fastify.register(require('fastify-express'))
-  await fastify.use(devMiddleware(compiler, { publicPath }))
-  await fastify.listen(3000)
-})()
+(async () => {
+  await fastify.register(require('fastify-express'));
+  await fastify.use(devMiddleware(compiler, { publicPath }));
+  await fastify.listen(3000);
+})();
 ```
 
 ## Contributing

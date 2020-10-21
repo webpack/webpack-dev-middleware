@@ -48,51 +48,46 @@ export default function wdm(compiler, options = {}) {
 
   setupOutputFileSystem(context);
 
-  let watchOptions;
-
-  if (Array.isArray(context.compiler.compilers)) {
-    watchOptions = context.compiler.compilers.map(
-      (childCompiler) => childCompiler.options.watchOptions || {}
-    );
+  // Start watching
+  if (context.compiler.watching) {
+    context.watching = context.compiler.watching;
   } else {
-    watchOptions = context.compiler.options.watchOptions || {};
+    let watchOptions;
+
+    if (Array.isArray(context.compiler.compilers)) {
+      watchOptions = context.compiler.compilers.map(
+        (childCompiler) => childCompiler.options.watchOptions || {}
+      );
+    } else {
+      watchOptions = context.compiler.options.watchOptions || {};
+    }
+
+    context.watching = context.compiler.watch(watchOptions, (error) => {
+      if (error) {
+        // TODO: improve that in future
+        // For example - `writeToDisk` can throw an error and right now it is ends watching.
+        // We can improve that and keep watching active, but it is require API on webpack side.
+        // Let's implement that in webpack@5 because it is rare case.
+        context.logger.error(error);
+      }
+    });
   }
 
-  // Start watching
-  context.watching = context.compiler.watch(watchOptions, (error) => {
-    if (error) {
-      // TODO: improve that in future
-      // For example - `writeToDisk` can throw an error and right now it is ends watching.
-      // We can improve that and keep watching active, but it is require API on webpack side.
-      // Let's implement that in webpack@5 because it is rare case.
-      context.logger.error(error);
-    }
-  });
+  const instance = middleware(context);
 
-  return Object.assign(middleware(context), {
-    waitUntilValid(callback) {
-      // eslint-disable-next-line no-param-reassign
-      callback = callback || noop;
+  // API
+  instance.waitUntilValid = (callback = noop) => {
+    ready(context, callback);
+  };
+  instance.invalidate = (callback = noop) => {
+    ready(context, callback);
 
-      ready(context, callback);
-    },
+    context.watching.invalidate();
+  };
+  instance.close = (callback = noop) => {
+    context.watching.close(callback);
+  };
+  instance.context = context;
 
-    invalidate(callback) {
-      // eslint-disable-next-line no-param-reassign
-      callback = callback || noop;
-
-      ready(context, callback);
-
-      context.watching.invalidate();
-    },
-
-    close(callback) {
-      // eslint-disable-next-line no-param-reassign
-      callback = callback || noop;
-
-      context.watching.close(callback);
-    },
-
-    context,
-  });
+  return instance;
 }

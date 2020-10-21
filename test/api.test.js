@@ -1,5 +1,5 @@
 import express from 'express';
-import { Stats } from 'webpack';
+import webpack, { Stats } from 'webpack';
 
 import middleware from '../src';
 
@@ -13,36 +13,163 @@ describe('API', () => {
   let app;
   let compiler;
 
-  beforeEach((done) => {
-    compiler = getCompiler(webpackConfig);
+  describe('constructor', () => {
+    describe('should accept compiler', () => {
+      beforeEach((done) => {
+        compiler = webpack(webpackConfig);
 
-    instance = middleware(compiler);
+        instance = middleware(compiler);
 
-    app = express();
-    app.use(instance);
+        app = express();
+        app.use(instance);
 
-    listen = app.listen((error) => {
-      if (error) {
-        return done(error);
-      }
+        listen = app.listen((error) => {
+          if (error) {
+            return done(error);
+          }
 
-      return done();
+          return done();
+        });
+      });
+
+      afterEach((done) => {
+        if (instance.context.watching.closed) {
+          if (listen) {
+            listen.close(done);
+          } else {
+            done();
+          }
+
+          return;
+        }
+
+        instance.close(() => {
+          if (listen) {
+            listen.close(done);
+          } else {
+            done();
+          }
+        });
+      });
+
+      it('should work', (done) => {
+        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+
+        instance.waitUntilValid(() => {
+          instance.close();
+
+          expect(compiler.running).toBe(false);
+          expect(doneSpy).toHaveBeenCalledTimes(1);
+
+          doneSpy.mockRestore();
+
+          done();
+        });
+      });
     });
-  });
 
-  afterEach((done) => {
-    if (instance) {
-      instance.close();
-    }
+    if (webpack.version[0] === 5) {
+      describe('should accept compiler in watch mode', () => {
+        beforeEach((done) => {
+          compiler = webpack(
+            { ...webpackConfig, ...{ watch: true } },
+            (error) => {
+              if (error) {
+                throw error;
+              }
+            }
+          );
 
-    if (listen) {
-      listen.close(done);
-    } else {
-      done();
+          instance = middleware(compiler);
+
+          app = express();
+          app.use(instance);
+
+          listen = app.listen((error) => {
+            if (error) {
+              return done(error);
+            }
+
+            return done();
+          });
+        });
+
+        afterEach((done) => {
+          if (instance.context.watching.closed) {
+            if (listen) {
+              listen.close(done);
+            } else {
+              done();
+            }
+
+            return;
+          }
+
+          instance.close(() => {
+            if (listen) {
+              listen.close(done);
+            } else {
+              done();
+            }
+          });
+        });
+
+        it('should work', (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+
+          instance.waitUntilValid(() => {
+            instance.close();
+
+            expect(compiler.running).toBe(false);
+            expect(doneSpy).toHaveBeenCalledTimes(1);
+
+            doneSpy.mockRestore();
+
+            done();
+          });
+        });
+      });
     }
   });
 
   describe('waitUntilValid method', () => {
+    beforeEach((done) => {
+      compiler = getCompiler(webpackConfig);
+
+      instance = middleware(compiler);
+
+      app = express();
+      app.use(instance);
+
+      listen = app.listen((error) => {
+        if (error) {
+          return done(error);
+        }
+
+        return done();
+      });
+    });
+
+    afterEach((done) => {
+      if (instance.context.watching.closed) {
+        if (listen) {
+          listen.close(done);
+        } else {
+          done();
+        }
+
+        return;
+      }
+
+      instance.close(() => {
+        if (listen) {
+          listen.close(done);
+        } else {
+          done();
+        }
+      });
+    });
+
     it('should work without callback', (done) => {
       const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
 
@@ -120,6 +247,43 @@ describe('API', () => {
   });
 
   describe('invalidate method', () => {
+    beforeEach((done) => {
+      compiler = getCompiler(webpackConfig);
+
+      instance = middleware(compiler);
+
+      app = express();
+      app.use(instance);
+
+      listen = app.listen((error) => {
+        if (error) {
+          return done(error);
+        }
+
+        return done();
+      });
+    });
+
+    afterEach((done) => {
+      if (instance.context.watching.closed) {
+        if (listen) {
+          listen.close(done);
+        } else {
+          done();
+        }
+
+        return;
+      }
+
+      instance.close(() => {
+        if (listen) {
+          listen.close(done);
+        } else {
+          done();
+        }
+      });
+    });
+
     it('should work without callback', (done) => {
       const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
 
@@ -166,6 +330,43 @@ describe('API', () => {
   });
 
   describe('close method', () => {
+    beforeEach((done) => {
+      compiler = getCompiler(webpackConfig);
+
+      instance = middleware(compiler);
+
+      app = express();
+      app.use(instance);
+
+      listen = app.listen((error) => {
+        if (error) {
+          return done(error);
+        }
+
+        return done();
+      });
+    });
+
+    afterEach((done) => {
+      if (instance.context.watching.closed) {
+        if (listen) {
+          listen.close(done);
+        } else {
+          done();
+        }
+
+        return;
+      }
+
+      instance.close(() => {
+        if (listen) {
+          listen.close(done);
+        } else {
+          done();
+        }
+      });
+    });
+
     it('should work without callback', (done) => {
       const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
 
@@ -198,6 +399,43 @@ describe('API', () => {
   });
 
   describe('context property', () => {
+    beforeEach((done) => {
+      compiler = getCompiler(webpackConfig);
+
+      instance = middleware(compiler);
+
+      app = express();
+      app.use(instance);
+
+      listen = app.listen((error) => {
+        if (error) {
+          return done(error);
+        }
+
+        return done();
+      });
+    });
+
+    afterEach((done) => {
+      if (instance.context.watching.closed) {
+        if (listen) {
+          listen.close(done);
+        } else {
+          done();
+        }
+
+        return;
+      }
+
+      instance.close(() => {
+        if (listen) {
+          listen.close(done);
+        } else {
+          done();
+        }
+      });
+    });
+
     it('should contain public properties', (done) => {
       expect(instance.context.state).toBeDefined();
       expect(instance.context.options).toBeDefined();
