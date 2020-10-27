@@ -1,3 +1,4 @@
+/* eslint-disable */
 import path from 'path';
 
 import mime from 'mime-types';
@@ -15,18 +16,20 @@ export default function wrapper(context) {
   const etagRegistry = new Map();
 
   function computeEtags(stats) {
-    const { assets } = stats.compilation;
-    for (const assetId in assets) {
-      if (hasOwnProperty.call(assets, assetId)) {
-        const { existsAt: fsPath } = assets[assetId];
-        const etag = getETag(assets[assetId].source());
-        etagRegistry.set(fsPath, etag);
+    try {
+      const { assets } = stats.compilation;
+      for (const assetId in assets) {
+        if (hasOwnProperty.call(assets, assetId)) {
+          const { existsAt: fsPath } = assets[assetId];
+          const etag = getETag(assets[assetId].source());
+          etagRegistry.set(fsPath, etag);
+        }
       }
-    }
+    } catch (err) {}
   }
 
   if (compiler.hooks.done) {
-    compiler.hooks.done.tap('just-ssr', computeEtags);
+    compiler.hooks.done.tap('webpack-dev-middleware', computeEtags);
   } else {
     compiler.plugin('done', computeEtags);
   }
@@ -78,13 +81,11 @@ export default function wrapper(context) {
         const { 'if-none-match': ifNoneMatch } = req.headers;
         if (ifNoneMatch) {
           if (assetEtag === ifNoneMatch) {
-            // eslint-disable-next-line no-param-reassign
-            res.statusCode = 304;
-            res.end();
+            res.status(304).end();
             return;
           }
         } else {
-          res.setHeader('ETag', assetEtag);
+          res.set('ETag', assetEtag);
         }
       }
 
@@ -95,18 +96,18 @@ export default function wrapper(context) {
         return;
       }
 
-      if (!res.getHeader('Content-Type')) {
+      if (!res.get('Content-Type')) {
         // content-type name(like application/javascript; charset=utf-8) or false
         const contentType = mime.contentType(path.extname(filename));
 
         if (contentType) {
-          res.setHeader('Content-Type', contentType);
+          res.set('Content-Type', contentType);
         }
       }
 
       if (headers) {
         for (const name of Object.keys(headers)) {
-          res.setHeader(name, headers[name]);
+          res.set(name, headers[name]);
         }
       }
 
@@ -114,7 +115,7 @@ export default function wrapper(context) {
       content = handleRangeHeaders(context, content, req, res);
 
       // send Buffer
-      res.end(content);
+      res.send(content);
     }
   };
 }
