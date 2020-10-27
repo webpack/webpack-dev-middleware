@@ -11,28 +11,26 @@ import ready from './utils/ready';
 const { hasOwnProperty } = Object.prototype;
 
 export default function wrapper(context) {
-  const { compiler } = context;
-  const etagRegistry = new Map();
+  let etagRegistry;
 
-  function computeEtags(stats) {
-    etagRegistry.clear();
+  if (context.options.etags) {
+    etagRegistry = new Map();
+    const { compiler } = context;
 
-    try {
-      const { assets } = stats.compilation;
-      for (const assetId in assets) {
-        if (hasOwnProperty.call(assets, assetId)) {
-          const { existsAt: fsPath } = assets[assetId];
-          const etag = getETag(assets[assetId].source());
-          etagRegistry.set(fsPath, etag);
+    compiler.hooks.done.tap('webpack-dev-middleware', (stats) => {
+      etagRegistry.clear();
+
+      try {
+        const { assets } = stats.compilation;
+        for (const assetId in assets) {
+          if (hasOwnProperty.call(assets, assetId)) {
+            const { existsAt: fsPath } = assets[assetId];
+            const etag = getETag(assets[assetId].source());
+            etagRegistry.set(fsPath, etag);
+          }
         }
-      }
-    } catch (_ignoreError) {} // eslint-disable-line no-empty
-  }
-
-  if (compiler.hooks.done) {
-    compiler.hooks.done.tap('webpack-dev-middleware', computeEtags);
-  } else {
-    compiler.plugin('done', computeEtags);
+      } catch (_ignoreError) {} // eslint-disable-line no-empty
+    });
   }
 
   return async function middleware(req, res, next) {
@@ -77,16 +75,18 @@ export default function wrapper(context) {
         return;
       }
 
-      const assetEtag = etagRegistry.get(filename);
-      if (assetEtag) {
-        const { 'if-none-match': ifNoneMatch } = req.headers;
-        if (ifNoneMatch) {
-          if (assetEtag === ifNoneMatch) {
-            res.status(304).end();
-            return;
+      if (etagRegistry) {
+        const assetEtag = etagRegistry.get(filename);
+        if (assetEtag) {
+          const { 'if-none-match': ifNoneMatch } = req.headers;
+          if (ifNoneMatch) {
+            if (assetEtag === ifNoneMatch) {
+              res.status(304).end();
+              return;
+            }
+          } else {
+            res.set('ETag', assetEtag);
           }
-        } else {
-          res.set('ETag', assetEtag);
         }
       }
 
