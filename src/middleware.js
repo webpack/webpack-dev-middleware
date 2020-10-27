@@ -1,4 +1,3 @@
-/* eslint-disable */
 import path from 'path';
 
 import mime from 'mime-types';
@@ -25,7 +24,7 @@ export default function wrapper(context) {
           etagRegistry.set(fsPath, etag);
         }
       }
-    } catch (err) {}
+    } catch (_ignoreError) {} // eslint-disable-line no-empty
   }
 
   if (compiler.hooks.done) {
