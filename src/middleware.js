@@ -78,6 +78,7 @@ export default function wrapper(context) {
         const { 'if-none-match': ifNoneMatch } = req.headers;
         if (ifNoneMatch) {
           if (assetEtag === ifNoneMatch) {
+            // eslint-disable-next-line no-param-reassign
             res.statusCode = 304;
             res.end();
             return;
