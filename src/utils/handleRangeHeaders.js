@@ -3,16 +3,16 @@ import parseRange from 'range-parser';
 export default function handleRangeHeaders(context, content, req, res) {
   // assumes express API. For other servers, need to add logic to access
   // alternative header APIs
-  res.set('Accept-Ranges', 'bytes');
+  res.setHeader('Accept-Ranges', 'bytes');
 
-  const range = req.get('range');
+  const { range } = req.headers;
 
   if (range) {
     const ranges = parseRange(content.length, range);
 
     // unsatisfiable
     if (ranges === -1) {
-      res.set('Content-Range', `bytes */${content.length}`);
+      res.setHeader('Content-Range', `bytes */${content.length}`);
       // eslint-disable-next-line no-param-reassign
       res.status(416);
     } else if (ranges === -2) {
@@ -32,7 +32,7 @@ export default function handleRangeHeaders(context, content, req, res) {
       // Content-Range
       // eslint-disable-next-line no-param-reassign
       res.status(206);
-      res.set(
+      res.setHeader(
         'Content-Range',
         `bytes ${ranges[0].start}-${ranges[0].end}/${length}`
       );
