@@ -15,9 +15,7 @@ export default function wrapper(context) {
 
   if (context.options.etags) {
     etagRegistry = new Map();
-    const { compiler } = context;
-
-    compiler.hooks.done.tap('webpack-dev-middleware', (stats) => {
+    context.compiler.hooks.done.tap('webpack-dev-middleware', (stats) => {
       etagRegistry.clear();
 
       try {
