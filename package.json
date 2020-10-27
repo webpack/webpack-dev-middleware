@@ -31,7 +31,6 @@
     "test": "npm run test:coverage",
     "defaults": "webpack-defaults"
   },
-  "files": [],
   "peerDependencies": {
     "webpack": "^4.0.0 || ^5.0.0"
   },
