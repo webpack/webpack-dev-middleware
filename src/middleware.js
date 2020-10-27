@@ -15,6 +15,8 @@ export default function wrapper(context) {
   const etagRegistry = new Map();
 
   function computeEtags(stats) {
+    etagRegistry.clear();
+
     try {
       const { assets } = stats.compilation;
       for (const assetId in assets) {
