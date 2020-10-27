@@ -2,11 +2,35 @@ import path from 'path';
 
 import mime from 'mime-types';
 
+import getETag from 'etag';
+
 import getFilenameFromUrl from './utils/getFilenameFromUrl';
 import handleRangeHeaders from './utils/handleRangeHeaders';
 import ready from './utils/ready';
 
+const { hasOwnProperty } = Object.prototype;
+
 export default function wrapper(context) {
+  let etagRegistry;
+
+  if (context.options.etags) {
+    etagRegistry = new Map();
+    context.compiler.hooks.done.tap('webpack-dev-middleware', (stats) => {
+      etagRegistry.clear();
+
+      try {
+        const { assets } = stats.compilation;
+        for (const assetId in assets) {
+          if (hasOwnProperty.call(assets, assetId)) {
+            const { existsAt: fsPath } = assets[assetId];
+            const etag = getETag(assets[assetId].source());
+            etagRegistry.set(fsPath, etag);
+          }
+        }
+      } catch (_ignoreError) {} // eslint-disable-line no-empty
+    });
+  }
+
   return async function middleware(req, res, next) {
     const acceptedMethods = context.options.methods || ['GET', 'HEAD'];
     // fixes #282. credit @cexoso. in certain edge situations res.locals is undefined.
@@ -47,6 +71,21 @@ export default function wrapper(context) {
       if (!filename) {
         await goNext();
         return;
+      }
+
+      if (etagRegistry) {
+        const assetEtag = etagRegistry.get(filename);
+        if (assetEtag) {
+          const { 'if-none-match': ifNoneMatch } = req.headers;
+          if (ifNoneMatch) {
+            if (assetEtag === ifNoneMatch) {
+              res.status(304).end();
+              return;
+            }
+          } else {
+            res.set('ETag', assetEtag);
+          }
+        }
       }
 
       try {

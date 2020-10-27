@@ -23,6 +23,9 @@
     "headers": {
       "type": "object"
     },
+    "etags": {
+      "type": "boolean"
+    },
     "publicPath": {
       "type": "string"
     },
