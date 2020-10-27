@@ -2,11 +2,35 @@ import path from 'path';
 
 import mime from 'mime-types';
 
+import getETag from 'etag';
+
 import getFilenameFromUrl from './utils/getFilenameFromUrl';
 import handleRangeHeaders from './utils/handleRangeHeaders';
 import ready from './utils/ready';
 
+const { hasOwnProperty } = Object.prototype;
+
 export default function wrapper(context) {
+  const { compiler } = context;
+  const etagRegistry = new Map();
+
+  function computeEtags(stats) {
+    const { assets } = stats.compilation;
+    for (const assetId in assets) {
+      if (hasOwnProperty.call(assets, assetId)) {
+        const { existsAt: fsPath } = assets[assetId];
+        const etag = getETag(assets[assetId].source());
+        etagRegistry.set(fsPath, etag);
+      }
+    }
+  }
+
+  if (compiler.hooks.done) {
+    compiler.hooks.done.tap('just-ssr', computeEtags);
+  } else {
+    compiler.plugin('done', computeEtags);
+  }
+
   return async function middleware(req, res, next) {
     const acceptedMethods = context.options.methods || ['GET', 'HEAD'];
     // fixes #282. credit @cexoso. in certain edge situations res.locals is undefined.
@@ -49,6 +73,20 @@ export default function wrapper(context) {
         return;
       }
 
+      const assetEtag = etagRegistry.get(filename);
+      if (assetEtag) {
+        const { 'if-none-match': ifNoneMatch } = req.headers;
+        if (ifNoneMatch) {
+          if (assetEtag === ifNoneMatch) {
+            res.statusCode = 304;
+            res.end();
+            return;
+          }
+        } else {
+          res.setHeader('ETag', assetEtag);
+        }
+      }
+
       try {
         content = context.outputFileSystem.readFileSync(filename);
       } catch (_ignoreError) {
@@ -75,7 +113,7 @@ export default function wrapper(context) {
       content = handleRangeHeaders(context, content, req, res);
 
       // send Buffer
-      res.send(content);
+      res.end(content);
     }
   };
 }
