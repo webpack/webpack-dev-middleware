@@ -819,7 +819,7 @@ describe('middleware', () => {
 
         app = express();
         app.use((req, res, next) => {
-          res.set('Content-Type', 'application/octet-stream');
+          res.setHeader('Content-Type', 'application/octet-stream');
           next();
         });
         app.use(instance);
@@ -2121,8 +2121,9 @@ describe('middleware', () => {
         app = express();
         app.use(instance);
 
-        app.get('/file.jpg', (req, res) => {
-          res.send('welcome');
+        app.use('/file.jpg', (req, res) => {
+          res.setHeader('Content-Type', 'text/html');
+          res.end('welcome');
         });
 
         listen = listenShorthand(done);
@@ -2763,8 +2764,8 @@ describe('middleware', () => {
     });
 
     it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-      app.get('/file.jpg', (req, res) => {
-        res.send('welcome');
+      app.use('/file.jpg', (req, res) => {
+        res.end('welcome');
       });
 
       const res = await request(app).get('/file.jpg');
@@ -2828,7 +2829,8 @@ describe('middleware', () => {
         // eslint-disable-next-line prefer-destructuring
         locals = res.locals;
 
-        res.sendStatus(200);
+        res.statusCode = 200;
+        res.end();
       });
 
       listen = listenShorthand(done);

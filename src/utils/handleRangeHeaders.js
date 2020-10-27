@@ -14,7 +14,7 @@ export default function handleRangeHeaders(context, content, req, res) {
     if (ranges === -1) {
       res.setHeader('Content-Range', `bytes */${content.length}`);
       // eslint-disable-next-line no-param-reassign
-      res.status(416);
+      res.statusCode = 416;
     } else if (ranges === -2) {
       // malformed header treated as regular response
       context.logger.error(
@@ -31,7 +31,7 @@ export default function handleRangeHeaders(context, content, req, res) {
 
       // Content-Range
       // eslint-disable-next-line no-param-reassign
-      res.status(206);
+      res.statusCode = 206;
       res.setHeader(
         'Content-Range',
         `bytes ${ranges[0].start}-${ranges[0].end}/${length}`
