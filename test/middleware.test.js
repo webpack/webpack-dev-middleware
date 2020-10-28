@@ -1740,7 +1740,7 @@ describe('middleware', () => {
       });
     });
 
-    describe('should respect the "stats" option from the configuration in multi-compiler mode', () => {
+    describe.only('should respect the "stats" option from the configuration in multi-compiler mode', () => {
       let compiler;
       let getLogsPlugin;
 
