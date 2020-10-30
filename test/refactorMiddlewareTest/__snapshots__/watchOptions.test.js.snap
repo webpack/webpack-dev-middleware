@@ -1,0 +1,5 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`should throw an error on "run" when we watching should logging an error 1`] = `"You ran Webpack twice. Each instance only supports a single concurrent compilation at a time."`;
+
+exports[`should throw an error on "watch" when we watching should logging an error 1`] = `"You ran Webpack twice. Each instance only supports a single concurrent compilation at a time."`;
