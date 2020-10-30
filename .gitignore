@@ -9,6 +9,7 @@ npm-debug.log*
 /local
 /reports
 /test/outputs
+/test/writeToDiskOption.test.js/outputs
 .DS_Store
 Thumbs.db
 .idea
