@@ -10,6 +10,8 @@ npm-debug.log*
 /reports
 /test/outputs
 /test/writeToDiskOption.test.js/outputs
+test\logger\outputs
+package-lock.json
 .DS_Store
 Thumbs.db
 .idea

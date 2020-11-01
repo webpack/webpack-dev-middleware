@@ -1,0 +1,137 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`should logging on unsuccessful build in multi-compiler  should logging 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /static-one/bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Failed to compile.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Failed to compile.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiling...",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Failed to compile.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Failed to compile.",
+    ],
+  ],
+]
+`;
+
+exports[`should logging on unsuccessful build should logging 1`] = `
+Array [
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished: /bundle.js",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Failed to compile.",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Compiling...",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "wait until bundle finished",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "error",
+    Array [
+      "ERROR",
+    ],
+  ],
+  Array [
+    "webpack-dev-middleware",
+    "info",
+    Array [
+      "Failed to compile.",
+    ],
+  ],
+]
+`;
