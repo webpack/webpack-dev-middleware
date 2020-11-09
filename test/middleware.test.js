@@ -833,7 +833,14 @@ describe.each([
 
           app = framework();
           app.use((req, res, next) => {
-            res.set('Content-Type', 'application/octet-stream');
+            // Express API
+            if (res.set) {
+              res.set('Content-Type', 'application/octet-stream');
+            }
+            // Connect API
+            else {
+              res.setHeader('Content-Type', 'application/octet-stream');
+            }
             next();
           });
           app.use(instance);
@@ -2151,8 +2158,16 @@ describe.each([
           app = framework();
           app.use(instance);
 
-          app.get('/file.jpg', (req, res) => {
-            res.send('welcome');
+          app.use('/file.jpg', (req, res) => {
+            // Express API
+            if (res.send) {
+              res.send('welcome');
+            }
+            // Connect API
+            else {
+              res.setHeader('Content-Type', 'text/html');
+              res.end('welcome');
+            }
           });
 
           listen = listenShorthand(done);
@@ -2801,8 +2816,15 @@ describe.each([
       });
 
       it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-        app.get('/file.jpg', (req, res) => {
-          res.send('welcome');
+        app.use('/file.jpg', (req, res) => {
+          // Express API
+          if (res.send) {
+            res.send('welcome');
+          }
+          // Connect API
+          else {
+            res.end('welcome');
+          }
         });
 
         const res = await request(app).get('/file.jpg');
@@ -2866,7 +2888,16 @@ describe.each([
           // eslint-disable-next-line prefer-destructuring
           locals = res.locals;
 
-          res.sendStatus(200);
+          // Express API
+          if (res.sendStatus) {
+            res.sendStatus(200);
+          }
+          // Connect API
+          else {
+            // eslint-disable-next-line no-param-reassign
+            res.statusCode = 200;
+            res.end();
+          }
         });
 
         listen = listenShorthand(done);
@@ -3213,9 +3244,9 @@ describe.each([
           });
 
           instance = middleware(compiler, {
-            index: 'index.custom',
+            index: 'index.mycustom',
             mimeTypes: {
-              custom: 'text/html',
+              mycustom: 'text/html',
             },
             publicPath: '/',
           });
@@ -3229,7 +3260,7 @@ describe.each([
             recursive: true,
           });
           instance.context.outputFileSystem.writeFileSync(
-            path.resolve(outputPath, 'index.custom'),
+            path.resolve(outputPath, 'index.mycustom'),
             'hello'
           );
         });
