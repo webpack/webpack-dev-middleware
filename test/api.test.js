@@ -1,4 +1,5 @@
 import express from 'express';
+import connect from 'connect';
 import webpack, { Stats } from 'webpack';
 
 import middleware from '../src';
@@ -7,7 +8,10 @@ import getCompiler from './helpers/getCompiler';
 import getCompilerHooks from './helpers/getCompilerHooks';
 import webpackConfig from './fixtures/webpack.config';
 
-describe.each([['%s framework:', express]])('%s', (_, framework) => {
+describe.each([
+  ['express', express],
+  ['connect', connect],
+])('%s framework:', (_, framework) => {
   describe('API', () => {
     let instance;
     let listen;

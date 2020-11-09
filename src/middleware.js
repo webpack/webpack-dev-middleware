@@ -9,6 +9,7 @@ import ready from './utils/ready';
 export default function wrapper(context) {
   return async function middleware(req, res, next) {
     const acceptedMethods = context.options.methods || ['GET', 'HEAD'];
+
     // fixes #282. credit @cexoso. in certain edge situations res.locals is undefined.
     // eslint-disable-next-line no-param-reassign
     res.locals = res.locals || {};
@@ -56,26 +57,50 @@ export default function wrapper(context) {
         return;
       }
 
-      if (!res.get('Content-Type')) {
+      const contentTypeHeader = res.get
+        ? res.get('Content-Type')
+        : res.getHeader('Content-Type');
+
+      if (!contentTypeHeader) {
         // content-type name(like application/javascript; charset=utf-8) or false
         const contentType = mime.contentType(path.extname(filename));
 
-        if (contentType) {
+        // Express API
+        if (res.set && contentType) {
           res.set('Content-Type', contentType);
+        }
+        // Node.js API
+        else {
+          res.setHeader(
+            'Content-Type',
+            contentType || 'application/octet-stream'
+          );
         }
       }
 
       if (headers) {
         for (const name of Object.keys(headers)) {
-          res.set(name, headers[name]);
+          res.setHeader(name, headers[name]);
         }
       }
 
       // Buffer
       content = handleRangeHeaders(context, content, req, res);
 
-      // send Buffer
-      res.send(content);
+      // Express API
+      if (res.send) {
+        res.send(content);
+      }
+      // Node.js API
+      else {
+        res.setHeader('Content-Length', content.length);
+
+        if (req.method === 'HEAD') {
+          res.end();
+        } else {
+          res.end(content);
+        }
+      }
     }
   };
 }

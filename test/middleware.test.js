@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import express from 'express';
+import connect from 'connect';
 import request from 'supertest';
 import memfs, { createFsFromVolume, Volume } from 'memfs';
 import del from 'del';
@@ -26,7 +27,10 @@ import webpackMultiWarningConfig from './fixtures/webpack.array.warning.config';
 import webpackOneErrorOneWarningOneSuccessConfig from './fixtures/webpack.array.one-error-one-warning-one-success';
 import webpackOneErrorOneWarningOneSuccessWithNamesConfig from './fixtures/webpack.array.one-error-one-warning-one-success-with-names';
 
-describe.each([['express', express]])('%s framework:', (_, framework) => {
+describe.each([
+  ['express', express],
+  ['connect', connect],
+])('%s framework:', (_, framework) => {
   describe('middleware', () => {
     let instance;
     let listen;
@@ -829,7 +833,14 @@ describe.each([['express', express]])('%s framework:', (_, framework) => {
 
           app = framework();
           app.use((req, res, next) => {
-            res.set('Content-Type', 'application/octet-stream');
+            // Express API
+            if (res.set) {
+              res.set('Content-Type', 'application/octet-stream');
+            }
+            // Connect API
+            else {
+              res.setHeader('Content-Type', 'application/octet-stream');
+            }
             next();
           });
           app.use(instance);
@@ -2058,7 +2069,7 @@ describe.each([['express', express]])('%s framework:', (_, framework) => {
 
           instance = middleware(compiler, {
             mimeTypes: {
-              phtml: 'text/html',
+              myhtml: 'text/html',
             },
           });
 
@@ -2071,7 +2082,7 @@ describe.each([['express', express]])('%s framework:', (_, framework) => {
             recursive: true,
           });
           instance.context.outputFileSystem.writeFileSync(
-            path.resolve(outputPath, 'file.phtml'),
+            path.resolve(outputPath, 'file.myhtml'),
             'welcome'
           );
         });
@@ -2080,7 +2091,7 @@ describe.each([['express', express]])('%s framework:', (_, framework) => {
 
         it('should return the "200" code for the "GET" request "file.phtml"', (done) => {
           request(app)
-            .get('/file.phtml')
+            .get('/file.myhtml')
             .expect('Content-Type', 'text/html; charset=utf-8')
             .expect(200, 'welcome', done);
         });
@@ -2147,8 +2158,16 @@ describe.each([['express', express]])('%s framework:', (_, framework) => {
           app = framework();
           app.use(instance);
 
-          app.get('/file.jpg', (req, res) => {
-            res.send('welcome');
+          app.use('/file.jpg', (req, res) => {
+            // Express API
+            if (res.send) {
+              res.send('welcome');
+            }
+            // Connect API
+            else {
+              res.setHeader('Content-Type', 'text/html');
+              res.end('welcome');
+            }
           });
 
           listen = listenShorthand(done);
@@ -2797,8 +2816,15 @@ describe.each([['express', express]])('%s framework:', (_, framework) => {
       });
 
       it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-        app.get('/file.jpg', (req, res) => {
-          res.send('welcome');
+        app.use('/file.jpg', (req, res) => {
+          // Express API
+          if (res.send) {
+            res.send('welcome');
+          }
+          // Connect API
+          else {
+            res.end('welcome');
+          }
         });
 
         const res = await request(app).get('/file.jpg');
@@ -2862,7 +2888,16 @@ describe.each([['express', express]])('%s framework:', (_, framework) => {
           // eslint-disable-next-line prefer-destructuring
           locals = res.locals;
 
-          res.sendStatus(200);
+          // Express API
+          if (res.sendStatus) {
+            res.sendStatus(200);
+          }
+          // Connect API
+          else {
+            // eslint-disable-next-line no-param-reassign
+            res.statusCode = 200;
+            res.end();
+          }
         });
 
         listen = listenShorthand(done);
@@ -3209,9 +3244,9 @@ describe.each([['express', express]])('%s framework:', (_, framework) => {
           });
 
           instance = middleware(compiler, {
-            index: 'index.custom',
+            index: 'index.mycustom',
             mimeTypes: {
-              custom: 'text/html',
+              mycustom: 'text/html',
             },
             publicPath: '/',
           });
@@ -3225,7 +3260,7 @@ describe.each([['express', express]])('%s framework:', (_, framework) => {
             recursive: true,
           });
           instance.context.outputFileSystem.writeFileSync(
-            path.resolve(outputPath, 'index.custom'),
+            path.resolve(outputPath, 'index.mycustom'),
             'hello'
           );
         });

@@ -3,18 +3,39 @@ import parseRange from 'range-parser';
 export default function handleRangeHeaders(context, content, req, res) {
   // assumes express API. For other servers, need to add logic to access
   // alternative header APIs
-  res.set('Accept-Ranges', 'bytes');
+  if (res.set) {
+    res.set('Accept-Ranges', 'bytes');
+  } else {
+    res.setHeader('Accept-Ranges', 'bytes');
+  }
 
-  const range = req.get('range');
+  let range;
+
+  // Express API
+  if (req.get) {
+    range = req.get('range');
+  }
+  // Node.js API
+  else {
+    ({ range } = req.headers);
+  }
 
   if (range) {
     const ranges = parseRange(content.length, range);
 
     // unsatisfiable
     if (ranges === -1) {
-      res.set('Content-Range', `bytes */${content.length}`);
-      // eslint-disable-next-line no-param-reassign
-      res.status(416);
+      // Express API
+      if (res.set) {
+        res.set('Content-Range', `bytes */${content.length}`);
+        res.status(416);
+      }
+      // Node.js API
+      else {
+        // eslint-disable-next-line no-param-reassign
+        res.statusCode = 416;
+        res.setHeader('Content-Range', `bytes */${content.length}`);
+      }
     } else if (ranges === -2) {
       // malformed header treated as regular response
       context.logger.error(
@@ -29,13 +50,25 @@ export default function handleRangeHeaders(context, content, req, res) {
       // valid range header
       const { length } = content;
 
-      // Content-Range
-      // eslint-disable-next-line no-param-reassign
-      res.status(206);
-      res.set(
-        'Content-Range',
-        `bytes ${ranges[0].start}-${ranges[0].end}/${length}`
-      );
+      // Express API
+      if (res.set) {
+        // Content-Range
+        res.status(206);
+        res.set(
+          'Content-Range',
+          `bytes ${ranges[0].start}-${ranges[0].end}/${length}`
+        );
+      }
+      // Node.js API
+      else {
+        // Content-Range
+        // eslint-disable-next-line no-param-reassign
+        res.statusCode = 206;
+        res.setHeader(
+          'Content-Range',
+          `bytes ${ranges[0].start}-${ranges[0].end}/${length}`
+        );
+      }
 
       // eslint-disable-next-line no-param-reassign
       content = content.slice(ranges[0].start, ranges[0].end + 1);
