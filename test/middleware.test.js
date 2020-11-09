@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import express from 'express';
+import connect from 'connect';
 import request from 'supertest';
 import memfs, { createFsFromVolume, Volume } from 'memfs';
 import del from 'del';
@@ -26,7 +27,10 @@ import webpackMultiWarningConfig from './fixtures/webpack.array.warning.config';
 import webpackOneErrorOneWarningOneSuccessConfig from './fixtures/webpack.array.one-error-one-warning-one-success';
 import webpackOneErrorOneWarningOneSuccessWithNamesConfig from './fixtures/webpack.array.one-error-one-warning-one-success-with-names';
 
-describe.each([['express', express]])('%s framework:', (_, framework) => {
+describe.each([
+  ['express', express],
+  ['connect', connect],
+])('%s framework:', (_, framework) => {
   describe('middleware', () => {
     let instance;
     let listen;
@@ -2058,7 +2062,7 @@ describe.each([['express', express]])('%s framework:', (_, framework) => {
 
           instance = middleware(compiler, {
             mimeTypes: {
-              phtml: 'text/html',
+              myhtml: 'text/html',
             },
           });
 
@@ -2071,7 +2075,7 @@ describe.each([['express', express]])('%s framework:', (_, framework) => {
             recursive: true,
           });
           instance.context.outputFileSystem.writeFileSync(
-            path.resolve(outputPath, 'file.phtml'),
+            path.resolve(outputPath, 'file.myhtml'),
             'welcome'
           );
         });
@@ -2080,7 +2084,7 @@ describe.each([['express', express]])('%s framework:', (_, framework) => {
 
         it('should return the "200" code for the "GET" request "file.phtml"', (done) => {
           request(app)
-            .get('/file.phtml')
+            .get('/file.myhtml')
             .expect('Content-Type', 'text/html; charset=utf-8')
             .expect(200, 'welcome', done);
         });
