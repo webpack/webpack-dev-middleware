@@ -7,82 +7,21 @@ import getCompiler from './helpers/getCompiler';
 import getCompilerHooks from './helpers/getCompilerHooks';
 import webpackConfig from './fixtures/webpack.config';
 
-describe('API', () => {
-  let instance;
-  let listen;
-  let app;
-  let compiler;
+describe.each([['%s framework:', express]])('%s', (_, framework) => {
+  describe('API', () => {
+    let instance;
+    let listen;
+    let app;
+    let compiler;
 
-  describe('constructor', () => {
-    describe('should accept compiler', () => {
-      beforeEach((done) => {
-        compiler = webpack(webpackConfig);
-
-        instance = middleware(compiler);
-
-        app = express();
-        app.use(instance);
-
-        listen = app.listen((error) => {
-          if (error) {
-            return done(error);
-          }
-
-          return done();
-        });
-      });
-
-      afterEach((done) => {
-        if (instance.context.watching.closed) {
-          if (listen) {
-            listen.close(done);
-          } else {
-            done();
-          }
-
-          return;
-        }
-
-        instance.close(() => {
-          if (listen) {
-            listen.close(done);
-          } else {
-            done();
-          }
-        });
-      });
-
-      it('should work', (done) => {
-        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
-
-        instance.waitUntilValid(() => {
-          instance.close();
-
-          expect(compiler.running).toBe(false);
-          expect(doneSpy).toHaveBeenCalledTimes(1);
-
-          doneSpy.mockRestore();
-
-          done();
-        });
-      });
-    });
-
-    if (webpack.version[0] === 5) {
-      describe('should accept compiler in watch mode', () => {
+    describe('constructor', () => {
+      describe('should accept compiler', () => {
         beforeEach((done) => {
-          compiler = webpack(
-            { ...webpackConfig, ...{ watch: true } },
-            (error) => {
-              if (error) {
-                throw error;
-              }
-            }
-          );
+          compiler = webpack(webpackConfig);
 
           instance = middleware(compiler);
 
-          app = express();
+          app = framework();
           app.use(instance);
 
           listen = app.listen((error) => {
@@ -129,264 +68,315 @@ describe('API', () => {
           });
         });
       });
-    }
-  });
 
-  describe('waitUntilValid method', () => {
-    beforeEach((done) => {
-      compiler = getCompiler(webpackConfig);
+      if (webpack.version[0] === 5) {
+        describe('should accept compiler in watch mode', () => {
+          beforeEach((done) => {
+            compiler = webpack(
+              { ...webpackConfig, ...{ watch: true } },
+              (error) => {
+                if (error) {
+                  throw error;
+                }
+              }
+            );
 
-      instance = middleware(compiler);
+            instance = middleware(compiler);
 
-      app = express();
-      app.use(instance);
+            app = framework();
+            app.use(instance);
 
-      listen = app.listen((error) => {
-        if (error) {
-          return done(error);
-        }
+            listen = app.listen((error) => {
+              if (error) {
+                return done(error);
+              }
 
-        return done();
-      });
-    });
+              return done();
+            });
+          });
 
-    afterEach((done) => {
-      if (instance.context.watching.closed) {
-        if (listen) {
-          listen.close(done);
-        } else {
-          done();
-        }
+          afterEach((done) => {
+            if (instance.context.watching.closed) {
+              if (listen) {
+                listen.close(done);
+              } else {
+                done();
+              }
 
-        return;
+              return;
+            }
+
+            instance.close(() => {
+              if (listen) {
+                listen.close(done);
+              } else {
+                done();
+              }
+            });
+          });
+
+          it('should work', (done) => {
+            const doneSpy = jest.spyOn(
+              getCompilerHooks(compiler).done[0],
+              'fn'
+            );
+
+            instance.waitUntilValid(() => {
+              instance.close();
+
+              expect(compiler.running).toBe(false);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+
+              doneSpy.mockRestore();
+
+              done();
+            });
+          });
+        });
       }
-
-      instance.close(() => {
-        if (listen) {
-          listen.close(done);
-        } else {
-          done();
-        }
-      });
     });
 
-    it('should work without callback', (done) => {
-      const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+    describe('waitUntilValid method', () => {
+      beforeEach((done) => {
+        compiler = getCompiler(webpackConfig);
 
-      instance.waitUntilValid();
+        instance = middleware(compiler);
 
-      const intervalId = setInterval(() => {
-        if (instance.context.state) {
-          expect(compiler.running).toBe(true);
-          expect(instance.context.state).toBe(true);
-          expect(doneSpy).toHaveBeenCalledTimes(1);
-          expect(doneSpy.mock.calls[0][0]).toBeInstanceOf(Stats);
+        app = framework();
+        app.use(instance);
 
-          doneSpy.mockRestore();
+        listen = app.listen((error) => {
+          if (error) {
+            return done(error);
+          }
 
-          clearInterval(intervalId);
-
-          done();
-        }
-      });
-    });
-
-    it('should work with callback', (done) => {
-      const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
-      let callbackCounter = 0;
-
-      instance.waitUntilValid(() => {
-        callbackCounter += 1;
-      });
-
-      const intervalId = setInterval(() => {
-        if (instance.context.state) {
-          expect(compiler.running).toBe(true);
-          expect(instance.context.state).toBe(true);
-          expect(callbackCounter).toBe(1);
-          expect(doneSpy).toHaveBeenCalledTimes(1);
-
-          doneSpy.mockRestore();
-
-          clearInterval(intervalId);
-
-          done();
-        }
-      });
-    });
-
-    it('should run callback immediately when state already valid', (done) => {
-      const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
-      let callbackCounter = 0;
-      let validToCheck = false;
-
-      instance.waitUntilValid(() => {
-        callbackCounter += 1;
-
-        instance.waitUntilValid(() => {
-          validToCheck = true;
-          callbackCounter += 1;
+          return done();
         });
       });
 
-      const intervalId = setInterval(() => {
-        if (instance.context.state && validToCheck) {
-          expect(compiler.running).toBe(true);
-          expect(instance.context.state).toBe(true);
-          expect(callbackCounter).toBe(2);
-          expect(doneSpy).toHaveBeenCalledTimes(1);
+      afterEach((done) => {
+        if (instance.context.watching.closed) {
+          if (listen) {
+            listen.close(done);
+          } else {
+            done();
+          }
 
-          doneSpy.mockRestore();
-
-          clearInterval(intervalId);
-
-          done();
-        }
-      });
-    });
-  });
-
-  describe('invalidate method', () => {
-    beforeEach((done) => {
-      compiler = getCompiler(webpackConfig);
-
-      instance = middleware(compiler);
-
-      app = express();
-      app.use(instance);
-
-      listen = app.listen((error) => {
-        if (error) {
-          return done(error);
+          return;
         }
 
-        return done();
-      });
-    });
-
-    afterEach((done) => {
-      if (instance.context.watching.closed) {
-        if (listen) {
-          listen.close(done);
-        } else {
-          done();
-        }
-
-        return;
-      }
-
-      instance.close(() => {
-        if (listen) {
-          listen.close(done);
-        } else {
-          done();
-        }
-      });
-    });
-
-    it('should work without callback', (done) => {
-      const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
-
-      instance.invalidate();
-
-      const intervalId = setInterval(() => {
-        if (instance.context.state) {
-          expect(compiler.running).toBe(true);
-          expect(instance.context.state).toBe(true);
-          expect(doneSpy).toHaveBeenCalledTimes(1);
-
-          doneSpy.mockRestore();
-
-          clearInterval(intervalId);
-
-          done();
-        }
-      });
-    });
-
-    it('should work with callback', (done) => {
-      const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
-      let callbackCounter = 0;
-
-      instance.invalidate(() => {
-        callbackCounter += 1;
-      });
-
-      const intervalId = setInterval(() => {
-        if (instance.context.state) {
-          expect(compiler.running).toBe(true);
-          expect(instance.context.state).toBe(true);
-          expect(callbackCounter).toBe(1);
-          expect(doneSpy).toHaveBeenCalledTimes(1);
-
-          doneSpy.mockRestore();
-
-          clearInterval(intervalId);
-
-          done();
-        }
-      });
-    });
-  });
-
-  describe('close method', () => {
-    beforeEach((done) => {
-      compiler = getCompiler(webpackConfig);
-
-      instance = middleware(compiler);
-
-      app = express();
-      app.use(instance);
-
-      listen = app.listen((error) => {
-        if (error) {
-          return done(error);
-        }
-
-        return done();
-      });
-    });
-
-    afterEach((done) => {
-      if (instance.context.watching.closed) {
-        if (listen) {
-          listen.close(done);
-        } else {
-          done();
-        }
-
-        return;
-      }
-
-      instance.close(() => {
-        if (listen) {
-          listen.close(done);
-        } else {
-          done();
-        }
-      });
-    });
-
-    it('should work without callback', (done) => {
-      const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
-
-      instance.waitUntilValid(() => {
-        instance.close();
-
-        expect(compiler.running).toBe(false);
-        expect(doneSpy).toHaveBeenCalledTimes(1);
-
-        doneSpy.mockRestore();
-
-        done();
-      });
-    });
-
-    it('should work with callback', (done) => {
-      const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
-
-      instance.waitUntilValid(() => {
         instance.close(() => {
+          if (listen) {
+            listen.close(done);
+          } else {
+            done();
+          }
+        });
+      });
+
+      it('should work without callback', (done) => {
+        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+
+        instance.waitUntilValid();
+
+        const intervalId = setInterval(() => {
+          if (instance.context.state) {
+            expect(compiler.running).toBe(true);
+            expect(instance.context.state).toBe(true);
+            expect(doneSpy).toHaveBeenCalledTimes(1);
+            expect(doneSpy.mock.calls[0][0]).toBeInstanceOf(Stats);
+
+            doneSpy.mockRestore();
+
+            clearInterval(intervalId);
+
+            done();
+          }
+        });
+      });
+
+      it('should work with callback', (done) => {
+        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+        let callbackCounter = 0;
+
+        instance.waitUntilValid(() => {
+          callbackCounter += 1;
+        });
+
+        const intervalId = setInterval(() => {
+          if (instance.context.state) {
+            expect(compiler.running).toBe(true);
+            expect(instance.context.state).toBe(true);
+            expect(callbackCounter).toBe(1);
+            expect(doneSpy).toHaveBeenCalledTimes(1);
+
+            doneSpy.mockRestore();
+
+            clearInterval(intervalId);
+
+            done();
+          }
+        });
+      });
+
+      it('should run callback immediately when state already valid', (done) => {
+        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+        let callbackCounter = 0;
+        let validToCheck = false;
+
+        instance.waitUntilValid(() => {
+          callbackCounter += 1;
+
+          instance.waitUntilValid(() => {
+            validToCheck = true;
+            callbackCounter += 1;
+          });
+        });
+
+        const intervalId = setInterval(() => {
+          if (instance.context.state && validToCheck) {
+            expect(compiler.running).toBe(true);
+            expect(instance.context.state).toBe(true);
+            expect(callbackCounter).toBe(2);
+            expect(doneSpy).toHaveBeenCalledTimes(1);
+
+            doneSpy.mockRestore();
+
+            clearInterval(intervalId);
+
+            done();
+          }
+        });
+      });
+    });
+
+    describe('invalidate method', () => {
+      beforeEach((done) => {
+        compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler);
+
+        app = framework();
+        app.use(instance);
+
+        listen = app.listen((error) => {
+          if (error) {
+            return done(error);
+          }
+
+          return done();
+        });
+      });
+
+      afterEach((done) => {
+        if (instance.context.watching.closed) {
+          if (listen) {
+            listen.close(done);
+          } else {
+            done();
+          }
+
+          return;
+        }
+
+        instance.close(() => {
+          if (listen) {
+            listen.close(done);
+          } else {
+            done();
+          }
+        });
+      });
+
+      it('should work without callback', (done) => {
+        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+
+        instance.invalidate();
+
+        const intervalId = setInterval(() => {
+          if (instance.context.state) {
+            expect(compiler.running).toBe(true);
+            expect(instance.context.state).toBe(true);
+            expect(doneSpy).toHaveBeenCalledTimes(1);
+
+            doneSpy.mockRestore();
+
+            clearInterval(intervalId);
+
+            done();
+          }
+        });
+      });
+
+      it('should work with callback', (done) => {
+        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+        let callbackCounter = 0;
+
+        instance.invalidate(() => {
+          callbackCounter += 1;
+        });
+
+        const intervalId = setInterval(() => {
+          if (instance.context.state) {
+            expect(compiler.running).toBe(true);
+            expect(instance.context.state).toBe(true);
+            expect(callbackCounter).toBe(1);
+            expect(doneSpy).toHaveBeenCalledTimes(1);
+
+            doneSpy.mockRestore();
+
+            clearInterval(intervalId);
+
+            done();
+          }
+        });
+      });
+    });
+
+    describe('close method', () => {
+      beforeEach((done) => {
+        compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler);
+
+        app = framework();
+        app.use(instance);
+
+        listen = app.listen((error) => {
+          if (error) {
+            return done(error);
+          }
+
+          return done();
+        });
+      });
+
+      afterEach((done) => {
+        if (instance.context.watching.closed) {
+          if (listen) {
+            listen.close(done);
+          } else {
+            done();
+          }
+
+          return;
+        }
+
+        instance.close(() => {
+          if (listen) {
+            listen.close(done);
+          } else {
+            done();
+          }
+        });
+      });
+
+      it('should work without callback', (done) => {
+        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+
+        instance.waitUntilValid(() => {
+          instance.close();
+
           expect(compiler.running).toBe(false);
           expect(doneSpy).toHaveBeenCalledTimes(1);
 
@@ -395,58 +385,73 @@ describe('API', () => {
           done();
         });
       });
-    });
-  });
 
-  describe('context property', () => {
-    beforeEach((done) => {
-      compiler = getCompiler(webpackConfig);
+      it('should work with callback', (done) => {
+        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
 
-      instance = middleware(compiler);
+        instance.waitUntilValid(() => {
+          instance.close(() => {
+            expect(compiler.running).toBe(false);
+            expect(doneSpy).toHaveBeenCalledTimes(1);
 
-      app = express();
-      app.use(instance);
+            doneSpy.mockRestore();
 
-      listen = app.listen((error) => {
-        if (error) {
-          return done(error);
-        }
-
-        return done();
+            done();
+          });
+        });
       });
     });
 
-    afterEach((done) => {
-      if (instance.context.watching.closed) {
-        if (listen) {
-          listen.close(done);
-        } else {
-          done();
-        }
+    describe('context property', () => {
+      beforeEach((done) => {
+        compiler = getCompiler(webpackConfig);
 
-        return;
-      }
+        instance = middleware(compiler);
 
-      instance.close(() => {
-        if (listen) {
-          listen.close(done);
-        } else {
-          done();
-        }
+        app = framework();
+        app.use(instance);
+
+        listen = app.listen((error) => {
+          if (error) {
+            return done(error);
+          }
+
+          return done();
+        });
       });
-    });
 
-    it('should contain public properties', (done) => {
-      expect(instance.context.state).toBeDefined();
-      expect(instance.context.options).toBeDefined();
-      expect(instance.context.compiler).toBeDefined();
-      expect(instance.context.watching).toBeDefined();
-      expect(instance.context.outputFileSystem).toBeDefined();
+      afterEach((done) => {
+        if (instance.context.watching.closed) {
+          if (listen) {
+            listen.close(done);
+          } else {
+            done();
+          }
 
-      // the compilation needs to finish, as it will still be running
-      // after the test is done if not finished, potentially impacting other tests
-      compiler.hooks.done.tap('wdm-test', () => {
-        done();
+          return;
+        }
+
+        instance.close(() => {
+          if (listen) {
+            listen.close(done);
+          } else {
+            done();
+          }
+        });
+      });
+
+      it('should contain public properties', (done) => {
+        expect(instance.context.state).toBeDefined();
+        expect(instance.context.options).toBeDefined();
+        expect(instance.context.compiler).toBeDefined();
+        expect(instance.context.watching).toBeDefined();
+        expect(instance.context.outputFileSystem).toBeDefined();
+
+        // the compilation needs to finish, as it will still be running
+        // after the test is done if not finished, potentially impacting other tests
+        compiler.hooks.done.tap('wdm-test', () => {
+          done();
+        });
       });
     });
   });
