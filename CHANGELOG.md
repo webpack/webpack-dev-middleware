@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.2](https://github.com/webpack/webpack-dev-middleware/compare/v4.0.1...v4.0.2) (2020-11-10)
+
+
+### Bug Fixes
+
+* compatibility with set headers option ([#763](https://github.com/webpack/webpack-dev-middleware/issues/763)) ([7c4cac5](https://github.com/webpack/webpack-dev-middleware/commit/7c4cac538dc7facf3c3334863ec3a49b14e16630))
+
 ### [4.0.1](https://github.com/webpack/webpack-dev-middleware/compare/v4.0.0...v4.0.1) (2020-11-09)
 
 
