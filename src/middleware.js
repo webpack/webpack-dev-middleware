@@ -80,16 +80,14 @@ export default function wrapper(context) {
 
       if (headers) {
         const names = Object.keys(headers);
-        
-        // Express API
-        if(res.set) {
-          for (const name of names) {
+
+        for (const name of names) {
+          // Express API
+          if (res.set) {
             res.set(name, headers[name]);
           }
-        }
-        // Node.js API
-        else {
-          for (const name of names) {
+          // Node.js API
+          else {
             res.setHeader(name, headers[name]);
           }
         }
