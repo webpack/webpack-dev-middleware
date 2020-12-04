@@ -6,7 +6,7 @@
       "type": "object"
     },
     "writeToDisk": {
-      "description": "Allows to write files on disk.",
+      "description": "Allows to write generated files on disk.",
       "anyOf": [
         {
           "type": "boolean"
