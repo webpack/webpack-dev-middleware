@@ -66,7 +66,7 @@ The middleware accepts an `options` Object. The following is a property referenc
 Type: `Array`  
 Default: `[ 'GET', 'HEAD' ]`
 
-This property allows a user to pass the list of HTTP request methods accepted by the server.
+This property allows a user to pass the list of HTTP request methods accepted by the middleware\*\*.
 
 ### headers
 
@@ -107,26 +107,20 @@ For more information about `publicPath`, please see [the webpack documentation](
 Type: `Boolean`  
 Default: `undefined`
 
-Instructs the module to enable or disable the server-side rendering mode. Please
-see [Server-Side Rendering](#server-side-rendering) for more information.
+Instructs the module to enable or disable the server-side rendering mode.
+Please see [Server-Side Rendering](#server-side-rendering) for more information.
 
 ### writeToDisk
 
 Type: `Boolean|Function`  
 Default: `false`
 
-If `true`, the option will instruct the module to write files to the configured
-location on disk as specified in your `webpack` config file. _Setting
-`writeToDisk: true` won't change the behavior of the `webpack-dev-middleware`,
-and bundle files accessed through the browser will still be served from memory._
-This option provides the same capabilities as the
-[`WriteFilePlugin`](https://github.com/gajus/write-file-webpack-plugin/pulls).
+If `true`, the option will instruct the module to write files to the configured location on disk as specified in your `webpack` config file.
+_Setting `writeToDisk: true` won't change the behavior of the `webpack-dev-middleware`, and bundle files accessed through the browser will still be served from memory._
+This option provides the same capabilities as the [`WriteFilePlugin`](https://github.com/gajus/write-file-webpack-plugin/pulls).
 
-This option also accepts a `Function` value, which can be used to filter which
-files are written to disk. The function follows the same premise as
-[`Array#filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter)
-in which a return value of `false` _will not_ write the file, and a return value
-of `true` _will_ write the file to disk. eg.
+This option also accepts a `Function` value, which can be used to filter which files are written to disk.
+The function follows the same premise as [`Array#filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) in which a return value of `false` _will not_ write the file, and a return value of `true` _will_ write the file to disk. eg.
 
 ```js
 const webpack = require('webpack');

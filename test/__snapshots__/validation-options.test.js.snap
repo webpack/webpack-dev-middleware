@@ -10,6 +10,7 @@ exports[`validation should throw an error on the "index" option with "{}" value 
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.index should be one of these:
    boolean | string
+   -> Allows to serve an index of the directory.
    Details:
     * options.index should be a boolean.
     * options.index should be a string."
@@ -19,6 +20,7 @@ exports[`validation should throw an error on the "index" option with "0" value 1
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.index should be one of these:
    boolean | string
+   -> Allows to serve an index of the directory.
    Details:
     * options.index should be a boolean.
     * options.index should be a string."
@@ -27,46 +29,59 @@ exports[`validation should throw an error on the "index" option with "0" value 1
 exports[`validation should throw an error on the "methods" option with "{}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.methods should be an array:
-   [string, ...]"
+   [string, ...]
+   -> Allows to pass the list of HTTP request methods accepted by the middleware."
 `;
 
 exports[`validation should throw an error on the "methods" option with "true" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.methods should be an array:
-   [string, ...]"
+   [string, ...]
+   -> Allows to pass the list of HTTP request methods accepted by the middleware."
 `;
 
 exports[`validation should throw an error on the "mimeTypes" option with "foo" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.mimeTypes should be an object:
-   object { … }"
+   object { … }
+   -> Allows a user to register custom mime types or extension mappings."
 `;
 
 exports[`validation should throw an error on the "outputFileSystem" option with "false" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.outputFileSystem should be an object:
-   object { … }"
+   object { … }
+   -> Set the default file system which will be used by webpack as primary destination of generated files."
 `;
 
 exports[`validation should throw an error on the "publicPath" option with "false" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
- - options.publicPath should be a string."
+ - options.publicPath should be one of these:
+   \\"auto\\" | string | function
+   -> The \`publicPath\` specifies the public URL address of the output files when referenced in a browser.
+   Details:
+    * options.publicPath should be \\"auto\\".
+    * options.publicPath should be a string.
+    * options.publicPath should be an instance of function."
 `;
 
 exports[`validation should throw an error on the "serverSideRender" option with "0" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
- - options.serverSideRender should be a boolean."
+ - options.serverSideRender should be a boolean.
+   -> Instructs the module to enable or disable the server-side rendering mode."
 `;
 
 exports[`validation should throw an error on the "serverSideRender" option with "foo" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
- - options.serverSideRender should be a boolean."
+ - options.serverSideRender should be a boolean.
+   -> Instructs the module to enable or disable the server-side rendering mode."
 `;
 
 exports[`validation should throw an error on the "writeToDisk" option with "{}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.writeToDisk should be one of these:
    boolean | function
+   -> Allows to write generated files on disk.
    Details:
     * options.writeToDisk should be a boolean.
     * options.writeToDisk should be an instance of function."
