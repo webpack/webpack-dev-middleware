@@ -81,7 +81,7 @@ exports[`validation should throw an error on the "writeToDisk" option with "{}" 
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.writeToDisk should be one of these:
    boolean | function
-   -> Allows to write files on disk.
+   -> Allows to write generated files on disk.
    Details:
     * options.writeToDisk should be a boolean.
     * options.writeToDisk should be an instance of function."
