@@ -35,7 +35,7 @@ export default function setupHooks(context) {
         additionalMessage = ' with warnings';
       }
 
-      logger.info(`Compiled finished${additionalMessage}`);
+      logger.info(`Finished${additionalMessage}`);
 
       process.stdout.write(stats.toString());
 

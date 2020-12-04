@@ -13,7 +13,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with errors",
+      "Finished with errors",
     ],
   ],
 ]
@@ -32,7 +32,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with warnings",
+      "Finished with warnings",
     ],
   ],
 ]
@@ -51,7 +51,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with errors",
+      "Finished with errors",
     ],
   ],
 ]
@@ -70,7 +70,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
 ]
@@ -89,7 +89,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
 ]
@@ -108,7 +108,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
 ]
@@ -127,7 +127,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
 ]
@@ -186,7 +186,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with warnings",
+      "Finished with warnings",
     ],
   ],
   Array [
@@ -207,7 +207,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with warnings",
+      "Finished with warnings",
     ],
   ],
 ]
@@ -226,7 +226,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
   Array [
@@ -247,7 +247,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
 ]
@@ -266,7 +266,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
   Array [
@@ -287,7 +287,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
 ]
@@ -306,7 +306,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with errors",
+      "Finished with errors",
     ],
   ],
   Array [
@@ -327,7 +327,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with errors",
+      "Finished with errors",
     ],
   ],
 ]
@@ -346,7 +346,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with errors",
+      "Finished with errors",
     ],
   ],
   Array [
@@ -367,7 +367,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with errors",
+      "Finished with errors",
     ],
   ],
 ]
@@ -386,7 +386,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with warnings",
+      "Finished with warnings",
     ],
   ],
   Array [
@@ -407,7 +407,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with warnings",
+      "Finished with warnings",
     ],
   ],
 ]
@@ -426,7 +426,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with errors",
+      "Finished with errors",
     ],
   ],
 ]
@@ -445,7 +445,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with warnings",
+      "Finished with warnings",
     ],
   ],
 ]
@@ -464,7 +464,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with errors",
+      "Finished with errors",
     ],
   ],
 ]
@@ -483,7 +483,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
 ]
@@ -502,7 +502,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
 ]
@@ -521,7 +521,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
 ]
@@ -540,7 +540,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
 ]
@@ -599,7 +599,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with warnings",
+      "Finished with warnings",
     ],
   ],
   Array [
@@ -620,7 +620,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with warnings",
+      "Finished with warnings",
     ],
   ],
 ]
@@ -639,7 +639,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
   Array [
@@ -660,7 +660,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
 ]
@@ -679,7 +679,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
   Array [
@@ -700,7 +700,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished",
+      "Finished",
     ],
   ],
 ]
@@ -719,7 +719,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with errors",
+      "Finished with errors",
     ],
   ],
   Array [
@@ -740,7 +740,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with errors",
+      "Finished with errors",
     ],
   ],
 ]
@@ -759,7 +759,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with errors",
+      "Finished with errors",
     ],
   ],
   Array [
@@ -780,7 +780,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with errors",
+      "Finished with errors",
     ],
   ],
 ]
@@ -799,7 +799,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with warnings",
+      "Finished with warnings",
     ],
   ],
   Array [
@@ -820,7 +820,7 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Compiled finished with warnings",
+      "Finished with warnings",
     ],
   ],
 ]
