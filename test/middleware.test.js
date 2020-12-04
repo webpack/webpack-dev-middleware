@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
+import muteStdout from 'mute-stdout';
 import express from 'express';
 import connect from 'connect';
 import request from 'supertest';
@@ -26,6 +27,8 @@ import webpackWarningConfig from './fixtures/webpack.warning.config';
 import webpackMultiWarningConfig from './fixtures/webpack.array.warning.config';
 import webpackOneErrorOneWarningOneSuccessConfig from './fixtures/webpack.array.one-error-one-warning-one-success';
 import webpackOneErrorOneWarningOneSuccessWithNamesConfig from './fixtures/webpack.array.one-error-one-warning-one-success-with-names';
+
+muteStdout.mute();
 
 describe.each([
   ['express', express],
