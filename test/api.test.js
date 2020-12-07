@@ -1,3 +1,4 @@
+import muteStdout from 'mute-stdout';
 import express from 'express';
 import connect from 'connect';
 import webpack, { Stats } from 'webpack';
@@ -7,6 +8,8 @@ import middleware from '../src';
 import getCompiler from './helpers/getCompiler';
 import getCompilerHooks from './helpers/getCompilerHooks';
 import webpackConfig from './fixtures/webpack.config';
+
+muteStdout.mute();
 
 describe.each([
   ['express', express],
@@ -58,7 +61,12 @@ describe.each([
         });
 
         it('should work', (done) => {
-          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+          const doneSpy = jest.spyOn(
+            (webpack.webpack
+              ? getCompilerHooks(compiler).afterDone
+              : getCompilerHooks(compiler).done)[0],
+            'fn'
+          );
 
           instance.waitUntilValid(() => {
             instance.close();
@@ -121,7 +129,9 @@ describe.each([
 
           it('should work', (done) => {
             const doneSpy = jest.spyOn(
-              getCompilerHooks(compiler).done[0],
+              (webpack.webpack
+                ? getCompilerHooks(compiler).afterDone
+                : getCompilerHooks(compiler).done)[0],
               'fn'
             );
 
@@ -179,7 +189,12 @@ describe.each([
       });
 
       it('should work without callback', (done) => {
-        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+        const doneSpy = jest.spyOn(
+          (webpack.webpack
+            ? getCompilerHooks(compiler).afterDone
+            : getCompilerHooks(compiler).done)[0],
+          'fn'
+        );
 
         instance.waitUntilValid();
 
@@ -200,7 +215,12 @@ describe.each([
       });
 
       it('should work with callback', (done) => {
-        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+        const doneSpy = jest.spyOn(
+          (webpack.webpack
+            ? getCompilerHooks(compiler).afterDone
+            : getCompilerHooks(compiler).done)[0],
+          'fn'
+        );
         let callbackCounter = 0;
 
         instance.waitUntilValid(() => {
@@ -224,7 +244,12 @@ describe.each([
       });
 
       it('should run callback immediately when state already valid', (done) => {
-        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+        const doneSpy = jest.spyOn(
+          (webpack.webpack
+            ? getCompilerHooks(compiler).afterDone
+            : getCompilerHooks(compiler).done)[0],
+          'fn'
+        );
         let callbackCounter = 0;
         let validToCheck = false;
 
@@ -293,7 +318,12 @@ describe.each([
       });
 
       it('should work without callback', (done) => {
-        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+        const doneSpy = jest.spyOn(
+          (webpack.webpack
+            ? getCompilerHooks(compiler).afterDone
+            : getCompilerHooks(compiler).done)[0],
+          'fn'
+        );
 
         instance.invalidate();
 
@@ -313,7 +343,12 @@ describe.each([
       });
 
       it('should work with callback', (done) => {
-        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+        const doneSpy = jest.spyOn(
+          (webpack.webpack
+            ? getCompilerHooks(compiler).afterDone
+            : getCompilerHooks(compiler).done)[0],
+          'fn'
+        );
         let callbackCounter = 0;
 
         instance.invalidate(() => {
@@ -376,7 +411,12 @@ describe.each([
       });
 
       it('should work without callback', (done) => {
-        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+        const doneSpy = jest.spyOn(
+          (webpack.webpack
+            ? getCompilerHooks(compiler).afterDone
+            : getCompilerHooks(compiler).done)[0],
+          'fn'
+        );
 
         instance.waitUntilValid(() => {
           instance.close();
@@ -391,7 +431,12 @@ describe.each([
       });
 
       it('should work with callback', (done) => {
-        const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], 'fn');
+        const doneSpy = jest.spyOn(
+          (webpack.webpack
+            ? getCompilerHooks(compiler).afterDone
+            : getCompilerHooks(compiler).done)[0],
+          'fn'
+        );
 
         instance.waitUntilValid(() => {
           instance.close(() => {
@@ -453,9 +498,12 @@ describe.each([
 
         // the compilation needs to finish, as it will still be running
         // after the test is done if not finished, potentially impacting other tests
-        compiler.hooks.done.tap('wdm-test', () => {
-          done();
-        });
+        (webpack.webpack ? compiler.hooks.afterDone : compiler.hooks.done).tap(
+          'wdm-test',
+          () => {
+            done();
+          }
+        );
       });
     });
   });

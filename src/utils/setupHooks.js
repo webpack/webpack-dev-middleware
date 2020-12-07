@@ -20,24 +20,14 @@ export default function setupHooks(context) {
 
     // Do the stuff in nextTick, because bundle may be invalidated if a change happened while compiling
     process.nextTick(() => {
-      const { state, callbacks, logger } = context;
+      const { state, callbacks } = context;
 
       // Check if still in valid state
       if (!state) {
         return;
       }
 
-      let additionalMessage = '';
-
-      if (stats.hasErrors()) {
-        additionalMessage = ' with errors';
-      } else if (stats.hasWarnings()) {
-        additionalMessage = ' with warnings';
-      }
-
-      logger.info(`Finished${additionalMessage}`);
-
-      process.stdout.write(stats.toString());
+      process.stdout.write(`${stats.toString()}\n`);
 
       // eslint-disable-next-line no-param-reassign
       context.callbacks = [];

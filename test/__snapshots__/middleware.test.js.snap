@@ -9,13 +9,6 @@ Array [
       "wait until bundle finished: /static-one/bundle.js",
     ],
   ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished with errors",
-    ],
-  ],
 ]
 `;
 
@@ -26,13 +19,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished: /static-one/bundle.js",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished with warnings",
     ],
   ],
 ]
@@ -47,13 +33,6 @@ Array [
       "wait until bundle finished: /static-one/bundle.js",
     ],
   ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished with errors",
-    ],
-  ],
 ]
 `;
 
@@ -64,13 +43,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished: /bundle.js",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished",
     ],
   ],
 ]
@@ -85,13 +57,6 @@ Array [
       "wait until bundle finished: /bundle.js",
     ],
   ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished",
-    ],
-  ],
 ]
 `;
 
@@ -104,13 +69,6 @@ Array [
       "wait until bundle finished: /bundle.js",
     ],
   ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished",
-    ],
-  ],
 ]
 `;
 
@@ -121,13 +79,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished: /bundle.js",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished",
     ],
   ],
 ]
@@ -186,13 +137,6 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Finished with warnings",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
       "Compiling...",
     ],
   ],
@@ -201,13 +145,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished with warnings",
     ],
   ],
 ]
@@ -226,13 +163,6 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
       "Compiling...",
     ],
   ],
@@ -241,13 +171,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished",
     ],
   ],
 ]
@@ -266,13 +189,6 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
       "Compiling...",
     ],
   ],
@@ -281,13 +197,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished",
     ],
   ],
 ]
@@ -306,13 +215,6 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Finished with errors",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
       "Compiling...",
     ],
   ],
@@ -321,13 +223,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished with errors",
     ],
   ],
 ]
@@ -346,13 +241,6 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Finished with errors",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
       "Compiling...",
     ],
   ],
@@ -361,13 +249,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished with errors",
     ],
   ],
 ]
@@ -386,13 +267,6 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Finished with warnings",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
       "Compiling...",
     ],
   ],
@@ -401,13 +275,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished with warnings",
     ],
   ],
 ]
@@ -422,13 +289,6 @@ Array [
       "wait until bundle finished: /static-one/bundle.js",
     ],
   ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished with errors",
-    ],
-  ],
 ]
 `;
 
@@ -439,13 +299,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished: /static-one/bundle.js",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished with warnings",
     ],
   ],
 ]
@@ -460,13 +313,6 @@ Array [
       "wait until bundle finished: /static-one/bundle.js",
     ],
   ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished with errors",
-    ],
-  ],
 ]
 `;
 
@@ -477,13 +323,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished: /bundle.js",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished",
     ],
   ],
 ]
@@ -498,13 +337,6 @@ Array [
       "wait until bundle finished: /bundle.js",
     ],
   ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished",
-    ],
-  ],
 ]
 `;
 
@@ -517,13 +349,6 @@ Array [
       "wait until bundle finished: /bundle.js",
     ],
   ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished",
-    ],
-  ],
 ]
 `;
 
@@ -534,13 +359,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished: /bundle.js",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished",
     ],
   ],
 ]
@@ -599,13 +417,6 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Finished with warnings",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
       "Compiling...",
     ],
   ],
@@ -614,13 +425,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished with warnings",
     ],
   ],
 ]
@@ -639,13 +443,6 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
       "Compiling...",
     ],
   ],
@@ -654,13 +451,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished",
     ],
   ],
 ]
@@ -679,13 +469,6 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
       "Compiling...",
     ],
   ],
@@ -694,13 +477,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished",
     ],
   ],
 ]
@@ -719,13 +495,6 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Finished with errors",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
       "Compiling...",
     ],
   ],
@@ -734,13 +503,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished with errors",
     ],
   ],
 ]
@@ -759,13 +521,6 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Finished with errors",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
       "Compiling...",
     ],
   ],
@@ -774,13 +529,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished with errors",
     ],
   ],
 ]
@@ -799,13 +547,6 @@ Array [
     "webpack-dev-middleware",
     "info",
     Array [
-      "Finished with warnings",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
       "Compiling...",
     ],
   ],
@@ -814,13 +555,6 @@ Array [
     "info",
     Array [
       "wait until bundle finished",
-    ],
-  ],
-  Array [
-    "webpack-dev-middleware",
-    "info",
-    Array [
-      "Finished with warnings",
     ],
   ],
 ]
