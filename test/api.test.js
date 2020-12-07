@@ -1,4 +1,3 @@
-import muteStdout from 'mute-stdout';
 import express from 'express';
 import connect from 'connect';
 import webpack, { Stats } from 'webpack';
@@ -9,7 +8,8 @@ import getCompiler from './helpers/getCompiler';
 import getCompilerHooks from './helpers/getCompilerHooks';
 import webpackConfig from './fixtures/webpack.config';
 
-muteStdout.mute();
+// Suppress unnecessary stats output
+global.console = { log: jest.fn() };
 
 describe.each([
   ['express', express],

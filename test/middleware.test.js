@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 
-import muteStdout from 'mute-stdout';
 import express from 'express';
 import connect from 'connect';
 import request from 'supertest';
@@ -28,7 +27,8 @@ import webpackMultiWarningConfig from './fixtures/webpack.array.warning.config';
 import webpackOneErrorOneWarningOneSuccessConfig from './fixtures/webpack.array.one-error-one-warning-one-success';
 import webpackOneErrorOneWarningOneSuccessWithNamesConfig from './fixtures/webpack.array.one-error-one-warning-one-success-with-names';
 
-muteStdout.mute();
+// Suppress unnecessary stats output
+global.console = { log: jest.fn() };
 
 describe.each([
   ['express', express],

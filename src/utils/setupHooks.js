@@ -27,7 +27,8 @@ export default function setupHooks(context) {
         return;
       }
 
-      process.stdout.write(`${stats.toString()}\n`);
+      // eslint-disable-next-line no-console
+      console.log(stats.toString());
 
       // eslint-disable-next-line no-param-reassign
       context.callbacks = [];
