@@ -133,6 +133,7 @@ describe('setupHooks', () => {
     ];
     setupHooks(context);
     doneHook.mock.calls[0][1]({
+      toString: jest.fn(() => 'statsString1 and statsString2'),
       stats: [
         {
           toString: jest.fn(() => 'statsString1'),
