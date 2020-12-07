@@ -21,14 +21,7 @@ describe('validation', () => {
       failure: [true],
     },
     publicPath: {
-      success: [
-        '/foo',
-        '',
-        'auto',
-        () => {
-          return '/public/path';
-        },
-      ],
+      success: ['/foo', '', 'auto', () => '/public/path'],
       failure: [false],
     },
     serverSideRender: {

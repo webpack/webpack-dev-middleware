@@ -1,5 +1,3 @@
 import webpack from 'webpack';
 
-export default () => {
-  return webpack.version[0] === '5';
-};
+export default () => webpack.version[0] === '5';
