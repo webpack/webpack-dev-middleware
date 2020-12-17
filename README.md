@@ -197,7 +197,7 @@ app.use(instance);
 setTimeout(() => {
   // After a short delay the configuration is changed and a banner plugin is added
   // to the config
-  compiler.apply(new webpack.BannerPlugin('A new banner'));
+  new webpack.BannerPlugin('A new banner').apply(compiler);
 
   // Recompile the bundle with the banner plugin:
   instance.invalidate();
