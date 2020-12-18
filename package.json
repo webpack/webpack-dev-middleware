@@ -58,8 +58,8 @@
     "cross-env": "^7.0.3",
     "del": "^6.0.0",
     "del-cli": "^3.0.1",
-    "eslint": "^7.15.0",
-    "eslint-config-prettier": "^7.0.0",
+    "eslint": "^7.16.0",
+    "eslint-config-prettier": "^7.1.0",
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-prettier": "^3.3.0",
     "express": "^4.17.1",
@@ -71,7 +71,7 @@
     "prettier": "^2.2.1",
     "standard-version": "^9.0.0",
     "supertest": "^6.0.1",
-    "webpack": "^5.10.3"
+    "webpack": "^5.11.0"
   },
   "keywords": [
     "webpack",
