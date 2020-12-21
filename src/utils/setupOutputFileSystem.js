@@ -27,7 +27,9 @@ export default function setupOutputFileSystem(context) {
   } else {
     outputFileSystem = createFsFromVolume(new Volume());
     // TODO: remove when we drop webpack@4 support
-    outputFileSystem.join = path.join.bind(path);
+    const newPath = Object.assign({}, path);
+    newPath.join = (...files) => path.join(...files).replace(/[\\/]+/g, '/');
+    outputFileSystem.join = newPath.join.bind(newPath);
   }
 
   const compilers = context.compiler.compilers || [context.compiler];
