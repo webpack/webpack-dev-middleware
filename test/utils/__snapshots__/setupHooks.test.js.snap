@@ -1,39 +1,9 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`setupHooks handles multi compiler 1`] = `
-Array [
-  Array [
-    "Child \\"comp1\\": Failed to compile.",
-  ],
-  Array [
-    "Child \\"comp2\\": Compiled with warnings.",
-  ],
-]
-`;
+exports[`setupHooks handles multi compiler 1`] = `Array []`;
 
-exports[`setupHooks handles multi compiler 2`] = `
-Array [
-  Array [
-    "Child \\"comp1\\": statsString1",
-  ],
-]
-`;
+exports[`setupHooks handles multi compiler 2`] = `Array []`;
 
-exports[`setupHooks handles multi compiler 3`] = `
-Array [
-  Array [
-    "Child \\"comp2\\": statsString2",
-  ],
-]
-`;
+exports[`setupHooks handles multi compiler 3`] = `Array []`;
 
-exports[`setupHooks sets state, then logs stats and handles callbacks on nextTick from done hook 1`] = `
-Array [
-  Array [
-    "statsString",
-  ],
-  Array [
-    "Compiled successfully.",
-  ],
-]
-`;
+exports[`setupHooks sets state, then logs stats and handles callbacks on nextTick from done hook 1`] = `Array []`;
