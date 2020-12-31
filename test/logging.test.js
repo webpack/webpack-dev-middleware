@@ -2,10 +2,9 @@ import fs from 'fs';
 import path from 'path';
 
 import execa from 'execa';
-import webpack from 'webpack';
 
 function extractWebpackEntry(string) {
-  const matches = string.match(/webpack\s\d\.\d\d?.\d\d?/gim);
+  const matches = string.match(/^webpack\s\d\.\d\d?.\d\d?/gim);
 
   const result =
     matches === null
@@ -16,19 +15,9 @@ function extractWebpackEntry(string) {
             .replace(/\d\./g, 'xx.')
             .replace(/\.\d\d/g, '.xx')
             .replace(/\.\d/g, '.xx')
-        )[0];
+        );
 
   return result;
-}
-
-function extractCountCompilations(string) {
-  const matches = webpack.webpack
-    ? string.match(/webpack\s\d\.\d\d?.\d\d?/gim)
-    : string.match(/Entrypoint/gim);
-
-  const result = matches === null ? null : matches.length;
-
-  return `Count compilations: ${result}`;
 }
 
 function extractErrorEntry(string) {
@@ -47,7 +36,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.config',
+          WC: 'webpackConfig',
           WCF_stats: 'normal',
         },
       });
@@ -61,7 +50,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       data += chunk.toString();
 
-      if (!/error/gi.test(data)) {
+      if (/Compiled successfully/gi.test(data)) {
         proc.stdin.write('exit');
       }
     });
@@ -73,9 +62,7 @@ describe('logging', () => {
 
     proc.on('exit', (code) => {
       expect(code).toBe(0);
-      expect(
-        `${extractWebpackEntry(data)}\n${extractCountCompilations(data)}`
-      ).toMatchSnapshot('data');
+      expect(extractWebpackEntry(data)).toMatchSnapshot('data');
       expect(error).toMatchSnapshot('error');
 
       done();
@@ -91,7 +78,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.array.config',
+          WC: 'webpackMultiConfig',
         },
       });
     } catch (error) {
@@ -104,7 +91,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       data += chunk.toString();
 
-      if (!/error/gi.test(data)) {
+      if (/Compiled successfully/gi.test(data)) {
         proc.stdin.write('exit');
       }
     });
@@ -116,9 +103,7 @@ describe('logging', () => {
 
     proc.on('exit', (code) => {
       expect(code).toBe(0);
-      expect(
-        `${extractWebpackEntry(data)}\n${extractCountCompilations(data)}`
-      ).toMatchSnapshot('data');
+      expect(extractWebpackEntry(data)).toMatchSnapshot('data');
       expect(error).toMatchSnapshot('error');
 
       done();
@@ -134,7 +119,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.error.config',
+          WC: 'webpackErrorConfig',
         },
       });
     } catch (error) {
@@ -159,9 +144,7 @@ describe('logging', () => {
 
     proc.on('exit', (code) => {
       expect(code).toBe(0);
-      expect(
-        `${extractWebpackEntry(data)}\n${extractCountCompilations(data)}`
-      ).toMatchSnapshot('data');
+      expect(extractWebpackEntry(data)).toMatchSnapshot('data');
       expect(error).toMatchSnapshot('error');
 
       done();
@@ -177,7 +160,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.array.error.config',
+          WC: 'webpackMultiErrorConfig',
         },
       });
     } catch (error) {
@@ -202,9 +185,7 @@ describe('logging', () => {
 
     proc.on('exit', (code) => {
       expect(code).toBe(0);
-      expect(
-        `${extractWebpackEntry(data)}\n${extractCountCompilations(data)}`
-      ).toMatchSnapshot('data');
+      expect(extractWebpackEntry(data)).toMatchSnapshot('data');
       expect(error).toMatchSnapshot('error');
 
       done();
@@ -220,7 +201,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.warning.config',
+          WC: 'webpackWarningConfig',
         },
       });
     } catch (error) {
@@ -245,9 +226,7 @@ describe('logging', () => {
 
     proc.on('exit', (code) => {
       expect(code).toBe(0);
-      expect(
-        `${extractWebpackEntry(data)}\n${extractCountCompilations(data)}`
-      ).toMatchSnapshot('data');
+      expect(extractWebpackEntry(data)).toMatchSnapshot('data');
       expect(error).toMatchSnapshot('error');
 
       done();
@@ -263,7 +242,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.array.warning.config',
+          WC: 'webpackMultiWarningConfig',
         },
       });
     } catch (error) {
@@ -288,9 +267,7 @@ describe('logging', () => {
 
     proc.on('exit', (code) => {
       expect(code).toBe(0);
-      expect(
-        `${extractWebpackEntry(data)}\n${extractCountCompilations(data)}`
-      ).toMatchSnapshot('data');
+      expect(extractWebpackEntry(data)).toMatchSnapshot('data');
       expect(error).toMatchSnapshot('error');
 
       done();
@@ -306,6 +283,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
+          WC: 'webpackConfig',
           WCF_infrastructureLogging_level: 'log',
           WATCH_break: true,
         },
@@ -320,7 +298,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       data += chunk.toString();
 
-      if (!/error/gi.test(data)) {
+      if (/Compiled successfully/gi.test(data)) {
         data += chunk.toString();
         proc.stdin.write('exit');
       }
@@ -338,6 +316,7 @@ describe('logging', () => {
 
     proc.on('exit', (code) => {
       expect(code).toBe(1);
+      expect(extractWebpackEntry(data)).toMatchSnapshot('data');
       expect(extractErrorEntry(error)).toMatchSnapshot('error');
 
       done();
@@ -363,7 +342,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.simple.config',
+          WC: 'webpackSimpleConfig',
           WCF_output_filename: 'bundle.js',
           WCF_output_path: outputDir,
           WCF_infrastructureLogging_level: 'log',
@@ -381,7 +360,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       data += chunk.toString();
 
-      if (!/error/gi.test(data)) {
+      if (/Compiled successfully/gi.test(data)) {
         data += chunk.toString();
         proc.stdin.write('exit');
       }
@@ -399,9 +378,7 @@ describe('logging', () => {
 
     proc.on('exit', (code) => {
       expect(code).toBe(1);
-      expect(
-        `${extractWebpackEntry(data)}\n${extractCountCompilations(data)}`
-      ).toMatchSnapshot('data');
+      expect(extractWebpackEntry(data)).toMatchSnapshot('data');
       expect(extractErrorEntry(error)).toMatchSnapshot('error');
 
       // fs.chmodSync(outputDir, 0o777);
