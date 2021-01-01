@@ -290,7 +290,6 @@ describe.each([
           request(app)
             .get('/unknown')
             .expect('Content-Length', fileData.byteLength.toString())
-            .expect('Content-Type', 'application/octet-stream')
             .expect(200, done);
         });
       });
@@ -584,7 +583,6 @@ describe.each([
             urls: [
               {
                 value: 'filename-name-with-dots/mono-v6.x.x',
-                contentType: 'application/octet-stream',
                 code: 200,
               },
             ],
@@ -595,7 +593,6 @@ describe.each([
             urls: [
               {
                 value: 'noextension',
-                contentType: 'application/octet-stream',
                 code: 200,
               },
             ],
@@ -812,12 +809,19 @@ describe.each([
                 it(`should return the "${code}" code for the "GET" request for the "${value}" url`, (done) => {
                   request(app)
                     .get(`${publicPathForRequest}${value}`)
-                    .expect('Content-Type', contentType)
                     .expect(
                       'Content-Length',
                       data ? String(data.length) : /\d+/
                     )
-                    .expect(code, done);
+                    .expect(code)
+                    .then((res) => {
+                      if (contentType) {
+                        expect(res.headers['content-type']).toEqual(
+                          contentType
+                        );
+                      }
+                    })
+                    .then(done);
                 });
               }
             }
@@ -835,11 +839,14 @@ describe.each([
           app.use((req, res, next) => {
             // Express API
             if (res.set) {
-              res.set('Content-Type', 'application/octet-stream');
+              res.set('Content-Type', 'application/vnd.test+octet-stream');
             }
             // Connect API
             else {
-              res.setHeader('Content-Type', 'application/octet-stream');
+              res.setHeader(
+                'Content-Type',
+                'application/vnd.test+octet-stream'
+              );
             }
             next();
           });
@@ -850,10 +857,10 @@ describe.each([
 
         afterAll(close);
 
-        it('should not guess a MIME type if the "Content-Type" header is found', (done) => {
+        it('should not modify the "Content-Type" header', (done) => {
           request(app)
             .get('/bundle.js')
-            .expect('Content-Type', 'application/octet-stream')
+            .expect('Content-Type', 'application/vnd.test+octet-stream')
             .expect(200, done);
         });
       });
@@ -2019,43 +2026,6 @@ describe.each([
         });
       });
 
-      describe('should set the correct value for "Content-Type" header to unknown MIME type', () => {
-        beforeAll((done) => {
-          const outputPath = path.resolve(__dirname, './outputs/basic');
-          const compiler = getCompiler({
-            ...webpackConfig,
-            output: {
-              filename: 'bundle.js',
-              path: outputPath,
-            },
-          });
-
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          instance.context.outputFileSystem.mkdirSync(outputPath, {
-            recursive: true,
-          });
-          instance.context.outputFileSystem.writeFileSync(
-            path.resolve(outputPath, 'file.phtml'),
-            'welcome'
-          );
-        });
-
-        afterAll(close);
-
-        it('should return the "200" code for the "GET" request to "file.phtml"', (done) => {
-          request(app)
-            .get('/file.phtml')
-            .expect('Content-Type', 'application/octet-stream')
-            .expect(200, done);
-        });
-      });
-
       describe('should set the correct value for "Content-Type" header to specified MIME type', () => {
         beforeAll((done) => {
           const outputPath = path.resolve(__dirname, './outputs/basic');
@@ -2110,7 +2080,7 @@ describe.each([
 
           instance = middleware(compiler, {
             mimeTypes: {
-              jpg: 'application/octet-stream',
+              jpg: 'image/vnd.test+jpeg',
             },
           });
 
@@ -2133,7 +2103,7 @@ describe.each([
         it('should return the "200" code for the "GET" request "file.jpg"', (done) => {
           request(app)
             .get('/file.jpg')
-            .expect('Content-Type', /application\/octet-stream/)
+            .expect('Content-Type', 'image/vnd.test+jpeg')
             .expect(200, done);
         });
       });
@@ -2151,7 +2121,7 @@ describe.each([
 
           instance = middleware(compiler, {
             mimeTypes: {
-              jpg: 'application/octet-stream',
+              jpg: 'image/vnd.test+jpeg',
             },
           });
 
@@ -3225,10 +3195,7 @@ describe.each([
         afterAll(close);
 
         it('should return the "200" code for the "GET" request to the public path', (done) => {
-          request(app)
-            .get('/')
-            .expect('Content-Type', 'application/octet-stream')
-            .expect(200, done);
+          request(app).get('/').expect(200, done);
         });
       });
 
@@ -3305,10 +3272,7 @@ describe.each([
         afterAll(close);
 
         it('should return the "200" code for the "GET" request to the public path', (done) => {
-          request(app)
-            .get('/')
-            .expect('Content-Type', 'application/octet-stream')
-            .expect(200, done);
+          request(app).get('/').expect(200, done);
         });
       });
 

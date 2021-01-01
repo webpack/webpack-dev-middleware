@@ -65,16 +65,17 @@ export default function wrapper(context) {
         // content-type name(like application/javascript; charset=utf-8) or false
         const contentType = mime.contentType(path.extname(filename));
 
-        // Express API
-        if (res.set && contentType) {
-          res.set('Content-Type', contentType);
-        }
-        // Node.js API
-        else {
-          res.setHeader(
-            'Content-Type',
-            contentType || 'application/octet-stream'
-          );
+        // Only set content-type header if media type is known
+        // https://tools.ietf.org/html/rfc7231#section-3.1.1.5
+        if (contentType) {
+          // Express API
+          if (res.set) {
+            res.set('Content-Type', contentType);
+          }
+          // Node.js API
+          else {
+            res.setHeader('Content-Type', contentType);
+          }
         }
       }
 
