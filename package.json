@@ -40,7 +40,7 @@
   "dependencies": {
     "mem": "^8.0.0",
     "memfs": "^3.2.0",
-    "mime-types": "^2.1.27",
+    "mime-types": "^2.1.28",
     "range-parser": "^1.2.1",
     "schema-utils": "^3.0.0"
   },
@@ -71,7 +71,7 @@
     "prettier": "^2.2.1",
     "standard-version": "^9.0.0",
     "supertest": "^6.0.1",
-    "webpack": "^5.11.0"
+    "webpack": "^5.11.1"
   },
   "keywords": [
     "webpack",
