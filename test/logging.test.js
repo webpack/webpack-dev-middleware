@@ -36,7 +36,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpackConfig',
+          WC: 'webpack.config',
           WCF_stats: 'normal',
         },
       });
@@ -78,7 +78,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpackMultiConfig',
+          WC: 'webpack.array.config',
         },
       });
     } catch (error) {
@@ -119,7 +119,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpackErrorConfig',
+          WC: 'webpack.error.config',
         },
       });
     } catch (error) {
@@ -160,7 +160,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpackMultiErrorConfig',
+          WC: 'webpack.array.error.config',
         },
       });
     } catch (error) {
@@ -201,7 +201,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpackWarningConfig',
+          WC: 'webpack.warning.config',
         },
       });
     } catch (error) {
@@ -242,7 +242,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpackMultiWarningConfig',
+          WC: 'webpack.array.warning.config',
         },
       });
     } catch (error) {
@@ -283,7 +283,6 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpackConfig',
           WCF_infrastructureLogging_level: 'log',
           WATCH_break: true,
         },
@@ -342,7 +341,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpackSimpleConfig',
+          WC: 'webpack.simple.config',
           WCF_output_filename: 'bundle.js',
           WCF_output_path: outputDir,
           WCF_infrastructureLogging_level: 'log',
