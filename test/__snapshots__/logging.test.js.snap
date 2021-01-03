@@ -1,7 +1,5 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`logging should logging an error in "watch" method: data 1`] = `null`;
-
 exports[`logging should logging an error in "watch" method: error 1`] = `
 Array [
   "code: 'watch error'",
@@ -9,52 +7,43 @@ Array [
 `;
 
 exports[`logging should logging an warning: data 1`] = `
-Array [
-  "webpack xx.xx.xx",
-]
+"webpack xx.xx.xx
+Count compilations: 1"
 `;
 
 exports[`logging should logging an warning: error 1`] = `""`;
 
 exports[`logging should logging on successfully build in multi-compiler mode: data 1`] = `
-Array [
-  "webpack xx.xx.xx",
-  "webpack xx.xx.xx",
-]
+"webpack xx.xx.xx
+Count compilations: 2"
 `;
 
 exports[`logging should logging on successfully build in multi-compiler mode: error 1`] = `""`;
 
 exports[`logging should logging on successfully build: data 1`] = `
-Array [
-  "webpack xx.xx.xx",
-]
+"webpack xx.xx.xx
+Count compilations: 1"
 `;
 
 exports[`logging should logging on successfully build: error 1`] = `""`;
 
 exports[`logging should logging on unsuccessful build in multi-compiler: data 1`] = `
-Array [
-  "webpack xx.xx.xx",
-  "webpack xx.xx.xx",
-]
+"webpack xx.xx.xx
+Count compilations: 2"
 `;
 
 exports[`logging should logging on unsuccessful build in multi-compiler: error 1`] = `""`;
 
 exports[`logging should logging on unsuccessful build: data 1`] = `
-Array [
-  "webpack xx.xx.xx",
-]
+"webpack xx.xx.xx
+Count compilations: 1"
 `;
 
 exports[`logging should logging on unsuccessful build: error 1`] = `""`;
 
 exports[`logging should logging warnings in multi-compiler mode: data 1`] = `
-Array [
-  "webpack xx.xx.xx",
-  "webpack xx.xx.xx",
-]
+"webpack xx.xx.xx
+Count compilations: 2"
 `;
 
 exports[`logging should logging warnings in multi-compiler mode: error 1`] = `""`;
