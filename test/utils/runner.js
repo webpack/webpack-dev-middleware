@@ -7,19 +7,6 @@ const merge = require('lodash.merge');
 const middleware = require('../../dist').default;
 
 const defaultConfig = require('../fixtures/webpack.config');
-const webpackConfig = require('../fixtures/webpack.config');
-const webpackSimpleConfig = require('../fixtures/webpack.simple.config');
-const webpackMultiConfig = require('../fixtures/webpack.array.config');
-const webpackWatchOptionsConfig = require('../fixtures/webpack.watch-options.config');
-const webpackMultiWatchOptionsConfig = require('../fixtures/webpack.array.watch-options.config');
-const webpackQueryStringConfig = require('../fixtures/webpack.querystring.config');
-const webpackClientServerConfig = require('../fixtures/webpack.client.server.config');
-const webpackErrorConfig = require('../fixtures/webpack.error.config');
-const webpackMultiErrorConfig = require('../fixtures/webpack.array.error.config');
-const webpackWarningConfig = require('../fixtures/webpack.warning.config');
-const webpackMultiWarningConfig = require('../fixtures/webpack.array.warning.config');
-const webpackOneErrorOneWarningOneSuccessConfig = require('../fixtures/webpack.array.one-error-one-warning-one-success');
-const webpackOneErrorOneWarningOneSuccessWithNamesConfig = require('../fixtures/webpack.array.one-error-one-warning-one-success-with-names');
 
 const configEntries = [];
 const configMiddlewareEntries = [];
@@ -33,7 +20,7 @@ const unionConfig =
     ? merge({}, getWebpackConfig(process.env.WC), config)
     : getWebpackConfig(process.env.WC);
 const configMiddleware = createConfig(configMiddlewareEntries);
-const compiler = getCompiler(unionConfig);
+const compiler = webpack(unionConfig || defaultConfig);
 let instance;
 
 if (process.env.WATCH_break) {
@@ -97,45 +84,18 @@ app.listen((error) => {
 });
 
 function getWebpackConfig(name) {
-  switch (name) {
-    case 'webpackSimpleConfig':
-      return webpackSimpleConfig;
-    case 'webpackMultiConfig':
-      return webpackMultiConfig;
-    case 'webpackWatchOptionsConfig':
-      return webpackWatchOptionsConfig;
-    case 'webpackMultiWatchOptionsConfig':
-      return webpackMultiWatchOptionsConfig;
-    case 'webpackQueryStringConfig':
-      return webpackQueryStringConfig;
-    case 'webpackClientServerConfig':
-      return webpackClientServerConfig;
-    case 'webpackErrorConfig':
-      return webpackErrorConfig;
-    case 'webpackMultiErrorConfig':
-      return webpackMultiErrorConfig;
-    case 'webpackWarningConfig':
-      return webpackWarningConfig;
-    case 'webpackMultiWarningConfig':
-      return webpackMultiWarningConfig;
-    case 'webpackOneErrorOneWarningOneSuccessConfig':
-      return webpackOneErrorOneWarningOneSuccessConfig;
-    case 'webpackOneErrorOneWarningOneSuccessWithNamesConfig':
-      return webpackOneErrorOneWarningOneSuccessWithNamesConfig;
-    default:
-      return webpackConfig;
+  try {
+    // eslint-disable-next-line global-require,import/no-dynamic-require
+    return require(`../fixtures/${name}`);
+  } catch (error) {
+    // eslint-disable-next-line global-require
+    return require(`../fixtures/webpack.config`);
   }
-}
-
-function getCompiler(passedConfig) {
-  return webpack(passedConfig || defaultConfig);
 }
 
 function createConfig(data) {
   function getObject(entry) {
-    const map = new Map([entry]);
-
-    return Object.fromEntries(map);
+    return { [entry[0]]: entry[1] };
   }
 
   function reduceObject(arr) {
