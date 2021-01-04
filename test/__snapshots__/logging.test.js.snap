@@ -1,5 +1,11 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`logging should logging an error from the fs error when the "writeToDisk" option is "true": error 1`] = `
+Array [
+  "code: 'EACCES'",
+]
+`;
+
 exports[`logging should logging an error in "watch" method: error 1`] = `
 Array [
   "code: 'watch error'",

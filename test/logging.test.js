@@ -4,6 +4,8 @@ import path from 'path';
 import execa from 'execa';
 import webpack from 'webpack';
 
+import clearDirectory from './helpers/clearDirectory';
+
 function extractWebpackEntry(string) {
   const matches = string.match(/webpack\s\d\.\d\d?.\d\d?/gim);
 
@@ -39,7 +41,7 @@ function extractErrorEntry(string) {
 
 describe('logging', () => {
   it('should logging on successfully build', (done) => {
-    const runner = `${__dirname}/utils/runner.js`;
+    const runner = `${__dirname}/helpers/runner.js`;
 
     let proc;
 
@@ -55,35 +57,34 @@ describe('logging', () => {
       throw error;
     }
 
-    let data = '';
-    let error = '';
+    let stdOut = '';
+    let stdError = '';
 
     proc.stdout.on('data', (chunk) => {
-      data += chunk.toString();
+      stdOut += chunk.toString();
 
-      if (!/error/gi.test(data)) {
-        proc.stdin.write('exit');
+      if (!/error/gi.test(stdOut)) {
+        proc.stdin.write('|exit|');
       }
     });
 
     proc.stderr.on('data', (chunk) => {
-      error += chunk.toString();
-      proc.stdin.write('error');
+      stdError += chunk.toString();
+      proc.stdin.write('|exit|');
     });
 
-    proc.on('exit', (code) => {
-      expect(code).toBe(0);
+    proc.on('exit', () => {
       expect(
-        `${extractWebpackEntry(data)}\n${extractCountCompilations(data)}`
+        `${extractWebpackEntry(stdOut)}\n${extractCountCompilations(stdOut)}`
       ).toMatchSnapshot('data');
-      expect(error).toMatchSnapshot('error');
+      expect(stdError).toMatchSnapshot('error');
 
       done();
     });
   });
 
   it('should logging on successfully build in multi-compiler mode', (done) => {
-    const runner = `${__dirname}/utils/runner.js`;
+    const runner = `${__dirname}/helpers/runner.js`;
 
     let proc;
 
@@ -98,35 +99,34 @@ describe('logging', () => {
       throw error;
     }
 
-    let data = '';
-    let error = '';
+    let stdOut = '';
+    let stdError = '';
 
     proc.stdout.on('data', (chunk) => {
-      data += chunk.toString();
+      stdOut += chunk.toString();
 
-      if (!/error/gi.test(data)) {
-        proc.stdin.write('exit');
+      if (!/error/gi.test(stdOut)) {
+        proc.stdin.write('|exit|');
       }
     });
 
     proc.stderr.on('data', (chunk) => {
-      error += chunk.toString();
-      proc.stdin.write('error');
+      stdError += chunk.toString();
+      proc.stdin.write('|exit|');
     });
 
-    proc.on('exit', (code) => {
-      expect(code).toBe(0);
+    proc.on('exit', () => {
       expect(
-        `${extractWebpackEntry(data)}\n${extractCountCompilations(data)}`
+        `${extractWebpackEntry(stdOut)}\n${extractCountCompilations(stdOut)}`
       ).toMatchSnapshot('data');
-      expect(error).toMatchSnapshot('error');
+      expect(stdError).toMatchSnapshot('error');
 
       done();
     });
   });
 
   it('should logging on unsuccessful build', (done) => {
-    const runner = `${__dirname}/utils/runner.js`;
+    const runner = `${__dirname}/helpers/runner.js`;
 
     let proc;
 
@@ -141,35 +141,34 @@ describe('logging', () => {
       throw error;
     }
 
-    let data = '';
-    let error = '';
+    let stdOut = '';
+    let stdError = '';
 
     proc.stdout.on('data', (chunk) => {
-      data += chunk.toString();
+      stdOut += chunk.toString();
 
-      if (/error/gi.test(data)) {
-        proc.stdin.write('exit');
+      if (/error/gi.test(stdOut)) {
+        proc.stdin.write('|exit|');
       }
     });
 
     proc.stderr.on('data', (chunk) => {
-      error += chunk.toString();
-      proc.stdin.write('error');
+      stdError += chunk.toString();
+      proc.stdin.write('|exit|');
     });
 
-    proc.on('exit', (code) => {
-      expect(code).toBe(0);
+    proc.on('exit', () => {
       expect(
-        `${extractWebpackEntry(data)}\n${extractCountCompilations(data)}`
+        `${extractWebpackEntry(stdOut)}\n${extractCountCompilations(stdOut)}`
       ).toMatchSnapshot('data');
-      expect(error).toMatchSnapshot('error');
+      expect(stdError).toMatchSnapshot('error');
 
       done();
     });
   });
 
   it('should logging on unsuccessful build in multi-compiler', (done) => {
-    const runner = `${__dirname}/utils/runner.js`;
+    const runner = `${__dirname}/helpers/runner.js`;
 
     let proc;
 
@@ -184,35 +183,34 @@ describe('logging', () => {
       throw error;
     }
 
-    let data = '';
-    let error = '';
+    let stdOut = '';
+    let stdError = '';
 
     proc.stdout.on('data', (chunk) => {
-      data += chunk.toString();
+      stdOut += chunk.toString();
 
-      if (/error/gi.test(data)) {
-        proc.stdin.write('exit');
+      if (/error/gi.test(stdOut)) {
+        proc.stdin.write('|exit|');
       }
     });
 
     proc.stderr.on('data', (chunk) => {
-      error += chunk.toString();
-      proc.stdin.write('error');
+      stdError += chunk.toString();
+      proc.stdin.write('|exit|');
     });
 
-    proc.on('exit', (code) => {
-      expect(code).toBe(0);
+    proc.on('exit', () => {
       expect(
-        `${extractWebpackEntry(data)}\n${extractCountCompilations(data)}`
+        `${extractWebpackEntry(stdOut)}\n${extractCountCompilations(stdOut)}`
       ).toMatchSnapshot('data');
-      expect(error).toMatchSnapshot('error');
+      expect(stdError).toMatchSnapshot('error');
 
       done();
     });
   });
 
   it('should logging an warning', (done) => {
-    const runner = `${__dirname}/utils/runner.js`;
+    const runner = `${__dirname}/helpers/runner.js`;
 
     let proc;
 
@@ -227,35 +225,34 @@ describe('logging', () => {
       throw error;
     }
 
-    let data = '';
-    let error = '';
+    let stdOut = '';
+    let stdError = '';
 
     proc.stdout.on('data', (chunk) => {
-      data += chunk.toString();
+      stdOut += chunk.toString();
 
-      if (/warning/gi.test(data)) {
-        proc.stdin.write('exit');
+      if (/warning/gi.test(stdOut)) {
+        proc.stdin.write('|exit|');
       }
     });
 
     proc.stderr.on('data', (chunk) => {
-      error += chunk.toString();
-      proc.stdin.write('error');
+      stdError += chunk.toString();
+      proc.stdin.write('|exit|');
     });
 
-    proc.on('exit', (code) => {
-      expect(code).toBe(0);
+    proc.on('exit', () => {
       expect(
-        `${extractWebpackEntry(data)}\n${extractCountCompilations(data)}`
+        `${extractWebpackEntry(stdOut)}\n${extractCountCompilations(stdOut)}`
       ).toMatchSnapshot('data');
-      expect(error).toMatchSnapshot('error');
+      expect(stdError).toMatchSnapshot('error');
 
       done();
     });
   });
 
   it('should logging warnings in multi-compiler mode', (done) => {
-    const runner = `${__dirname}/utils/runner.js`;
+    const runner = `${__dirname}/helpers/runner.js`;
 
     let proc;
 
@@ -270,35 +267,34 @@ describe('logging', () => {
       throw error;
     }
 
-    let data = '';
-    let error = '';
+    let stdOut = '';
+    let stdError = '';
 
     proc.stdout.on('data', (chunk) => {
-      data += chunk.toString();
+      stdOut += chunk.toString();
 
-      if (/warning/gi.test(data)) {
-        proc.stdin.write('exit');
+      if (/warning/gi.test(stdOut)) {
+        proc.stdin.write('|exit|');
       }
     });
 
     proc.stderr.on('data', (chunk) => {
-      error += chunk.toString();
-      proc.stdin.write('error');
+      stdError += chunk.toString();
+      proc.stdin.write('|exit|');
     });
 
-    proc.on('exit', (code) => {
-      expect(code).toBe(0);
+    proc.on('exit', () => {
       expect(
-        `${extractWebpackEntry(data)}\n${extractCountCompilations(data)}`
+        `${extractWebpackEntry(stdOut)}\n${extractCountCompilations(stdOut)}`
       ).toMatchSnapshot('data');
-      expect(error).toMatchSnapshot('error');
+      expect(stdError).toMatchSnapshot('error');
 
       done();
     });
   });
 
   it('should logging an error in "watch" method', (done) => {
-    const runner = `${__dirname}/utils/runner.js`;
+    const runner = `${__dirname}/helpers/runner.js`;
 
     let proc;
 
@@ -314,48 +310,32 @@ describe('logging', () => {
       throw error;
     }
 
-    let data = '';
-    let error = '';
-
-    proc.stdout.on('data', (chunk) => {
-      data += chunk.toString();
-
-      if (!/error/gi.test(data)) {
-        data += chunk.toString();
-        proc.stdin.write('exit');
-      }
-
-      if (/error/gi.test(data)) {
-        error += chunk.toString();
-        proc.stdin.write('error');
-      }
-    });
+    let stdError = '';
 
     proc.stderr.on('data', (chunk) => {
-      error += chunk.toString();
-      proc.stdin.write('error');
+      stdError += chunk.toString();
+      proc.stdin.write('|exit|');
     });
 
-    proc.on('exit', (code) => {
-      expect(code).toBe(1);
-      expect(extractErrorEntry(error)).toMatchSnapshot('error');
+    proc.on('exit', () => {
+      expect(extractErrorEntry(stdError)).toMatchSnapshot('error');
 
       done();
     });
   });
 
-  it.skip('should logging an error from the fs error when the "writeToDisk" option is "true"', async (done) => {
-    const runner = `${__dirname}/utils/runner.js`;
+  it('should logging an error from the fs error when the "writeToDisk" option is "true"', async (done) => {
+    const runner = `${__dirname}/helpers/runner.js`;
     const outputDir = path.resolve(
       __dirname,
-      './outputs/write-to-disk-mkdir-error/'
+      './outputs/write-to-disk-mkdir-error'
     );
 
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir);
     }
 
-    fs.chmodSync(outputDir, 0o000);
+    fs.chmodSync(outputDir, 0o444);
 
     let proc;
 
@@ -375,37 +355,18 @@ describe('logging', () => {
       throw error;
     }
 
-    let data = '';
-    let error = '';
-
-    proc.stdout.on('data', (chunk) => {
-      data += chunk.toString();
-
-      if (!/error/gi.test(data)) {
-        data += chunk.toString();
-        proc.stdin.write('exit');
-      }
-
-      if (/error/gi.test(data)) {
-        error += chunk.toString();
-        proc.stdin.write('error');
-      }
-    });
+    let stdError = '';
 
     proc.stderr.on('data', (chunk) => {
-      error += chunk.toString();
-      proc.stdin.write('error');
+      stdError += chunk.toString();
+      proc.stdin.write('|exit|');
     });
 
-    proc.on('exit', (code) => {
-      expect(code).toBe(1);
-      expect(
-        `${extractWebpackEntry(data)}\n${extractCountCompilations(data)}`
-      ).toMatchSnapshot('data');
-      expect(extractErrorEntry(error)).toMatchSnapshot('error');
+    proc.on('exit', () => {
+      expect(extractErrorEntry(stdError)).toMatchSnapshot('error');
 
-      // fs.chmodSync(outputDir, 0o777);
-      // clearDirectory(outputDir);
+      fs.chmodSync(outputDir, 0o777);
+      clearDirectory(outputDir);
 
       done();
     });

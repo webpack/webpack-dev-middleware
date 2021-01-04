@@ -2,7 +2,7 @@
 
 const express = require('express');
 const webpack = require('webpack');
-const merge = require('lodash.merge');
+const merge = require('deepmerge');
 
 const middleware = require('../../dist').default;
 
@@ -17,7 +17,7 @@ fillConfigEntries('WMC_', configMiddlewareEntries);
 const config = createConfig(configEntries);
 const unionConfig =
   Object.keys(config).length > 0
-    ? merge({}, getWebpackConfig(process.env.WC), config)
+    ? merge(getWebpackConfig(process.env.WC), config)
     : getWebpackConfig(process.env.WC);
 const configMiddleware = createConfig(configMiddlewareEntries);
 const compiler = webpack(unionConfig || defaultConfig);
@@ -35,9 +35,7 @@ if (process.env.WATCH_break) {
 try {
   instance = middleware(compiler, configMiddleware);
 } catch (error) {
-  // eslint-disable-next-line no-console
-  console.log(error);
-  process.exit(1);
+  throw error;
 }
 
 const app = express();
@@ -45,40 +43,38 @@ const app = express();
 try {
   app.use(instance);
 } catch (error) {
-  // eslint-disable-next-line no-console
-  console.log(error);
-  process.exit(1);
+  throw error;
 }
 
 app.listen((error) => {
   if (error) {
-    // eslint-disable-next-line no-console
-    console.log(error);
-    process.exit(1);
+    throw error;
   }
 
-  let stdinInput = '';
+  let commands = [];
+  let incompleteCommand = '';
 
   process.stdin.on('data', (chunk) => {
-    stdinInput = chunk.toString();
+    const entries = chunk.toString().split('|');
 
-    // eslint-disable-next-line default-case
-    switch (stdinInput) {
-      case 'invalidate':
-        stdinInput = '';
-        instance.waitUntilValid(() => {
-          instance.invalidate();
-        });
-        break;
-      case 'exit':
-      case 'exitexit':
-        stdinInput = '';
-        process.exit(0);
-        break;
-      case 'error':
-        stdinInput = '';
-        process.exit(1);
-        break;
+    incompleteCommand += entries.shift();
+    commands.push(incompleteCommand);
+    incompleteCommand = entries.pop();
+    commands = commands.concat(entries);
+
+    while (commands.length > 0) {
+      // eslint-disable-next-line default-case
+      switch (commands.shift()) {
+        // case 'invalidate':
+        //   stdinInput = '';
+        //   instance.waitUntilValid(() => {
+        //     instance.invalidate();
+        //   });
+        //   break;
+        case 'exit':
+          process.exit();
+          break;
+      }
     }
   });
 });
@@ -112,7 +108,7 @@ function createConfig(data) {
 
   const result = data.map((el) => reduceObject([...el]));
 
-  return merge({}, ...result);
+  return merge.all(result);
 }
 
 function fillConfigEntries(NSKey, accumulator) {
