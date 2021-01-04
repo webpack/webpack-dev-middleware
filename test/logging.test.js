@@ -1,10 +1,9 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
 import execa from 'execa';
 import webpack from 'webpack';
-
-import clearDirectory from './helpers/clearDirectory';
 
 function extractWebpackEntry(string) {
   const matches = string.match(/webpack\s\d\.\d\d?.\d\d?/gim);
@@ -34,9 +33,9 @@ function extractCountCompilations(string) {
 }
 
 function extractErrorEntry(string) {
-  const matches = string.match(/code:\s['||"]?\w.+['||"]/gim);
+  const matches = string.match(/error:\s\D[^:||\n||\r]+/gim);
 
-  return matches;
+  return matches === null ? null : matches[0];
 }
 
 describe('logging', () => {
@@ -324,51 +323,55 @@ describe('logging', () => {
     });
   });
 
-  it('should logging an error from the fs error when the "writeToDisk" option is "true"', async (done) => {
-    const runner = `${__dirname}/helpers/runner.js`;
-    const outputDir = path.resolve(
-      __dirname,
-      './outputs/write-to-disk-mkdir-error'
-    );
+  if (os.platform() !== 'win32') {
+    it('should logging an error from the fs error when the "writeToDisk" option is "true"', async (done) => {
+      // eslint-disable-next-line global-require
+      const clearDirectory = require('./helpers/clearDirectory').default;
+      const runner = `${__dirname}/helpers/runner.js`;
+      const outputDir = path.resolve(
+        __dirname,
+        './outputs/write-to-disk-mkdir-error'
+      );
 
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir);
-    }
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir);
+      }
 
-    fs.chmodSync(outputDir, 0o444);
+      fs.chmodSync(outputDir, 0o400);
 
-    let proc;
+      let proc;
 
-    try {
-      proc = execa(runner, [], {
-        stdio: 'pipe',
-        env: {
-          WC: 'webpack.simple.config',
-          WCF_output_filename: 'bundle.js',
-          WCF_output_path: outputDir,
-          WCF_infrastructureLogging_level: 'log',
-          WMC_writeToDisk: true,
-          FS_block: true,
-        },
+      try {
+        proc = execa(runner, [], {
+          stdio: 'pipe',
+          env: {
+            WC: 'webpack.simple.config',
+            WCF_output_filename: 'bundle.js',
+            WCF_output_path: outputDir,
+            WCF_infrastructureLogging_level: 'log',
+            WMC_writeToDisk: true,
+            FS_block: true,
+          },
+        });
+      } catch (error) {
+        throw error;
+      }
+
+      let stdError = '';
+
+      proc.stderr.on('data', (chunk) => {
+        stdError += chunk.toString();
+        proc.stdin.write('|exit|');
       });
-    } catch (error) {
-      throw error;
-    }
 
-    let stdError = '';
+      proc.on('exit', () => {
+        expect(extractErrorEntry(stdError)).toMatch('Error: EACCES');
 
-    proc.stderr.on('data', (chunk) => {
-      stdError += chunk.toString();
-      proc.stdin.write('|exit|');
+        fs.chmodSync(outputDir, 0o700);
+        clearDirectory(outputDir);
+
+        done();
+      });
     });
-
-    proc.on('exit', () => {
-      expect(extractErrorEntry(stdError)).toMatchSnapshot('error');
-
-      fs.chmodSync(outputDir, 0o777);
-      clearDirectory(outputDir);
-
-      done();
-    });
-  });
+  }
 });

@@ -1,16 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`logging should logging an error from the fs error when the "writeToDisk" option is "true": error 1`] = `
-Array [
-  "code: 'EACCES'",
-]
-`;
-
-exports[`logging should logging an error in "watch" method: error 1`] = `
-Array [
-  "code: 'watch error'",
-]
-`;
+exports[`logging should logging an error in "watch" method: error 1`] = `"Error: Watch error"`;
 
 exports[`logging should logging an warning: data 1`] = `
 "webpack xx.xx.xx
