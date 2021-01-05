@@ -3,34 +3,16 @@ import path from 'path';
 import os from 'os';
 
 import execa from 'execa';
-import webpack from 'webpack';
 
-function extractWebpackEntry(string) {
-  const matches = string.match(/webpack\s\d\.\d\d?.\d\d?/gim);
-
-  const result =
-    matches === null
-      ? null
-      : matches.map((i) =>
-          i
-            .replace(/\d\d\./g, 'xx.')
-            .replace(/\d\./g, 'xx.')
-            .replace(/\.\d\d/g, '.xx')
-            .replace(/\.\d/g, '.xx')
-        )[0];
-
-  return result;
-}
-
-function extractCountCompilations(string) {
-  const matches = webpack.webpack
-    ? string.match(/webpack\s\d\.\d\d?.\d\d?/gim)
-    : string.match(/Entrypoint/gim);
-
-  const result = matches === null ? null : matches.length;
-
-  return `Count compilations: ${result}`;
-}
+// function extractCountCompilations(string) {
+//   const matches = webpack.webpack
+//     ? string.match(/webpack\s\d\.\d\d?.\d\d?/gim)
+//     : string.match(/Entrypoint/gim);
+//
+//   const result = matches === null ? null : matches.length;
+//
+//   return `Count compilations: ${result}`;
+// }
 
 function extractErrorEntry(string) {
   const matches = string.match(/error:\s\D[^:||\n||\r]+/gim);
@@ -49,34 +31,272 @@ describe('logging', () => {
         stdio: 'pipe',
         env: {
           WC: 'webpack.config',
-          WCF_stats: 'normal',
         },
       });
     } catch (error) {
       throw error;
     }
 
-    let stdOut = '';
-    let stdError = '';
+    let stdout = '';
+    let stderr = '';
 
     proc.stdout.on('data', (chunk) => {
-      stdOut += chunk.toString();
+      stdout += chunk.toString();
 
-      if (!/error/gi.test(stdOut)) {
+      if (!/error/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
 
     proc.stderr.on('data', (chunk) => {
-      stdError += chunk.toString();
+      stderr += chunk.toString();
       proc.stdin.write('|exit|');
     });
 
     proc.on('exit', () => {
-      expect(
-        `${extractWebpackEntry(stdOut)}\n${extractCountCompilations(stdOut)}`
-      ).toMatchSnapshot('data');
-      expect(stdError).toMatchSnapshot('error');
+      expect(stdout.trim()).toMatchSnapshot('stdout');
+      expect(stderr).toMatchSnapshot('stderr');
+
+      done();
+    });
+  });
+
+  it('should logging on successfully build and respect the "stats" option from configuration with the "none" value', (done) => {
+    const runner = `${__dirname}/helpers/runner.js`;
+
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: 'pipe',
+        env: {
+          WC: 'webpack.stats-none.config',
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      if (!/error/gi.test(stdout)) {
+        proc.stdin.write('|exit|');
+      }
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write('|exit|');
+    });
+
+    proc.on('exit', () => {
+      expect(stdout.trim()).toMatchSnapshot('stdout');
+      expect(stderr.trim()).toMatchSnapshot('stderr');
+
+      done();
+    });
+  });
+
+  it('should logging on successfully build and respect the "stats" option from configuration with the "minimal" value', (done) => {
+    // TODO fix me
+    const runner = `${__dirname}/helpers/runner.js`;
+
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: 'pipe',
+        env: {
+          WC: 'webpack.stats-minimal.config',
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      if (!/error/gi.test(stdout)) {
+        proc.stdin.write('|exit|');
+      }
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write('|exit|');
+    });
+
+    proc.on('exit', () => {
+      expect(stdout.trim()).toMatchSnapshot('stdout');
+      expect(stderr.trim()).toMatchSnapshot('stderr');
+
+      done();
+    });
+  });
+
+  it.skip('should logging on successfully build and respect the "stats" option from configuration with the "verbose" value', (done) => {
+    const runner = `${__dirname}/helpers/runner.js`;
+
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: 'pipe',
+        env: {
+          WC: 'webpack.stats-verbose.config',
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      if (!/error/gi.test(stdout)) {
+        proc.stdin.write('|exit|');
+      }
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write('|exit|');
+    });
+
+    proc.on('exit', () => {
+      expect(stdout.trim()).toMatchSnapshot('stdout');
+      expect(stderr.trim()).toMatchSnapshot('stderr');
+
+      done();
+    });
+  });
+
+  it('should logging on successfully build and respect the "stats" option from configuration with the "true" value', (done) => {
+    const runner = `${__dirname}/helpers/runner.js`;
+
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: 'pipe',
+        env: {
+          WC: 'webpack.stats-true.config',
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      if (!/error/gi.test(stdout)) {
+        proc.stdin.write('|exit|');
+      }
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write('|exit|');
+    });
+
+    proc.on('exit', () => {
+      expect(stdout.trim()).toMatchSnapshot('stdout');
+      expect(stderr.trim()).toMatchSnapshot('stderr');
+
+      done();
+    });
+  });
+
+  it('should logging on successfully build and respect the "stats" option from configuration with the "false" value', (done) => {
+    const runner = `${__dirname}/helpers/runner.js`;
+
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: 'pipe',
+        env: {
+          WC: 'webpack.stats-false.config',
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      if (!/error/gi.test(stdout)) {
+        proc.stdin.write('|exit|');
+      }
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write('|exit|');
+    });
+
+    proc.on('exit', () => {
+      expect(stdout.trim()).toMatchSnapshot('stdout');
+      expect(stderr.trim()).toMatchSnapshot('stderr');
+
+      done();
+    });
+  });
+
+  it('should logging on successfully build and respect the "stats" option from configuration with custom object value', (done) => {
+    const runner = `${__dirname}/helpers/runner.js`;
+
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: 'pipe',
+        env: {
+          WC: 'webpack.stats-object.config',
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      if (!/error/gi.test(stdout)) {
+        proc.stdin.write('|exit|');
+      }
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write('|exit|');
+    });
+
+    proc.on('exit', () => {
+      expect(stdout.trim()).toMatchSnapshot('stdout');
+      expect(stderr.trim()).toMatchSnapshot('stderr');
 
       done();
     });
@@ -98,27 +318,25 @@ describe('logging', () => {
       throw error;
     }
 
-    let stdOut = '';
-    let stdError = '';
+    let stdout = '';
+    let stderr = '';
 
     proc.stdout.on('data', (chunk) => {
-      stdOut += chunk.toString();
+      stdout += chunk.toString();
 
-      if (!/error/gi.test(stdOut)) {
+      if (!/error/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
 
     proc.stderr.on('data', (chunk) => {
-      stdError += chunk.toString();
+      stderr += chunk.toString();
       proc.stdin.write('|exit|');
     });
 
     proc.on('exit', () => {
-      expect(
-        `${extractWebpackEntry(stdOut)}\n${extractCountCompilations(stdOut)}`
-      ).toMatchSnapshot('data');
-      expect(stdError).toMatchSnapshot('error');
+      expect(stdout.trim()).toMatchSnapshot('stdout');
+      expect(stderr.trim()).toMatchSnapshot('stderr');
 
       done();
     });
@@ -140,27 +358,25 @@ describe('logging', () => {
       throw error;
     }
 
-    let stdOut = '';
-    let stdError = '';
+    let stdout = '';
+    let stderr = '';
 
     proc.stdout.on('data', (chunk) => {
-      stdOut += chunk.toString();
+      stdout += chunk.toString();
 
-      if (/error/gi.test(stdOut)) {
+      if (/error/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
 
     proc.stderr.on('data', (chunk) => {
-      stdError += chunk.toString();
+      stderr += chunk.toString();
       proc.stdin.write('|exit|');
     });
 
     proc.on('exit', () => {
-      expect(
-        `${extractWebpackEntry(stdOut)}\n${extractCountCompilations(stdOut)}`
-      ).toMatchSnapshot('data');
-      expect(stdError).toMatchSnapshot('error');
+      expect(stdout.trim()).toMatchSnapshot('stdout');
+      expect(stderr.trim()).toMatchSnapshot('stderr');
 
       done();
     });
@@ -182,27 +398,25 @@ describe('logging', () => {
       throw error;
     }
 
-    let stdOut = '';
-    let stdError = '';
+    let stdout = '';
+    let stderr = '';
 
     proc.stdout.on('data', (chunk) => {
-      stdOut += chunk.toString();
+      stdout += chunk.toString();
 
-      if (/error/gi.test(stdOut)) {
+      if (/error/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
 
     proc.stderr.on('data', (chunk) => {
-      stdError += chunk.toString();
+      stderr += chunk.toString();
       proc.stdin.write('|exit|');
     });
 
     proc.on('exit', () => {
-      expect(
-        `${extractWebpackEntry(stdOut)}\n${extractCountCompilations(stdOut)}`
-      ).toMatchSnapshot('data');
-      expect(stdError).toMatchSnapshot('error');
+      expect(stdout.trim()).toMatchSnapshot('stdout');
+      expect(stderr.trim()).toMatchSnapshot('stderr');
 
       done();
     });
@@ -224,27 +438,25 @@ describe('logging', () => {
       throw error;
     }
 
-    let stdOut = '';
-    let stdError = '';
+    let stdout = '';
+    let stderr = '';
 
     proc.stdout.on('data', (chunk) => {
-      stdOut += chunk.toString();
+      stdout += chunk.toString();
 
-      if (/warning/gi.test(stdOut)) {
+      if (/warning/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
 
     proc.stderr.on('data', (chunk) => {
-      stdError += chunk.toString();
+      stderr += chunk.toString();
       proc.stdin.write('|exit|');
     });
 
     proc.on('exit', () => {
-      expect(
-        `${extractWebpackEntry(stdOut)}\n${extractCountCompilations(stdOut)}`
-      ).toMatchSnapshot('data');
-      expect(stdError).toMatchSnapshot('error');
+      expect(stdout.trim()).toMatchSnapshot('stdout');
+      expect(stderr.trim()).toMatchSnapshot('stderr');
 
       done();
     });
@@ -266,27 +478,105 @@ describe('logging', () => {
       throw error;
     }
 
-    let stdOut = '';
-    let stdError = '';
+    let stdout = '';
+    let stderr = '';
 
     proc.stdout.on('data', (chunk) => {
-      stdOut += chunk.toString();
+      stdout += chunk.toString();
 
-      if (/warning/gi.test(stdOut)) {
+      if (/warning/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
 
     proc.stderr.on('data', (chunk) => {
-      stdError += chunk.toString();
+      stderr += chunk.toString();
       proc.stdin.write('|exit|');
     });
 
     proc.on('exit', () => {
-      expect(
-        `${extractWebpackEntry(stdOut)}\n${extractCountCompilations(stdOut)}`
-      ).toMatchSnapshot('data');
-      expect(stdError).toMatchSnapshot('error');
+      expect(stdout.trim()).toMatchSnapshot('stdout');
+      expect(stderr.trim()).toMatchSnapshot('stderr');
+
+      done();
+    });
+  });
+
+  it('should logging in multi-compiler and respect the "stats" option from configuration', (done) => {
+    const runner = `${__dirname}/helpers/runner.js`;
+
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: 'pipe',
+        env: {
+          WC: 'webpack.array.one-error-one-warning-one-success',
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      if (!/error/gi.test(stdout)) {
+        proc.stdin.write('|exit|');
+      }
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write('|exit|');
+    });
+
+    proc.on('exit', () => {
+      expect(stdout.trim()).toMatchSnapshot('stdout');
+      expect(stderr.trim()).toMatchSnapshot('stderr');
+
+      done();
+    });
+  });
+
+  it('should logging in multi-compiler and respect the "stats" option from configuration #2', (done) => {
+    const runner = `${__dirname}/helpers/runner.js`;
+
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: 'pipe',
+        env: {
+          WC: 'webpack.array.one-error-one-warning-one-success-with-names',
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      if (!/error/gi.test(stdout)) {
+        proc.stdin.write('|exit|');
+      }
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write('|exit|');
+    });
+
+    proc.on('exit', () => {
+      expect(stdout.trim()).toMatchSnapshot('stdout');
+      expect(stderr.trim()).toMatchSnapshot('stderr');
 
       done();
     });
@@ -309,15 +599,15 @@ describe('logging', () => {
       throw error;
     }
 
-    let stdError = '';
+    let stderr = '';
 
     proc.stderr.on('data', (chunk) => {
-      stdError += chunk.toString();
+      stderr += chunk.toString();
       proc.stdin.write('|exit|');
     });
 
     proc.on('exit', () => {
-      expect(extractErrorEntry(stdError)).toMatchSnapshot('error');
+      expect(extractErrorEntry(stderr)).toMatchSnapshot('error');
 
       done();
     });
@@ -357,15 +647,15 @@ describe('logging', () => {
         throw error;
       }
 
-      let stdError = '';
+      let stderr = '';
 
       proc.stderr.on('data', (chunk) => {
-        stdError += chunk.toString();
+        stderr += chunk.toString();
         proc.stdin.write('|exit|');
       });
 
       proc.on('exit', () => {
-        expect(extractErrorEntry(stdError)).toMatch('Error: EACCES');
+        expect(extractErrorEntry(stderr)).toMatch('Error: EACCES');
 
         fs.chmodSync(outputDir, 0o700);
         clearDirectory(outputDir);
