@@ -56,7 +56,7 @@ export default function setupHooks(context) {
       // Avoid extra empty line when `stats: 'none'`
       if (printedStats) {
         // eslint-disable-next-line no-console
-        console.log(printedStats);
+        process.stdout.write(printedStats);
       }
 
       // eslint-disable-next-line no-param-reassign
