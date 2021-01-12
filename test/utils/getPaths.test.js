@@ -12,6 +12,9 @@ import webpackPublicPathConfig from '../fixtures/webpack.public-path.config';
 import webpackMultiConfig from '../fixtures/webpack.array.config';
 import isWebpack5 from '../helpers/isWebpack5';
 
+// Suppress unnecessary stats output
+global.process.stdout.write = jest.fn();
+
 describe('getPaths', () => {
   const configs = [
     {

@@ -16,15 +16,17 @@ function stdoutToSnapshot(stdout) {
   cleanedStdout = cleanedStdout.replace(/compiled-for-tests/g, '');
   cleanedStdout = cleanedStdout.replace(/\d+.\d+ KiB/g, 'x KiB');
   cleanedStdout = cleanedStdout.replace(/\d+ bytes/g, 'x bytes');
-
   cleanedStdout = cleanedStdout.replace(/\d+ assets/g, 'x assets');
-  cleanedStdout = cleanedStdout.replace(/\d+ modules/g, 'x modules');
 
+  cleanedStdout = cleanedStdout.replace(/\d+ modules/g, 'x modules');
   cleanedStdout = cleanedStdout.replace(/in \d+ ms/g, 'in x ms');
+
+  cleanedStdout = cleanedStdout.replace(/LOG from .+webpack/s, 'LOG from xxx\n...\nwebpack');
   cleanedStdout = cleanedStdout.replace(
     /webpack \d+.\d+.\d+/g,
     'webpack x.x.x'
   );
+  cleanedStdout = cleanedStdout.replace(/\([0-9a-z]+\)/g, '(xxxx)');
 
   return cleanedStdout;
 }

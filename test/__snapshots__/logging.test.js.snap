@@ -123,7 +123,7 @@ asset bundle.js x KiB {main} [emitted] (name: main)
 asset svg.svg x KiB ({main}) [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes ({main}) [emitted] [from: index.html] (auxiliary name: main)
 Entrypoint main x KiB (x KiB) = bundle.js 2 auxiliary assets
-chunk {main} (runtime: main) bundle.js (main) x bytes (javascript) x KiB (runtime) [entry] [rendered]
+chunk {main} (runtime: main) bundle.js (xxxx) x bytes (xxxx) x KiB (xxxx) [entry] [rendered]
   > ./foo.js main
   runtime modules x KiB
     webpack/runtime/define property getters x bytes {main} [code generated]
@@ -155,87 +155,9 @@ chunk {main} (runtime: main) bundle.js (main) x bytes (javascript) x KiB (runtim
       cjs require ./svg.svg [./foo.js] 3:0-20
   
 
-LOG from webpack.Compiler
-<t> make hook: 48.463037 ms
-<t> finish make hook: 0.051897 ms
-<t> finish compilation: 1.328929 ms
-<t> seal compilation: 15.688917 ms
-<t> afterCompile hook: 0.034935 ms
-<t> emitAssets: 3.268205 ms
-<t> emitRecords: 0.057017 ms
-
-LOG from webpack.ResolverCachePlugin
-    100% really resolved (4 real resolves with 0 cached but invalid, 0 cached valid, 0 concurrent)
-
-LOG from webpack.FlagDependencyExportsPlugin
-<t> restore cached provided exports: 0.258316 ms
-<t> figure out provided exports: 0.402477 ms
-    100% of exports of modules have been determined (3 not cached, 0 flagged uncacheable, 0 from cache, 0 additional calculations due to dependencies)
-<t> store provided exports into cache: 0.120146 ms
-
-LOG from webpack.Compilation
-<t> finish modules: 1.190879 ms
-<t> report dependency errors and warnings: 0.067086 ms
-<t> optimize dependencies: 0.188124 ms
-<t> create chunks: 1.675751 ms
-<t> optimize: 2.991625 ms
-    x modules hashed (1 variants per module in average)
-<t> module hashing: 0.454595 ms
-    100% code generated (3 generated, 0 from cache)
-<t> code generation: 1.880747 ms
-<t> runtime requirements: 1.843136 ms
-<t> hashing: initialize hash: 0.003587 ms
-<t> hashing: sort chunks: 0.067707 ms
-<t> hashing: hash runtime modules: 0.912876 ms
-<t> hashing: hash chunks: 1.283242 ms
-<t> hashing: hash digest: 0.047249 ms
-<t> hashing: process full hash modules: 0.001573 ms
-<t> hashing: 2.6276 ms
-<t> record hash: 0.019266 ms
-<t> module assets: 0.282832 ms
-<t> create chunk assets: 2.659821 ms
-<t> process assets: 0.143751 ms
-
-LOG from webpack.SideEffectsFlagPlugin
-<t> update dependencies: 0.049483 ms
-
-LOG from webpack.buildChunkGraph
-<t> visitModules: prepare: 0.208943 ms
-<t> visitModules: visiting: 0.281138 ms
-    6 queue items processed (3 blocks)
-    0 chunk groups connected
-    0 chunk groups processed for merging (0 module sets, 0 forked, 0 + x modules forked, 0 + x modules merged into fork, 0 resulting modules)
-    0 chunk group info updated (0 already connected chunk groups reconnected)
-<t> visitModules: 0.972899 ms
-<t> connectChunkGroups: 0.052759 ms
-<t> cleanup: 0.025608 ms
-
-LOG from webpack.SplitChunksPlugin
-<t> prepare: 0.016681 ms
-<t> modules: 0.59072 ms
-<t> queue: 0.003978 ms
-<t> maxSize: 0.033974 ms
-
-LOG from webpack.FileSystemInfo
-    7 new snapshots created
-    0% root snapshot uncached (0 / 0)
-    0% children snapshot uncached (0 / 0)
-    0 entries tested
-    File info in cache: 16 timestamps 0 hashes 0 timestamp hash combinations
-    File timestamp snapshot optimization: 81% (30/37) entries shared via 2 shared snapshots (3 times referenced)
-    Directory info in cache: 0 timestamps 0 hashes 0 timestamp hash combinations
-    Missing items snapshot optimization: 0% (0/10) entries shared via 0 shared snapshots (0 times referenced)
-    Managed items info in cache: 3 items
-    Managed items snapshot optimization: 0% (0/3) entries shared via 0 shared snapshots (0 times referenced)
-    Managed files snapshot optimization: 0% (0/4) entries shared via 0 shared snapshots (0 times referenced)
-    Managed missing snapshot optimization: 0% (0/4) entries shared via 0 shared snapshots (0 times referenced)
-
-LOG from webpack.Watching
-<t> done hook: 0.425249 ms
-<t> storeBuildDependencies: 0.076233 ms
-<t> beginIdle: 0.021921 ms
-
-2021-01-12 17:32:52: webpack x.x.x compiled successfully in x ms (359e7fcfa4835e1094b9)"
+LOG from xxx
+...
+webpack x.x.x compiled successfully in x ms (xxxx)"
 `;
 
 exports[`logging should logging on successfully build in multi-compiler mode: stderr 1`] = `""`;
