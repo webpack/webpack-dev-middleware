@@ -183,9 +183,7 @@ chunk {main} (runtime: main) bundle.js (xxxx) x bytes (xxxx) x KiB (xxxx) [entry
       cjs require ./svg.svg [./foo.js] 3:0-20
   
 
-LOG from xxx
-...
-webpack x.x.x compiled successfully in x ms (xxxx)"
+LOG from xxx"
 `;
 
 exports[`logging should logging on successfully build in multi-compiler mode: stderr 1`] = `""`;

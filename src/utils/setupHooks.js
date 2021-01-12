@@ -1,3 +1,4 @@
+import webpack from 'webpack';
 import colorette from 'colorette';
 
 export default function setupHooks(context) {
@@ -31,7 +32,7 @@ export default function setupHooks(context) {
 
       logger.log('Compilation finished');
 
-      const statsOptions = compiler.compilers
+      let statsOptions = compiler.compilers
         ? {
             children: compiler.compilers.map((child) =>
               // eslint-disable-next-line no-undefined
@@ -43,22 +44,39 @@ export default function setupHooks(context) {
         : // eslint-disable-next-line no-undefined
           undefined;
 
+      const statsForWebpack4 = webpack.Stats && webpack.Stats.presetToOptions;
+
       if (compiler.compilers) {
-        statsOptions.children.forEach((childStatsOptions) => {
-          if (typeof childStatsOptions.colors === 'undefined') {
-            // eslint-disable-next-line no-param-reassign
-            childStatsOptions.colors = Boolean(colorette.options.enabled);
+        statsOptions.children = statsOptions.children.map(
+          (childStatsOptions) => {
+            if (statsForWebpack4) {
+              // eslint-disable-next-line no-param-reassign
+              childStatsOptions = webpack.Stats.presetToOptions(
+                childStatsOptions
+              );
+            }
+
+            if (typeof childStatsOptions.colors === 'undefined') {
+              // eslint-disable-next-line no-param-reassign
+              childStatsOptions.colors = Boolean(colorette.options.enabled);
+            }
+
+            return childStatsOptions;
           }
-        });
-      } else if (typeof statsOptions.colors === 'undefined') {
+        );
+      } else if (
+        typeof statsOptions.colors === 'undefined' ||
+        typeof statsOptions === 'string'
+      ) {
+        if (statsForWebpack4) {
+          statsOptions = webpack.Stats.presetToOptions(statsOptions);
+        }
+
         statsOptions.colors = Boolean(colorette.options.enabled);
       }
 
       // TODO webpack@4 doesn't support `{ children: [{ colors: true }, { colors: true }] }` for stats
-      if (
-        compiler.compilers &&
-        !compiler.compilers.find((oneOfCompiler) => oneOfCompiler.webpack)
-      ) {
+      if (compiler.compilers && statsForWebpack4) {
         statsOptions.colors = statsOptions.children.some(
           (child) => child.colors
         );

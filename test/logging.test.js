@@ -38,6 +38,12 @@ function stdoutToSnapshot(stdout) {
   );
   cleanedStdout = cleanedStdout.replace(/\([0-9a-z]+\)/g, '(xxxx)');
 
+  // webpack@4
+  cleanedStdout = cleanedStdout.replace(/Hash: [0-9a-z]+/g, 'Hash: xxxx');
+  cleanedStdout = cleanedStdout.replace(/Time: \d+ms/g, 'Time: Xms');
+  cleanedStdout = cleanedStdout.replace(/Built at: .+/g, 'Built at: x');
+  cleanedStdout = cleanedStdout.replace(/LOG from .+$/s, 'LOG from xxx');
+
   return cleanedStdout;
 }
 
