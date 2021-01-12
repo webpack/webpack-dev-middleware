@@ -14,7 +14,7 @@ function extractErrorEntry(string) {
 function stdoutToSnapshot(stdout) {
   let cleanedStdout = stripAnsi(stdout.trim());
 
-  cleanedStdout = cleanedStdout.replace(/\| {2}/g, '|');
+  cleanedStdout = cleanedStdout.replace(/\| /g, '|');
   cleanedStdout = cleanedStdout.replace(/compiled-for-tests/g, '');
   cleanedStdout = cleanedStdout.replace(/\d+.\d+ KiB/g, 'x KiB');
   cleanedStdout = cleanedStdout.replace(/\d+ bytes/g, 'x bytes');
