@@ -1,10 +1,14 @@
 import setupHooks from '../../src/utils/setupHooks';
 
+// Suppress unnecessary stats output
+global.console.log = jest.fn();
+
 describe('setupHooks', () => {
   let context;
   const watchRunHook = jest.fn();
   const invalidHook = jest.fn();
   const doneHook = jest.fn();
+  const loggerLog = jest.fn();
   const loggerInfo = jest.fn();
   const loggerWarn = jest.fn();
   const loggerError = jest.fn();
@@ -28,14 +32,14 @@ describe('setupHooks', () => {
             tap: doneHook,
           },
         },
-        options: {},
+        options: { stats: {} },
       },
       logger: {
+        log: loggerLog,
         info: loggerInfo,
         warn: loggerWarn,
         error: loggerError,
       },
-      stats: {},
       callbacks: [cb1, cb2],
     };
   });
@@ -84,7 +88,7 @@ describe('setupHooks', () => {
     invalidHook.mock.calls[0][1]();
     expect(context.state).toEqual(false);
     expect(context.stats).toBeUndefined();
-    expect(loggerInfo.mock.calls[0][0]).toEqual('Compiling...');
+    expect(loggerLog.mock.calls[0][0]).toEqual('Compilation starting...');
   });
 
   it('sets state, then logs stats and handles callbacks on nextTick from done hook', () => {
@@ -123,11 +127,13 @@ describe('setupHooks', () => {
       {
         options: {
           name: 'comp1',
+          stats: {},
         },
       },
       {
         options: {
           name: 'comp2',
+          stats: {},
         },
       },
     ];

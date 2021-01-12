@@ -1,7 +1,10 @@
+import webpack from 'webpack';
+import colorette from 'colorette';
+
 export default function setupHooks(context) {
   function invalid() {
     if (context.state) {
-      context.logger.info('Compiling...');
+      context.logger.log('Compilation starting...');
     }
 
     // We are now in invalid state
@@ -20,47 +23,71 @@ export default function setupHooks(context) {
 
     // Do the stuff in nextTick, because bundle may be invalidated if a change happened while compiling
     process.nextTick(() => {
-      const { state, compiler, callbacks, logger } = context;
+      const { compiler, logger, state, callbacks } = context;
 
       // Check if still in valid state
       if (!state) {
         return;
       }
 
-      // Print webpack output
-      const printStats = (childCompiler, childStats) => {
-        const statsString = childStats.toString(childCompiler.options.stats);
-        const name = childCompiler.options.name
-          ? `Child "${childCompiler.options.name}": `
-          : '';
+      logger.log('Compilation finished');
 
-        if (statsString.length) {
-          if (childStats.hasErrors()) {
-            logger.error(`${name}${statsString}`);
-          } else if (childStats.hasWarnings()) {
-            logger.warn(`${name}${statsString}`);
-          } else {
-            logger.info(`${name}${statsString}`);
+      let statsOptions = compiler.compilers
+        ? {
+            children: compiler.compilers.map((child) =>
+              // eslint-disable-next-line no-undefined
+              child.options ? child.options.stats : undefined
+            ),
           }
-        }
+        : compiler.options
+        ? compiler.options.stats
+        : // eslint-disable-next-line no-undefined
+          undefined;
 
-        let message = `${name}Compiled successfully.`;
-
-        if (childStats.hasErrors()) {
-          message = `${name}Failed to compile.`;
-        } else if (childStats.hasWarnings()) {
-          message = `${name}Compiled with warnings.`;
-        }
-
-        logger.info(message);
-      };
+      const statsForWebpack4 = webpack.Stats && webpack.Stats.presetToOptions;
 
       if (compiler.compilers) {
-        compiler.compilers.forEach((compilerFromMultiCompileMode, index) => {
-          printStats(compilerFromMultiCompileMode, stats.stats[index]);
-        });
-      } else {
-        printStats(compiler, stats);
+        statsOptions.children = statsOptions.children.map(
+          (childStatsOptions) => {
+            if (statsForWebpack4) {
+              // eslint-disable-next-line no-param-reassign
+              childStatsOptions = webpack.Stats.presetToOptions(
+                childStatsOptions
+              );
+            }
+
+            if (typeof childStatsOptions.colors === 'undefined') {
+              // eslint-disable-next-line no-param-reassign
+              childStatsOptions.colors = Boolean(colorette.options.enabled);
+            }
+
+            return childStatsOptions;
+          }
+        );
+      } else if (
+        typeof statsOptions.colors === 'undefined' ||
+        typeof statsOptions === 'string'
+      ) {
+        if (statsForWebpack4) {
+          statsOptions = webpack.Stats.presetToOptions(statsOptions);
+        }
+
+        statsOptions.colors = Boolean(colorette.options.enabled);
+      }
+
+      // TODO webpack@4 doesn't support `{ children: [{ colors: true }, { colors: true }] }` for stats
+      if (compiler.compilers && statsForWebpack4) {
+        statsOptions.colors = statsOptions.children.some(
+          (child) => child.colors
+        );
+      }
+
+      const printedStats = stats.toString(statsOptions);
+
+      // Avoid extra empty line when `stats: 'none'`
+      if (printedStats) {
+        // eslint-disable-next-line no-console
+        console.log(printedStats);
       }
 
       // eslint-disable-next-line no-param-reassign
@@ -73,7 +100,10 @@ export default function setupHooks(context) {
     });
   }
 
-  context.compiler.hooks.watchRun.tap('DevMiddleware', invalid);
-  context.compiler.hooks.invalid.tap('DevMiddleware', invalid);
-  context.compiler.hooks.done.tap('DevMiddleware', done);
+  context.compiler.hooks.watchRun.tap('webpack-dev-middleware', invalid);
+  context.compiler.hooks.invalid.tap('webpack-dev-middleware', invalid);
+  (context.compiler.webpack
+    ? context.compiler.hooks.afterDone
+    : context.compiler.hooks.done
+  ).tap('webpack-dev-middleware', done);
 }

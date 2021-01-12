@@ -4,12 +4,14 @@ import express from 'express';
 
 import middleware from '../../src';
 import getFilenameFromUrl from '../../src/utils/getFilenameFromUrl';
-
 import getCompiler from '../helpers/getCompiler';
 import listenAndCompile from '../helpers/listenAndCompile';
 import webpackSimpleConfig from '../fixtures/webpack.simple.config';
 import webpackPublicPathConfig from '../fixtures/webpack.public-path.config';
 import webpackMultiConfig from '../fixtures/webpack.array.config';
+
+// Suppress unnecessary stats output
+global.console.log = jest.fn();
 
 describe('getFilenameFromUrl', () => {
   const configs = [

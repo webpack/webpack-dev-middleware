@@ -1,0 +1,263 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`logging should logging an error in "watch" method: stderr 1`] = `"Error: Watch error"`;
+
+exports[`logging should logging an warning: stderr 1`] = `""`;
+
+exports[`logging should logging an warning: stdout 1`] = `
+"WARNING in Warning
+
+webpack compiled with 1 warning"
+`;
+
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #2: stderr 1`] = `""`;
+
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #2: stdout 1`] = `
+"broken:
+  asset bundle.js x bytes [emitted] (name: main)
+  ./broken.js x bytes [built] [code generated] [1 error]
+
+  ERROR in ./broken.js 1:3
+  Module parse failed: Unexpected token (1:3)
+  You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+  > 1()2()3()
+  |
+
+  broken (webpack x.x.x) compiled with 1 error in x ms
+
+warning:
+  asset bundle.js x bytes [emitted] (name: main)
+  ./warning.js x bytes [built] [code generated]
+
+  WARNING in Warning
+
+  warning (webpack x.x.x) compiled with 1 warning in x ms
+
+success:
+  asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
+  asset bundle.js x KiB [emitted] (name: main)
+  asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
+  runtime modules x bytes x modules
+  cacheable modules x bytes
+    ./foo.js x bytes [built] [code generated]
+    ./svg.svg x bytes [built] [code generated]
+    ./index.html x bytes [built] [code generated]
+  success (webpack x.x.x) compiled successfully in x ms"
+`;
+
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration: stderr 1`] = `""`;
+
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration: stdout 1`] = `
+"asset bundle.js x bytes [emitted] (name: main)
+./broken.js x bytes [built] [code generated] [1 error]
+
+ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|
+
+webpack x.x.x compiled with 1 error in x ms
+
+asset bundle.js x bytes [emitted] (name: main)
+./warning.js x bytes [built] [code generated]
+
+WARNING in Warning
+
+webpack x.x.x compiled with 1 warning in x ms
+
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
+asset bundle.js x KiB [emitted] (name: main)
+asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
+runtime modules x bytes x modules
+cacheable modules x bytes
+  ./foo.js x bytes [built] [code generated]
+  ./svg.svg x bytes [built] [code generated]
+  ./index.html x bytes [built] [code generated]
+webpack x.x.x compiled successfully in x ms"
+`;
+
+exports[`logging should logging on successfully build and respect colors #2: stderr 1`] = `""`;
+
+exports[`logging should logging on successfully build and respect colors #2: stdout 1`] = `
+"asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
+asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
+runtime modules x KiB x modules
+cacheable modules x bytes
+  ./foo.js x bytes [built] [code generated]
+  ./svg.svg x bytes [built] [code generated]
+  ./index.html x bytes [built] [code generated]
+webpack x.x.x compiled successfully in x ms"
+`;
+
+exports[`logging should logging on successfully build and respect colors: stderr 1`] = `""`;
+
+exports[`logging should logging on successfully build and respect colors: stdout 1`] = `
+"asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
+asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
+runtime modules x KiB x modules
+cacheable modules x bytes
+  ./foo.js x bytes [built] [code generated]
+  ./svg.svg x bytes [built] [code generated]
+  ./index.html x bytes [built] [code generated]
+webpack x.x.x compiled successfully in x ms"
+`;
+
+exports[`logging should logging on successfully build and respect the "stats" option from configuration with custom object value: stderr 1`] = `""`;
+
+exports[`logging should logging on successfully build and respect the "stats" option from configuration with custom object value: stdout 1`] = `
+"asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
+asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)"
+`;
+
+exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "false" value: stderr 1`] = `""`;
+
+exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "false" value: stdout 1`] = `""`;
+
+exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "minimal" value: stderr 1`] = `""`;
+
+exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "minimal" value: stdout 1`] = `
+"x assets
+x modules
+webpack x.x.x compiled successfully in x ms"
+`;
+
+exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "none" value: stderr 1`] = `""`;
+
+exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "none" value: stdout 1`] = `""`;
+
+exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "true" value: stderr 1`] = `""`;
+
+exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "true" value: stdout 1`] = `
+"asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
+asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
+runtime modules x KiB x modules
+cacheable modules x bytes
+  ./foo.js x bytes [built] [code generated]
+  ./svg.svg x bytes [built] [code generated]
+  ./index.html x bytes [built] [code generated]
+webpack x.x.x compiled successfully in x ms"
+`;
+
+exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "verbose" value: stderr 1`] = `""`;
+
+exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "verbose" value: stdout 1`] = `
+"PublicPath: auto
+asset bundle.js x KiB {main} [emitted] (name: main)
+asset svg.svg x KiB ({main}) [emitted] [from: svg.svg] (auxiliary name: main)
+asset index.html x bytes ({main}) [emitted] [from: index.html] (auxiliary name: main)
+Entrypoint main x KiB (x KiB) = bundle.js 2 auxiliary assets
+chunk {main} (runtime: main) bundle.js (xxxx) x bytes (xxxx) x KiB (xxxx) [entry] [rendered]
+  > ./foo.js main
+  runtime modules x KiB
+    webpack/runtime/define property getters x bytes {main} [code generated]
+      [no exports]
+      [used exports unknown]
+    webpack/runtime/global x bytes {main} [code generated]
+      [no exports]
+      [used exports unknown]
+    webpack/runtime/hasOwnProperty shorthand x bytes {main} [code generated]
+      [no exports]
+      [used exports unknown]
+    webpack/runtime/make namespace object x bytes {main} [code generated]
+      [no exports]
+      [used exports unknown]
+    webpack/runtime/publicPath x bytes {main} [code generated]
+      [no exports]
+      [used exports unknown]
+  cacheable modules x bytes
+    ./foo.js x bytes {main} [depth 0] [built] [code generated]
+      [used exports unknown]
+      entry ./foo.js main
+    ./index.html x bytes {main} [depth 1] [dependent] [built] [code generated]
+      [exports: default]
+      [used exports unknown]
+      cjs require ./index.html [./foo.js] 4:0-23
+    ./svg.svg x bytes {main} [depth 1] [dependent] [built] [code generated]
+      [exports: default]
+      [used exports unknown]
+      cjs require ./svg.svg [./foo.js] 3:0-20
+  
+
+LOG from xxx"
+`;
+
+exports[`logging should logging on successfully build in multi-compiler mode: stderr 1`] = `""`;
+
+exports[`logging should logging on successfully build in multi-compiler mode: stdout 1`] = `
+"asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
+asset bundle.js x KiB [emitted] (name: main)
+asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
+runtime modules x bytes x modules
+cacheable modules x bytes
+  ./foo.js x bytes [built] [code generated]
+  ./svg.svg x bytes [built] [code generated]
+  ./index.html x bytes [built] [code generated]
+webpack x.x.x compiled successfully in x ms
+
+asset bundle.js x bytes [emitted] (name: main)
+./bar.js x bytes [built] [code generated]
+webpack x.x.x compiled successfully in x ms"
+`;
+
+exports[`logging should logging on successfully build: stderr 1`] = `""`;
+
+exports[`logging should logging on successfully build: stdout 1`] = `
+"asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
+asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
+runtime modules x KiB x modules
+cacheable modules x bytes
+  ./foo.js x bytes [built] [code generated]
+  ./svg.svg x bytes [built] [code generated]
+  ./index.html x bytes [built] [code generated]
+webpack x.x.x compiled successfully in x ms"
+`;
+
+exports[`logging should logging on unsuccessful build in multi-compiler: stderr 1`] = `""`;
+
+exports[`logging should logging on unsuccessful build in multi-compiler: stdout 1`] = `
+"ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|
+
+webpack compiled with 1 error
+
+ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|
+
+webpack compiled with 1 error"
+`;
+
+exports[`logging should logging on unsuccessful build: stderr 1`] = `""`;
+
+exports[`logging should logging on unsuccessful build: stdout 1`] = `
+"ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|
+
+webpack compiled with 1 error"
+`;
+
+exports[`logging should logging warnings in multi-compiler mode: stderr 1`] = `""`;
+
+exports[`logging should logging warnings in multi-compiler mode: stdout 1`] = `
+"WARNING in Warning
+
+webpack compiled with 1 warning
+
+WARNING in Warning
+
+webpack compiled with 1 warning"
+`;

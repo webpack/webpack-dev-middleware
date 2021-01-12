@@ -24,7 +24,7 @@ module.exports = [
     infrastructureLogging: {
       level: 'none'
     },
-    stats: 'errors-warnings'
+    stats: 'normal'
   },
   {
     mode: 'development',
@@ -38,6 +38,6 @@ module.exports = [
     infrastructureLogging: {
       level: 'none'
     },
-    stats: 'errors-warnings'
+    stats: 'normal'
   },
 ];
