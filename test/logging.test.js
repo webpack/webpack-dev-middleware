@@ -22,7 +22,10 @@ function stdoutToSnapshot(stdout) {
   cleanedStdout = cleanedStdout.replace(/\d+ modules/g, 'x modules');
   cleanedStdout = cleanedStdout.replace(/in \d+ ms/g, 'in x ms');
 
-  cleanedStdout = cleanedStdout.replace(/LOG from .+webpack/s, 'LOG from xxx\n...\nwebpack');
+  cleanedStdout = cleanedStdout.replace(
+    /LOG from .+webpack/s,
+    'LOG from xxx\n...\nwebpack'
+  );
   cleanedStdout = cleanedStdout.replace(
     /webpack \d+.\d+.\d+/g,
     'webpack x.x.x'
