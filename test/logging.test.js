@@ -14,6 +14,10 @@ function extractErrorEntry(string) {
 function stdoutToSnapshot(stdout) {
   let cleanedStdout = stripAnsi(stdout.trim());
 
+  // Bug in `strip-ansi`
+  cleanedStdout = cleanedStdout.replace(/(\d+):(\d+)-(\d+) /g, '$1:$2-$3');
+  cleanedStdout = cleanedStdout.replace(/> (.+) {2}(.+)/g, '> $1 $2');
+
   cleanedStdout = cleanedStdout.replace(/\| /g, '|');
   cleanedStdout = cleanedStdout.replace(/compiled-for-tests/g, '');
   cleanedStdout = cleanedStdout.replace(/\d+.\d+ KiB/g, 'x KiB');
