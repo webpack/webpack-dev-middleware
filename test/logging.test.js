@@ -3,6 +3,7 @@ import path from 'path';
 import os from 'os';
 
 import execa from 'execa';
+import stripAnsi from 'strip-ansi';
 
 function extractErrorEntry(string) {
   const matches = string.match(/error:\s\D[^:||\n||\r]+/gim);
@@ -53,7 +54,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.config',
+          WEBPACK_CONFIG: 'webpack.config',
         },
       });
     } catch (error) {
@@ -84,14 +85,14 @@ describe('logging', () => {
     });
   });
 
-  it('should logging on successfully build and respect the "stats" option from configuration with the "none" value', (done) => {
+  it('should logging on successfully build and respect colors', (done) => {
     let proc;
 
     try {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WEBPACK_CONFIG: 'webpack.stats-none.config',
+          WEBPACK_CONFIG: 'webpack.stats-colors-true.config.js',
         },
       });
     } catch (error) {
@@ -115,7 +116,47 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stdout).toContain('\u001b[1m');
+      expect(stdoutToSnapshot(stripAnsi(stdout))).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
+
+      done();
+    });
+  });
+
+  it('should logging on successfully build and respect the "stats" option from configuration with the "none" value', (done) => {
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: 'pipe',
+        env: {
+          WEBPACK_CONFIG: 'webpack.stats-colors-false.config.js',
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      if (/compiled-for-tests/gi.test(stdout)) {
+        proc.stdin.write('|exit|');
+      }
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write('|exit|');
+    });
+
+    proc.on('exit', () => {
+      expect(stdout).not.toContain('\u001b[1m');
+      expect(stdoutToSnapshot(stripAnsi(stdout))).toMatchSnapshot('stdout');
       expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
@@ -586,8 +627,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WCF_infrastructureLogging_level: 'log',
-          WATCH_break: true,
+          WEBPACK_BREAK_WATCH: true,
         },
       });
     } catch (error) {
@@ -634,7 +674,6 @@ describe('logging', () => {
             WCF_output_path: outputDir,
             WCF_infrastructureLogging_level: 'log',
             WMC_writeToDisk: true,
-            FS_block: true,
           },
         });
       } catch (error) {

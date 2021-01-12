@@ -23,7 +23,7 @@ const configMiddleware = createConfig(configMiddlewareEntries);
 const compiler = webpack(unionConfig || defaultConfig);
 let instance;
 
-if (process.env.WATCH_break) {
+if (process.env.WEBPACK_BREAK_WATCH) {
   compiler.watch = function watch() {
     const error = new Error('Watch error');
     error.code = 'watch error';
