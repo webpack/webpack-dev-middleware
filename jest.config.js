@@ -1,5 +1,3 @@
-
-
 module.exports = {
   collectCoverage: false,
   coveragePathIgnorePatterns: ['test', '<rootDir>/node_modules'],
