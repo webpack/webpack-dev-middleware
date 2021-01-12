@@ -45,7 +45,7 @@ Child success:
          Asset      Size  Chunks             Chunk Names
      bundle.js  x KiB    main  [emitted]  main
     index.html  x bytes          [emitted]  
-       svg.svg  x KiB          [emitted]  
+       svg.svg x KiB [emitted]
     Entrypoint main = bundle.js
     [./foo.js] x bytes {main} [built]
     [./index.html] x bytes {main} [built]
@@ -88,7 +88,7 @@ Child
          Asset      Size  Chunks             Chunk Names
      bundle.js  x KiB    main  [emitted]  main
     index.html  x bytes          [emitted]  
-       svg.svg  x KiB          [emitted]  
+       svg.svg x KiB [emitted]
     Entrypoint main = bundle.js
     [./foo.js] x bytes {main} [built]
     [./index.html] x bytes {main} [built]
@@ -105,7 +105,7 @@ Built at: x
      Asset      Size  Chunks             Chunk Names
  bundle.js  x KiB    main  [emitted]  main
 index.html  x bytes          [emitted]  
-   svg.svg  x KiB          [emitted]  
+   svg.svg x KiB [emitted]
 Entrypoint main = bundle.js
 [./foo.js] x bytes {main} [built]
 [./index.html] x bytes {main} [built]
@@ -122,7 +122,7 @@ Built at: x
      Asset      Size  Chunks             Chunk Names
  bundle.js  x KiB    main  [emitted]  main
 index.html  x bytes          [emitted]  
-   svg.svg  x KiB          [emitted]  
+   svg.svg x KiB [emitted]
 Entrypoint main = bundle.js
 [./foo.js] x bytes {main} [built]
 [./index.html] x bytes {main} [built]
@@ -139,7 +139,7 @@ Built at: x
      Asset      Size  Chunks             Chunk Names
  bundle.js  x KiB    main  [emitted]  main
 index.html  x bytes          [emitted]  
-   svg.svg  x KiB          [emitted]  
+   svg.svg x KiB [emitted]
 Entrypoint main = bundle.js
 [./foo.js] x bytes {main} [built]
 [./index.html] x bytes {main} [built]
@@ -168,7 +168,7 @@ Built at: x
      Asset      Size  Chunks             Chunk Names
  bundle.js  x KiB    main  [emitted]  main
 index.html  x bytes          [emitted]  
-   svg.svg  x KiB          [emitted]  
+   svg.svg x KiB [emitted]
 Entrypoint main = bundle.js
 [./foo.js] x bytes {main} [built]
 [./index.html] x bytes {main} [built]
@@ -185,7 +185,7 @@ Built at: x
      Asset      Size  Chunks             Chunk Names
  bundle.js  x KiB    main  [emitted]  main
 index.html  x bytes          [emitted]  
-   svg.svg  x KiB          [emitted]  
+   svg.svg x KiB [emitted]
 Entrypoint main = bundle.js
 chunk {main} bundle.js (xxxx) x bytes [entry] [rendered]
     > ./foo.js main
@@ -213,7 +213,7 @@ Child
          Asset      Size  Chunks             Chunk Names
      bundle.js  x KiB    main  [emitted]  main
     index.html  x bytes          [emitted]  
-       svg.svg  x KiB          [emitted]  
+       svg.svg x KiB [emitted]
     Entrypoint main = bundle.js
     [./foo.js] x bytes {main} [built]
     [./index.html] x bytes {main} [built]
@@ -238,7 +238,7 @@ Built at: x
      Asset      Size  Chunks             Chunk Names
  bundle.js  x KiB    main  [emitted]  main
 index.html  x bytes          [emitted]  
-   svg.svg  x KiB          [emitted]  
+   svg.svg x KiB [emitted]
 Entrypoint main = bundle.js
 [./foo.js] x bytes {main} [built]
 [./index.html] x bytes {main} [built]
