@@ -65,8 +65,9 @@ export default function setupHooks(context) {
           }
         );
       } else if (
-        typeof statsOptions.colors === 'undefined' ||
-        typeof statsOptions === 'string'
+        statsOptions &&
+        (typeof statsOptions.colors === 'undefined' ||
+        typeof statsOptions === 'string')
       ) {
         if (statsForWebpack4) {
           statsOptions = webpack.Stats.presetToOptions(statsOptions);
