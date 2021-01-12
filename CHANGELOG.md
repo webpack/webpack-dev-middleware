@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.3](https://github.com/webpack/webpack-dev-middleware/compare/v4.0.1...v4.0.3) (2021-01-12)
+
+
+### Bug Fixes
+
+* output `stats` to `stdout` instead `stderr`, how does `webpack-cli`, if you need hide `stats` from output please use `{ stats: false }` or `{ stats: 'none' }` ([4de0f97](https://github.com/webpack/webpack-dev-middleware/commit/4de0f97596d52a7182ac108a9b9865462fca54fe))
+* colors are working for `stats` ([4de0f97](https://github.com/webpack/webpack-dev-middleware/commit/4de0f97596d52a7182ac108a9b9865462fca54fe))
+* schema description ([#783](https://github.com/webpack/webpack-dev-middleware/issues/783)) ([f9ce2b2](https://github.com/webpack/webpack-dev-middleware/commit/f9ce2b2537c331901e230c5a8452f4b91d45c713))
+* skip `Content-type header` on unknown types ([#809](https://github.com/webpack/webpack-dev-middleware/issues/809)) ([5c9eee5](https://github.com/webpack/webpack-dev-middleware/commit/5c9eee549be264f6df202d960b7cd10bfff7f97d))
+
 ### [4.0.2](https://github.com/webpack/webpack-dev-middleware/compare/v4.0.1...v4.0.2) (2020-11-10)
 
 
