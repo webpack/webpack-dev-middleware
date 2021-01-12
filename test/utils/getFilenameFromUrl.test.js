@@ -11,7 +11,7 @@ import webpackPublicPathConfig from '../fixtures/webpack.public-path.config';
 import webpackMultiConfig from '../fixtures/webpack.array.config';
 
 // Suppress unnecessary stats output
-global.process.stdout.write = jest.fn();
+global.console.log = jest.fn();
 
 describe('getFilenameFromUrl', () => {
   const configs = [

@@ -3,6 +3,7 @@ import memfs from 'memfs';
 import setupOutputFileSystem from '../../src/utils/setupOutputFileSystem';
 
 const createFsFromVolume = jest.spyOn(memfs, 'createFsFromVolume');
+
 createFsFromVolume.mockImplementation(() => {
   return {
     testFs: true,

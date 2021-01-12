@@ -12,7 +12,7 @@ function extractErrorEntry(string) {
 }
 
 function stdoutToSnapshot(stdout) {
-  let cleanedStdout = stdout.trim();
+  let cleanedStdout = stripAnsi(stdout.trim());
 
   cleanedStdout = cleanedStdout.replace(/compiled-for-tests/g, '');
   cleanedStdout = cleanedStdout.replace(/\d+.\d+ KiB/g, 'x KiB');
@@ -55,44 +55,7 @@ describe('logging', () => {
         stdio: 'pipe',
         env: {
           WEBPACK_CONFIG: 'webpack.config',
-        },
-      });
-    } catch (error) {
-      throw error;
-    }
-
-    let stdout = '';
-    let stderr = '';
-
-    proc.stdout.on('data', (chunk) => {
-      stdout += chunk.toString();
-
-      if (/compiled-for-tests/gi.test(stdout)) {
-        proc.stdin.write('|exit|');
-      }
-    });
-
-    proc.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
-      proc.stdin.write('|exit|');
-    });
-
-    proc.on('exit', () => {
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
-
-      done();
-    });
-  });
-
-  it('should logging on successfully build and respect colors', (done) => {
-    let proc;
-
-    try {
-      proc = execa(runner, [], {
-        stdio: 'pipe',
-        env: {
-          WEBPACK_CONFIG: 'webpack.stats-colors-true.config.js',
+          FORCE_COLOR: true,
         },
       });
     } catch (error) {
@@ -117,14 +80,54 @@ describe('logging', () => {
 
     proc.on('exit', () => {
       expect(stdout).toContain('\u001b[1m');
-      expect(stdoutToSnapshot(stripAnsi(stdout))).toMatchSnapshot('stdout');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
       expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
   });
 
-  it('should logging on successfully build and respect the "stats" option from configuration with the "none" value', (done) => {
+  it('should logging on successfully build and respect colors', (done) => {
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: 'pipe',
+        env: {
+          WEBPACK_CONFIG: 'webpack.stats-colors-true.config.js',
+          FORCE_COLOR: true,
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      if (/compiled-for-tests/gi.test(stdout)) {
+        proc.stdin.write('|exit|');
+      }
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write('|exit|');
+    });
+
+    proc.on('exit', () => {
+      expect(stdout).toContain('\u001b[1m');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
+
+      done();
+    });
+  });
+
+  it('should logging on successfully build and respect colors #2', (done) => {
     let proc;
 
     try {
@@ -132,6 +135,7 @@ describe('logging', () => {
         stdio: 'pipe',
         env: {
           WEBPACK_CONFIG: 'webpack.stats-colors-false.config.js',
+          FORCE_COLOR: true,
         },
       });
     } catch (error) {
@@ -156,7 +160,45 @@ describe('logging', () => {
 
     proc.on('exit', () => {
       expect(stdout).not.toContain('\u001b[1m');
-      expect(stdoutToSnapshot(stripAnsi(stdout))).toMatchSnapshot('stdout');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
+
+      done();
+    });
+  });
+
+  it('should logging on successfully build and respect the "stats" option from configuration with the "none" value', (done) => {
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: 'pipe',
+        env: {
+          WEBPACK_CONFIG: 'webpack.stats-none.config.js',
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      if (/compiled-for-tests/gi.test(stdout)) {
+        proc.stdin.write('|exit|');
+      }
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write('|exit|');
+    });
+
+    proc.on('exit', () => {
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
       expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
@@ -360,6 +402,7 @@ describe('logging', () => {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
+          FORCE_COLOR: true,
           WEBPACK_CONFIG: 'webpack.array.config',
         },
       });
@@ -384,6 +427,7 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
+      expect(stdout).toContain('\u001b[1m');
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
       expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 

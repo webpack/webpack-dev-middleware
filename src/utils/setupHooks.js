@@ -1,3 +1,5 @@
+import colorette from 'colorette';
+
 export default function setupHooks(context) {
   function invalid() {
     if (context.state) {
@@ -31,15 +33,26 @@ export default function setupHooks(context) {
 
       const statsOptions = compiler.compilers
         ? {
-            children: compiler.compilers.map((oneOfCompiler) =>
+            children: compiler.compilers.map((child) =>
               // eslint-disable-next-line no-undefined
-              oneOfCompiler.options ? oneOfCompiler.options.stats : undefined
+              child.options ? child.options.stats : undefined
             ),
           }
         : compiler.options
         ? compiler.options.stats
         : // eslint-disable-next-line no-undefined
           undefined;
+
+      if (compiler.compilers) {
+        statsOptions.children.forEach((childStatsOptions) => {
+          if (typeof childStatsOptions.colors === 'undefined') {
+            // eslint-disable-next-line no-param-reassign
+            childStatsOptions.colors = Boolean(colorette.options.enabled);
+          }
+        });
+      } else if (typeof statsOptions.colors === 'undefined') {
+        statsOptions.colors = Boolean(colorette.options.enabled);
+      }
 
       // TODO webpack@4 doesn't support `{ children: [{ colors: true }, { colors: true }] }` for stats
       if (
@@ -56,7 +69,7 @@ export default function setupHooks(context) {
       // Avoid extra empty line when `stats: 'none'`
       if (printedStats) {
         // eslint-disable-next-line no-console
-        process.stdout.write(printedStats);
+        console.log(printedStats);
       }
 
       // eslint-disable-next-line no-param-reassign

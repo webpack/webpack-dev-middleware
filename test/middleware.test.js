@@ -20,7 +20,7 @@ import webpackQueryStringConfig from './fixtures/webpack.querystring.config';
 import webpackClientServerConfig from './fixtures/webpack.client.server.config';
 
 // Suppress unnecessary stats output
-global.process.stdout.write = jest.fn();
+global.console.log = jest.fn();
 
 describe.each([
   ['express', express],

@@ -3,7 +3,7 @@ import middleware from '../src';
 import getCompiler from './helpers/getCompiler';
 
 // Suppress unnecessary stats output
-global.process.stdout.write = jest.fn();
+global.console.log = jest.fn();
 
 describe('validation', () => {
   const cases = {

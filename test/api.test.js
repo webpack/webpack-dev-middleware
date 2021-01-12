@@ -9,7 +9,7 @@ import getCompilerHooks from './helpers/getCompilerHooks';
 import webpackConfig from './fixtures/webpack.config';
 
 // Suppress unnecessary stats output
-global.process.stdout.write = jest.fn();
+global.console.log = jest.fn();
 
 describe.each([
   ['express', express],

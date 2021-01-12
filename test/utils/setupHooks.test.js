@@ -1,5 +1,8 @@
 import setupHooks from '../../src/utils/setupHooks';
 
+// Suppress unnecessary stats output
+global.console.log = jest.fn();
+
 describe('setupHooks', () => {
   let context;
   const watchRunHook = jest.fn();
@@ -29,7 +32,7 @@ describe('setupHooks', () => {
             tap: doneHook,
           },
         },
-        options: {},
+        options: { stats: {} },
       },
       logger: {
         log: loggerLog,
@@ -37,7 +40,6 @@ describe('setupHooks', () => {
         warn: loggerWarn,
         error: loggerError,
       },
-      stats: {},
       callbacks: [cb1, cb2],
     };
   });
@@ -125,13 +127,13 @@ describe('setupHooks', () => {
       {
         options: {
           name: 'comp1',
-          stats: {}
+          stats: {},
         },
       },
       {
         options: {
           name: 'comp2',
-          stats: {}
+          stats: {},
         },
       },
     ];
