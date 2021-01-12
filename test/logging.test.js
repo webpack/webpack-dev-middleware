@@ -4,26 +4,47 @@ import os from 'os';
 
 import execa from 'execa';
 
-// function extractCountCompilations(string) {
-//   const matches = webpack.webpack
-//     ? string.match(/webpack\s\d\.\d\d?.\d\d?/gim)
-//     : string.match(/Entrypoint/gim);
-//
-//   const result = matches === null ? null : matches.length;
-//
-//   return `Count compilations: ${result}`;
-// }
-
 function extractErrorEntry(string) {
   const matches = string.match(/error:\s\D[^:||\n||\r]+/gim);
 
   return matches === null ? null : matches[0];
 }
 
+function stdoutToSnapshot(stdout) {
+  let cleanedStdout = stdout.trim();
+
+  cleanedStdout = cleanedStdout.replace(/compiled-for-tests/g, '');
+  cleanedStdout = cleanedStdout.replace(/\d+.\d+ KiB/g, 'x KiB');
+  cleanedStdout = cleanedStdout.replace(/\d+ bytes/g, 'x bytes');
+
+  cleanedStdout = cleanedStdout.replace(/\d+ assets/g, 'x assets');
+  cleanedStdout = cleanedStdout.replace(/\d+ modules/g, 'x modules');
+
+  cleanedStdout = cleanedStdout.replace(/in \d+ ms/g, 'in x ms');
+  cleanedStdout = cleanedStdout.replace(
+    /webpack \d+.\d+.\d+/g,
+    'webpack x.x.x'
+  );
+
+  return cleanedStdout;
+}
+
+function stderrToSnapshot(stderr) {
+  const cleanedStderr = stderr.trim();
+
+  const matches = stderr.match(/error:\s\D[^:||\n||\r]+/gim);
+
+  if (matches !== null) {
+    return matches[0];
+  }
+
+  return cleanedStderr;
+}
+
+const runner = path.resolve(__dirname, './helpers/runner.js');
+
 describe('logging', () => {
   it('should logging on successfully build', (done) => {
-    const runner = `${__dirname}/helpers/runner.js`;
-
     let proc;
 
     try {
@@ -43,7 +64,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
 
-      if (!/error/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
@@ -54,23 +75,21 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdout.trim()).toMatchSnapshot('stdout');
-      expect(stderr).toMatchSnapshot('stderr');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
   });
 
   it('should logging on successfully build and respect the "stats" option from configuration with the "none" value', (done) => {
-    const runner = `${__dirname}/helpers/runner.js`;
-
     let proc;
 
     try {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.stats-none.config',
+          WEBPACK_CONFIG: 'webpack.stats-none.config',
         },
       });
     } catch (error) {
@@ -83,7 +102,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
 
-      if (!/error/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
@@ -94,24 +113,21 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdout.trim()).toMatchSnapshot('stdout');
-      expect(stderr.trim()).toMatchSnapshot('stderr');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
   });
 
   it('should logging on successfully build and respect the "stats" option from configuration with the "minimal" value', (done) => {
-    // TODO fix me
-    const runner = `${__dirname}/helpers/runner.js`;
-
     let proc;
 
     try {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.stats-minimal.config',
+          WEBPACK_CONFIG: 'webpack.stats-minimal.config',
         },
       });
     } catch (error) {
@@ -124,7 +140,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
 
-      if (!/error/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
@@ -135,23 +151,21 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdout.trim()).toMatchSnapshot('stdout');
-      expect(stderr.trim()).toMatchSnapshot('stderr');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
   });
 
-  it.skip('should logging on successfully build and respect the "stats" option from configuration with the "verbose" value', (done) => {
-    const runner = `${__dirname}/helpers/runner.js`;
-
+  it('should logging on successfully build and respect the "stats" option from configuration with the "verbose" value', (done) => {
     let proc;
 
     try {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.stats-verbose.config',
+          WEBPACK_CONFIG: 'webpack.stats-verbose.config',
         },
       });
     } catch (error) {
@@ -164,7 +178,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
 
-      if (!/error/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
@@ -175,23 +189,21 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdout.trim()).toMatchSnapshot('stdout');
-      expect(stderr.trim()).toMatchSnapshot('stderr');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
   });
 
   it('should logging on successfully build and respect the "stats" option from configuration with the "true" value', (done) => {
-    const runner = `${__dirname}/helpers/runner.js`;
-
     let proc;
 
     try {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.stats-true.config',
+          WEBPACK_CONFIG: 'webpack.stats-true.config',
         },
       });
     } catch (error) {
@@ -204,7 +216,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
 
-      if (!/error/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
@@ -215,23 +227,21 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdout.trim()).toMatchSnapshot('stdout');
-      expect(stderr.trim()).toMatchSnapshot('stderr');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
   });
 
   it('should logging on successfully build and respect the "stats" option from configuration with the "false" value', (done) => {
-    const runner = `${__dirname}/helpers/runner.js`;
-
     let proc;
 
     try {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.stats-false.config',
+          WEBPACK_CONFIG: 'webpack.stats-false.config',
         },
       });
     } catch (error) {
@@ -244,7 +254,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
 
-      if (!/error/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
@@ -255,23 +265,21 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdout.trim()).toMatchSnapshot('stdout');
-      expect(stderr.trim()).toMatchSnapshot('stderr');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
   });
 
   it('should logging on successfully build and respect the "stats" option from configuration with custom object value', (done) => {
-    const runner = `${__dirname}/helpers/runner.js`;
-
     let proc;
 
     try {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.stats-object.config',
+          WEBPACK_CONFIG: 'webpack.stats-object.config',
         },
       });
     } catch (error) {
@@ -284,7 +292,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
 
-      if (!/error/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
@@ -295,23 +303,21 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdout.trim()).toMatchSnapshot('stdout');
-      expect(stderr.trim()).toMatchSnapshot('stderr');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
   });
 
   it('should logging on successfully build in multi-compiler mode', (done) => {
-    const runner = `${__dirname}/helpers/runner.js`;
-
     let proc;
 
     try {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.array.config',
+          WEBPACK_CONFIG: 'webpack.array.config',
         },
       });
     } catch (error) {
@@ -324,7 +330,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
 
-      if (!/error/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
@@ -335,23 +341,21 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdout.trim()).toMatchSnapshot('stdout');
-      expect(stderr.trim()).toMatchSnapshot('stderr');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
   });
 
   it('should logging on unsuccessful build', (done) => {
-    const runner = `${__dirname}/helpers/runner.js`;
-
     let proc;
 
     try {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.error.config',
+          WEBPACK_CONFIG: 'webpack.error.config',
         },
       });
     } catch (error) {
@@ -364,7 +368,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
 
-      if (/error/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
@@ -375,23 +379,21 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdout.trim()).toMatchSnapshot('stdout');
-      expect(stderr.trim()).toMatchSnapshot('stderr');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
   });
 
   it('should logging on unsuccessful build in multi-compiler', (done) => {
-    const runner = `${__dirname}/helpers/runner.js`;
-
     let proc;
 
     try {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.array.error.config',
+          WEBPACK_CONFIG: 'webpack.array.error.config',
         },
       });
     } catch (error) {
@@ -404,7 +406,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
 
-      if (/error/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
@@ -415,23 +417,21 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdout.trim()).toMatchSnapshot('stdout');
-      expect(stderr.trim()).toMatchSnapshot('stderr');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
   });
 
   it('should logging an warning', (done) => {
-    const runner = `${__dirname}/helpers/runner.js`;
-
     let proc;
 
     try {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.warning.config',
+          WEBPACK_CONFIG: 'webpack.warning.config',
         },
       });
     } catch (error) {
@@ -444,7 +444,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
 
-      if (/warning/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
@@ -455,23 +455,21 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdout.trim()).toMatchSnapshot('stdout');
-      expect(stderr.trim()).toMatchSnapshot('stderr');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
   });
 
   it('should logging warnings in multi-compiler mode', (done) => {
-    const runner = `${__dirname}/helpers/runner.js`;
-
     let proc;
 
     try {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.array.warning.config',
+          WEBPACK_CONFIG: 'webpack.array.warning.config',
         },
       });
     } catch (error) {
@@ -484,7 +482,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
 
-      if (/warning/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
@@ -495,23 +493,21 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdout.trim()).toMatchSnapshot('stdout');
-      expect(stderr.trim()).toMatchSnapshot('stderr');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
   });
 
   it('should logging in multi-compiler and respect the "stats" option from configuration', (done) => {
-    const runner = `${__dirname}/helpers/runner.js`;
-
     let proc;
 
     try {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.array.one-error-one-warning-one-success',
+          WEBPACK_CONFIG: 'webpack.array.one-error-one-warning-one-success',
         },
       });
     } catch (error) {
@@ -524,7 +520,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
 
-      if (!/error/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
@@ -535,23 +531,22 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdout.trim()).toMatchSnapshot('stdout');
-      expect(stderr.trim()).toMatchSnapshot('stderr');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
   });
 
   it('should logging in multi-compiler and respect the "stats" option from configuration #2', (done) => {
-    const runner = `${__dirname}/helpers/runner.js`;
-
     let proc;
 
     try {
       proc = execa(runner, [], {
         stdio: 'pipe',
         env: {
-          WC: 'webpack.array.one-error-one-warning-one-success-with-names',
+          WEBPACK_CONFIG:
+            'webpack.array.one-error-one-warning-one-success-with-names',
         },
       });
     } catch (error) {
@@ -564,7 +559,7 @@ describe('logging', () => {
     proc.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
 
-      if (!/error/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(stdout)) {
         proc.stdin.write('|exit|');
       }
     });
@@ -575,16 +570,14 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdout.trim()).toMatchSnapshot('stdout');
-      expect(stderr.trim()).toMatchSnapshot('stderr');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
   });
 
   it('should logging an error in "watch" method', (done) => {
-    const runner = `${__dirname}/helpers/runner.js`;
-
     let proc;
 
     try {
@@ -607,7 +600,7 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(extractErrorEntry(stderr)).toMatchSnapshot('error');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
       done();
     });
@@ -617,7 +610,6 @@ describe('logging', () => {
     it('should logging an error from the fs error when the "writeToDisk" option is "true"', async (done) => {
       // eslint-disable-next-line global-require
       const clearDirectory = require('./helpers/clearDirectory').default;
-      const runner = `${__dirname}/helpers/runner.js`;
       const outputDir = path.resolve(
         __dirname,
         './outputs/write-to-disk-mkdir-error'
@@ -635,7 +627,7 @@ describe('logging', () => {
         proc = execa(runner, [], {
           stdio: 'pipe',
           env: {
-            WC: 'webpack.simple.config',
+            WEBPACK_CONFIG: 'webpack.simple.config',
             WCF_output_filename: 'bundle.js',
             WCF_output_path: outputDir,
             WCF_infrastructureLogging_level: 'log',

@@ -17,8 +17,8 @@ fillConfigEntries('WMC_', configMiddlewareEntries);
 const config = createConfig(configEntries);
 const unionConfig =
   Object.keys(config).length > 0
-    ? merge(getWebpackConfig(process.env.WC), config)
-    : getWebpackConfig(process.env.WC);
+    ? merge(getWebpackConfig(process.env.WEBPACK_CONFIG), config)
+    : getWebpackConfig(process.env.WEBPACK_CONFIG);
 const configMiddleware = createConfig(configMiddlewareEntries);
 const compiler = webpack(unionConfig || defaultConfig);
 let instance;
@@ -31,6 +31,10 @@ if (process.env.WATCH_break) {
     throw error;
   };
 }
+
+compiler.hooks.done.tap('plugin-test', () => {
+  process.stdout.write('compiled-for-tests');
+});
 
 try {
   instance = middleware(compiler, configMiddleware);

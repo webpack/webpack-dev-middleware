@@ -22,5 +22,5 @@ module.exports = {
     infrastructureLogging: {
         level: 'none'
     },
-    stats: { all: false, entrypoints: true }
+    stats: { all: false, assets: true }
 };

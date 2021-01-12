@@ -2,6 +2,9 @@ import middleware from '../src';
 
 import getCompiler from './helpers/getCompiler';
 
+// Suppress unnecessary stats output
+global.process.stdout.write = jest.fn();
+
 describe('validation', () => {
   const cases = {
     mimeTypes: {
