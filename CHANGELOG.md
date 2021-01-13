@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.4](https://github.com/webpack/webpack-dev-middleware/compare/v4.0.3...v4.0.4) (2021-01-13)
+
+
+### Bug Fixes
+
+* compatibility with webpack@4 ([#816](https://github.com/webpack/webpack-dev-middleware/issues/816)) ([acdfd4d](https://github.com/webpack/webpack-dev-middleware/commit/acdfd4d8b671ba98b601ea4d53c7dccea3270e73))
+
 ### [4.0.3](https://github.com/webpack/webpack-dev-middleware/compare/v4.0.1...v4.0.3) (2021-01-12)
 
 
