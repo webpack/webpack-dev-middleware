@@ -14,6 +14,25 @@ export default function setupHooks(context) {
     context.stats = undefined;
   }
 
+  const statsForWebpack4 = webpack.Stats && webpack.Stats.presetToOptions;
+
+  function normalizeStatsOptions(statsOptions) {
+    if (statsForWebpack4) {
+      if (typeof statsOptions === 'undefined') {
+        // eslint-disable-next-line no-param-reassign
+        statsOptions = {};
+      } else if (
+        typeof statsOptions === 'boolean' ||
+        typeof statsOptions === 'string'
+      ) {
+        // eslint-disable-next-line no-param-reassign
+        statsOptions = webpack.Stats.presetToOptions(statsOptions);
+      }
+    }
+
+    return statsOptions;
+  }
+
   function done(stats) {
     // We are now on valid state
     // eslint-disable-next-line no-param-reassign
@@ -33,28 +52,14 @@ export default function setupHooks(context) {
       logger.log('Compilation finished');
 
       let statsOptions = compiler.compilers
-        ? {
-            children: compiler.compilers.map((child) =>
-              // eslint-disable-next-line no-undefined
-              child.options ? child.options.stats : undefined
-            ),
-          }
-        : compiler.options
-        ? compiler.options.stats
-        : // eslint-disable-next-line no-undefined
-          undefined;
-
-      const statsForWebpack4 = webpack.Stats && webpack.Stats.presetToOptions;
+        ? { children: compiler.compilers.map((child) => child.options.stats) }
+        : compiler.options.stats;
 
       if (compiler.compilers) {
         statsOptions.children = statsOptions.children.map(
           (childStatsOptions) => {
-            if (statsForWebpack4) {
-              // eslint-disable-next-line no-param-reassign
-              childStatsOptions = webpack.Stats.presetToOptions(
-                childStatsOptions
-              );
-            }
+            // eslint-disable-next-line no-param-reassign
+            childStatsOptions = normalizeStatsOptions(childStatsOptions);
 
             if (typeof childStatsOptions.colors === 'undefined') {
               // eslint-disable-next-line no-param-reassign
@@ -64,15 +69,12 @@ export default function setupHooks(context) {
             return childStatsOptions;
           }
         );
-      } else if (
-        typeof statsOptions.colors === 'undefined' ||
-        typeof statsOptions === 'string'
-      ) {
-        if (statsForWebpack4) {
-          statsOptions = webpack.Stats.presetToOptions(statsOptions);
-        }
+      } else {
+        statsOptions = normalizeStatsOptions(statsOptions);
 
-        statsOptions.colors = Boolean(colorette.options.enabled);
+        if (typeof statsOptions.colors === 'undefined') {
+          statsOptions.colors = Boolean(colorette.options.enabled);
+        }
       }
 
       // TODO webpack@4 doesn't support `{ children: [{ colors: true }, { colors: true }] }` for stats

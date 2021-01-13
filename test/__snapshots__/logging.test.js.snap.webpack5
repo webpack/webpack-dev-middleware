@@ -204,6 +204,20 @@ asset bundle.js x bytes [emitted] (name: main)
 webpack x.x.x compiled successfully in x ms"
 `;
 
+exports[`logging should logging on successfully build when the 'stats' doesn't exist: stderr 1`] = `""`;
+
+exports[`logging should logging on successfully build when the 'stats' doesn't exist: stdout 1`] = `
+"asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
+asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
+runtime modules x KiB x modules
+cacheable modules x bytes
+  ./foo.js x bytes [built] [code generated]
+  ./svg.svg x bytes [built] [code generated]
+  ./index.html x bytes [built] [code generated]
+webpack x.x.x compiled successfully in x ms"
+`;
+
 exports[`logging should logging on successfully build: stderr 1`] = `""`;
 
 exports[`logging should logging on successfully build: stdout 1`] = `

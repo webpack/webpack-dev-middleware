@@ -132,18 +132,10 @@ Entrypoint main = bundle.js
 exports[`logging should logging on successfully build and respect the "stats" option from configuration with custom object value: stderr 1`] = `""`;
 
 exports[`logging should logging on successfully build and respect the "stats" option from configuration with custom object value: stdout 1`] = `
-"Hash: xxxx
-Version: webpack x.x.x
-Time: Xms
-Built at: x
-     Asset      Size  Chunks             Chunk Names
+"     Asset      Size  Chunks             Chunk Names
  bundle.js  x KiB    main  [emitted]  main
 index.html  x bytes          [emitted]  
-   svg.svg x KiB [emitted]
-Entrypoint main = bundle.js
-[./foo.js] x bytes {main} [built]
-[./index.html] x bytes {main} [built]
-[./svg.svg] x bytes {main} [built]"
+   svg.svg  x KiB          [emitted]"
 `;
 
 exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "false" value: stderr 1`] = `""`;
@@ -226,6 +218,23 @@ Child
     bundle.js  x KiB    main  [emitted]  main
     Entrypoint main = bundle.js
     [./bar.js] x bytes {main} [built]"
+`;
+
+exports[`logging should logging on successfully build when the 'stats' doesn't exist: stderr 1`] = `""`;
+
+exports[`logging should logging on successfully build when the 'stats' doesn't exist: stdout 1`] = `
+"Hash: xxxx
+Version: webpack x.x.x
+Time: Xms
+Built at: x
+     Asset      Size  Chunks             Chunk Names
+ bundle.js  x KiB    main  [emitted]  main
+index.html  x bytes          [emitted]  
+   svg.svg x KiB [emitted]
+Entrypoint main = bundle.js
+[./foo.js] x bytes {main} [built]
+[./index.html] x bytes {main} [built]
+[./svg.svg] x bytes {main} [built]"
 `;
 
 exports[`logging should logging on successfully build: stderr 1`] = `""`;
