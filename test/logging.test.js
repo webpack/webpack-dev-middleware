@@ -43,10 +43,9 @@ function stdoutToSnapshot(stdout) {
   cleanedStdout = cleanedStdout.replace(/Time: \d+ms/g, 'Time: Xms');
   cleanedStdout = cleanedStdout.replace(/Built at: .+/g, 'Built at: x');
   cleanedStdout = cleanedStdout.replace(/LOG from .+$/s, 'LOG from xxx');
-  cleanedStdout = cleanedStdout.replace(
-    / {3}([a-z]+)\.([a-z]+) +x KiB +\[emitted] +/s,
-    '   $1.$2 x KiB [emitted]'
-  );
+  cleanedStdout = cleanedStdout.replace(/  +/g, ' ');
+  cleanedStdout = cleanedStdout.replace(/^ +/gm, '');
+  cleanedStdout = cleanedStdout.replace(/ +$/gm, '');
 
   return cleanedStdout;
 }
@@ -179,6 +178,46 @@ describe('logging', () => {
 
     proc.on('exit', () => {
       expect(stdout).not.toContain('\u001b[1m');
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
+
+      done();
+    });
+  });
+
+  it("should logging on successfully build when the 'stats' doesn't exist", (done) => {
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: 'pipe',
+        env: {
+          WEBPACK_CONFIG: 'webpack.no-stats.config.js',
+          FORCE_COLOR: true,
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      if (/compiled-for-tests/gi.test(stdout)) {
+        proc.stdin.write('|exit|');
+      }
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write('|exit|');
+    });
+
+    proc.on('exit', () => {
+      expect(stdout).toContain('\u001b[1m');
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
       expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
@@ -384,6 +423,7 @@ describe('logging', () => {
         stdio: 'pipe',
         env: {
           WEBPACK_CONFIG: 'webpack.stats-object.config',
+          FORCE_COLOR: true,
         },
       });
     } catch (error) {
@@ -407,6 +447,7 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
+      expect(stdout).toContain('\u001b[1m');
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
       expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
@@ -653,6 +694,82 @@ describe('logging', () => {
         env: {
           WEBPACK_CONFIG:
             'webpack.array.one-error-one-warning-one-success-with-names',
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      if (/compiled-for-tests/gi.test(stdout)) {
+        proc.stdin.write('|exit|');
+      }
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write('|exit|');
+    });
+
+    proc.on('exit', () => {
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
+
+      done();
+    });
+  });
+
+  it('should logging in multi-compiler and respect the "stats" option from configuration #3', (done) => {
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: 'pipe',
+        env: {
+          WEBPACK_CONFIG: 'webpack.array.one-error-one-warning-one-no',
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      if (/compiled-for-tests/gi.test(stdout)) {
+        proc.stdin.write('|exit|');
+      }
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write('|exit|');
+    });
+
+    proc.on('exit', () => {
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
+
+      done();
+    });
+  });
+
+  it('should logging in multi-compiler and respect the "stats" option from configuration #3', (done) => {
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: 'pipe',
+        env: {
+          WEBPACK_CONFIG: 'webpack.array.one-error-one-warning-one-object',
         },
       });
     } catch (error) {

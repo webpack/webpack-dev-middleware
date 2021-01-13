@@ -14,35 +14,93 @@ exports[`logging should logging in multi-compiler and respect the "stats" option
 
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #2: stdout 1`] = `
 "broken:
-  asset bundle.js x bytes [emitted] (name: main)
-  ./broken.js x bytes [built] [code generated] [1 error]
+asset bundle.js x bytes [emitted] (name: main)
+./broken.js x bytes [built] [code generated] [1 error]
 
-  ERROR in ./broken.js 1:3
-  Module parse failed: Unexpected token (1:3)
-  You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-  > 1()2()3()
-  |
+ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|
 
-  broken (webpack x.x.x) compiled with 1 error in x ms
+broken (webpack x.x.x) compiled with 1 error in x ms
 
 warning:
-  asset bundle.js x bytes [emitted] (name: main)
-  ./warning.js x bytes [built] [code generated]
+asset bundle.js x bytes [emitted] (name: main)
+./warning.js x bytes [built] [code generated]
 
-  WARNING in Warning
+WARNING in Warning
 
-  warning (webpack x.x.x) compiled with 1 warning in x ms
+warning (webpack x.x.x) compiled with 1 warning in x ms
 
 success:
-  asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
-  asset bundle.js x KiB [emitted] (name: main)
-  asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-  runtime modules x bytes x modules
-  cacheable modules x bytes
-    ./foo.js x bytes [built] [code generated]
-    ./svg.svg x bytes [built] [code generated]
-    ./index.html x bytes [built] [code generated]
-  success (webpack x.x.x) compiled successfully in x ms"
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
+asset bundle.js x KiB [emitted] (name: main)
+asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
+runtime modules x bytes x modules
+cacheable modules x bytes
+./foo.js x bytes [built] [code generated]
+./svg.svg x bytes [built] [code generated]
+./index.html x bytes [built] [code generated]
+success (webpack x.x.x) compiled successfully in x ms"
+`;
+
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stderr 1`] = `""`;
+
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stderr 2`] = `""`;
+
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stdout 1`] = `
+"asset bundle.js x bytes [emitted] (name: main)
+./broken.js x bytes [built] [code generated] [1 error]
+
+ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|
+
+webpack x.x.x compiled with 1 error in x ms
+
+asset bundle.js x bytes [emitted] (name: main)
+./warning.js x bytes [built] [code generated]
+
+WARNING in Warning
+
+webpack x.x.x compiled with 1 warning in x ms
+
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
+asset bundle.js x KiB [emitted] (name: main)
+asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
+runtime modules x bytes x modules
+cacheable modules x bytes
+./foo.js x bytes [built] [code generated]
+./svg.svg x bytes [built] [code generated]
+./index.html x bytes [built] [code generated]
+webpack x.x.x compiled successfully in x ms"
+`;
+
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stdout 2`] = `
+"asset bundle.js x bytes [emitted] (name: main)
+./broken.js x bytes [built] [code generated] [1 error]
+
+ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|
+
+webpack x.x.x compiled with 1 error in x ms
+
+asset bundle.js x bytes [emitted] (name: main)
+./warning.js x bytes [built] [code generated]
+
+WARNING in Warning
+
+webpack x.x.x compiled with 1 warning in x ms
+
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
+asset bundle.js x KiB [emitted] (name: main)
+asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)"
 `;
 
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration: stderr 1`] = `""`;
@@ -71,9 +129,9 @@ asset bundle.js x KiB [emitted] (name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
 runtime modules x bytes x modules
 cacheable modules x bytes
-  ./foo.js x bytes [built] [code generated]
-  ./svg.svg x bytes [built] [code generated]
-  ./index.html x bytes [built] [code generated]
+./foo.js x bytes [built] [code generated]
+./svg.svg x bytes [built] [code generated]
+./index.html x bytes [built] [code generated]
 webpack x.x.x compiled successfully in x ms"
 `;
 
@@ -85,9 +143,9 @@ asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
 runtime modules x KiB x modules
 cacheable modules x bytes
-  ./foo.js x bytes [built] [code generated]
-  ./svg.svg x bytes [built] [code generated]
-  ./index.html x bytes [built] [code generated]
+./foo.js x bytes [built] [code generated]
+./svg.svg x bytes [built] [code generated]
+./index.html x bytes [built] [code generated]
 webpack x.x.x compiled successfully in x ms"
 `;
 
@@ -99,9 +157,9 @@ asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
 runtime modules x KiB x modules
 cacheable modules x bytes
-  ./foo.js x bytes [built] [code generated]
-  ./svg.svg x bytes [built] [code generated]
-  ./index.html x bytes [built] [code generated]
+./foo.js x bytes [built] [code generated]
+./svg.svg x bytes [built] [code generated]
+./index.html x bytes [built] [code generated]
 webpack x.x.x compiled successfully in x ms"
 `;
 
@@ -137,9 +195,9 @@ asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
 runtime modules x KiB x modules
 cacheable modules x bytes
-  ./foo.js x bytes [built] [code generated]
-  ./svg.svg x bytes [built] [code generated]
-  ./index.html x bytes [built] [code generated]
+./foo.js x bytes [built] [code generated]
+./svg.svg x bytes [built] [code generated]
+./index.html x bytes [built] [code generated]
 webpack x.x.x compiled successfully in x ms"
 `;
 
@@ -152,36 +210,36 @@ asset svg.svg x KiB ({main}) [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes ({main}) [emitted] [from: index.html] (auxiliary name: main)
 Entrypoint main x KiB (x KiB) = bundle.js 2 auxiliary assets
 chunk {main} (runtime: main) bundle.js (xxxx) x bytes (xxxx) x KiB (xxxx) [entry] [rendered]
-  > ./foo.js main
-  runtime modules x KiB
-    webpack/runtime/define property getters x bytes {main} [code generated]
-      [no exports]
-      [used exports unknown]
-    webpack/runtime/global x bytes {main} [code generated]
-      [no exports]
-      [used exports unknown]
-    webpack/runtime/hasOwnProperty shorthand x bytes {main} [code generated]
-      [no exports]
-      [used exports unknown]
-    webpack/runtime/make namespace object x bytes {main} [code generated]
-      [no exports]
-      [used exports unknown]
-    webpack/runtime/publicPath x bytes {main} [code generated]
-      [no exports]
-      [used exports unknown]
-  cacheable modules x bytes
-    ./foo.js x bytes {main} [depth 0] [built] [code generated]
-      [used exports unknown]
-      entry ./foo.js main
-    ./index.html x bytes {main} [depth 1] [dependent] [built] [code generated]
-      [exports: default]
-      [used exports unknown]
-      cjs require ./index.html [./foo.js] 4:0-23
-    ./svg.svg x bytes {main} [depth 1] [dependent] [built] [code generated]
-      [exports: default]
-      [used exports unknown]
-      cjs require ./svg.svg [./foo.js] 3:0-20
-  
+> ./foo.js main
+runtime modules x KiB
+webpack/runtime/define property getters x bytes {main} [code generated]
+[no exports]
+[used exports unknown]
+webpack/runtime/global x bytes {main} [code generated]
+[no exports]
+[used exports unknown]
+webpack/runtime/hasOwnProperty shorthand x bytes {main} [code generated]
+[no exports]
+[used exports unknown]
+webpack/runtime/make namespace object x bytes {main} [code generated]
+[no exports]
+[used exports unknown]
+webpack/runtime/publicPath x bytes {main} [code generated]
+[no exports]
+[used exports unknown]
+cacheable modules x bytes
+./foo.js x bytes {main} [depth 0] [built] [code generated]
+[used exports unknown]
+entry ./foo.js main
+./index.html x bytes {main} [depth 1] [dependent] [built] [code generated]
+[exports: default]
+[used exports unknown]
+cjs require ./index.html [./foo.js] 4:0-23
+./svg.svg x bytes {main} [depth 1] [dependent] [built] [code generated]
+[exports: default]
+[used exports unknown]
+cjs require ./svg.svg [./foo.js] 3:0-20
+
 
 LOG from xxx"
 `;
@@ -194,13 +252,27 @@ asset bundle.js x KiB [emitted] (name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
 runtime modules x bytes x modules
 cacheable modules x bytes
-  ./foo.js x bytes [built] [code generated]
-  ./svg.svg x bytes [built] [code generated]
-  ./index.html x bytes [built] [code generated]
+./foo.js x bytes [built] [code generated]
+./svg.svg x bytes [built] [code generated]
+./index.html x bytes [built] [code generated]
 webpack x.x.x compiled successfully in x ms
 
 asset bundle.js x bytes [emitted] (name: main)
 ./bar.js x bytes [built] [code generated]
+webpack x.x.x compiled successfully in x ms"
+`;
+
+exports[`logging should logging on successfully build when the 'stats' doesn't exist: stderr 1`] = `""`;
+
+exports[`logging should logging on successfully build when the 'stats' doesn't exist: stdout 1`] = `
+"asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
+asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
+runtime modules x KiB x modules
+cacheable modules x bytes
+./foo.js x bytes [built] [code generated]
+./svg.svg x bytes [built] [code generated]
+./index.html x bytes [built] [code generated]
 webpack x.x.x compiled successfully in x ms"
 `;
 
@@ -212,9 +284,9 @@ asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
 runtime modules x KiB x modules
 cacheable modules x bytes
-  ./foo.js x bytes [built] [code generated]
-  ./svg.svg x bytes [built] [code generated]
-  ./index.html x bytes [built] [code generated]
+./foo.js x bytes [built] [code generated]
+./svg.svg x bytes [built] [code generated]
+./index.html x bytes [built] [code generated]
 webpack x.x.x compiled successfully in x ms"
 `;
 
