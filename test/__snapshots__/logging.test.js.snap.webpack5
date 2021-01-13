@@ -45,6 +45,38 @@ success:
   success (webpack x.x.x) compiled successfully in x ms"
 `;
 
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stderr 1`] = `""`;
+
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stdout 1`] = `
+"asset bundle.js x bytes [emitted] (name: main)
+./broken.js x bytes [built] [code generated] [1 error]
+
+ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|
+
+webpack x.x.x compiled with 1 error in x ms
+
+asset bundle.js x bytes [emitted] (name: main)
+./warning.js x bytes [built] [code generated]
+
+WARNING in Warning
+
+webpack x.x.x compiled with 1 warning in x ms
+
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
+asset bundle.js x KiB [emitted] (name: main)
+asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
+runtime modules x bytes x modules
+cacheable modules x bytes
+  ./foo.js x bytes [built] [code generated]
+  ./svg.svg x bytes [built] [code generated]
+  ./index.html x bytes [built] [code generated]
+webpack x.x.x compiled successfully in x ms"
+`;
+
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration: stderr 1`] = `""`;
 
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration: stdout 1`] = `
