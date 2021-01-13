@@ -15,41 +15,41 @@ exports[`logging should logging in multi-compiler and respect the "stats" option
 "Hash: xxxx
 Version: webpack x.x.x
 Child broken:
-    Hash: xxxx
-    Time: Xms
-    Built at: x
-        Asset      Size  Chunks             Chunk Names
-    bundle.js  x KiB    main  [emitted]  main
-    Entrypoint main = bundle.js
-    [./broken.js] x bytes {main} [built] [failed] [1 error]
-    
-    ERROR in ./broken.js 1:3
-    Module parse failed: Unexpected token (1:3)
-    You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-    > 1()2()3()
-    |
+Hash: xxxx
+Time: Xms
+Built at: x
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+Entrypoint main = bundle.js
+[./broken.js] x bytes {main} [built] [failed] [1 error]
+
+ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|
 Child warning:
-    Hash: xxxx
-    Time: Xms
-    Built at: x
-        Asset      Size  Chunks             Chunk Names
-    bundle.js  x KiB    main  [emitted]  main
-    Entrypoint main = bundle.js
-    [./warning.js] x bytes {main} [built]
-    
-    WARNING in Warning
+Hash: xxxx
+Time: Xms
+Built at: x
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+Entrypoint main = bundle.js
+[./warning.js] x bytes {main} [built]
+
+WARNING in Warning
 Child success:
-    Hash: xxxx
-    Time: Xms
-    Built at: x
-         Asset      Size  Chunks             Chunk Names
-     bundle.js  x KiB    main  [emitted]  main
-    index.html  x bytes          [emitted]  
-       svg.svg x KiB [emitted]
-    Entrypoint main = bundle.js
-    [./foo.js] x bytes {main} [built]
-    [./index.html] x bytes {main} [built]
-    [./svg.svg] x bytes {main} [built]"
+Hash: xxxx
+Time: Xms
+Built at: x
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+index.html x bytes [emitted]
+svg.svg x KiB [emitted]
+Entrypoint main = bundle.js
+[./foo.js] x bytes {main} [built]
+[./index.html] x bytes {main} [built]
+[./svg.svg] x bytes {main} [built]"
 `;
 
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stderr 1`] = `""`;
@@ -58,41 +58,41 @@ exports[`logging should logging in multi-compiler and respect the "stats" option
 "Hash: xxxx
 Version: webpack x.x.x
 Child
-    Hash: xxxx
-    Time: Xms
-    Built at: x
-        Asset      Size  Chunks             Chunk Names
-    bundle.js  x KiB    main  [emitted]  main
-    Entrypoint main = bundle.js
-    [./broken.js] x bytes {main} [built] [failed] [1 error]
-    
-    ERROR in ./broken.js 1:3
-    Module parse failed: Unexpected token (1:3)
-    You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-    > 1()2()3()
-    |
+Hash: xxxx
+Time: Xms
+Built at: x
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+Entrypoint main = bundle.js
+[./broken.js] x bytes {main} [built] [failed] [1 error]
+
+ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|
 Child
-    Hash: xxxx
-    Time: Xms
-    Built at: x
-        Asset      Size  Chunks             Chunk Names
-    bundle.js  x KiB    main  [emitted]  main
-    Entrypoint main = bundle.js
-    [./warning.js] x bytes {main} [built]
-    
-    WARNING in Warning
+Hash: xxxx
+Time: Xms
+Built at: x
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+Entrypoint main = bundle.js
+[./warning.js] x bytes {main} [built]
+
+WARNING in Warning
 Child
-    Hash: xxxx
-    Time: Xms
-    Built at: x
-         Asset      Size  Chunks             Chunk Names
-     bundle.js  x KiB    main  [emitted]  main
-    index.html  x bytes          [emitted]  
-       svg.svg x KiB [emitted]
-    Entrypoint main = bundle.js
-    [./foo.js] x bytes {main} [built]
-    [./index.html] x bytes {main} [built]
-    [./svg.svg] x bytes {main} [built]"
+Hash: xxxx
+Time: Xms
+Built at: x
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+index.html x bytes [emitted]
+svg.svg x KiB [emitted]
+Entrypoint main = bundle.js
+[./foo.js] x bytes {main} [built]
+[./index.html] x bytes {main} [built]
+[./svg.svg] x bytes {main} [built]"
 `;
 
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration: stderr 1`] = `""`;
@@ -101,41 +101,41 @@ exports[`logging should logging in multi-compiler and respect the "stats" option
 "Hash: xxxx
 Version: webpack x.x.x
 Child
-    Hash: xxxx
-    Time: Xms
-    Built at: x
-        Asset      Size  Chunks             Chunk Names
-    bundle.js  x KiB    main  [emitted]  main
-    Entrypoint main = bundle.js
-    [./broken.js] x bytes {main} [built] [failed] [1 error]
-    
-    ERROR in ./broken.js 1:3
-    Module parse failed: Unexpected token (1:3)
-    You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-    > 1()2()3()
-    |
+Hash: xxxx
+Time: Xms
+Built at: x
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+Entrypoint main = bundle.js
+[./broken.js] x bytes {main} [built] [failed] [1 error]
+
+ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|
 Child
-    Hash: xxxx
-    Time: Xms
-    Built at: x
-        Asset      Size  Chunks             Chunk Names
-    bundle.js  x KiB    main  [emitted]  main
-    Entrypoint main = bundle.js
-    [./warning.js] x bytes {main} [built]
-    
-    WARNING in Warning
+Hash: xxxx
+Time: Xms
+Built at: x
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+Entrypoint main = bundle.js
+[./warning.js] x bytes {main} [built]
+
+WARNING in Warning
 Child
-    Hash: xxxx
-    Time: Xms
-    Built at: x
-         Asset      Size  Chunks             Chunk Names
-     bundle.js  x KiB    main  [emitted]  main
-    index.html  x bytes          [emitted]  
-       svg.svg x KiB [emitted]
-    Entrypoint main = bundle.js
-    [./foo.js] x bytes {main} [built]
-    [./index.html] x bytes {main} [built]
-    [./svg.svg] x bytes {main} [built]"
+Hash: xxxx
+Time: Xms
+Built at: x
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+index.html x bytes [emitted]
+svg.svg x KiB [emitted]
+Entrypoint main = bundle.js
+[./foo.js] x bytes {main} [built]
+[./index.html] x bytes {main} [built]
+[./svg.svg] x bytes {main} [built]"
 `;
 
 exports[`logging should logging on successfully build and respect colors #2: stderr 1`] = `""`;
@@ -145,10 +145,10 @@ exports[`logging should logging on successfully build and respect colors #2: std
 Version: webpack x.x.x
 Time: Xms
 Built at: x
-     Asset      Size  Chunks             Chunk Names
- bundle.js  x KiB    main  [emitted]  main
-index.html  x bytes          [emitted]  
-   svg.svg x KiB [emitted]
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+index.html x bytes [emitted]
+svg.svg x KiB [emitted]
 Entrypoint main = bundle.js
 [./foo.js] x bytes {main} [built]
 [./index.html] x bytes {main} [built]
@@ -162,10 +162,10 @@ exports[`logging should logging on successfully build and respect colors: stdout
 Version: webpack x.x.x
 Time: Xms
 Built at: x
-     Asset      Size  Chunks             Chunk Names
- bundle.js  x KiB    main  [emitted]  main
-index.html  x bytes          [emitted]  
-   svg.svg x KiB [emitted]
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+index.html x bytes [emitted]
+svg.svg x KiB [emitted]
 Entrypoint main = bundle.js
 [./foo.js] x bytes {main} [built]
 [./index.html] x bytes {main} [built]
@@ -175,10 +175,10 @@ Entrypoint main = bundle.js
 exports[`logging should logging on successfully build and respect the "stats" option from configuration with custom object value: stderr 1`] = `""`;
 
 exports[`logging should logging on successfully build and respect the "stats" option from configuration with custom object value: stdout 1`] = `
-"     Asset      Size  Chunks             Chunk Names
- bundle.js  x KiB    main  [emitted]  main
-index.html  x bytes          [emitted]  
-   svg.svg  x KiB          [emitted]"
+"Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+index.html x bytes [emitted]
+svg.svg x KiB [emitted]"
 `;
 
 exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "false" value: stderr 1`] = `""`;
@@ -187,7 +187,7 @@ exports[`logging should logging on successfully build and respect the "stats" op
 
 exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "minimal" value: stderr 1`] = `""`;
 
-exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "minimal" value: stdout 1`] = `"   x modules"`;
+exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "minimal" value: stdout 1`] = `"x modules"`;
 
 exports[`logging should logging on successfully build and respect the "stats" option from configuration with the "none" value: stderr 1`] = `""`;
 
@@ -200,10 +200,10 @@ exports[`logging should logging on successfully build and respect the "stats" op
 Version: webpack x.x.x
 Time: Xms
 Built at: x
-     Asset      Size  Chunks             Chunk Names
- bundle.js  x KiB    main  [emitted]  main
-index.html  x bytes          [emitted]  
-   svg.svg x KiB [emitted]
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+index.html x bytes [emitted]
+svg.svg x KiB [emitted]
 Entrypoint main = bundle.js
 [./foo.js] x bytes {main} [built]
 [./index.html] x bytes {main} [built]
@@ -217,21 +217,21 @@ exports[`logging should logging on successfully build and respect the "stats" op
 Version: webpack x.x.x
 Time: Xms
 Built at: x
-     Asset      Size  Chunks             Chunk Names
- bundle.js  x KiB    main  [emitted]  main
-index.html  x bytes          [emitted]  
-   svg.svg x KiB [emitted]
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+index.html x bytes [emitted]
+svg.svg x KiB [emitted]
 Entrypoint main = bundle.js
 chunk {main} bundle.js (xxxx) x bytes [entry] [rendered]
-    > ./foo.js main
- [./foo.js] x bytes {main} [depth 0] [built]
-     single entry ./foo.js  main
- [./index.html] x bytes {main} [depth 1] [built]
-     [exports: default]
-     cjs require ./index.html [./foo.js] 4:0-23
- [./svg.svg] x bytes {main} [depth 1] [built]
-     [exports: default]
-     cjs require ./svg.svg [./foo.js] 3:0-20
+> ./foo.js main
+[./foo.js] x bytes {main} [depth 0] [built]
+single entry ./foo.js main
+[./index.html] x bytes {main} [depth 1] [built]
+[exports: default]
+cjs require ./index.html [./foo.js] 4:0-23
+[./svg.svg] x bytes {main} [depth 1] [built]
+[exports: default]
+cjs require ./svg.svg [./foo.js] 3:0-20
 
 LOG from xxx"
 `;
@@ -242,25 +242,25 @@ exports[`logging should logging on successfully build in multi-compiler mode: st
 "Hash: xxxx
 Version: webpack x.x.x
 Child
-    Hash: xxxx
-    Time: Xms
-    Built at: x
-         Asset      Size  Chunks             Chunk Names
-     bundle.js  x KiB    main  [emitted]  main
-    index.html  x bytes          [emitted]  
-       svg.svg x KiB [emitted]
-    Entrypoint main = bundle.js
-    [./foo.js] x bytes {main} [built]
-    [./index.html] x bytes {main} [built]
-    [./svg.svg] x bytes {main} [built]
+Hash: xxxx
+Time: Xms
+Built at: x
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+index.html x bytes [emitted]
+svg.svg x KiB [emitted]
+Entrypoint main = bundle.js
+[./foo.js] x bytes {main} [built]
+[./index.html] x bytes {main} [built]
+[./svg.svg] x bytes {main} [built]
 Child
-    Hash: xxxx
-    Time: Xms
-    Built at: x
-        Asset      Size  Chunks             Chunk Names
-    bundle.js  x KiB    main  [emitted]  main
-    Entrypoint main = bundle.js
-    [./bar.js] x bytes {main} [built]"
+Hash: xxxx
+Time: Xms
+Built at: x
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+Entrypoint main = bundle.js
+[./bar.js] x bytes {main} [built]"
 `;
 
 exports[`logging should logging on successfully build when the 'stats' doesn't exist: stderr 1`] = `""`;
@@ -270,10 +270,10 @@ exports[`logging should logging on successfully build when the 'stats' doesn't e
 Version: webpack x.x.x
 Time: Xms
 Built at: x
-     Asset      Size  Chunks             Chunk Names
- bundle.js  x KiB    main  [emitted]  main
-index.html  x bytes          [emitted]  
-   svg.svg x KiB [emitted]
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+index.html x bytes [emitted]
+svg.svg x KiB [emitted]
 Entrypoint main = bundle.js
 [./foo.js] x bytes {main} [built]
 [./index.html] x bytes {main} [built]
@@ -287,10 +287,10 @@ exports[`logging should logging on successfully build: stdout 1`] = `
 Version: webpack x.x.x
 Time: Xms
 Built at: x
-     Asset      Size  Chunks             Chunk Names
- bundle.js  x KiB    main  [emitted]  main
-index.html  x bytes          [emitted]  
-   svg.svg x KiB [emitted]
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+index.html x bytes [emitted]
+svg.svg x KiB [emitted]
 Entrypoint main = bundle.js
 [./foo.js] x bytes {main} [built]
 [./index.html] x bytes {main} [built]
@@ -301,19 +301,19 @@ exports[`logging should logging on unsuccessful build in multi-compiler: stderr 
 
 exports[`logging should logging on unsuccessful build in multi-compiler: stdout 1`] = `
 "Child
-    
-    ERROR in ./broken.js 1:3
-    Module parse failed: Unexpected token (1:3)
-    You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-    > 1()2()3()
-    |
+
+ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|
 Child
-    
-    ERROR in ./broken.js 1:3
-    Module parse failed: Unexpected token (1:3)
-    You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-    > 1()2()3()
-    |"
+
+ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|"
 `;
 
 exports[`logging should logging on unsuccessful build: stderr 1`] = `""`;
@@ -331,9 +331,9 @@ exports[`logging should logging warnings in multi-compiler mode: stderr 1`] = `"
 
 exports[`logging should logging warnings in multi-compiler mode: stdout 1`] = `
 "Child
-    
-    WARNING in Warning
+
+WARNING in Warning
 Child
-    
-    WARNING in Warning"
+
+WARNING in Warning"
 `;

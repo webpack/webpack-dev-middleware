@@ -43,10 +43,9 @@ function stdoutToSnapshot(stdout) {
   cleanedStdout = cleanedStdout.replace(/Time: \d+ms/g, 'Time: Xms');
   cleanedStdout = cleanedStdout.replace(/Built at: .+/g, 'Built at: x');
   cleanedStdout = cleanedStdout.replace(/LOG from .+$/s, 'LOG from xxx');
-  cleanedStdout = cleanedStdout.replace(
-    / {3}([a-z]+)\.([a-z]+) +x KiB +\[emitted] +/s,
-    '   $1.$2 x KiB [emitted]'
-  );
+  cleanedStdout = cleanedStdout.replace(/  +/g, ' ');
+  cleanedStdout = cleanedStdout.replace(/^ +/gm, '');
+  cleanedStdout = cleanedStdout.replace(/ +$/gm, '');
 
   return cleanedStdout;
 }
