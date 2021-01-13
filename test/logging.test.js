@@ -762,6 +762,44 @@ describe('logging', () => {
     });
   });
 
+  it('should logging in multi-compiler and respect the "stats" option from configuration #3', (done) => {
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: 'pipe',
+        env: {
+          WEBPACK_CONFIG: 'webpack.array.one-error-one-warning-one-object',
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      if (/compiled-for-tests/gi.test(stdout)) {
+        proc.stdin.write('|exit|');
+      }
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write('|exit|');
+    });
+
+    proc.on('exit', () => {
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
+
+      done();
+    });
+  });
+
   it('should logging an error in "watch" method', (done) => {
     let proc;
 

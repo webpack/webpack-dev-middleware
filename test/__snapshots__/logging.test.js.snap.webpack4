@@ -54,6 +54,8 @@ Entrypoint main = bundle.js
 
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stderr 1`] = `""`;
 
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stderr 2`] = `""`;
+
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stdout 1`] = `
 "Hash: xxxx
 Version: webpack x.x.x
@@ -93,6 +95,40 @@ Entrypoint main = bundle.js
 [./foo.js] x bytes {main} [built]
 [./index.html] x bytes {main} [built]
 [./svg.svg] x bytes {main} [built]"
+`;
+
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stdout 2`] = `
+"Child
+Hash: xxxx
+Version: webpack x.x.x
+Time: Xms
+Built at: x
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+Entrypoint main = bundle.js
+[./broken.js] x bytes {main} [built] [failed] [1 error]
+
+ERROR in ./broken.js 1:3
+Module parse failed: Unexpected token (1:3)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> 1()2()3()
+|
+Child
+Hash: xxxx
+Version: webpack x.x.x
+Time: Xms
+Built at: x
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+Entrypoint main = bundle.js
+[./warning.js] x bytes {main} [built]
+
+WARNING in Warning
+Child
+Asset Size Chunks Chunk Names
+bundle.js x KiB main [emitted] main
+index.html x bytes [emitted]
+svg.svg x KiB [emitted]"
 `;
 
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration: stderr 1`] = `""`;
