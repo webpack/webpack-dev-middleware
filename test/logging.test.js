@@ -295,7 +295,7 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      expect(stdout).toContain('\u001b[1m');
+      // expect(stdout).toContain('\u001b[1m');
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
       expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
 
