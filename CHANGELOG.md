@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.1.0](https://github.com/webpack/webpack-dev-middleware/compare/v4.0.4...v4.1.0) (2021-01-15)
+
+
+### Features
+
+* added the `stats` option ([376cdba](https://github.com/webpack/webpack-dev-middleware/commit/376cdba4b6d3f70414d3d1707f80539b7523e486))
+
 ### [4.0.4](https://github.com/webpack/webpack-dev-middleware/compare/v4.0.3...v4.0.4) (2021-01-13)
 
 
