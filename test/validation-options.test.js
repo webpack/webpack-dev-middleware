@@ -44,6 +44,10 @@ describe('validation', () => {
       success: [true, false, 'foo'],
       failure: [0, {}],
     },
+    stats: {
+      success: [true, false, 'normal', 'verbose', { all: false, assets: true }],
+      failure: [0],
+    },
   };
 
   function stringifyValue(value) {

@@ -96,11 +96,18 @@ Please see the documentation for [`mime-types`](https://github.com/jshttp/mime-t
 ### publicPath
 
 Type: `String`
-Default: `output.publicPath`
+Default: `output.publicPath` (from a configuration)
 
 The public path that the middleware is bound to.
-_Best Practice: use the same `publicPath` defined in your webpack config.
-For more information about `publicPath`, please see [the webpack documentation](https://webpack.js.org/guides/public-path)._
+
+_Best Practice: use the same `publicPath` defined in your webpack config. For more information about `publicPath`, please see [the webpack documentation](https://webpack.js.org/guides/public-path)._
+
+### stats
+
+Type: `Boolean|String|Object`
+Default: `stats` (from a configuration)
+
+Stats options object or preset name.
 
 ### serverSideRender
 

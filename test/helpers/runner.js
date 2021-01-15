@@ -5,7 +5,6 @@ const webpack = require('webpack');
 const merge = require('deepmerge');
 
 const middleware = require('../../dist').default;
-
 const defaultConfig = require('../fixtures/webpack.config');
 
 const configEntries = [];
@@ -35,6 +34,20 @@ if (process.env.WEBPACK_BREAK_WATCH) {
 compiler.hooks.done.tap('plugin-test', () => {
   process.stdout.write('compiled-for-tests');
 });
+
+switch (process.env.WEBPACK_DEV_MIDDLEWARE_STATS) {
+  case 'object':
+    configMiddleware.stats = { all: false, assets: true };
+    break;
+  case 'object_colors_true':
+    configMiddleware.stats = { all: false, assets: true, colors: true };
+    break;
+  case 'object_colors_false':
+    configMiddleware.stats = { all: false, assets: true, colors: false };
+    break;
+  default:
+  // Nothing
+}
 
 try {
   instance = middleware(compiler, configMiddleware);

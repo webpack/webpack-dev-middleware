@@ -20,6 +20,7 @@ describe('setupHooks', () => {
   beforeEach(() => {
     nextTick = jest.spyOn(process, 'nextTick').mockImplementation(() => {});
     context = {
+      options: {},
       compiler: {
         hooks: {
           watchRun: {

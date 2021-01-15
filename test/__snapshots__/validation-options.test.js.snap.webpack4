@@ -77,6 +77,19 @@ exports[`validation should throw an error on the "serverSideRender" option with 
    -> Instructs the module to enable or disable the server-side rendering mode."
 `;
 
+exports[`validation should throw an error on the "stats" option with "0" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.stats should be one of these:
+   \\"none\\" | \\"summary\\" | \\"errors-only\\" | \\"errors-warnings\\" | \\"minimal\\" | \\"normal\\" | \\"detailed\\" | \\"verbose\\" | boolean | object { … }
+   -> Stats options object or preset name.
+   Details:
+    * options.stats should be one of these:
+      \\"none\\" | \\"summary\\" | \\"errors-only\\" | \\"errors-warnings\\" | \\"minimal\\" | \\"normal\\" | \\"detailed\\" | \\"verbose\\"
+    * options.stats should be a boolean.
+    * options.stats should be an object:
+      object { … }"
+`;
+
 exports[`validation should throw an error on the "writeToDisk" option with "{}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.writeToDisk should be one of these:

@@ -28,6 +28,19 @@ export default function setupHooks(context) {
         // eslint-disable-next-line no-param-reassign
         statsOptions = webpack.Stats.presetToOptions(statsOptions);
       }
+
+      return statsOptions;
+    }
+
+    if (typeof statsOptions === 'undefined') {
+      // eslint-disable-next-line no-param-reassign
+      statsOptions = { preset: 'normal' };
+    } else if (typeof statsOptions === 'boolean') {
+      // eslint-disable-next-line no-param-reassign
+      statsOptions = statsOptions ? { preset: 'normal' } : { preset: 'none' };
+    } else if (typeof statsOptions === 'string') {
+      // eslint-disable-next-line no-param-reassign
+      statsOptions = { preset: statsOptions };
     }
 
     return statsOptions;
@@ -42,7 +55,7 @@ export default function setupHooks(context) {
 
     // Do the stuff in nextTick, because bundle may be invalidated if a change happened while compiling
     process.nextTick(() => {
-      const { compiler, logger, state, callbacks } = context;
+      const { compiler, logger, options, state, callbacks } = context;
 
       // Check if still in valid state
       if (!state) {
@@ -51,11 +64,21 @@ export default function setupHooks(context) {
 
       logger.log('Compilation finished');
 
-      let statsOptions = compiler.compilers
-        ? { children: compiler.compilers.map((child) => child.options.stats) }
-        : compiler.options.stats;
+      const isMultiCompilerMode = Boolean(compiler.compilers);
 
-      if (compiler.compilers) {
+      let statsOptions;
+
+      if (typeof options.stats !== 'undefined') {
+        statsOptions = isMultiCompilerMode
+          ? { children: compiler.compilers.map(() => options.stats) }
+          : options.stats;
+      } else {
+        statsOptions = isMultiCompilerMode
+          ? { children: compiler.compilers.map((child) => child.options.stats) }
+          : compiler.options.stats;
+      }
+
+      if (isMultiCompilerMode) {
         statsOptions.children = statsOptions.children.map(
           (childStatsOptions) => {
             // eslint-disable-next-line no-param-reassign

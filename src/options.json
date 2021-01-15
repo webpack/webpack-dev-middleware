@@ -41,6 +41,30 @@
         }
       ]
     },
+    "stats": {
+      "description": "Stats options object or preset name.",
+      "anyOf": [
+        {
+          "enum": [
+            "none",
+            "summary",
+            "errors-only",
+            "errors-warnings",
+            "minimal",
+            "normal",
+            "detailed",
+            "verbose"
+          ]
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object",
+          "additionalProperties": true
+        }
+      ]
+    },
     "serverSideRender": {
       "description": "Instructs the module to enable or disable the server-side rendering mode.",
       "type": "boolean"
