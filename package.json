@@ -13,7 +13,7 @@
     "url": "https://opencollective.com/webpack"
   },
   "engines": {
-    "node": ">= 10.13.0"
+    "node": ">= v10.23.3"
   },
   "scripts": {
     "commitlint": "commitlint --from=master",
@@ -60,7 +60,7 @@
     "deepmerge": "^4.2.2",
     "del": "^6.0.0",
     "del-cli": "^3.0.1",
-    "eslint": "^7.19.0",
+    "eslint": "^7.20.0",
     "eslint-config-prettier": "^7.2.0",
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-prettier": "^3.3.1",
