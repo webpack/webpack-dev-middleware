@@ -15,5 +15,11 @@
       "depTypeList": ["peerDependencies"],
       "enabled": false
     }
-  ]
+  ],
+  "ignoreDeps": ["node"],
+  "force": {
+    "constraints": {
+      "node": ">= 10.23.3"
+    }
+  }
 }
