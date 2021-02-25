@@ -54,7 +54,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         node-version: [10.x, 12.x, 14.x]
         webpack-version: [4, latest]
 
@@ -98,7 +98,7 @@ jobs:
         run: npm i webpack@${{ matrix.webpack-version }}
 
       - name: Run tests for webpack version ${{ matrix.webpack-version }}
-        run: node_modules/.bin/jest test/logging.test.js
+        run: npm run test:coverage -- --ci
 
       - name: Submit coverage data to codecov
         uses: codecov/codecov-action@v1
