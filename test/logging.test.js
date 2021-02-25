@@ -1430,7 +1430,7 @@ describe('logging', () => {
     });
   });
 
-  it('should logging on successfully multi-compiler build using the "stats" option for middleware with object value and no colors', (done) => {
+  it.only('should logging on successfully multi-compiler build using the "stats" option for middleware with object value and no colors', (done) => {
     let proc;
 
     try {
