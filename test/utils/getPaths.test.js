@@ -12,8 +12,8 @@ import getPaths from '../../src/utils/getPaths';
 import getCompiler from '../helpers/getCompiler';
 import listenAndCompile from '../helpers/listenAndCompile';
 import webpackSimpleConfig from '../fixtures/webpack.simple.config';
-// import webpackPublicPathConfig from '../fixtures/webpack.public-path.config';
-// import webpackMultiConfig from '../fixtures/webpack.array.config';
+import webpackPublicPathConfig from '../fixtures/webpack.public-path.config';
+import webpackMultiConfig from '../fixtures/webpack.array.config';
 import isWebpack5 from '../helpers/isWebpack5';
 
 // Suppress unnecessary stats output
@@ -31,30 +31,30 @@ describe('getPaths', () => {
         },
       ],
     },
-    // {
-    //   title: 'publicPath config',
-    //   config: webpackPublicPathConfig,
-    //   expected: [
-    //     {
-    //       outputPath: path.resolve(__dirname, '../outputs/public-path'),
-    //       publicPath: '/public/path/',
-    //     },
-    //   ],
-    // },
-    // {
-    //   title: 'multi config',
-    //   config: webpackMultiConfig,
-    //   expected: [
-    //     {
-    //       outputPath: path.resolve(__dirname, '../outputs/array/js1'),
-    //       publicPath: '/static-one/',
-    //     },
-    //     {
-    //       outputPath: path.resolve(__dirname, '../outputs/array/js2'),
-    //       publicPath: '/static-two/',
-    //     },
-    //   ],
-    // },
+    {
+      title: 'publicPath config',
+      config: webpackPublicPathConfig,
+      expected: [
+        {
+          outputPath: path.resolve(__dirname, '../outputs/public-path'),
+          publicPath: '/public/path/',
+        },
+      ],
+    },
+    {
+      title: 'multi config',
+      config: webpackMultiConfig,
+      expected: [
+        {
+          outputPath: path.resolve(__dirname, '../outputs/array/js1'),
+          publicPath: '/static-one/',
+        },
+        {
+          outputPath: path.resolve(__dirname, '../outputs/array/js2'),
+          publicPath: '/static-two/',
+        },
+      ],
+    },
   ];
 
   configs.forEach((config) => {
