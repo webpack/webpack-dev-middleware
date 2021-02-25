@@ -1,4 +1,5 @@
 module.exports = {
+  testEnvironment: 'node',
   collectCoverage: false,
   coveragePathIgnorePatterns: ['test', '<rootDir>/node_modules'],
   moduleFileExtensions: ['js', 'json'],

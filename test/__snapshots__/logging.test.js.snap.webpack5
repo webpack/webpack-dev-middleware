@@ -14,7 +14,7 @@ exports[`logging should logging in multi-compiler and respect the "stats" option
 
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #2: stdout 1`] = `
 "broken:
-asset bundle.js x bytes [emitted] (name: main)
+asset bundle.js x KiB [emitted] (name: main)
 ./broken.js x bytes [built] [code generated] [1 error]
 
 ERROR in ./broken.js 1:3
@@ -26,7 +26,7 @@ You may need an appropriate loader to handle this file type, currently no loader
 broken (webpack x.x.x) compiled with 1 error in x ms
 
 warning:
-asset bundle.js x bytes [emitted] (name: main)
+asset bundle.js x KiB [emitted] (name: main)
 ./warning.js x bytes [built] [code generated]
 
 WARNING in Warning
@@ -34,8 +34,8 @@ WARNING in Warning
 warning (webpack x.x.x) compiled with 1 warning in x ms
 
 success:
-asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
 runtime modules x bytes x modules
 cacheable modules x bytes
@@ -50,7 +50,7 @@ exports[`logging should logging in multi-compiler and respect the "stats" option
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stderr 2`] = `""`;
 
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stdout 1`] = `
-"asset bundle.js x bytes [emitted] (name: main)
+"asset bundle.js x KiB [emitted] (name: main)
 ./broken.js x bytes [built] [code generated] [1 error]
 
 ERROR in ./broken.js 1:3
@@ -61,15 +61,15 @@ You may need an appropriate loader to handle this file type, currently no loader
 
 webpack x.x.x compiled with 1 error in x ms
 
-asset bundle.js x bytes [emitted] (name: main)
+asset bundle.js x KiB [emitted] (name: main)
 ./warning.js x bytes [built] [code generated]
 
 WARNING in Warning
 
 webpack x.x.x compiled with 1 warning in x ms
 
-asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
 runtime modules x bytes x modules
 cacheable modules x bytes
@@ -80,7 +80,7 @@ webpack x.x.x compiled successfully in x ms"
 `;
 
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stdout 2`] = `
-"asset bundle.js x bytes [emitted] (name: main)
+"asset bundle.js x KiB [emitted] (name: main)
 ./broken.js x bytes [built] [code generated] [1 error]
 
 ERROR in ./broken.js 1:3
@@ -91,22 +91,22 @@ You may need an appropriate loader to handle this file type, currently no loader
 
 webpack x.x.x compiled with 1 error in x ms
 
-asset bundle.js x bytes [emitted] (name: main)
+asset bundle.js x KiB [emitted] (name: main)
 ./warning.js x bytes [built] [code generated]
 
 WARNING in Warning
 
 webpack x.x.x compiled with 1 warning in x ms
 
-asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)"
 `;
 
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration: stderr 1`] = `""`;
 
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration: stdout 1`] = `
-"asset bundle.js x bytes [emitted] (name: main)
+"asset bundle.js x KiB [emitted] (name: main)
 ./broken.js x bytes [built] [code generated] [1 error]
 
 ERROR in ./broken.js 1:3
@@ -117,15 +117,15 @@ You may need an appropriate loader to handle this file type, currently no loader
 
 webpack x.x.x compiled with 1 error in x ms
 
-asset bundle.js x bytes [emitted] (name: main)
+asset bundle.js x KiB [emitted] (name: main)
 ./warning.js x bytes [built] [code generated]
 
 WARNING in Warning
 
 webpack x.x.x compiled with 1 warning in x ms
 
-asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
 runtime modules x bytes x modules
 cacheable modules x bytes
@@ -261,8 +261,8 @@ LOG from xxx"
 exports[`logging should logging on successfully build in multi-compiler mode: stderr 1`] = `""`;
 
 exports[`logging should logging on successfully build in multi-compiler mode: stdout 1`] = `
-"asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
-asset bundle.js x KiB [emitted] (name: main)
+"asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
 runtime modules x bytes x modules
 cacheable modules x bytes
@@ -271,7 +271,7 @@ cacheable modules x bytes
 ./index.html x bytes [built] [code generated]
 webpack x.x.x compiled successfully in x ms
 
-asset bundle.js x bytes [emitted] (name: main)
+asset bundle.js x KiB [emitted] (name: main)
 ./bar.js x bytes [built] [code generated]
 webpack x.x.x compiled successfully in x ms"
 `;
@@ -407,35 +407,35 @@ cacheable modules x bytes
 webpack x.x.x compiled successfully in x ms"
 `;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with object value and colors: stderr 1`] = `""`;
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with object value and colors: stderr 1`] = `""`;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with object value and colors: stdout 1`] = `
-"asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
-asset bundle.js x KiB [emitted] (name: main)
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with object value and colors: stdout 1`] = `
+"asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
 
-asset bundle.js x bytes [emitted] (name: main)"
+asset bundle.js x KiB [emitted] (name: main)"
 `;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with object value and no colors: stderr 1`] = `""`;
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with object value and no colors: stderr 1`] = `""`;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with object value and no colors: stdout 1`] = `
-"asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
-asset bundle.js x KiB [emitted] (name: main)
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with object value and no colors: stdout 1`] = `
+"asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
 
-asset bundle.js x bytes [emitted] (name: main)"
+asset bundle.js x KiB [emitted] (name: main)"
 `;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the "false" value: stderr 1`] = `""`;
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the "false" value: stderr 1`] = `""`;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the "false" value: stdout 1`] = `""`;
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the "false" value: stdout 1`] = `""`;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the "normal" value: stderr 1`] = `""`;
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the "normal" value: stderr 1`] = `""`;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the "normal" value: stdout 1`] = `
-"asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
-asset bundle.js x KiB [emitted] (name: main)
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the "normal" value: stdout 1`] = `
+"asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
 runtime modules x bytes x modules
 cacheable modules x bytes
@@ -444,16 +444,16 @@ cacheable modules x bytes
 ./index.html x bytes [built] [code generated]
 webpack x.x.x compiled successfully in x ms
 
-asset bundle.js x bytes [emitted] (name: main)
+asset bundle.js x KiB [emitted] (name: main)
 ./bar.js x bytes [built] [code generated]
 webpack x.x.x compiled successfully in x ms"
 `;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the "true" value: stderr 1`] = `""`;
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the "true" value: stderr 1`] = `""`;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the "true" value: stdout 1`] = `
-"asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
-asset bundle.js x KiB [emitted] (name: main)
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the "true" value: stdout 1`] = `
+"asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
 runtime modules x bytes x modules
 cacheable modules x bytes
@@ -462,19 +462,19 @@ cacheable modules x bytes
 ./index.html x bytes [built] [code generated]
 webpack x.x.x compiled successfully in x ms
 
-asset bundle.js x bytes [emitted] (name: main)
+asset bundle.js x KiB [emitted] (name: main)
 ./bar.js x bytes [built] [code generated]
 webpack x.x.x compiled successfully in x ms"
 `;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the object value: stderr 1`] = `""`;
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the object value: stderr 1`] = `""`;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the object value: stdout 1`] = `
-"asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
-asset bundle.js x KiB [emitted] (name: main)
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the object value: stdout 1`] = `
+"asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
 
-asset bundle.js x bytes [emitted] (name: main)"
+asset bundle.js x KiB [emitted] (name: main)"
 `;
 
 exports[`logging should logging on unsuccessful build in multi-compiler: stderr 1`] = `""`;

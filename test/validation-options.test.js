@@ -1,9 +1,17 @@
+import path from 'path';
+
+import { createFsFromVolume, Volume } from 'memfs';
+
 import middleware from '../src';
 
 import getCompiler from './helpers/getCompiler';
 
 // Suppress unnecessary stats output
 global.console.log = jest.fn();
+
+const configuredFs = createFsFromVolume(new Volume());
+
+configuredFs.join = path.join.bind(path);
 
 describe('validation', () => {
   const cases = {
@@ -32,12 +40,7 @@ describe('validation', () => {
       failure: ['foo', 0],
     },
     outputFileSystem: {
-      success: [
-        {
-          join: () => {},
-          mkdirp: () => {},
-        },
-      ],
+      success: [configuredFs],
       failure: [false],
     },
     index: {
@@ -61,22 +64,10 @@ describe('validation', () => {
     return value;
   }
 
-  async function close(webpackDevMiddleware) {
-    return new Promise((resolve) => {
-      if (webpackDevMiddleware) {
-        webpackDevMiddleware.close(() => {
-          resolve();
-        });
-      } else {
-        resolve();
-      }
-    });
-  }
-
   async function createTestCase(key, value, type) {
     it(`should ${
       type === 'success' ? 'successfully validate' : 'throw an error on'
-    } the "${key}" option with "${stringifyValue(value)}" value`, async () => {
+    } the "${key}" option with "${stringifyValue(value)}" value`, (done) => {
       const compiler = getCompiler();
 
       let webpackDevMiddleware;
@@ -99,7 +90,15 @@ describe('validation', () => {
           }).toThrowErrorMatchingSnapshot();
         }
 
-        await close(webpackDevMiddleware);
+        if (webpackDevMiddleware) {
+          webpackDevMiddleware.waitUntilValid(() => {
+            webpackDevMiddleware.close(() => {
+              done();
+            });
+          });
+        } else {
+          done();
+        }
       }
     });
   }

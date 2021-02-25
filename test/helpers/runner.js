@@ -13,13 +13,20 @@ const configMiddlewareEntries = [];
 fillConfigEntries('WCF_', configEntries);
 fillConfigEntries('WMC_', configMiddlewareEntries);
 
-const config = createConfig(configEntries);
+const createdConfig = createConfig(configEntries);
 const unionConfig =
-  Object.keys(config).length > 0
-    ? merge(getWebpackConfig(process.env.WEBPACK_CONFIG), config)
+  Object.keys(createdConfig).length > 0
+    ? merge(getWebpackConfig(process.env.WEBPACK_CONFIG), createdConfig)
     : getWebpackConfig(process.env.WEBPACK_CONFIG);
 const configMiddleware = createConfig(configMiddlewareEntries);
-const compiler = webpack(unionConfig || defaultConfig);
+const config = unionConfig || defaultConfig;
+
+if (Array.isArray(config)) {
+  config.parallelism = 1;
+}
+
+const compiler = webpack(config);
+
 let instance;
 
 if (process.env.WEBPACK_BREAK_WATCH) {

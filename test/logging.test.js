@@ -860,7 +860,7 @@ describe('logging', () => {
       );
 
       if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir);
+        fs.mkdirSync(outputDir, { recursive: true });
       }
 
       fs.chmodSync(outputDir, 0o400);
@@ -1226,7 +1226,7 @@ describe('logging', () => {
     });
   });
 
-  it('should logging on successfully multi compiler build using the "stats" option for middleware with the "true" value', (done) => {
+  it('should logging on successfully multi-compiler build using the "stats" option for middleware with the "true" value', (done) => {
     let proc;
 
     try {
@@ -1267,7 +1267,7 @@ describe('logging', () => {
     });
   });
 
-  it('should logging on successfully multi compiler build using the "stats" option for middleware with the "false" value', (done) => {
+  it('should logging on successfully multi-compiler build using the "stats" option for middleware with the "false" value', (done) => {
     let proc;
 
     try {
@@ -1307,7 +1307,7 @@ describe('logging', () => {
     });
   });
 
-  it('should logging on successfully multi compiler build using the "stats" option for middleware with the "normal" value', (done) => {
+  it('should logging on successfully multi-compiler build using the "stats" option for middleware with the "normal" value', (done) => {
     let proc;
 
     try {
@@ -1348,7 +1348,7 @@ describe('logging', () => {
     });
   });
 
-  it('should logging on successfully multi compiler build using the "stats" option for middleware with the object value', (done) => {
+  it('should logging on successfully multi-compiler build using the "stats" option for middleware with the object value', (done) => {
     let proc;
 
     try {
@@ -1389,7 +1389,7 @@ describe('logging', () => {
     });
   });
 
-  it('should logging on successfully multi compiler build using the "stats" option for middleware with object value and colors', (done) => {
+  it('should logging on successfully multi-compiler build using the "stats" option for middleware with object value and colors', (done) => {
     let proc;
 
     try {
@@ -1430,7 +1430,7 @@ describe('logging', () => {
     });
   });
 
-  it('should logging on successfully multi compiler build using the "stats" option for middleware with object value and no colors', (done) => {
+  it('should logging on successfully multi-compiler build using the "stats" option for middleware with object value and no colors', (done) => {
     let proc;
 
     try {
@@ -1463,6 +1463,8 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
+      // eslint-disable-next-line no-console
+      console.log(stdout);
       expect(stdout).not.toContain('\u001b[1m');
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
       expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
