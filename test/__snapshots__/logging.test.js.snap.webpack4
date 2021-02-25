@@ -445,9 +445,9 @@ Entrypoint main = bundle.js
 [./svg.svg] x bytes {main} [built]"
 `;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with object value and colors: stderr 1`] = `""`;
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with object value and colors: stderr 1`] = `""`;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with object value and colors: stdout 1`] = `
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with object value and colors: stdout 1`] = `
 "Child
 Asset Size Chunks Chunk Names
 bundle.js x KiB main [emitted] main
@@ -458,9 +458,9 @@ Asset Size Chunks Chunk Names
 bundle.js x KiB main [emitted] main"
 `;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with object value and no colors: stderr 1`] = `""`;
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with object value and no colors: stderr 1`] = `""`;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with object value and no colors: stdout 1`] = `
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with object value and no colors: stdout 1`] = `
 "Child
 Asset Size Chunks Chunk Names
 bundle.js x KiB main [emitted] main
@@ -471,13 +471,13 @@ Asset Size Chunks Chunk Names
 bundle.js x KiB main [emitted] main"
 `;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the "false" value: stderr 1`] = `""`;
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the "false" value: stderr 1`] = `""`;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the "false" value: stdout 1`] = `""`;
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the "false" value: stdout 1`] = `""`;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the "normal" value: stderr 1`] = `""`;
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the "normal" value: stderr 1`] = `""`;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the "normal" value: stdout 1`] = `
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the "normal" value: stdout 1`] = `
 "Hash: xxxx
 Version: webpack x.x.x
 Child
@@ -502,9 +502,9 @@ Entrypoint main = bundle.js
 [./bar.js] x bytes {main} [built]"
 `;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the "true" value: stderr 1`] = `""`;
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the "true" value: stderr 1`] = `""`;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the "true" value: stdout 1`] = `
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the "true" value: stdout 1`] = `
 "Hash: xxxx
 Version: webpack x.x.x
 Child
@@ -529,9 +529,9 @@ Entrypoint main = bundle.js
 [./bar.js] x bytes {main} [built]"
 `;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the object value: stderr 1`] = `""`;
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the object value: stderr 1`] = `""`;
 
-exports[`logging should logging on successfully multi compiler build using the "stats" option for middleware with the object value: stdout 1`] = `
+exports[`logging should logging on successfully multi-compiler build using the "stats" option for middleware with the object value: stdout 1`] = `
 "Child
 Asset Size Chunks Chunk Names
 bundle.js x KiB main [emitted] main
