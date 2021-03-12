@@ -73,7 +73,7 @@
     "standard-version": "^9.1.1",
     "strip-ansi": "^6.0.0",
     "supertest": "^6.1.3",
-    "webpack": "^5.24.4"
+    "webpack": "^5.25.0"
   },
   "keywords": [
     "webpack",
