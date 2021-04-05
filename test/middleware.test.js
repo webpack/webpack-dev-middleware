@@ -1593,7 +1593,10 @@ describe.each([
 
           let invalidated = false;
 
-          compiler.hooks.done.tap('Invalidated', () => {
+          (compiler.hooks.afterDone
+            ? compiler.hooks.afterDone
+            : compiler.hooks.done
+          ).tap('Invalidated', () => {
             if (!invalidated) {
               instance.invalidate();
 
