@@ -48,7 +48,8 @@ export default function wrapper(context) {
         headers = headers(req, res, context);
       }
 
-      let content;
+      let stream;
+      let fileSize;
 
       if (!filename) {
         await goNext();
@@ -56,7 +57,7 @@ export default function wrapper(context) {
       }
 
       try {
-        content = context.outputFileSystem.readFileSync(filename);
+        fileSize = context.outputFileSystem.lstatSync(filename).size;
       } catch (_ignoreError) {
         await goNext();
         return;
@@ -100,21 +101,29 @@ export default function wrapper(context) {
       }
 
       // Buffer
-      content = handleRangeHeaders(context, content, req, res);
-
-      // Express API
-      if (res.send) {
-        res.send(content);
+      const ranges = handleRangeHeaders(context, fileSize, req, res);
+      try {
+        stream = context.outputFileSystem.createReadStream(
+          filename,
+          ranges
+            ? {
+                start: ranges.start,
+                end: ranges.end,
+              }
+            : {}
+        );
+      } catch (_ignoreError) {
+        await goNext();
+        return;
       }
-      // Node.js API
-      else {
-        res.setHeader("Content-Length", content.length);
 
-        if (req.method === "HEAD") {
-          res.end();
-        } else {
-          res.end(content);
-        }
+      const responseSize = ranges ? 1 + (ranges.end - ranges.start) : fileSize;
+      res.setHeader("Content-Length", responseSize);
+
+      if (req.method === "HEAD") {
+        res.end();
+      } else {
+        stream.pipe(res);
       }
     }
   };
