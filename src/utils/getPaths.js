@@ -12,6 +12,10 @@ export default function getPaths(context) {
       ? compilation.getPath(compilation.outputOptions.publicPath)
       : '';
 
+    if (publicPath) {
+      context.logger.info(`webpack output is served from "${publicPath === 'auto' ? '/' : publicPath}" URL`);
+    }
+
     publicPaths.push({ outputPath, publicPath });
   }
 
