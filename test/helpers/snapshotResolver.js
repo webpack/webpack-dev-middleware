@@ -6,9 +6,6 @@ const webpack = require('webpack');
 const [webpackVersion] = webpack.version;
 const snapshotExtension = `.snap.webpack${webpackVersion}`;
 
-// eslint-disable-next-line no-console
-console.log('Current webpack version:', webpackVersion);
-
 module.exports = {
   resolveSnapshotPath: (testPath) =>
     path.join(
