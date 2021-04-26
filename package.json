@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "colorette": "^1.2.2",
-    "mem": "^8.1.0",
+    "mem": "^8.1.1",
     "memfs": "^3.2.2",
     "mime-types": "^2.1.30",
     "range-parser": "^1.2.1",
@@ -76,7 +76,7 @@
     "standard-version": "^9.2.0",
     "strip-ansi": "^6.0.0",
     "supertest": "^6.1.3",
-    "webpack": "^5.35.0"
+    "webpack": "^5.35.1"
   },
   "keywords": [
     "webpack",

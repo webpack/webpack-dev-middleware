@@ -1463,8 +1463,6 @@ describe('logging', () => {
     });
 
     proc.on('exit', () => {
-      // eslint-disable-next-line no-console
-      console.log(stdout);
       expect(stdout).not.toContain('\u001b[1m');
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot('stdout');
       expect(stderrToSnapshot(stderr)).toMatchSnapshot('stderr');
