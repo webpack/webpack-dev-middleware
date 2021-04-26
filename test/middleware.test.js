@@ -66,7 +66,7 @@ describe.each([
         let compiler;
         let codeLength;
 
-        const outputPath = path.resolve(__dirname, './outputs/basic');
+        const outputPath = path.resolve(__dirname, './outputs/basic-test');
 
         beforeAll((done) => {
           compiler = getCompiler({
