@@ -63,29 +63,51 @@ The middleware accepts an `options` Object. The following is a property referenc
 
 ### methods
 
-Type: `Array`  
+Type: `Array`
 Default: `[ 'GET', 'HEAD' ]`
 
 This property allows a user to pass the list of HTTP request methods accepted by the middleware\*\*.
 
 ### headers
 
-Type: `Object`  
+Type: `Object`
 Default: `undefined`
 
 This property allows a user to pass custom HTTP headers on each request.
 eg. `{ "X-Custom-Header": "yes" }`
 
+or
+
+```js
+webpackDevMiddleware(compiler, {
+  headers: () => {
+    return {
+      'Last-Modified': new Date(),
+    }
+  }
+})
+```
+
+or
+
+```js
+webpackDevMiddleware(compiler, {
+  headers: (req, res, context) => {
+    res.setHeader('Last-Modified', new Date())
+  }
+})
+```
+
 ### index
 
-Type: `Boolean|String`  
+Type: `Boolean|String`
 Default: `index.html`
 
 If `false` (but not `undefined`), the server will not respond to requests to the root URL.
 
 ### mimeTypes
 
-Type: `Object`  
+Type: `Object`
 Default: `undefined`
 
 This property allows a user to register custom mime types or extension mappings.
@@ -111,7 +133,7 @@ Stats options object or preset name.
 
 ### serverSideRender
 
-Type: `Boolean`  
+Type: `Boolean`
 Default: `undefined`
 
 Instructs the module to enable or disable the server-side rendering mode.
@@ -119,7 +141,7 @@ Please see [Server-Side Rendering](#server-side-rendering) for more information.
 
 ### writeToDisk
 
-Type: `Boolean|Function`  
+Type: `Boolean|Function`
 Default: `false`
 
 If `true`, the option will instruct the module to write files to the configured location on disk as specified in your `webpack` config file.
@@ -145,7 +167,7 @@ middleware(compiler, {
 
 ### outputFileSystem
 
-Type: `Object`  
+Type: `Object`
 Default: [memfs](https://github.com/streamich/memfs)
 
 Set the default file system which will be used by webpack as primary destination of generated files.

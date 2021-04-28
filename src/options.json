@@ -25,7 +25,15 @@
       }
     },
     "headers": {
-      "type": "object"
+      "description": "Allows a user to pass custom HTTP headers on each request.",
+      "anyOf": [
+        {
+          "type": "object"
+        },
+        {
+          "instanceof": "Function"
+        }
+      ]
     },
     "publicPath": {
       "description": "The `publicPath` specifies the public URL address of the output files when referenced in a browser.",

@@ -42,7 +42,16 @@ export default function wrapper(context) {
 
     async function processRequest() {
       const filename = getFilenameFromUrl(context, req.url);
-      const { headers } = context.options;
+      let { headers } = context.options;
+
+      if (typeof headers === 'function') {
+        headers = headers(req, res, context)
+        if (headers && typeof headers !== 'object') {
+          headers = null;
+          console.warn('webpack-dev-middleware >> ', 'The heasers return must be the object');
+        }
+      }
+
       let content;
 
       if (!filename) {
