@@ -28,8 +28,8 @@ describe('validation', () => {
       failure: [{}, true],
     },
     headers: {
-      success: [{ 'X-Custom-Header': 'yes' }],
-      failure: [true],
+      success: [{ 'X-Custom-Header': 'yes' }, () => {}],
+      failure: [true, 1],
     },
     publicPath: {
       success: ['/foo', '', 'auto', () => '/public/path'],

@@ -1,9 +1,23 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`validation should throw an error on the "headers" option with "1" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.headers should be one of these:
+   object { … } | function
+   Details:
+    * options.headers should be an object:
+      object { … }
+    * options.headers should be an instance of function."
+`;
+
 exports[`validation should throw an error on the "headers" option with "true" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
- - options.headers should be an object:
-   object { … }"
+ - options.headers should be one of these:
+   object { … } | function
+   Details:
+    * options.headers should be an object:
+      object { … }
+    * options.headers should be an instance of function."
 `;
 
 exports[`validation should throw an error on the "index" option with "{}" value 1`] = `
