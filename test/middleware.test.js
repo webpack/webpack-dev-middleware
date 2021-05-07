@@ -2392,45 +2392,137 @@ describe.each([
     });
 
     describe('headers option', () => {
-      beforeEach((done) => {
-        const compiler = getCompiler(webpackConfig);
+      describe('works with object', () => {
+        beforeEach((done) => {
+          const compiler = getCompiler(webpackConfig);
 
-        instance = middleware(compiler, {
-          headers: { 'X-nonsense-1': 'yes', 'X-nonsense-2': 'no' },
+          instance = middleware(compiler, {
+            headers: { 'X-nonsense-1': 'yes', 'X-nonsense-2': 'no' },
+          });
+
+          app = framework();
+          app.use(instance);
+
+          listen = listenShorthand(done);
         });
 
-        app = framework();
-        app.use(instance);
+        afterEach(close);
 
-        listen = listenShorthand(done);
-      });
-
-      afterEach(close);
-
-      it('should return the "200" code for the "GET" request to the bundle file and return headers', (done) => {
-        request(app)
-          .get('/bundle.js')
-          .expect('X-nonsense-1', 'yes')
-          .expect('X-nonsense-2', 'no')
-          .expect(200, done);
-      });
-
-      it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-        app.use('/file.jpg', (req, res) => {
-          // Express API
-          if (res.send) {
-            res.send('welcome');
-          }
-          // Connect API
-          else {
-            res.end('welcome');
-          }
+        it('should return the "200" code for the "GET" request to the bundle file and return headers', (done) => {
+          request(app)
+            .get('/bundle.js')
+            .expect('X-nonsense-1', 'yes')
+            .expect('X-nonsense-2', 'no')
+            .expect(200, done);
         });
 
-        const res = await request(app).get('/file.jpg');
-        expect(res.statusCode).toEqual(200);
-        expect(res.headers['X-nonsense-1']).toBeUndefined();
-        expect(res.headers['X-nonsense-2']).toBeUndefined();
+        it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          app.use('/file.jpg', (req, res) => {
+            // Express API
+            if (res.send) {
+              res.send('welcome');
+            }
+            // Connect API
+            else {
+              res.end('welcome');
+            }
+          });
+
+          const res = await request(app).get('/file.jpg');
+          expect(res.statusCode).toEqual(200);
+          expect(res.headers['X-nonsense-1']).toBeUndefined();
+          expect(res.headers['X-nonsense-2']).toBeUndefined();
+        });
+      });
+      describe('works with function', () => {
+        beforeEach((done) => {
+          const compiler = getCompiler(webpackConfig);
+
+          instance = middleware(compiler, {
+            headers: () => {
+              return { 'X-nonsense-1': 'yes', 'X-nonsense-2': 'no' };
+            },
+          });
+
+          app = framework();
+          app.use(instance);
+
+          listen = listenShorthand(done);
+        });
+
+        afterEach(close);
+
+        it('should return the "200" code for the "GET" request to the bundle file and return headers', (done) => {
+          request(app)
+            .get('/bundle.js')
+            .expect('X-nonsense-1', 'yes')
+            .expect('X-nonsense-2', 'no')
+            .expect(200, done);
+        });
+
+        it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          app.use('/file.jpg', (req, res) => {
+            // Express API
+            if (res.send) {
+              res.send('welcome');
+            }
+            // Connect API
+            else {
+              res.end('welcome');
+            }
+          });
+
+          const res = await request(app).get('/file.jpg');
+          expect(res.statusCode).toEqual(200);
+          expect(res.headers['X-nonsense-1']).toBeUndefined();
+          expect(res.headers['X-nonsense-2']).toBeUndefined();
+        });
+      });
+      describe('works with headers function with params', () => {
+        beforeEach((done) => {
+          const compiler = getCompiler(webpackConfig);
+
+          instance = middleware(compiler, {
+            // eslint-disable-next-line no-unused-vars
+            headers: (req, res, context) => {
+              res.setHeader('X-nonsense-1', 'yes');
+              res.setHeader('X-nonsense-2', 'no');
+            },
+          });
+
+          app = framework();
+          app.use(instance);
+
+          listen = listenShorthand(done);
+        });
+
+        afterEach(close);
+
+        it('should return the "200" code for the "GET" request to the bundle file and return headers', (done) => {
+          request(app)
+            .get('/bundle.js')
+            .expect('X-nonsense-1', 'yes')
+            .expect('X-nonsense-2', 'no')
+            .expect(200, done);
+        });
+
+        it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          app.use('/file.jpg', (req, res) => {
+            // Express API
+            if (res.send) {
+              res.send('welcome');
+            }
+            // Connect API
+            else {
+              res.end('welcome');
+            }
+          });
+
+          const res = await request(app).get('/file.jpg');
+          expect(res.statusCode).toEqual(200);
+          expect(res.headers['X-nonsense-1']).toBeUndefined();
+          expect(res.headers['X-nonsense-2']).toBeUndefined();
+        });
       });
     });
 
