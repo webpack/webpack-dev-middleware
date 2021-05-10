@@ -42,7 +42,12 @@ export default function wrapper(context) {
 
     async function processRequest() {
       const filename = getFilenameFromUrl(context, req.url);
-      const { headers } = context.options;
+      let { headers } = context.options;
+
+      if (typeof headers === 'function') {
+        headers = headers(req, res, context);
+      }
+
       let content;
 
       if (!filename) {

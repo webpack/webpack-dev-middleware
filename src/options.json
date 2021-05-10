@@ -25,7 +25,14 @@
       }
     },
     "headers": {
-      "type": "object"
+      "anyOf": [
+        {
+          "type": "object"
+        },
+        {
+          "instanceof": "Function"
+        }
+      ]
     },
     "publicPath": {
       "description": "The `publicPath` specifies the public URL address of the output files when referenced in a browser.",
