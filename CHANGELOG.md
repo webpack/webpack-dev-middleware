@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.2.0](https://github.com/webpack/webpack-dev-middleware/compare/v4.1.0...v4.2.0) (2021-05-10)
+
+
+### Features
+
+* allow the `headers` option to accept function ([#897](https://github.com/webpack/webpack-dev-middleware/issues/897)) ([966afb3](https://github.com/webpack/webpack-dev-middleware/commit/966afb3e331f09912bb9fc5f403e758f586b1a07))
+
 ## [4.1.0](https://github.com/webpack/webpack-dev-middleware/compare/v4.0.4...v4.1.0) (2021-01-15)
 
 
