@@ -260,6 +260,24 @@ instance.waitUntilValid(() => {
 });
 ```
 
+### `getFilenameFromUrl(context, url)`
+
+Get filename from url.
+
+```js
+const webpack = require('webpack');
+const compiler = webpack({ ... });
+const middleware = require('webpack-dev-middleware');
+const instance = middleware(compiler);
+
+app.use(instance);
+
+const processRequest = (req, res) => {
+  const filename = instance.getFilenameFromUrl(instance.contex, req.url);
+  console.log(`filename is ${filename}`)
+}
+```
+
 ## Known Issues
 
 ### Multiple Successive Builds
