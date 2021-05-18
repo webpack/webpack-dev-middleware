@@ -94,5 +94,6 @@ export default function getFilenameFromUrl(context, url) {
     }
   }
 
+  // eslint-disable-next-line consistent-return
   return foundFilename;
 }
