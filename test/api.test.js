@@ -9,6 +9,8 @@ import middleware from '../src';
 import getCompiler from './helpers/getCompiler';
 import getCompilerHooks from './helpers/getCompilerHooks';
 import webpackConfig from './fixtures/webpack.config';
+import webpackPublicPathConfig from './fixtures/webpack.public-path.config';
+import webpackMultiConfig from './fixtures/webpack.array.config';
 
 // Suppress unnecessary stats output
 global.console.log = jest.fn();
@@ -375,51 +377,278 @@ describe.each([
     });
 
     describe('getFilenameFromUrl method', () => {
-      beforeEach((done) => {
-        compiler = getCompiler(webpackConfig);
+      describe('should work', () => {
+        beforeEach((done) => {
+          compiler = getCompiler(webpackConfig);
 
-        instance = middleware(compiler);
+          instance = middleware(compiler);
 
-        app = framework();
-        app.use(instance);
+          app = framework();
+          app.use(instance);
 
-        listen = app.listen((error) => {
-          if (error) {
-            return done(error);
+          listen = app.listen((error) => {
+            if (error) {
+              return done(error);
+            }
+
+            return done();
+          });
+        });
+
+        afterEach((done) => {
+          if (instance.context.watching.closed) {
+            if (listen) {
+              listen.close(done);
+            } else {
+              done();
+            }
+
+            return;
           }
 
-          return done();
+          instance.close(() => {
+            if (listen) {
+              listen.close(done);
+            } else {
+              done();
+            }
+          });
+        });
+
+        it('should work', (done) => {
+          instance.waitUntilValid(() => {
+            expect(instance.getFilenameFromUrl('/bundle.js')).toBe(
+              path.join(webpackConfig.output.path, '/bundle.js')
+            );
+            expect(instance.getFilenameFromUrl('/')).toBe(
+              path.join(webpackConfig.output.path, '/index.html')
+            );
+            expect(instance.getFilenameFromUrl('/index.html')).toBe(
+              path.join(webpackConfig.output.path, '/index.html')
+            );
+            expect(instance.getFilenameFromUrl('/svg.svg')).toBe(
+              path.join(webpackConfig.output.path, '/svg.svg')
+            );
+            expect(
+              instance.getFilenameFromUrl('/unknown.unknown')
+            ).toBeUndefined();
+            expect(
+              instance.getFilenameFromUrl('/unknown/unknown.unknown')
+            ).toBeUndefined();
+
+            done();
+          });
         });
       });
 
-      afterEach((done) => {
-        if (instance.context.watching.closed) {
-          if (listen) {
-            listen.close(done);
-          } else {
-            done();
+      describe('should work when the "index" option disabled', () => {
+        beforeEach((done) => {
+          compiler = getCompiler(webpackConfig);
+
+          instance = middleware(compiler, { index: false });
+
+          app = framework();
+          app.use(instance);
+
+          listen = app.listen((error) => {
+            if (error) {
+              return done(error);
+            }
+
+            return done();
+          });
+        });
+
+        afterEach((done) => {
+          if (instance.context.watching.closed) {
+            if (listen) {
+              listen.close(done);
+            } else {
+              done();
+            }
+
+            return;
           }
 
-          return;
-        }
+          instance.close(() => {
+            if (listen) {
+              listen.close(done);
+            } else {
+              done();
+            }
+          });
+        });
 
-        instance.close(() => {
-          if (listen) {
-            listen.close(done);
-          } else {
+        it('should work', (done) => {
+          instance.waitUntilValid(() => {
+            expect(instance.getFilenameFromUrl('/bundle.js')).toBe(
+              path.join(webpackConfig.output.path, '/bundle.js')
+            );
+            // eslint-disable-next-line no-undefined
+            expect(instance.getFilenameFromUrl('/')).toBe(undefined);
+            expect(instance.getFilenameFromUrl('/index.html')).toBe(
+              path.join(webpackConfig.output.path, '/index.html')
+            );
+            expect(instance.getFilenameFromUrl('/svg.svg')).toBe(
+              path.join(webpackConfig.output.path, '/svg.svg')
+            );
+            expect(
+              instance.getFilenameFromUrl('/unknown.unknown')
+            ).toBeUndefined();
+            expect(
+              instance.getFilenameFromUrl('/unknown/unknown.unknown')
+            ).toBeUndefined();
+
             done();
-          }
+          });
         });
       });
 
-      it('should work', (done) => {
-        instance.waitUntilValid(() => {
-          expect(instance.getFilenameFromUrl('/unknown.unknown')).toBeUndefined();
-          expect(instance.getFilenameFromUrl('/bundle.js')).toBe(
-            path.join(webpackConfig.output.path, '/bundle.js')
-          );
+      describe('should work with the "publicPath" option', () => {
+        beforeEach((done) => {
+          compiler = getCompiler(webpackPublicPathConfig);
 
-          done();
+          instance = middleware(compiler);
+
+          app = framework();
+          app.use(instance);
+
+          listen = app.listen((error) => {
+            if (error) {
+              return done(error);
+            }
+
+            return done();
+          });
+        });
+
+        afterEach((done) => {
+          if (instance.context.watching.closed) {
+            if (listen) {
+              listen.close(done);
+            } else {
+              done();
+            }
+
+            return;
+          }
+
+          instance.close(() => {
+            if (listen) {
+              listen.close(done);
+            } else {
+              done();
+            }
+          });
+        });
+
+        it('should work', (done) => {
+          instance.waitUntilValid(() => {
+            expect(instance.getFilenameFromUrl('/public/path/bundle.js')).toBe(
+              path.join(webpackPublicPathConfig.output.path, '/bundle.js')
+            );
+            expect(instance.getFilenameFromUrl('/public/path/')).toBe(
+              path.join(webpackPublicPathConfig.output.path, '/index.html')
+            );
+            expect(instance.getFilenameFromUrl('/public/path/index.html')).toBe(
+              path.join(webpackPublicPathConfig.output.path, '/index.html')
+            );
+            expect(instance.getFilenameFromUrl('/public/path/svg.svg')).toBe(
+              path.join(webpackPublicPathConfig.output.path, '/svg.svg')
+            );
+
+            expect(instance.getFilenameFromUrl('/')).toBeUndefined();
+            expect(
+              instance.getFilenameFromUrl('/unknown.unknown')
+            ).toBeUndefined();
+            expect(
+              instance.getFilenameFromUrl('/unknown/unknown.unknown')
+            ).toBeUndefined();
+
+            done();
+          });
+        });
+      });
+
+      describe('should work in multi compiler mode', () => {
+        beforeEach((done) => {
+          compiler = getCompiler(webpackMultiConfig);
+
+          instance = middleware(compiler);
+
+          app = framework();
+          app.use(instance);
+
+          listen = app.listen((error) => {
+            if (error) {
+              return done(error);
+            }
+
+            return done();
+          });
+        });
+
+        afterEach((done) => {
+          if (instance.context.watching.closed) {
+            if (listen) {
+              listen.close(done);
+            } else {
+              done();
+            }
+
+            return;
+          }
+
+          instance.close(() => {
+            if (listen) {
+              listen.close(done);
+            } else {
+              done();
+            }
+          });
+        });
+
+        it('should work', (done) => {
+          instance.waitUntilValid(() => {
+            expect(instance.getFilenameFromUrl('/static-one/bundle.js')).toBe(
+              path.join(webpackMultiConfig[0].output.path, '/bundle.js')
+            );
+            expect(instance.getFilenameFromUrl('/static-one/')).toBe(
+              path.join(webpackMultiConfig[0].output.path, '/index.html')
+            );
+            expect(instance.getFilenameFromUrl('/static-one/index.html')).toBe(
+              path.join(webpackMultiConfig[0].output.path, '/index.html')
+            );
+            expect(instance.getFilenameFromUrl('/static-one/svg.svg')).toBe(
+              path.join(webpackMultiConfig[0].output.path, '/svg.svg')
+            );
+            expect(
+              instance.getFilenameFromUrl('/static-one/unknown.unknown')
+            ).toBeUndefined();
+            expect(
+              instance.getFilenameFromUrl('/static-one/unknown/unknown.unknown')
+            ).toBeUndefined();
+
+            expect(instance.getFilenameFromUrl('/static-two/bundle.js')).toBe(
+              path.join(webpackMultiConfig[1].output.path, '/bundle.js')
+            );
+            expect(
+              instance.getFilenameFromUrl('/static-two/unknown.unknown')
+            ).toBeUndefined();
+            expect(
+              instance.getFilenameFromUrl('/static-two/unknown/unknown.unknown')
+            ).toBeUndefined();
+
+            expect(instance.getFilenameFromUrl('/')).toBeUndefined();
+            expect(
+              instance.getFilenameFromUrl('/static-one/unknown.unknown')
+            ).toBeUndefined();
+            expect(
+              instance.getFilenameFromUrl('/static-one/unknown/unknown.unknown')
+            ).toBeUndefined();
+
+            done();
+          });
         });
       });
     });
