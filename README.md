@@ -236,7 +236,7 @@ Instructs `webpack-dev-middleware` instance to recompile the bundle, e.g. after 
 
 #### Parameters
 
-##### callback
+##### `callback`
 
 Type: `Function`
 Required: `No`
@@ -270,9 +270,9 @@ setTimeout(() => {
 Executes a callback function when the compiler bundle is valid, typically after
 compilation.
 
-### Parameters
+#### Parameters
 
-#### callback
+##### `callback`
 
 Type: `Function`
 Required: `No`
@@ -302,9 +302,9 @@ instance.waitUntilValid(() => {
 
 Get filename from URL.
 
-### Parameters
+#### Parameters
 
-#### url
+##### `url`
 
 Type: `String`
 Required: `Yes`
