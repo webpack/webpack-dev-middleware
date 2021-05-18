@@ -77,6 +77,8 @@ export default function wdm(compiler, options = {}) {
   const instance = middleware(context);
 
   // API
+  instance.getFilenameFromUrl = (url) => getFilenameFromUrl(context, url);
+
   instance.waitUntilValid = (callback = noop) => {
     ready(context, callback);
   };
@@ -92,8 +94,6 @@ export default function wdm(compiler, options = {}) {
   };
 
   instance.context = context;
-
-  instance.getFilenameFromUrl = getFilenameFromUrl;
 
   return instance;
 }

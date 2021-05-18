@@ -198,9 +198,9 @@ middleware(compiler, { outputFileSystem: myOutputFileSystem });
 `webpack-dev-middleware` also provides convenience methods that can be use to
 interact with the middleware at runtime:
 
-### `close(callback)`
+### `close(callback?)`
 
-Instructs a webpack-dev-middleware instance to stop watching for file changes.
+Instructs `webpack-dev-middleware` instance to stop watching for file changes.
 
 ### Parameters
 
@@ -210,14 +210,14 @@ Type: `Function`
 
 A function executed once the middleware has stopped watching.
 
-### `invalidate()`
+### `invalidate(callback?)`
 
 Instructs a webpack-dev-middleware instance to recompile the bundle.
 e.g. after a change to the configuration.
 
 ```js
 const webpack = require('webpack');
-const compiler = webpack({ ... });
+const compiler = webpack();
 const middleware = require('webpack-dev-middleware');
 const instance = middleware(compiler);
 
@@ -233,6 +233,14 @@ setTimeout(() => {
 }, 1000);
 ```
 
+### Parameters
+
+#### callback
+
+Type: `Function`
+
+A function executed once the middleware has invalidated.
+
 ### `waitUntilValid(callback)`
 
 Executes a callback function when the compiler bundle is valid, typically after
@@ -244,12 +252,12 @@ compilation.
 
 Type: `Function`
 
-A function executed when the bundle becomes valid. If the bundle is
-valid at the time of calling, the callback is executed immediately.
+A function executed when the bundle becomes valid.
+If the bundle is valid at the time of calling, the callback is executed immediately.
 
 ```js
 const webpack = require('webpack');
-const compiler = webpack({ ... });
+const compiler = webpack();
 const middleware = require('webpack-dev-middleware');
 const instance = middleware(compiler);
 
@@ -260,22 +268,23 @@ instance.waitUntilValid(() => {
 });
 ```
 
-### `getFilenameFromUrl(context, url)`
+### `getFilenameFromUrl(url)`
 
-Get filename from url.
+Get filename from URL.
 
 ```js
 const webpack = require('webpack');
-const compiler = webpack({ ... });
+const compiler = webpack();
 const middleware = require('webpack-dev-middleware');
 const instance = middleware(compiler);
 
 app.use(instance);
 
-const processRequest = (req, res) => {
-  const filename = instance.getFilenameFromUrl(instance.contex, req.url);
-  console.log(`filename is ${filename}`)
-}
+instance.waitUntilValid(() => {
+  const filename = instance.getFilenameFromUrl('/bundle.js');
+
+  console.log(`Filename is ${filename}`);
+});
 ```
 
 ## Known Issues

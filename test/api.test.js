@@ -1,3 +1,5 @@
+import path from 'path';
+
 import express from 'express';
 import connect from 'connect';
 import webpack, { Stats } from 'webpack';
@@ -368,6 +370,56 @@ describe.each([
 
             done();
           }
+        });
+      });
+    });
+
+    describe('getFilenameFromUrl method', () => {
+      beforeEach((done) => {
+        compiler = getCompiler(webpackConfig);
+
+        instance = middleware(compiler);
+
+        app = framework();
+        app.use(instance);
+
+        listen = app.listen((error) => {
+          if (error) {
+            return done(error);
+          }
+
+          return done();
+        });
+      });
+
+      afterEach((done) => {
+        if (instance.context.watching.closed) {
+          if (listen) {
+            listen.close(done);
+          } else {
+            done();
+          }
+
+          return;
+        }
+
+        instance.close(() => {
+          if (listen) {
+            listen.close(done);
+          } else {
+            done();
+          }
+        });
+      });
+
+      it('should work', (done) => {
+        instance.waitUntilValid(() => {
+          expect(instance.getFilenameFromUrl('/unknown.unknown')).toBeUndefined();
+          expect(instance.getFilenameFromUrl('/bundle.js')).toBe(
+            path.join(webpackConfig.output.path, '/bundle.js')
+          );
+
+          done();
         });
       });
     });
