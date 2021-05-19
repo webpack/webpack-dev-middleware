@@ -1,10 +1,10 @@
-import path from 'path';
+import path from "path";
 
-import { createFsFromVolume, Volume } from 'memfs';
+import { createFsFromVolume, Volume } from "memfs";
 
-import middleware from '../src';
+import middleware from "../src";
 
-import getCompiler from './helpers/getCompiler';
+import getCompiler from "./helpers/getCompiler";
 
 // Suppress unnecessary stats output
 global.console.log = jest.fn();
@@ -13,42 +13,42 @@ const configuredFs = createFsFromVolume(new Volume());
 
 configuredFs.join = path.join.bind(path);
 
-describe('validation', () => {
+describe("validation", () => {
   const cases = {
     mimeTypes: {
-      success: [{ phtml: ['text/html'] }],
-      failure: ['foo'],
+      success: [{ phtml: ["text/html"] }],
+      failure: ["foo"],
     },
     writeToDisk: {
       success: [true, false, () => {}],
       failure: [{}],
     },
     methods: {
-      success: [['GET', 'HEAD']],
+      success: [["GET", "HEAD"]],
       failure: [{}, true],
     },
     headers: {
-      success: [{ 'X-Custom-Header': 'yes' }, () => {}],
+      success: [{ "X-Custom-Header": "yes" }, () => {}],
       failure: [true, 1],
     },
     publicPath: {
-      success: ['/foo', '', 'auto', () => '/public/path'],
+      success: ["/foo", "", "auto", () => "/public/path"],
       failure: [false],
     },
     serverSideRender: {
       success: [true],
-      failure: ['foo', 0],
+      failure: ["foo", 0],
     },
     outputFileSystem: {
       success: [configuredFs],
       failure: [false],
     },
     index: {
-      success: [true, false, 'foo'],
+      success: [true, false, "foo"],
       failure: [0, {}],
     },
     stats: {
-      success: [true, false, 'normal', 'verbose', { all: false, assets: true }],
+      success: [true, false, "normal", "verbose", { all: false, assets: true }],
       failure: [0],
     },
   };
@@ -56,7 +56,7 @@ describe('validation', () => {
   function stringifyValue(value) {
     if (
       Array.isArray(value) ||
-      (value && typeof value === 'object' && value.constructor === Object)
+      (value && typeof value === "object" && value.constructor === Object)
     ) {
       return JSON.stringify(value);
     }
@@ -66,7 +66,7 @@ describe('validation', () => {
 
   async function createTestCase(key, value, type) {
     it(`should ${
-      type === 'success' ? 'successfully validate' : 'throw an error on'
+      type === "success" ? "successfully validate" : "throw an error on"
     } the "${key}" option with "${stringifyValue(value)}" value`, (done) => {
       const compiler = getCompiler();
 
@@ -76,15 +76,15 @@ describe('validation', () => {
       try {
         webpackDevMiddleware = middleware(compiler, { [key]: value });
       } catch (maybeError) {
-        if (maybeError.name !== 'ValidationError') {
+        if (maybeError.name !== "ValidationError") {
           throw maybeError;
         }
 
         error = maybeError;
       } finally {
-        if (type === 'success') {
+        if (type === "success") {
           expect(error).toBeUndefined();
-        } else if (type === 'failure') {
+        } else if (type === "failure") {
           expect(() => {
             throw error;
           }).toThrowErrorMatchingSnapshot();

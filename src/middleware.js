@@ -1,14 +1,14 @@
-import path from 'path';
+import path from "path";
 
-import mime from 'mime-types';
+import mime from "mime-types";
 
-import getFilenameFromUrl from './utils/getFilenameFromUrl';
-import handleRangeHeaders from './utils/handleRangeHeaders';
-import ready from './utils/ready';
+import getFilenameFromUrl from "./utils/getFilenameFromUrl";
+import handleRangeHeaders from "./utils/handleRangeHeaders";
+import ready from "./utils/ready";
 
 export default function wrapper(context) {
   return async function middleware(req, res, next) {
-    const acceptedMethods = context.options.methods || ['GET', 'HEAD'];
+    const acceptedMethods = context.options.methods || ["GET", "HEAD"];
 
     // fixes #282. credit @cexoso. in certain edge situations res.locals is undefined.
     // eslint-disable-next-line no-param-reassign
@@ -44,7 +44,7 @@ export default function wrapper(context) {
       const filename = getFilenameFromUrl(context, req.url);
       let { headers } = context.options;
 
-      if (typeof headers === 'function') {
+      if (typeof headers === "function") {
         headers = headers(req, res, context);
       }
 
@@ -63,8 +63,8 @@ export default function wrapper(context) {
       }
 
       const contentTypeHeader = res.get
-        ? res.get('Content-Type')
-        : res.getHeader('Content-Type');
+        ? res.get("Content-Type")
+        : res.getHeader("Content-Type");
 
       if (!contentTypeHeader) {
         // content-type name(like application/javascript; charset=utf-8) or false
@@ -75,11 +75,11 @@ export default function wrapper(context) {
         if (contentType) {
           // Express API
           if (res.set) {
-            res.set('Content-Type', contentType);
+            res.set("Content-Type", contentType);
           }
           // Node.js API
           else {
-            res.setHeader('Content-Type', contentType);
+            res.setHeader("Content-Type", contentType);
           }
         }
       }
@@ -108,9 +108,9 @@ export default function wrapper(context) {
       }
       // Node.js API
       else {
-        res.setHeader('Content-Length', content.length);
+        res.setHeader("Content-Length", content.length);
 
-        if (req.method === 'HEAD') {
+        if (req.method === "HEAD") {
           res.end();
         } else {
           res.end(content);

@@ -1,32 +1,32 @@
-import path from 'path';
+import path from "path";
 
-import express from 'express';
-import connect from 'connect';
-import webpack, { Stats } from 'webpack';
+import express from "express";
+import connect from "connect";
+import webpack, { Stats } from "webpack";
 
-import middleware from '../src';
+import middleware from "../src";
 
-import getCompiler from './helpers/getCompiler';
-import getCompilerHooks from './helpers/getCompilerHooks';
-import webpackConfig from './fixtures/webpack.config';
-import webpackPublicPathConfig from './fixtures/webpack.public-path.config';
-import webpackMultiConfig from './fixtures/webpack.array.config';
+import getCompiler from "./helpers/getCompiler";
+import getCompilerHooks from "./helpers/getCompilerHooks";
+import webpackConfig from "./fixtures/webpack.config";
+import webpackPublicPathConfig from "./fixtures/webpack.public-path.config";
+import webpackMultiConfig from "./fixtures/webpack.array.config";
 
 // Suppress unnecessary stats output
 global.console.log = jest.fn();
 
 describe.each([
-  ['express', express],
-  ['connect', connect],
-])('%s framework:', (_, framework) => {
-  describe('API', () => {
+  ["express", express],
+  ["connect", connect],
+])("%s framework:", (_, framework) => {
+  describe("API", () => {
     let instance;
     let listen;
     let app;
     let compiler;
 
-    describe('constructor', () => {
-      describe('should accept compiler', () => {
+    describe("constructor", () => {
+      describe("should accept compiler", () => {
         beforeEach((done) => {
           compiler = webpack(webpackConfig);
 
@@ -64,12 +64,12 @@ describe.each([
           });
         });
 
-        it('should work', (done) => {
+        it("should work", (done) => {
           const doneSpy = jest.spyOn(
             (webpack.webpack
               ? getCompilerHooks(compiler).afterDone
               : getCompilerHooks(compiler).done)[0],
-            'fn'
+            "fn"
           );
 
           instance.waitUntilValid(() => {
@@ -86,7 +86,7 @@ describe.each([
       });
 
       if (webpack.version[0] === 5) {
-        describe('should accept compiler in watch mode', () => {
+        describe("should accept compiler in watch mode", () => {
           beforeEach((done) => {
             compiler = webpack(
               { ...webpackConfig, ...{ watch: true } },
@@ -131,12 +131,12 @@ describe.each([
             });
           });
 
-          it('should work', (done) => {
+          it("should work", (done) => {
             const doneSpy = jest.spyOn(
               (webpack.webpack
                 ? getCompilerHooks(compiler).afterDone
                 : getCompilerHooks(compiler).done)[0],
-              'fn'
+              "fn"
             );
 
             instance.waitUntilValid(() => {
@@ -154,7 +154,7 @@ describe.each([
       }
     });
 
-    describe('waitUntilValid method', () => {
+    describe("waitUntilValid method", () => {
       beforeEach((done) => {
         compiler = getCompiler(webpackConfig);
 
@@ -192,12 +192,12 @@ describe.each([
         });
       });
 
-      it('should work without callback', (done) => {
+      it("should work without callback", (done) => {
         const doneSpy = jest.spyOn(
           (webpack.webpack
             ? getCompilerHooks(compiler).afterDone
             : getCompilerHooks(compiler).done)[0],
-          'fn'
+          "fn"
         );
 
         instance.waitUntilValid();
@@ -218,12 +218,12 @@ describe.each([
         });
       });
 
-      it('should work with callback', (done) => {
+      it("should work with callback", (done) => {
         const doneSpy = jest.spyOn(
           (webpack.webpack
             ? getCompilerHooks(compiler).afterDone
             : getCompilerHooks(compiler).done)[0],
-          'fn'
+          "fn"
         );
         let callbackCounter = 0;
 
@@ -247,12 +247,12 @@ describe.each([
         });
       });
 
-      it('should run callback immediately when state already valid', (done) => {
+      it("should run callback immediately when state already valid", (done) => {
         const doneSpy = jest.spyOn(
           (webpack.webpack
             ? getCompilerHooks(compiler).afterDone
             : getCompilerHooks(compiler).done)[0],
-          'fn'
+          "fn"
         );
         let callbackCounter = 0;
         let validToCheck = false;
@@ -283,7 +283,7 @@ describe.each([
       });
     });
 
-    describe('invalidate method', () => {
+    describe("invalidate method", () => {
       beforeEach((done) => {
         compiler = getCompiler(webpackConfig);
 
@@ -321,12 +321,12 @@ describe.each([
         });
       });
 
-      it('should work without callback', (done) => {
+      it("should work without callback", (done) => {
         const doneSpy = jest.spyOn(
           (webpack.webpack
             ? getCompilerHooks(compiler).afterDone
             : getCompilerHooks(compiler).done)[0],
-          'fn'
+          "fn"
         );
 
         instance.invalidate();
@@ -346,12 +346,12 @@ describe.each([
         });
       });
 
-      it('should work with callback', (done) => {
+      it("should work with callback", (done) => {
         const doneSpy = jest.spyOn(
           (webpack.webpack
             ? getCompilerHooks(compiler).afterDone
             : getCompilerHooks(compiler).done)[0],
-          'fn'
+          "fn"
         );
         let callbackCounter = 0;
 
@@ -376,8 +376,8 @@ describe.each([
       });
     });
 
-    describe('getFilenameFromUrl method', () => {
-      describe('should work', () => {
+    describe("getFilenameFromUrl method", () => {
+      describe("should work", () => {
         beforeEach((done) => {
           compiler = getCompiler(webpackConfig);
 
@@ -415,25 +415,25 @@ describe.each([
           });
         });
 
-        it('should work', (done) => {
+        it("should work", (done) => {
           instance.waitUntilValid(() => {
-            expect(instance.getFilenameFromUrl('/bundle.js')).toBe(
-              path.join(webpackConfig.output.path, '/bundle.js')
+            expect(instance.getFilenameFromUrl("/bundle.js")).toBe(
+              path.join(webpackConfig.output.path, "/bundle.js")
             );
-            expect(instance.getFilenameFromUrl('/')).toBe(
-              path.join(webpackConfig.output.path, '/index.html')
+            expect(instance.getFilenameFromUrl("/")).toBe(
+              path.join(webpackConfig.output.path, "/index.html")
             );
-            expect(instance.getFilenameFromUrl('/index.html')).toBe(
-              path.join(webpackConfig.output.path, '/index.html')
+            expect(instance.getFilenameFromUrl("/index.html")).toBe(
+              path.join(webpackConfig.output.path, "/index.html")
             );
-            expect(instance.getFilenameFromUrl('/svg.svg')).toBe(
-              path.join(webpackConfig.output.path, '/svg.svg')
+            expect(instance.getFilenameFromUrl("/svg.svg")).toBe(
+              path.join(webpackConfig.output.path, "/svg.svg")
             );
             expect(
-              instance.getFilenameFromUrl('/unknown.unknown')
+              instance.getFilenameFromUrl("/unknown.unknown")
             ).toBeUndefined();
             expect(
-              instance.getFilenameFromUrl('/unknown/unknown.unknown')
+              instance.getFilenameFromUrl("/unknown/unknown.unknown")
             ).toBeUndefined();
 
             done();
@@ -479,24 +479,24 @@ describe.each([
           });
         });
 
-        it('should work', (done) => {
+        it("should work", (done) => {
           instance.waitUntilValid(() => {
-            expect(instance.getFilenameFromUrl('/bundle.js')).toBe(
-              path.join(webpackConfig.output.path, '/bundle.js')
+            expect(instance.getFilenameFromUrl("/bundle.js")).toBe(
+              path.join(webpackConfig.output.path, "/bundle.js")
             );
             // eslint-disable-next-line no-undefined
-            expect(instance.getFilenameFromUrl('/')).toBe(undefined);
-            expect(instance.getFilenameFromUrl('/index.html')).toBe(
-              path.join(webpackConfig.output.path, '/index.html')
+            expect(instance.getFilenameFromUrl("/")).toBe(undefined);
+            expect(instance.getFilenameFromUrl("/index.html")).toBe(
+              path.join(webpackConfig.output.path, "/index.html")
             );
-            expect(instance.getFilenameFromUrl('/svg.svg')).toBe(
-              path.join(webpackConfig.output.path, '/svg.svg')
+            expect(instance.getFilenameFromUrl("/svg.svg")).toBe(
+              path.join(webpackConfig.output.path, "/svg.svg")
             );
             expect(
-              instance.getFilenameFromUrl('/unknown.unknown')
+              instance.getFilenameFromUrl("/unknown.unknown")
             ).toBeUndefined();
             expect(
-              instance.getFilenameFromUrl('/unknown/unknown.unknown')
+              instance.getFilenameFromUrl("/unknown/unknown.unknown")
             ).toBeUndefined();
 
             done();
@@ -542,27 +542,27 @@ describe.each([
           });
         });
 
-        it('should work', (done) => {
+        it("should work", (done) => {
           instance.waitUntilValid(() => {
-            expect(instance.getFilenameFromUrl('/public/path/bundle.js')).toBe(
-              path.join(webpackPublicPathConfig.output.path, '/bundle.js')
+            expect(instance.getFilenameFromUrl("/public/path/bundle.js")).toBe(
+              path.join(webpackPublicPathConfig.output.path, "/bundle.js")
             );
-            expect(instance.getFilenameFromUrl('/public/path/')).toBe(
-              path.join(webpackPublicPathConfig.output.path, '/index.html')
+            expect(instance.getFilenameFromUrl("/public/path/")).toBe(
+              path.join(webpackPublicPathConfig.output.path, "/index.html")
             );
-            expect(instance.getFilenameFromUrl('/public/path/index.html')).toBe(
-              path.join(webpackPublicPathConfig.output.path, '/index.html')
+            expect(instance.getFilenameFromUrl("/public/path/index.html")).toBe(
+              path.join(webpackPublicPathConfig.output.path, "/index.html")
             );
-            expect(instance.getFilenameFromUrl('/public/path/svg.svg')).toBe(
-              path.join(webpackPublicPathConfig.output.path, '/svg.svg')
+            expect(instance.getFilenameFromUrl("/public/path/svg.svg")).toBe(
+              path.join(webpackPublicPathConfig.output.path, "/svg.svg")
             );
 
-            expect(instance.getFilenameFromUrl('/')).toBeUndefined();
+            expect(instance.getFilenameFromUrl("/")).toBeUndefined();
             expect(
-              instance.getFilenameFromUrl('/unknown.unknown')
+              instance.getFilenameFromUrl("/unknown.unknown")
             ).toBeUndefined();
             expect(
-              instance.getFilenameFromUrl('/unknown/unknown.unknown')
+              instance.getFilenameFromUrl("/unknown/unknown.unknown")
             ).toBeUndefined();
 
             done();
@@ -570,7 +570,7 @@ describe.each([
         });
       });
 
-      describe('should work in multi compiler mode', () => {
+      describe("should work in multi compiler mode", () => {
         beforeEach((done) => {
           compiler = getCompiler(webpackMultiConfig);
 
@@ -608,43 +608,43 @@ describe.each([
           });
         });
 
-        it('should work', (done) => {
+        it("should work", (done) => {
           instance.waitUntilValid(() => {
-            expect(instance.getFilenameFromUrl('/static-one/bundle.js')).toBe(
-              path.join(webpackMultiConfig[0].output.path, '/bundle.js')
+            expect(instance.getFilenameFromUrl("/static-one/bundle.js")).toBe(
+              path.join(webpackMultiConfig[0].output.path, "/bundle.js")
             );
-            expect(instance.getFilenameFromUrl('/static-one/')).toBe(
-              path.join(webpackMultiConfig[0].output.path, '/index.html')
+            expect(instance.getFilenameFromUrl("/static-one/")).toBe(
+              path.join(webpackMultiConfig[0].output.path, "/index.html")
             );
-            expect(instance.getFilenameFromUrl('/static-one/index.html')).toBe(
-              path.join(webpackMultiConfig[0].output.path, '/index.html')
+            expect(instance.getFilenameFromUrl("/static-one/index.html")).toBe(
+              path.join(webpackMultiConfig[0].output.path, "/index.html")
             );
-            expect(instance.getFilenameFromUrl('/static-one/svg.svg')).toBe(
-              path.join(webpackMultiConfig[0].output.path, '/svg.svg')
+            expect(instance.getFilenameFromUrl("/static-one/svg.svg")).toBe(
+              path.join(webpackMultiConfig[0].output.path, "/svg.svg")
             );
             expect(
-              instance.getFilenameFromUrl('/static-one/unknown.unknown')
+              instance.getFilenameFromUrl("/static-one/unknown.unknown")
             ).toBeUndefined();
             expect(
-              instance.getFilenameFromUrl('/static-one/unknown/unknown.unknown')
-            ).toBeUndefined();
-
-            expect(instance.getFilenameFromUrl('/static-two/bundle.js')).toBe(
-              path.join(webpackMultiConfig[1].output.path, '/bundle.js')
-            );
-            expect(
-              instance.getFilenameFromUrl('/static-two/unknown.unknown')
-            ).toBeUndefined();
-            expect(
-              instance.getFilenameFromUrl('/static-two/unknown/unknown.unknown')
+              instance.getFilenameFromUrl("/static-one/unknown/unknown.unknown")
             ).toBeUndefined();
 
-            expect(instance.getFilenameFromUrl('/')).toBeUndefined();
+            expect(instance.getFilenameFromUrl("/static-two/bundle.js")).toBe(
+              path.join(webpackMultiConfig[1].output.path, "/bundle.js")
+            );
             expect(
-              instance.getFilenameFromUrl('/static-one/unknown.unknown')
+              instance.getFilenameFromUrl("/static-two/unknown.unknown")
             ).toBeUndefined();
             expect(
-              instance.getFilenameFromUrl('/static-one/unknown/unknown.unknown')
+              instance.getFilenameFromUrl("/static-two/unknown/unknown.unknown")
+            ).toBeUndefined();
+
+            expect(instance.getFilenameFromUrl("/")).toBeUndefined();
+            expect(
+              instance.getFilenameFromUrl("/static-one/unknown.unknown")
+            ).toBeUndefined();
+            expect(
+              instance.getFilenameFromUrl("/static-one/unknown/unknown.unknown")
             ).toBeUndefined();
 
             done();
@@ -653,7 +653,7 @@ describe.each([
       });
     });
 
-    describe('close method', () => {
+    describe("close method", () => {
       beforeEach((done) => {
         compiler = getCompiler(webpackConfig);
 
@@ -691,12 +691,12 @@ describe.each([
         });
       });
 
-      it('should work without callback', (done) => {
+      it("should work without callback", (done) => {
         const doneSpy = jest.spyOn(
           (webpack.webpack
             ? getCompilerHooks(compiler).afterDone
             : getCompilerHooks(compiler).done)[0],
-          'fn'
+          "fn"
         );
 
         instance.waitUntilValid(() => {
@@ -711,12 +711,12 @@ describe.each([
         });
       });
 
-      it('should work with callback', (done) => {
+      it("should work with callback", (done) => {
         const doneSpy = jest.spyOn(
           (webpack.webpack
             ? getCompilerHooks(compiler).afterDone
             : getCompilerHooks(compiler).done)[0],
-          'fn'
+          "fn"
         );
 
         instance.waitUntilValid(() => {
@@ -732,7 +732,7 @@ describe.each([
       });
     });
 
-    describe('context property', () => {
+    describe("context property", () => {
       beforeEach((done) => {
         compiler = getCompiler(webpackConfig);
 
@@ -770,7 +770,7 @@ describe.each([
         });
       });
 
-      it('should contain public properties', (done) => {
+      it("should contain public properties", (done) => {
         expect(instance.context.state).toBeDefined();
         expect(instance.context.options).toBeDefined();
         expect(instance.context.compiler).toBeDefined();
@@ -780,7 +780,7 @@ describe.each([
         // the compilation needs to finish, as it will still be running
         // after the test is done if not finished, potentially impacting other tests
         (webpack.webpack ? compiler.hooks.afterDone : compiler.hooks.done).tap(
-          'wdm-test',
+          "wdm-test",
           () => {
             done();
           }

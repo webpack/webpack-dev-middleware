@@ -1,3 +1,3 @@
-import webpack from 'webpack';
+import webpack from "webpack";
 
-export default () => webpack.version[0] === '5';
+export default () => webpack.version[0] === "5";

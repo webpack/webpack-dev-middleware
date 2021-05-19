@@ -1,6 +1,6 @@
-import path from 'path';
+import path from "path";
 
-import { createFsFromVolume, Volume } from 'memfs';
+import { createFsFromVolume, Volume } from "memfs";
 
 export default function setupOutputFileSystem(context) {
   let outputFileSystem;
@@ -10,16 +10,16 @@ export default function setupOutputFileSystem(context) {
     const { outputFileSystem: outputFileSystemFromOptions } = context.options;
 
     // Todo remove when we drop webpack@4 support
-    if (typeof outputFileSystemFromOptions.join !== 'function') {
+    if (typeof outputFileSystemFromOptions.join !== "function") {
       throw new Error(
-        'Invalid options: options.outputFileSystem.join() method is expected'
+        "Invalid options: options.outputFileSystem.join() method is expected"
       );
     }
 
     // Todo remove when we drop webpack@4 support
-    if (typeof outputFileSystemFromOptions.mkdirp !== 'function') {
+    if (typeof outputFileSystemFromOptions.mkdirp !== "function") {
       throw new Error(
-        'Invalid options: options.outputFileSystem.mkdirp() method is expected'
+        "Invalid options: options.outputFileSystem.mkdirp() method is expected"
       );
     }
 

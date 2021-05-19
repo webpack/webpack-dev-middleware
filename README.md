@@ -38,12 +38,12 @@ _Note: We do not recommend installing this module globally._
 ## Usage
 
 ```js
-const webpack = require('webpack');
-const middleware = require('webpack-dev-middleware');
+const webpack = require("webpack");
+const middleware = require("webpack-dev-middleware");
 const compiler = webpack({
   // webpack options
 });
-const express = require('express');
+const express = require("express");
 const app = express();
 
 app.use(
@@ -52,7 +52,7 @@ app.use(
   })
 );
 
-app.listen(3000, () => console.log('Example app listening on port 3000!'));
+app.listen(3000, () => console.log("Example app listening on port 3000!"));
 ```
 
 See [below](#other-servers) for an example of use with fastify.
@@ -82,7 +82,7 @@ or
 webpackDevMiddleware(compiler, {
   headers: () => {
     return {
-      'Last-Modified': new Date(),
+      "Last-Modified": new Date(),
     };
   },
 });
@@ -93,7 +93,7 @@ or
 ```js
 webpackDevMiddleware(compiler, {
   headers: (req, res, context) => {
-    res.setHeader('Last-Modified', new Date());
+    res.setHeader("Last-Modified", new Date());
   },
 });
 ```
@@ -152,7 +152,7 @@ This option also accepts a `Function` value, which can be used to filter which f
 The function follows the same premise as [`Array#filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) in which a return value of `false` _will not_ write the file, and a return value of `true` _will_ write the file to disk. eg.
 
 ```js
-const webpack = require('webpack');
+const webpack = require("webpack");
 const configuration = {
   /* Webpack configuration */
 };
@@ -178,10 +178,10 @@ You have to provide `.join()` and `mkdirp` method to the `outputFileSystem` inst
 This can be done simply by using `path.join`:
 
 ```js
-const webpack = require('webpack');
-const path = require('path');
-const myOutputFileSystem = require('my-fs');
-const mkdirp = require('mkdirp');
+const webpack = require("webpack");
+const path = require("path");
+const myOutputFileSystem = require("my-fs");
+const mkdirp = require("mkdirp");
 
 myOutputFileSystem.join = path.join.bind(path); // no need to bind
 myOutputFileSystem.mkdirp = mkdirp.bind(mkdirp); // no need to bind
@@ -212,12 +212,12 @@ Required: `No`
 A function executed once the middleware has stopped watching.
 
 ```js
-const express = require('express');
-const webpack = require('webpack');
+const express = require("express");
+const webpack = require("webpack");
 const compiler = webpack({
   /* Webpack configuration */
 });
-const middleware = require('webpack-dev-middleware');
+const middleware = require("webpack-dev-middleware");
 const instance = middleware(compiler);
 
 const app = new express();
@@ -244,12 +244,12 @@ Required: `No`
 A function executed once the middleware has invalidated.
 
 ```js
-const express = require('express');
-const webpack = require('webpack');
+const express = require("express");
+const webpack = require("webpack");
 const compiler = webpack({
   /* Webpack configuration */
 });
-const middleware = require('webpack-dev-middleware');
+const middleware = require("webpack-dev-middleware");
 const instance = middleware(compiler);
 
 const app = new express();
@@ -258,7 +258,7 @@ app.use(instance);
 
 setTimeout(() => {
   // After a short delay the configuration is changed and a banner plugin is added to the config
-  new webpack.BannerPlugin('A new banner').apply(compiler);
+  new webpack.BannerPlugin("A new banner").apply(compiler);
 
   // Recompile the bundle with the banner plugin:
   instance.invalidate();
@@ -281,12 +281,12 @@ A function executed when the bundle becomes valid.
 If the bundle is valid at the time of calling, the callback is executed immediately.
 
 ```js
-const express = require('express');
-const webpack = require('webpack');
+const express = require("express");
+const webpack = require("webpack");
 const compiler = webpack({
   /* Webpack configuration */
 });
-const middleware = require('webpack-dev-middleware');
+const middleware = require("webpack-dev-middleware");
 const instance = middleware(compiler);
 
 const app = new express();
@@ -294,7 +294,7 @@ const app = new express();
 app.use(instance);
 
 instance.waitUntilValid(() => {
-  console.log('Package is in a valid state');
+  console.log("Package is in a valid state");
 });
 ```
 
@@ -312,12 +312,12 @@ Required: `Yes`
 URL for the requested file.
 
 ```js
-const express = require('express');
-const webpack = require('webpack');
+const express = require("express");
+const webpack = require("webpack");
 const compiler = webpack({
   /* Webpack configuration */
 });
-const middleware = require('webpack-dev-middleware');
+const middleware = require("webpack-dev-middleware");
 const instance = middleware(compiler);
 
 const app = new express();
@@ -325,7 +325,7 @@ const app = new express();
 app.use(instance);
 
 instance.waitUntilValid(() => {
-  const filename = instance.getFilenameFromUrl('/bundle.js');
+  const filename = instance.getFilenameFromUrl("/bundle.js");
 
   console.log(`Filename is ${filename}`);
 });
@@ -360,13 +360,13 @@ process is finished with server-side rendering enabled._
 Example Implementation:
 
 ```js
-const express = require('express');
-const webpack = require('webpack');
+const express = require("express");
+const webpack = require("webpack");
 const compiler = webpack({
   /* Webpack configuration */
 });
-const isObject = require('is-object');
-const middleware = require('webpack-dev-middleware');
+const isObject = require("is-object");
+const middleware = require("webpack-dev-middleware");
 
 const app = new express();
 
@@ -396,17 +396,17 @@ app.use((req, res) => {
     <title>My App</title>
     <style>
     ${normalizeAssets(assetsByChunkName.main)
-      .filter((path) => path.endsWith('.css'))
+      .filter((path) => path.endsWith(".css"))
       .map((path) => outputFileSystem.readFileSync(path.join(outputPath, path)))
-      .join('\n')}
+      .join("\n")}
     </style>
   </head>
   <body>
     <div id="root"></div>
     ${normalizeAssets(assetsByChunkName.main)
-      .filter((path) => path.endsWith('.js'))
+      .filter((path) => path.endsWith(".js"))
       .map((path) => `<script src="${path}"></script>`)
-      .join('\n')}
+      .join("\n")}
   </body>
 </html>
   `);
@@ -448,16 +448,16 @@ Examples of use with other servers will follow here.
 Fastify interop will require the use of `fastify-express` instead of `middie` for providing middleware support. As the authors of `fastify-express` recommend, this should only be used as a stopgap while full Fastify support is worked on.
 
 ```js
-const fastify = require('fastify')();
-const webpack = require('webpack');
-const webpackConfig = require('./webpack.config.js');
-const devMiddleware = require('webpack-dev-middleware');
+const fastify = require("fastify")();
+const webpack = require("webpack");
+const webpackConfig = require("./webpack.config.js");
+const devMiddleware = require("webpack-dev-middleware");
 
 const compiler = webpack(webpackConfig);
 const { publicPath } = webpackConfig.output;
 
 (async () => {
-  await fastify.register(require('fastify-express'));
+  await fastify.register(require("fastify-express"));
   await fastify.use(devMiddleware(compiler, { publicPath }));
   await fastify.listen(3000);
 })();

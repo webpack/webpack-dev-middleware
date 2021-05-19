@@ -1,10 +1,10 @@
-import path from 'path';
-import { parse } from 'url';
-import querystring from 'querystring';
+import path from "path";
+import { parse } from "url";
+import querystring from "querystring";
 
-import mem from 'mem';
+import mem from "mem";
 
-import getPaths from './getPaths';
+import getPaths from "./getPaths";
 
 const memoizedParse = mem(parse);
 
@@ -28,7 +28,7 @@ export default function getFilenameFromUrl(context, url) {
 
     try {
       publicPathObject = memoizedParse(
-        publicPath !== 'auto' && publicPath ? publicPath : '/',
+        publicPath !== "auto" && publicPath ? publicPath : "/",
         false,
         true
       );
@@ -68,12 +68,12 @@ export default function getFilenameFromUrl(context, url) {
         break;
       } else if (
         fsStats.isDirectory() &&
-        (typeof options.index === 'undefined' || options.index)
+        (typeof options.index === "undefined" || options.index)
       ) {
         const indexValue =
-          typeof options.index === 'undefined' ||
-          typeof options.index === 'boolean'
-            ? 'index.html'
+          typeof options.index === "undefined" ||
+          typeof options.index === "boolean"
+            ? "index.html"
             : options.index;
 
         filename = path.join(filename, indexValue);

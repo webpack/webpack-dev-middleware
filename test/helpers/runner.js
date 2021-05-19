@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 
-const express = require('express');
-const webpack = require('webpack');
-const merge = require('deepmerge');
+const express = require("express");
+const webpack = require("webpack");
+const merge = require("deepmerge");
 
-const middleware = require('../../dist').default;
-const defaultConfig = require('../fixtures/webpack.config');
+const middleware = require("../../dist").default;
+const defaultConfig = require("../fixtures/webpack.config");
 
 const configEntries = [];
 const configMiddlewareEntries = [];
 
-fillConfigEntries('WCF_', configEntries);
-fillConfigEntries('WMC_', configMiddlewareEntries);
+fillConfigEntries("WCF_", configEntries);
+fillConfigEntries("WMC_", configMiddlewareEntries);
 
 const createdConfig = createConfig(configEntries);
 const unionConfig =
@@ -31,25 +31,25 @@ let instance;
 
 if (process.env.WEBPACK_BREAK_WATCH) {
   compiler.watch = function watch() {
-    const error = new Error('Watch error');
-    error.code = 'watch error';
+    const error = new Error("Watch error");
+    error.code = "watch error";
 
     throw error;
   };
 }
 
-compiler.hooks.done.tap('plugin-test', () => {
-  process.stdout.write('compiled-for-tests');
+compiler.hooks.done.tap("plugin-test", () => {
+  process.stdout.write("compiled-for-tests");
 });
 
 switch (process.env.WEBPACK_DEV_MIDDLEWARE_STATS) {
-  case 'object':
+  case "object":
     configMiddleware.stats = { all: false, assets: true };
     break;
-  case 'object_colors_true':
+  case "object_colors_true":
     configMiddleware.stats = { all: false, assets: true, colors: true };
     break;
-  case 'object_colors_false':
+  case "object_colors_false":
     configMiddleware.stats = { all: false, assets: true, colors: false };
     break;
   default:
@@ -76,10 +76,10 @@ app.listen((error) => {
   }
 
   let commands = [];
-  let incompleteCommand = '';
+  let incompleteCommand = "";
 
-  process.stdin.on('data', (chunk) => {
-    const entries = chunk.toString().split('|');
+  process.stdin.on("data", (chunk) => {
+    const entries = chunk.toString().split("|");
 
     incompleteCommand += entries.shift();
     commands.push(incompleteCommand);
@@ -95,7 +95,7 @@ app.listen((error) => {
         //     instance.invalidate();
         //   });
         //   break;
-        case 'exit':
+        case "exit":
           process.exit();
           break;
       }
@@ -140,9 +140,9 @@ function fillConfigEntries(NSKey, accumulator) {
     .filter((key) => key.indexOf(NSKey) === 0)
     .forEach((key) => {
       let value = process.env[key];
-      const keys = key.replace(NSKey, '').split('_');
+      const keys = key.replace(NSKey, "").split("_");
 
-      value = value === 'true' ? true : value === 'false' ? false : value;
+      value = value === "true" ? true : value === "false" ? false : value;
 
       keys.push(value);
       accumulator.push(keys);

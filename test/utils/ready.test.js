@@ -1,46 +1,46 @@
-import ready from '../../src/utils/ready';
+import ready from "../../src/utils/ready";
 
-describe('ready', () => {
-  it('should call callback if state is true', () => {
+describe("ready", () => {
+  it("should call callback if state is true", () => {
     const cb = jest.fn();
     const context = {
       state: true,
-      stats: 'stats',
+      stats: "stats",
     };
     ready(context, cb);
 
     expect(cb.mock.calls.length).toEqual(1);
-    expect(cb.mock.calls[0]).toEqual(['stats']);
+    expect(cb.mock.calls[0]).toEqual(["stats"]);
   });
 
-  it('should save callback and log req.url if state is false with req.url set', () => {
+  it("should save callback and log req.url if state is false with req.url set", () => {
     const cb = jest.fn();
     const context = {
       state: false,
-      stats: 'stats',
+      stats: "stats",
       logger: {
         info: jest.fn(),
       },
       callbacks: [],
     };
     const req = {
-      url: 'url',
+      url: "url",
     };
     ready(context, cb, req);
 
     expect(cb).not.toBeCalled();
     expect(context.logger.info.mock.calls.length).toEqual(1);
     expect(context.logger.info.mock.calls[0]).toEqual([
-      'wait until bundle finished: url',
+      "wait until bundle finished: url",
     ]);
     expect(context.callbacks).toEqual([cb]);
   });
 
-  it('should save callback and log callback.name if state is false with req.url not set', () => {
+  it("should save callback and log callback.name if state is false with req.url not set", () => {
     const cb = jest.fn();
     const context = {
       state: false,
-      stats: 'stats',
+      stats: "stats",
       logger: {
         info: jest.fn(),
       },
@@ -52,7 +52,7 @@ describe('ready', () => {
     expect(context.logger.info.mock.calls.length).toEqual(1);
     // mockConstructor is the name of the jest.fn() function
     expect(context.logger.info.mock.calls[0]).toEqual([
-      'wait until bundle finished: mockConstructor',
+      "wait until bundle finished: mockConstructor",
     ]);
     expect(context.callbacks).toEqual([cb]);
   });

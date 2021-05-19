@@ -1,3 +1,3 @@
-'use strict';
+"use strict";
 
 jest.setTimeout(20000);

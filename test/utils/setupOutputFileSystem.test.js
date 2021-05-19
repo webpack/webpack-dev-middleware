@@ -1,8 +1,8 @@
-import memfs from 'memfs';
+import memfs from "memfs";
 
-import setupOutputFileSystem from '../../src/utils/setupOutputFileSystem';
+import setupOutputFileSystem from "../../src/utils/setupOutputFileSystem";
 
-const createFsFromVolume = jest.spyOn(memfs, 'createFsFromVolume');
+const createFsFromVolume = jest.spyOn(memfs, "createFsFromVolume");
 
 createFsFromVolume.mockImplementation(() => {
   return {
@@ -10,12 +10,12 @@ createFsFromVolume.mockImplementation(() => {
   };
 });
 
-describe('setupOutputFileSystem', () => {
+describe("setupOutputFileSystem", () => {
   afterEach(() => {
     createFsFromVolume.mockClear();
   });
 
-  it('should create default fs if not provided', () => {
+  it("should create default fs if not provided", () => {
     const context = {
       compiler: {},
       options: {},
@@ -29,7 +29,7 @@ describe('setupOutputFileSystem', () => {
     expect(createFsFromVolume.mock.calls.length).toEqual(1);
   });
 
-  it('should set fs for multi compiler', () => {
+  it("should set fs for multi compiler", () => {
     const context = {
       compiler: {
         compilers: [{}, {}],
@@ -42,7 +42,7 @@ describe('setupOutputFileSystem', () => {
     });
   });
 
-  it('should throw on provided fs without join method', () => {
+  it("should throw on provided fs without join method", () => {
     const context = {
       compiler: {},
       options: {
@@ -54,7 +54,7 @@ describe('setupOutputFileSystem', () => {
     }).toThrow(/join/);
   });
 
-  it('should throw on provided fs without mkdirp method', () => {
+  it("should throw on provided fs without mkdirp method", () => {
     const context = {
       compiler: {},
       options: {
@@ -68,7 +68,7 @@ describe('setupOutputFileSystem', () => {
     }).toThrow(/mkdirp/);
   });
 
-  it('should use provided fs with correct methods', () => {
+  it("should use provided fs with correct methods", () => {
     const context = {
       compiler: {},
       options: {
