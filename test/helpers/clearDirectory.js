@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs from "fs";
 
 function clearDirectory(dirPath) {
   let files;

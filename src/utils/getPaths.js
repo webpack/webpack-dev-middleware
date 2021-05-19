@@ -10,7 +10,7 @@ export default function getPaths(context) {
       ? compilation.getPath(options.publicPath)
       : compilation.outputOptions.publicPath
       ? compilation.getPath(compilation.outputOptions.publicPath)
-      : '';
+      : "";
 
     publicPaths.push({ outputPath, publicPath });
   }

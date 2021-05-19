@@ -1,20 +1,20 @@
-import { validate } from 'schema-utils';
-import mime from 'mime-types';
+import { validate } from "schema-utils";
+import mime from "mime-types";
 
-import middleware from './middleware';
-import getFilenameFromUrl from './utils/getFilenameFromUrl';
-import setupHooks from './utils/setupHooks';
-import setupWriteToDisk from './utils/setupWriteToDisk';
-import setupOutputFileSystem from './utils/setupOutputFileSystem';
-import ready from './utils/ready';
-import schema from './options.json';
+import middleware from "./middleware";
+import getFilenameFromUrl from "./utils/getFilenameFromUrl";
+import setupHooks from "./utils/setupHooks";
+import setupWriteToDisk from "./utils/setupWriteToDisk";
+import setupOutputFileSystem from "./utils/setupOutputFileSystem";
+import ready from "./utils/ready";
+import schema from "./options.json";
 
 const noop = () => {};
 
 export default function wdm(compiler, options = {}) {
   validate(schema, options, {
-    name: 'Dev Middleware',
-    baseDataPath: 'options',
+    name: "Dev Middleware",
+    baseDataPath: "options",
   });
 
   const { mimeTypes } = options;
@@ -38,7 +38,7 @@ export default function wdm(compiler, options = {}) {
 
   // eslint-disable-next-line no-param-reassign
   context.logger = context.compiler.getInfrastructureLogger(
-    'webpack-dev-middleware'
+    "webpack-dev-middleware"
   );
 
   setupHooks(context);

@@ -1,17 +1,17 @@
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
 
 export default function setupWriteToDisk(context) {
   const compilers = context.compiler.compilers || [context.compiler];
 
   for (const compiler of compilers) {
-    compiler.hooks.emit.tap('DevMiddleware', (compilation) => {
+    compiler.hooks.emit.tap("DevMiddleware", (compilation) => {
       if (compiler.hasWebpackDevMiddlewareAssetEmittedCallback) {
         return;
       }
 
       compiler.hooks.assetEmitted.tapAsync(
-        'DevMiddleware',
+        "DevMiddleware",
         (file, info, callback) => {
           let targetPath = null;
           let content = null;
@@ -22,7 +22,7 @@ export default function setupWriteToDisk(context) {
           } else {
             let targetFile = file;
 
-            const queryStringIdx = targetFile.indexOf('?');
+            const queryStringIdx = targetFile.indexOf("?");
 
             if (queryStringIdx >= 0) {
               targetFile = targetFile.substr(0, queryStringIdx);
@@ -37,7 +37,7 @@ export default function setupWriteToDisk(context) {
 
           const { writeToDisk: filter } = context.options;
           const allowWrite =
-            filter && typeof filter === 'function' ? filter(targetPath) : true;
+            filter && typeof filter === "function" ? filter(targetPath) : true;
 
           if (!allowWrite) {
             return callback();
@@ -46,7 +46,7 @@ export default function setupWriteToDisk(context) {
           const dir = path.dirname(targetPath);
           const name = compiler.options.name
             ? `Child "${compiler.options.name}": `
-            : '';
+            : "";
 
           return fs.mkdir(dir, { recursive: true }, (mkdirError) => {
             if (mkdirError) {

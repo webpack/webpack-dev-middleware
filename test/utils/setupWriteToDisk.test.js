@@ -1,12 +1,12 @@
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
 
-import setupWriteToDisk from '../../src/utils/setupWriteToDisk';
+import setupWriteToDisk from "../../src/utils/setupWriteToDisk";
 
-const mkdirSpy = jest.spyOn(fs, 'mkdir');
-const writeFileSpy = jest.spyOn(fs, 'writeFile');
+const mkdirSpy = jest.spyOn(fs, "mkdir");
+const writeFileSpy = jest.spyOn(fs, "writeFile");
 
-describe('setupWriteToDisk', () => {
+describe("setupWriteToDisk", () => {
   let context;
   const emitHook = jest.fn();
   const assetEmittedHook = jest.fn();
@@ -23,9 +23,9 @@ describe('setupWriteToDisk', () => {
             tapAsync: assetEmittedHook,
           },
         },
-        outputPath: '/output/path/',
+        outputPath: "/output/path/",
         options: {
-          name: 'name',
+          name: "name",
         },
       },
       logger: {
@@ -52,7 +52,7 @@ describe('setupWriteToDisk', () => {
     assetEmittedHook.mock.calls[0][1](...args);
   };
 
-  it('will not tap assetEmitted twice for compiler', () => {
+  it("will not tap assetEmitted twice for compiler", () => {
     setupWriteToDisk(context);
     // this simulates the emit hook being called twice
     emitHook.mock.calls[0][1]();
@@ -60,7 +60,7 @@ describe('setupWriteToDisk', () => {
     expect(assetEmittedHook.mock.calls.length).toEqual(1);
   });
 
-  it('filters out unwanted emits with writeToDisk', () => {
+  it("filters out unwanted emits with writeToDisk", () => {
     const filter = jest.fn(() => false);
     context.options = {
       writeToDisk: filter,
@@ -72,7 +72,7 @@ describe('setupWriteToDisk', () => {
       null,
       {
         compilation: {},
-        targetPath: 'targetPath',
+        targetPath: "targetPath",
       },
       cb
     );
@@ -81,14 +81,14 @@ describe('setupWriteToDisk', () => {
     expect(getPath.mock.calls.length).toEqual(0);
 
     expect(filter.mock.calls.length).toEqual(1);
-    expect(filter.mock.calls[0][0]).toEqual('targetPath');
+    expect(filter.mock.calls[0][0]).toEqual("targetPath");
     // the callback should always be called
     expect(cb.mock.calls.length).toEqual(1);
     // the filter prevents a directory from being made
     expect(mkdirSpy.mock.calls.length).toEqual(0);
   });
 
-  it('handles query string with webpack@4', () => {
+  it("handles query string with webpack@4", () => {
     const filter = jest.fn(() => false);
     context.options = {
       writeToDisk: filter,
@@ -97,9 +97,9 @@ describe('setupWriteToDisk', () => {
     const cb = jest.fn();
     // webpack@4 info style
     runAssetEmitted(
-      'file?query=example',
+      "file?query=example",
       {
-        targetPath: 'targetPath',
+        targetPath: "targetPath",
       },
       cb
     );
@@ -109,7 +109,7 @@ describe('setupWriteToDisk', () => {
 
     expect(filter.mock.calls.length).toEqual(1);
     // need to fix path for windows test
-    expect(filter.mock.calls[0][0]).toEqual(path.join('/output/path/file'));
+    expect(filter.mock.calls[0][0]).toEqual(path.join("/output/path/file"));
     // the callback should always be called
     expect(cb.mock.calls.length).toEqual(1);
     // the filter prevents a directory from being made
@@ -118,19 +118,19 @@ describe('setupWriteToDisk', () => {
 
   const writeErrors = [
     {
-      title: 'with no write errors',
+      title: "with no write errors",
       mkdirError: null,
       writeFileError: null,
     },
     {
-      title: 'with mkdir error',
-      mkdirError: 'error1',
+      title: "with mkdir error",
+      mkdirError: "error1",
       writeFileError: null,
     },
     {
-      title: 'with writeFile error',
+      title: "with writeFile error",
       mkdirError: null,
-      writeFileError: 'error2',
+      writeFileError: "error2",
     },
   ];
 
@@ -144,8 +144,8 @@ describe('setupWriteToDisk', () => {
         null,
         {
           compilation: {},
-          targetPath: '/target/path/file',
-          content: 'content',
+          targetPath: "/target/path/file",
+          content: "content",
         },
         cb
       );
@@ -154,7 +154,7 @@ describe('setupWriteToDisk', () => {
       expect(getPath.mock.calls.length).toEqual(0);
 
       expect(mkdirSpy.mock.calls.length).toEqual(1);
-      expect(mkdirSpy.mock.calls[0][0]).toEqual('/target/path');
+      expect(mkdirSpy.mock.calls[0][0]).toEqual("/target/path");
 
       // simulates the mkdir callback being called
       mkdirSpy.mock.calls[0][2](writeError.mkdirError);
@@ -163,8 +163,8 @@ describe('setupWriteToDisk', () => {
         expect(writeFileSpy.mock.calls.length).toEqual(0);
       } else {
         expect(writeFileSpy.mock.calls.length).toEqual(1);
-        expect(writeFileSpy.mock.calls[0][0]).toEqual('/target/path/file');
-        expect(writeFileSpy.mock.calls[0][1]).toEqual('content');
+        expect(writeFileSpy.mock.calls[0][0]).toEqual("/target/path/file");
+        expect(writeFileSpy.mock.calls[0][1]).toEqual("content");
 
         // simulates the writeFile callback being called
         writeFileSpy.mock.calls[0][2](writeError.writeFileError);

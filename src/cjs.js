@@ -1,3 +1,3 @@
-const middleware = require('./index');
+const middleware = require("./index");
 
 module.exports = middleware.default;

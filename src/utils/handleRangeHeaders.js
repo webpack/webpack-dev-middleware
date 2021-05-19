@@ -1,19 +1,19 @@
-import parseRange from 'range-parser';
+import parseRange from "range-parser";
 
 export default function handleRangeHeaders(context, content, req, res) {
   // assumes express API. For other servers, need to add logic to access
   // alternative header APIs
   if (res.set) {
-    res.set('Accept-Ranges', 'bytes');
+    res.set("Accept-Ranges", "bytes");
   } else {
-    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader("Accept-Ranges", "bytes");
   }
 
   let range;
 
   // Express API
   if (req.get) {
-    range = req.get('range');
+    range = req.get("range");
   }
   // Node.js API
   else {
@@ -27,24 +27,24 @@ export default function handleRangeHeaders(context, content, req, res) {
     if (ranges === -1) {
       // Express API
       if (res.set) {
-        res.set('Content-Range', `bytes */${content.length}`);
+        res.set("Content-Range", `bytes */${content.length}`);
         res.status(416);
       }
       // Node.js API
       else {
         // eslint-disable-next-line no-param-reassign
         res.statusCode = 416;
-        res.setHeader('Content-Range', `bytes */${content.length}`);
+        res.setHeader("Content-Range", `bytes */${content.length}`);
       }
     } else if (ranges === -2) {
       // malformed header treated as regular response
       context.logger.error(
-        'A malformed Range header was provided. A regular response will be sent for this request.'
+        "A malformed Range header was provided. A regular response will be sent for this request."
       );
     } else if (ranges.length !== 1) {
       // multiple ranges treated as regular response
       context.logger.error(
-        'A Range header with multiple ranges was provided. Multiple ranges are not supported, so a regular response will be sent for this request.'
+        "A Range header with multiple ranges was provided. Multiple ranges are not supported, so a regular response will be sent for this request."
       );
     } else {
       // valid range header
@@ -55,7 +55,7 @@ export default function handleRangeHeaders(context, content, req, res) {
         // Content-Range
         res.status(206);
         res.set(
-          'Content-Range',
+          "Content-Range",
           `bytes ${ranges[0].start}-${ranges[0].end}/${length}`
         );
       }
@@ -65,7 +65,7 @@ export default function handleRangeHeaders(context, content, req, res) {
         // eslint-disable-next-line no-param-reassign
         res.statusCode = 206;
         res.setHeader(
-          'Content-Range',
+          "Content-Range",
           `bytes ${ranges[0].start}-${ranges[0].end}/${length}`
         );
       }

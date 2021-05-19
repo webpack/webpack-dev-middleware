@@ -1,10 +1,10 @@
-import webpack from 'webpack';
-import colorette from 'colorette';
+import webpack from "webpack";
+import colorette from "colorette";
 
 export default function setupHooks(context) {
   function invalid() {
     if (context.state) {
-      context.logger.log('Compilation starting...');
+      context.logger.log("Compilation starting...");
     }
 
     // We are now in invalid state
@@ -18,12 +18,12 @@ export default function setupHooks(context) {
 
   function normalizeStatsOptions(statsOptions) {
     if (statsForWebpack4) {
-      if (typeof statsOptions === 'undefined') {
+      if (typeof statsOptions === "undefined") {
         // eslint-disable-next-line no-param-reassign
         statsOptions = {};
       } else if (
-        typeof statsOptions === 'boolean' ||
-        typeof statsOptions === 'string'
+        typeof statsOptions === "boolean" ||
+        typeof statsOptions === "string"
       ) {
         // eslint-disable-next-line no-param-reassign
         statsOptions = webpack.Stats.presetToOptions(statsOptions);
@@ -32,13 +32,13 @@ export default function setupHooks(context) {
       return statsOptions;
     }
 
-    if (typeof statsOptions === 'undefined') {
+    if (typeof statsOptions === "undefined") {
       // eslint-disable-next-line no-param-reassign
-      statsOptions = { preset: 'normal' };
-    } else if (typeof statsOptions === 'boolean') {
+      statsOptions = { preset: "normal" };
+    } else if (typeof statsOptions === "boolean") {
       // eslint-disable-next-line no-param-reassign
-      statsOptions = statsOptions ? { preset: 'normal' } : { preset: 'none' };
-    } else if (typeof statsOptions === 'string') {
+      statsOptions = statsOptions ? { preset: "normal" } : { preset: "none" };
+    } else if (typeof statsOptions === "string") {
       // eslint-disable-next-line no-param-reassign
       statsOptions = { preset: statsOptions };
     }
@@ -62,13 +62,13 @@ export default function setupHooks(context) {
         return;
       }
 
-      logger.log('Compilation finished');
+      logger.log("Compilation finished");
 
       const isMultiCompilerMode = Boolean(compiler.compilers);
 
       let statsOptions;
 
-      if (typeof options.stats !== 'undefined') {
+      if (typeof options.stats !== "undefined") {
         statsOptions = isMultiCompilerMode
           ? { children: compiler.compilers.map(() => options.stats) }
           : options.stats;
@@ -84,7 +84,7 @@ export default function setupHooks(context) {
             // eslint-disable-next-line no-param-reassign
             childStatsOptions = normalizeStatsOptions(childStatsOptions);
 
-            if (typeof childStatsOptions.colors === 'undefined') {
+            if (typeof childStatsOptions.colors === "undefined") {
               // eslint-disable-next-line no-param-reassign
               childStatsOptions.colors = Boolean(colorette.options.enabled);
             }
@@ -95,7 +95,7 @@ export default function setupHooks(context) {
       } else {
         statsOptions = normalizeStatsOptions(statsOptions);
 
-        if (typeof statsOptions.colors === 'undefined') {
+        if (typeof statsOptions.colors === "undefined") {
           statsOptions.colors = Boolean(colorette.options.enabled);
         }
       }
@@ -125,10 +125,10 @@ export default function setupHooks(context) {
     });
   }
 
-  context.compiler.hooks.watchRun.tap('webpack-dev-middleware', invalid);
-  context.compiler.hooks.invalid.tap('webpack-dev-middleware', invalid);
+  context.compiler.hooks.watchRun.tap("webpack-dev-middleware", invalid);
+  context.compiler.hooks.invalid.tap("webpack-dev-middleware", invalid);
   (context.compiler.webpack
     ? context.compiler.hooks.afterDone
     : context.compiler.hooks.done
-  ).tap('webpack-dev-middleware', done);
+  ).tap("webpack-dev-middleware", done);
 }
