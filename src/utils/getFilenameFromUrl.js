@@ -12,17 +12,18 @@ export default function getFilenameFromUrl(context, url) {
   const { options } = context;
   const paths = getPaths(context);
 
-  let filename;
+  let foundFilename;
   let urlObject;
 
   try {
     // The `url` property of the `request` is contains only  `pathname`, `search` and `hash`
     urlObject = memoizedParse(url, false, true);
   } catch (_ignoreError) {
-    return filename;
+    return;
   }
 
   for (const { publicPath, outputPath } of paths) {
+    let filename;
     let publicPathObject;
 
     try {
@@ -62,6 +63,8 @@ export default function getFilenameFromUrl(context, url) {
       }
 
       if (fsStats.isFile()) {
+        foundFilename = filename;
+
         break;
       } else if (
         fsStats.isDirectory() &&
@@ -83,11 +86,14 @@ export default function getFilenameFromUrl(context, url) {
         }
 
         if (fsStats.isFile()) {
+          foundFilename = filename;
+
           break;
         }
       }
     }
   }
 
-  return filename;
+  // eslint-disable-next-line consistent-return
+  return foundFilename;
 }

@@ -200,32 +200,64 @@ interact with the middleware at runtime:
 
 ### `close(callback)`
 
-Instructs a webpack-dev-middleware instance to stop watching for file changes.
+Instructs `webpack-dev-middleware` instance to stop watching for file changes.
 
-### Parameters
+#### Parameters
 
-#### callback
+##### `callback`
 
 Type: `Function`
+Required: `No`
 
 A function executed once the middleware has stopped watching.
 
-### `invalidate()`
-
-Instructs a webpack-dev-middleware instance to recompile the bundle.
-e.g. after a change to the configuration.
-
 ```js
+const express = require('express');
 const webpack = require('webpack');
-const compiler = webpack({ ... });
+const compiler = webpack({
+  /* Webpack configuration */
+});
 const middleware = require('webpack-dev-middleware');
 const instance = middleware(compiler);
+
+const app = new express();
 
 app.use(instance);
 
 setTimeout(() => {
-  // After a short delay the configuration is changed and a banner plugin is added
-  // to the config
+  // Says `webpack` to stop watch changes
+  instance.close();
+}, 1000);
+```
+
+### `invalidate(callback)`
+
+Instructs `webpack-dev-middleware` instance to recompile the bundle, e.g. after a change to the configuration.
+
+#### Parameters
+
+##### `callback`
+
+Type: `Function`
+Required: `No`
+
+A function executed once the middleware has invalidated.
+
+```js
+const express = require('express');
+const webpack = require('webpack');
+const compiler = webpack({
+  /* Webpack configuration */
+});
+const middleware = require('webpack-dev-middleware');
+const instance = middleware(compiler);
+
+const app = new express();
+
+app.use(instance);
+
+setTimeout(() => {
+  // After a short delay the configuration is changed and a banner plugin is added to the config
   new webpack.BannerPlugin('A new banner').apply(compiler);
 
   // Recompile the bundle with the banner plugin:
@@ -238,25 +270,64 @@ setTimeout(() => {
 Executes a callback function when the compiler bundle is valid, typically after
 compilation.
 
-### Parameters
+#### Parameters
 
-#### callback
+##### `callback`
 
 Type: `Function`
+Required: `No`
 
-A function executed when the bundle becomes valid. If the bundle is
-valid at the time of calling, the callback is executed immediately.
+A function executed when the bundle becomes valid.
+If the bundle is valid at the time of calling, the callback is executed immediately.
 
 ```js
+const express = require('express');
 const webpack = require('webpack');
-const compiler = webpack({ ... });
+const compiler = webpack({
+  /* Webpack configuration */
+});
 const middleware = require('webpack-dev-middleware');
 const instance = middleware(compiler);
+
+const app = new express();
 
 app.use(instance);
 
 instance.waitUntilValid(() => {
   console.log('Package is in a valid state');
+});
+```
+
+### `getFilenameFromUrl(url)`
+
+Get filename from URL.
+
+#### Parameters
+
+##### `url`
+
+Type: `String`
+Required: `Yes`
+
+URL for the requested file.
+
+```js
+const express = require('express');
+const webpack = require('webpack');
+const compiler = webpack({
+  /* Webpack configuration */
+});
+const middleware = require('webpack-dev-middleware');
+const instance = middleware(compiler);
+
+const app = new express();
+
+app.use(instance);
+
+instance.waitUntilValid(() => {
+  const filename = instance.getFilenameFromUrl('/bundle.js');
+
+  console.log(`Filename is ${filename}`);
 });
 ```
 
@@ -289,12 +360,15 @@ process is finished with server-side rendering enabled._
 Example Implementation:
 
 ```js
+const express = require('express');
 const webpack = require('webpack');
 const compiler = webpack({
-  // webpack options
+  /* Webpack configuration */
 });
 const isObject = require('is-object');
 const middleware = require('webpack-dev-middleware');
+
+const app = new express();
 
 // This function makes server rendering of asset references consistent with different webpack chunk/entry configurations
 function normalizeAssets(assets) {

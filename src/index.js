@@ -2,6 +2,7 @@ import { validate } from 'schema-utils';
 import mime from 'mime-types';
 
 import middleware from './middleware';
+import getFilenameFromUrl from './utils/getFilenameFromUrl';
 import setupHooks from './utils/setupHooks';
 import setupWriteToDisk from './utils/setupWriteToDisk';
 import setupOutputFileSystem from './utils/setupOutputFileSystem';
@@ -76,17 +77,22 @@ export default function wdm(compiler, options = {}) {
   const instance = middleware(context);
 
   // API
+  instance.getFilenameFromUrl = (url) => getFilenameFromUrl(context, url);
+
   instance.waitUntilValid = (callback = noop) => {
     ready(context, callback);
   };
+
   instance.invalidate = (callback = noop) => {
     ready(context, callback);
 
     context.watching.invalidate();
   };
+
   instance.close = (callback = noop) => {
     context.watching.close(callback);
   };
+
   instance.context = context;
 
   return instance;
