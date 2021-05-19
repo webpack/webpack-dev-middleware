@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.3.0](https://github.com/webpack/webpack-dev-middleware/compare/v4.2.0...v4.3.0) (2021-05-19)
+
+
+### Features
+
+* add `getFilenameFromUrl` to API ([#911](https://github.com/webpack/webpack-dev-middleware/issues/911)) ([1edc726](https://github.com/webpack/webpack-dev-middleware/commit/1edc7263ff62cfd6456f35e3cb3c2e30c3ac379a))
+
+
+### Bug Fixes
+
+* husky config ([#904](https://github.com/webpack/webpack-dev-middleware/issues/904)) ([8a423be](https://github.com/webpack/webpack-dev-middleware/commit/8a423bea3f1641e99c1f6fed56630bfe128b62d8))
+* typo depandabot -> dependabot ([#905](https://github.com/webpack/webpack-dev-middleware/issues/905)) ([7062990](https://github.com/webpack/webpack-dev-middleware/commit/7062990a55d21d2e35de832ea593f7b088bf054b))
+
 ## [4.2.0](https://github.com/webpack/webpack-dev-middleware/compare/v4.1.0...v4.2.0) (2021-05-10)
 
 
