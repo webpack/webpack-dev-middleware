@@ -48,6 +48,14 @@
         }
       ]
     },
+    "historyApiFallback": {
+      "description": "When using the HTML5 History API, the index.html page will likely have to be served in place of any 404 responses. Enable historyApiFallback by setting it to true",
+      "anyOf": [
+        {
+          "type": "boolean"
+        }
+      ]
+    },
     "stats": {
       "description": "Stats options object or preset name.",
       "anyOf": [

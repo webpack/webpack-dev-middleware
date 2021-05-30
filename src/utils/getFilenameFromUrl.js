@@ -53,8 +53,11 @@ export default function getFilenameFromUrl(context, url) {
         filename = path.join(outputPath, querystring.unescape(pathname));
       }
 
-      let fsStats;
+      if (!context.outputFileSystem.existsSync(filename) && options.historyApiFallback){
+        filename = path.join(outputPath);
+      }
 
+      let fsStats;
       try {
         fsStats = context.outputFileSystem.statSync(filename);
       } catch (_ignoreError) {
