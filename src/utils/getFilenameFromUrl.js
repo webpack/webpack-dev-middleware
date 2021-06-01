@@ -53,7 +53,10 @@ export default function getFilenameFromUrl(context, url) {
         filename = path.join(outputPath, querystring.unescape(pathname));
       }
 
-      if (!context.outputFileSystem.existsSync(filename) && options.historyApiFallback){
+      if (
+        !context.outputFileSystem.existsSync(filename) &&
+        options.historyApiFallback
+      ) {
         filename = path.join(outputPath);
       }
 
