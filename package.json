@@ -13,7 +13,7 @@
     "url": "https://opencollective.com/webpack"
   },
   "engines": {
-    "node": ">= v12.13.0"
+    "node": ">= 12.13.0"
   },
   "scripts": {
     "commitlint": "commitlint --from=master",
