@@ -851,7 +851,7 @@ describe("logging", () => {
   });
 
   if (os.platform() !== "win32") {
-    it('should logging an error from the fs error when the "writeToDisk" option is "true"', async (done) => {
+    it('should logging an error from the fs error when the "writeToDisk" option is "true"', (done) => {
       // eslint-disable-next-line global-require
       const clearDirectory = require("./helpers/clearDirectory").default;
       const outputDir = path.resolve(
