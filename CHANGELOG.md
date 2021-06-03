@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.0.0](https://github.com/webpack/webpack-dev-middleware/compare/v4.3.0...v5.0.0) (2021-06-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* minimum supported `Node.js` version is `12.13.0` ([#928](https://github.com/webpack/webpack-dev-middleware/issues/928)) ([4cffeff](https://github.com/webpack/webpack-dev-middleware/commit/4cffeffb5fd07ea79e5a7a5a0cdb3f08f3856c06))
+
 ## [4.3.0](https://github.com/webpack/webpack-dev-middleware/compare/v4.2.0...v4.3.0) (2021-05-19)
 
 

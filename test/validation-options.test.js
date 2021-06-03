@@ -35,6 +35,10 @@ describe("validation", () => {
       success: ["/foo", "", "auto", () => "/public/path"],
       failure: [false],
     },
+    historyApiFallback: {
+      success: [true],
+      failure: [],
+    },
     serverSideRender: {
       success: [true],
       failure: ["foo", 0],
