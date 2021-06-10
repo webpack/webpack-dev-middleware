@@ -37,7 +37,7 @@ describe("validation", () => {
     },
     historyApiFallback: {
       success: [true],
-      failure: [],
+      failure: ["foo", 10],
     },
     serverSideRender: {
       success: [true],
