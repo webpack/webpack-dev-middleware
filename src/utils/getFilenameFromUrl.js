@@ -2,11 +2,11 @@ import path from "path";
 import { parse } from "url";
 import querystring from "querystring";
 
-import mem from "mem";
+import memoize from "fast-memoize";
 
 import getPaths from "./getPaths";
 
-const memoizedParse = mem(parse);
+const memoizedParse = memoize(parse);
 
 export default function getFilenameFromUrl(context, url) {
   const { options } = context;
