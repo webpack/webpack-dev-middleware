@@ -1,12 +1,19 @@
 import path from "path";
-import { parse } from "url";
+import { URL } from "url";
 import querystring from "querystring";
-
-import memoize from "fast-memoize";
 
 import getPaths from "./getPaths";
 
-const memoizedParse = memoize(parse);
+const urlCache = new Map();
+const parseUrl = (url) => {
+  if (urlCache.has(url)) {
+    return urlCache.get(url);
+  }
+
+  const parsed = new URL(url, "http://localhost/");
+  urlCache.set(url, parsed);
+  return parsed;
+};
 
 export default function getFilenameFromUrl(context, url) {
   const { options } = context;
@@ -17,7 +24,7 @@ export default function getFilenameFromUrl(context, url) {
 
   try {
     // The `url` property of the `request` is contains only  `pathname`, `search` and `hash`
-    urlObject = memoizedParse(url, false, true);
+    urlObject = parseUrl(url);
   } catch (_ignoreError) {
     return;
   }
@@ -27,10 +34,8 @@ export default function getFilenameFromUrl(context, url) {
     let publicPathObject;
 
     try {
-      publicPathObject = memoizedParse(
-        publicPath !== "auto" && publicPath ? publicPath : "/",
-        false,
-        true
+      publicPathObject = parseUrl(
+        publicPath !== "auto" && publicPath ? publicPath : "/"
       );
     } catch (_ignoreError) {
       // eslint-disable-next-line no-continue
