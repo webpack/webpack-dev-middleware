@@ -300,7 +300,7 @@ describe.each([
             output: {
               filename: "bundle.js",
               path: outputPath,
-              publicPath: "https://test:malfor%5Med@test.example.com",
+              publicPath: "https://malformed:test.example.com",
             },
           });
 

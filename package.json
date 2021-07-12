@@ -41,7 +41,6 @@
   },
   "dependencies": {
     "colorette": "^1.2.2",
-    "fast-memoize": "^2.5.2",
     "memfs": "^3.2.2",
     "mime-types": "^2.1.31",
     "range-parser": "^1.2.1",
