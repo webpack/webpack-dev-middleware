@@ -17,7 +17,7 @@ Array [
 ]
 `;
 
-exports[`handleRangeHeaders should handle multiple ranges 1`] = `
+exports[`handleRangeHeaders should handle multiple ranges by sending a regular response 1`] = `
 Array [
   Array [
     "A Range header with multiple ranges was provided. Multiple ranges are not supported, so a regular response will be sent for this request.",
@@ -25,7 +25,7 @@ Array [
 ]
 `;
 
-exports[`handleRangeHeaders should handle multiple ranges 2`] = `
+exports[`handleRangeHeaders should handle multiple ranges by sending a regular response 2`] = `
 Array [
   Array [
     "Accept-Ranges",

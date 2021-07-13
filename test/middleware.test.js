@@ -231,23 +231,43 @@ describe.each([
         });
 
         it('should return the "206" code for the "GET" request with the valid range header', (done) => {
+          const fileData = instance.context.outputFileSystem.readFileSync(
+            path.resolve(outputPath, "bundle.js"),
+            "utf8"
+          );
           request(app)
             .get("/bundle.js")
             .set("Range", "bytes=3000-3500")
             .expect("Content-Length", "501")
             .expect("Content-Range", `bytes 3000-3500/${codeLength}`)
-            .expect(206, done);
+            .expect(206)
+            .then((response) => {
+              expect(response.text).toBe(fileData.substr(3000, 501));
+              expect(response.text.length).toBe(501);
+              done();
+            });
         });
 
         it('should return the "200" code for the "GET" request with malformed range header which is ignored', (done) => {
-          request(app).get("/bundle.js").set("Range", "abc").expect(200, done);
+          request(app)
+            .get("/bundle.js")
+            .set("Range", "abc")
+            .expect(200)
+            .then((response) => {
+              expect(response.text.length).toBe(codeLength);
+              done();
+            });
         });
 
         it('should return the "200" code for the "GET" request with multiple range header which is ignored', (done) => {
           request(app)
             .get("/bundle.js")
             .set("Range", "bytes=3000-3100,3200-3300")
-            .expect(200, done);
+            .expect(200)
+            .then((response) => {
+              expect(response.text.length).toBe(codeLength);
+              done();
+            });
         });
 
         it('should return the "404" code for the "GET" request with to the non-public path', (done) => {
