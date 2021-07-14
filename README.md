@@ -124,6 +124,13 @@ The public path that the middleware is bound to.
 
 _Best Practice: use the same `publicPath` defined in your webpack config. For more information about `publicPath`, please see [the webpack documentation](https://webpack.js.org/guides/public-path)._
 
+### historyApiFallback
+
+type: `Boolean`
+Default: `false`
+
+When using the HTML5 History API, the index.html page will likely have to be served in place of any 404 responses. Enable historyApiFallback by setting it to true
+
 ### stats
 
 Type: `Boolean|String|Object`
