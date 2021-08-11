@@ -48,7 +48,6 @@ export default function wrapper(context) {
         headers = headers(req, res, context);
       }
 
-      let stream;
       let fileSize;
 
       if (!filename) {
@@ -102,20 +101,15 @@ export default function wrapper(context) {
 
       // Buffer
       const ranges = handleRangeHeaders(context, fileSize, req, res);
-      try {
-        stream = context.outputFileSystem.createReadStream(
-          filename,
-          ranges
-            ? {
-                start: ranges.start,
-                end: ranges.end,
-              }
-            : {}
-        );
-      } catch (_ignoreError) {
-        await goNext();
-        return;
-      }
+      const stream = context.outputFileSystem.createReadStream(
+        filename,
+        ranges
+          ? {
+              start: ranges.start,
+              end: ranges.end,
+            }
+          : {}
+      );
 
       const responseSize = ranges ? 1 + (ranges.end - ranges.start) : fileSize;
       res.setHeader("Content-Length", responseSize);
