@@ -233,33 +233,66 @@ describe.each([
         });
 
         it('should return the "206" code for the "GET" request with the valid range header', (done) => {
+          const content = instance.context.outputFileSystem.readFileSync(
+            path.resolve(outputPath, "bundle.js"),
+            "utf8"
+          );
+
           request(app)
             .get("/bundle.js")
             .set("Range", "bytes=3000-3500")
             .expect("Content-Length", "501")
             .expect("Content-Type", "application/javascript; charset=utf-8")
             .expect("Content-Range", `bytes 3000-3500/${codeLength}`)
-            .expect(206, done);
+            .expect(206)
+            .then((response) => {
+              expect(response.text).toBe(content.substr(3000, 501));
+              expect(response.text.length).toBe(501);
+
+              done();
+            });
         });
 
         it('should return the "206" code for the "GET" request with the valid range header when range starts with 0', (done) => {
+          const content = instance.context.outputFileSystem.readFileSync(
+            path.resolve(outputPath, "bundle.js"),
+            "utf8"
+          );
+
           request(app)
             .get("/bundle.js")
             .set("Range", "bytes=0-3500")
             .expect("Content-Length", "3501")
             .expect("Content-Type", "application/javascript; charset=utf-8")
             .expect("Content-Range", `bytes 0-3500/${codeLength}`)
-            .expect(206, done);
+            .expect(206)
+            .then((response) => {
+              expect(response.text).toBe(content.substr(0, 3501));
+              expect(response.text.length).toBe(3501);
+
+              done();
+            });
         });
 
         it('should return the "206" code for the "GET" request with the valid range header with multiple values', (done) => {
+          const content = instance.context.outputFileSystem.readFileSync(
+            path.resolve(outputPath, "bundle.js"),
+            "utf8"
+          );
+
           request(app)
             .get("/bundle.js")
             .set("Range", "bytes=0-499, 499-800")
             .expect("Content-Length", "801")
             .expect("Content-Type", "application/javascript; charset=utf-8")
             .expect("Content-Range", `bytes 0-800/${codeLength}`)
-            .expect(206, done);
+            .expect(206)
+            .then((response) => {
+              expect(response.text).toBe(content.substr(0, 801));
+              expect(response.text.length).toBe(801);
+
+              done();
+            });
         });
 
         it('should return the "200" code for the "GET" request with malformed range header which is ignored', (done) => {
