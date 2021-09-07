@@ -35,7 +35,7 @@ function createHtmlDocument(title, body) {
   );
 }
 
-const BYTES_RANGE_REGEXP = /^ *bytes=/i;
+const BYTES_RANGE_REGEXP = /^ *bytes/i;
 
 export default function wrapper(context) {
   return async function middleware(req, res, next) {
