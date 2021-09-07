@@ -2,10 +2,31 @@ import path from "path";
 import { parse } from "url";
 import querystring from "querystring";
 
-import mem from "mem";
-
 import getPaths from "./getPaths";
 
+const cacheStore = new WeakMap();
+const mem = (fn, { cache = new Map() } = {}) => {
+  const memoized = (...arguments_) => {
+    const [key] = arguments_;
+    const cacheItem = cache.get(key);
+
+    if (cacheItem) {
+      return cacheItem.data;
+    }
+
+    const result = fn.apply(this, arguments_);
+
+    cache.set(key, {
+      data: result,
+    });
+
+    return result;
+  };
+
+  cacheStore.set(memoized, cache);
+
+  return memoized;
+};
 const memoizedParse = mem(parse);
 
 export default function getFilenameFromUrl(context, url) {
