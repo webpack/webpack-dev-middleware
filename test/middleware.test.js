@@ -99,6 +99,10 @@ describe.each([
             path.resolve(outputPath, "image.svg"),
             "svg image"
           );
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "byte-length.html"),
+            "\u00bd + \u00bc = \u00be"
+          );
           instance.context.outputFileSystem.mkdirSync(
             path.resolve(outputPath, "directory/nested-directory"),
             { recursive: true }
@@ -375,6 +379,24 @@ describe.each([
             .get("/unknown")
             .expect("Content-Length", fileData.byteLength.toString())
             .expect(200, done);
+        });
+
+        it('should return "200" code code for the "GET" request and "Content-Length" to the file with unicode', (done) => {
+          request(app)
+            .get("/byte-length.html")
+            .expect("Content-Type", "text/html; charset=utf-8")
+            .expect("Content-Length", "12")
+            .expect(200, (error) => {
+              if (error) {
+                return done(error);
+              }
+
+              expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
+                false
+              );
+
+              return done();
+            });
         });
       });
 

@@ -205,7 +205,7 @@ export default function wrapper(context) {
           byteLength = end - start + 1;
         } else {
           bufferOtStream = context.outputFileSystem.readFileSync(filename);
-          byteLength = Buffer.byteLength(bufferOtStream);
+          ({ byteLength } = bufferOtStream);
         }
       } catch (_ignoreError) {
         await goNext();
