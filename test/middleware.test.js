@@ -222,7 +222,7 @@ describe.each([
             .get("/bundle.js")
             .set("Range", "bytes=9999999-")
             .expect("Content-Type", "text/html; charset=utf-8")
-            .expect("Content-Range", "bytes */6219")
+            .expect("Content-Range", `bytes */${codeLength}`)
             .expect(416, done);
         });
 
@@ -237,6 +237,21 @@ describe.each([
             .then((response) => {
               expect(response.text).toBe(codeContent.substr(3000, 501));
               expect(response.text.length).toBe(501);
+
+              done();
+            });
+        });
+
+        it('should return the "206" code for the "GET" request with the valid range header for "HEAD" request', (done) => {
+          request(app)
+            .head("/bundle.js")
+            .set("Range", "bytes=3000-3500")
+            .expect("Content-Length", "501")
+            .expect("Content-Type", "application/javascript; charset=utf-8")
+            .expect("Content-Range", `bytes 3000-3500/${codeLength}`)
+            .expect(206)
+            .then((response) => {
+              expect(response.text).toBeUndefined();
 
               done();
             });
