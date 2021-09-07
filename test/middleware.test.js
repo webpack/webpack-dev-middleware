@@ -227,6 +227,8 @@ describe.each([
           request(app)
             .get("/bundle.js")
             .set("Range", "bytes=9999999-")
+            .expect("Content-Type", "text/html; charset=utf-8")
+            .expect("Content-Range", "bytes */6219")
             .expect(416, done);
         });
 
@@ -235,7 +237,28 @@ describe.each([
             .get("/bundle.js")
             .set("Range", "bytes=3000-3500")
             .expect("Content-Length", "501")
+            .expect("Content-Type", "application/javascript; charset=utf-8")
             .expect("Content-Range", `bytes 3000-3500/${codeLength}`)
+            .expect(206, done);
+        });
+
+        it('should return the "206" code for the "GET" request with the valid range header when range starts with 0', (done) => {
+          request(app)
+            .get("/bundle.js")
+            .set("Range", "bytes=0-3500")
+            .expect("Content-Length", "3501")
+            .expect("Content-Type", "application/javascript; charset=utf-8")
+            .expect("Content-Range", `bytes 0-3500/${codeLength}`)
+            .expect(206, done);
+        });
+
+        it('should return the "206" code for the "GET" request with the valid range header with multiple values', (done) => {
+          request(app)
+            .get("/bundle.js")
+            .set("Range", "bytes=0-499, 499-800")
+            .expect("Content-Length", "801")
+            .expect("Content-Type", "application/javascript; charset=utf-8")
+            .expect("Content-Range", `bytes 0-800/${codeLength}`)
             .expect(206, done);
         });
 
