@@ -182,8 +182,7 @@ export default function wrapper(context) {
             getValueContentRangeHeader("bytes", size, parsedRanges[0])
           );
 
-          [{ start }] = parsedRanges;
-          end = parsedRanges[0].end - parsedRanges[0].start + 1;
+          [{ start, end }] = parsedRanges;
         }
       }
 
@@ -201,9 +200,9 @@ export default function wrapper(context) {
         ) {
           bufferOtStream = context.outputFileSystem.createReadStream(filename, {
             start,
-            end: start + (end - 1),
+            end,
           });
-          byteLength = end;
+          byteLength = end - start + 1;
         } else {
           bufferOtStream = context.outputFileSystem.readFileSync(filename);
           byteLength = Buffer.byteLength(bufferOtStream);
