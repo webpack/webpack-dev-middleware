@@ -326,7 +326,10 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request with malformed range header which is ignored #2', (done) => {
-          request(app).get("/bundle.js").set("Range", "bytes").expect(200, done);
+          request(app)
+            .get("/bundle.js")
+            .set("Range", "bytes")
+            .expect(200, done);
         });
 
         it('should return the "200" code for the "GET" request with multiple range header which is ignored', (done) => {
