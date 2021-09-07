@@ -62,7 +62,7 @@ describe.each([
     }
 
     describe("basic", () => {
-      describe.only("should work", () => {
+      describe("should work", () => {
         let compiler;
         let codeLength;
 
