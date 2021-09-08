@@ -130,7 +130,9 @@ describe.each([
           const response = await req.get("/bundle.js");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("application/javascript; charset=utf-8")
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
           expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
             false
           );
@@ -140,8 +142,12 @@ describe.each([
           const response = await req.get("/bundle.js");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-length"]).toEqual(String(codeLength))
-          expect(response.headers["content-type"]).toEqual("application/javascript; charset=utf-8")
+          expect(response.headers["content-length"]).toEqual(
+            String(codeLength)
+          );
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
           expect(response.text).toEqual(codeContent);
         });
 
@@ -149,8 +155,12 @@ describe.each([
           const response = await req.head("/bundle.js");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-length"]).toEqual(String(codeLength))
-          expect(response.headers["content-type"]).toEqual("application/javascript; charset=utf-8")
+          expect(response.headers["content-length"]).toEqual(
+            String(codeLength)
+          );
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
           expect(response.text).toBeUndefined();
         });
 
@@ -168,7 +178,9 @@ describe.each([
           const response = await req.get("/image.svg");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-length"]).toEqual(fileData.byteLength.toString());
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString()
+          );
           expect(response.headers["content-type"]).toEqual("image/svg+xml");
         });
 
@@ -180,8 +192,12 @@ describe.each([
           const response = await req.get("/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-length"]).toEqual(fileData.byteLength.toString());
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString()
+          );
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
           expect(response.text).toEqual(fileData.toString());
         });
 
@@ -193,8 +209,12 @@ describe.each([
           const response = await req.get("/directory/nested-directory/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-length"]).toEqual(fileData.byteLength.toString());
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString()
+          );
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
           expect(response.text).toEqual(fileData.toString());
         });
 
@@ -206,8 +226,12 @@ describe.each([
           const response = await req.get("/directory/nested-directory");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-length"]).toEqual(fileData.byteLength.toString());
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString()
+          );
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
           expect(response.text).toEqual(fileData.toString());
         });
 
@@ -216,83 +240,131 @@ describe.each([
             path.resolve(outputPath, "directory/nested-directory/index.html")
           );
 
-          const response = await req.get("/directory/nested-directory/index.html");
+          const response = await req.get(
+            "/directory/nested-directory/index.html"
+          );
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-length"]).toEqual(fileData.byteLength.toString());
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString()
+          );
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
           expect(response.text).toEqual(fileData.toString());
         });
 
         it('should return the "416" code for the "GET" request with the invalid range header', async () => {
-          const response = await req.get("/bundle.js").set("Range", "bytes=9999999-");
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", "bytes=9999999-");
 
           expect(response.statusCode).toEqual(416);
-          expect(response.headers["content-range"]).toEqual(`bytes */${codeLength}`);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-range"]).toEqual(
+            `bytes */${codeLength}`
+          );
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return the "206" code for the "GET" request with the valid range header', async () => {
-          const response = await req.get("/bundle.js").set("Range", "bytes=3000-3500");
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", "bytes=3000-3500");
 
           expect(response.statusCode).toEqual(206);
-          expect(response.headers["content-range"]).toEqual(`bytes 3000-3500/${codeLength}`);
+          expect(response.headers["content-range"]).toEqual(
+            `bytes 3000-3500/${codeLength}`
+          );
           expect(response.headers["content-length"]).toEqual("501");
-          expect(response.headers["content-type"]).toEqual("application/javascript; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
           expect(response.text).toBe(codeContent.substr(3000, 501));
           expect(response.text.length).toBe(501);
         });
 
         it('should return the "206" code for the "GET" request with the valid range header for "HEAD" request', async () => {
-          const response = await req.head("/bundle.js").set("Range", "bytes=3000-3500");
+          const response = await req
+            .head("/bundle.js")
+            .set("Range", "bytes=3000-3500");
 
           expect(response.statusCode).toEqual(206);
-          expect(response.headers["content-range"]).toEqual(`bytes 3000-3500/${codeLength}`);
+          expect(response.headers["content-range"]).toEqual(
+            `bytes 3000-3500/${codeLength}`
+          );
           expect(response.headers["content-length"]).toEqual("501");
-          expect(response.headers["content-type"]).toEqual("application/javascript; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
           expect(response.text).toBeUndefined();
         });
 
         it('should return the "206" code for the "GET" request with the valid range header (lowercase)', async () => {
-          const response = await req.get("/bundle.js").set("range", "bytes=3000-3500");
+          const response = await req
+            .get("/bundle.js")
+            .set("range", "bytes=3000-3500");
 
           expect(response.statusCode).toEqual(206);
-          expect(response.headers["content-range"]).toEqual(`bytes 3000-3500/${codeLength}`);
+          expect(response.headers["content-range"]).toEqual(
+            `bytes 3000-3500/${codeLength}`
+          );
           expect(response.headers["content-length"]).toEqual("501");
-          expect(response.headers["content-type"]).toEqual("application/javascript; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
           expect(response.text).toBe(codeContent.substr(3000, 501));
           expect(response.text.length).toBe(501);
         });
 
         it('should return the "206" code for the "GET" request with the valid range header (uppercase)', async () => {
-          const response = await req.get("/bundle.js").set("RANGE", "BYTES=3000-3500");
+          const response = await req
+            .get("/bundle.js")
+            .set("RANGE", "BYTES=3000-3500");
 
           expect(response.statusCode).toEqual(206);
-          expect(response.headers["content-range"]).toEqual(`bytes 3000-3500/${codeLength}`);
+          expect(response.headers["content-range"]).toEqual(
+            `bytes 3000-3500/${codeLength}`
+          );
           expect(response.headers["content-length"]).toEqual("501");
-          expect(response.headers["content-type"]).toEqual("application/javascript; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
           expect(response.text).toBe(codeContent.substr(3000, 501));
           expect(response.text.length).toBe(501);
         });
 
         it('should return the "206" code for the "GET" request with the valid range header when range starts with 0', async () => {
-          const response = await req.get("/bundle.js").set("Range", "bytes=0-3500");
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", "bytes=0-3500");
 
           expect(response.statusCode).toEqual(206);
-          expect(response.headers["content-range"]).toEqual(`bytes 0-3500/${codeLength}`);
+          expect(response.headers["content-range"]).toEqual(
+            `bytes 0-3500/${codeLength}`
+          );
           expect(response.headers["content-length"]).toEqual("3501");
-          expect(response.headers["content-type"]).toEqual("application/javascript; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
           expect(response.text).toBe(codeContent.substr(0, 3501));
           expect(response.text.length).toBe(3501);
         });
 
         it('should return the "206" code for the "GET" request with the valid range header with multiple values', async () => {
-          const response = await req.get("/bundle.js").set("Range", "bytes=0-499, 499-800");
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", "bytes=0-499, 499-800");
 
           expect(response.statusCode).toEqual(206);
-          expect(response.headers["content-range"]).toEqual(`bytes 0-800/${codeLength}`);
+          expect(response.headers["content-range"]).toEqual(
+            `bytes 0-800/${codeLength}`
+          );
           expect(response.headers["content-length"]).toEqual("801");
-          expect(response.headers["content-type"]).toEqual("application/javascript; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
           expect(response.text).toBe(codeContent.substr(0, 801));
           expect(response.text.length).toBe(801);
         });
@@ -310,7 +382,9 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request with multiple range header which is ignored', async () => {
-          const response = await req.get("/bundle.js").set("Range", "bytes=3000-3100,3200-3300")
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", "bytes=3000-3100,3200-3300");
 
           expect(response.statusCode).toEqual(200);
         });
@@ -328,7 +402,9 @@ describe.each([
               throw new Error("error");
             });
 
-          const response = await req.get("/public/throw-an-exception-on-readFileSync.txt/");
+          const response = await req.get(
+            "/public/throw-an-exception-on-readFileSync.txt/"
+          );
 
           expect(response.statusCode).toEqual(404);
 
@@ -343,7 +419,9 @@ describe.each([
           const response = await req.get("/unknown");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-length"]).toEqual(fileData.byteLength.toString());
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString()
+          );
         });
 
         it('should return "200" code code for the "GET" request and "Content-Length" to the file with unicode', async () => {
@@ -351,7 +429,9 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual("12");
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
           expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
             false
           );
@@ -393,7 +473,6 @@ describe.each([
       });
 
       describe("should work in multi-compiler mode", () => {
-        
         beforeAll((done) => {
           const compiler = getCompiler(webpackMultiConfig);
 
@@ -425,14 +504,18 @@ describe.each([
           const response = await req.get("/static-one/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "200" code for GET request to the "index" option for the first compiler', async () => {
           const response = await req.get("/static-one/index.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "200" code for GET request for the bundle file for the second compiler', async () => {
@@ -463,21 +546,27 @@ describe.each([
           const response = await req.get("/static-three/");
 
           expect(response.statusCode).toEqual(404);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "404" code for GET request to the non-public path', async () => {
           const response = await req.get("/static-three/invalid.js");
 
           expect(response.statusCode).toEqual(404);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "404" code for GET request to the non-public path', async () => {
           const response = await req.get("/");
 
           expect(response.statusCode).toEqual(404);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -892,16 +981,22 @@ describe.each([
               for (const { value, contentType, code } of urls) {
                 // eslint-disable-next-line no-loop-func
                 it(`should return the "${code}" code for the "GET" request for the "${value}" url`, async () => {
-                  const response = await req.get(`${publicPathForRequest}${value}`);
+                  const response = await req.get(
+                    `${publicPathForRequest}${value}`
+                  );
 
                   expect(response.statusCode).toEqual(code);
 
                   if (data) {
-                    expect(response.headers["content-length"]).toEqual(String(data.length));
+                    expect(response.headers["content-length"]).toEqual(
+                      String(data.length)
+                    );
                   }
 
                   if (contentType) {
-                    expect(response.headers["content-type"]).toEqual(contentType);
+                    expect(response.headers["content-type"]).toEqual(
+                      contentType
+                    );
                   }
                 });
               }
@@ -944,7 +1039,9 @@ describe.each([
           const response = await req.get("/bundle.js");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("application/vnd.test+octet-stream");
+          expect(response.headers["content-type"]).toEqual(
+            "application/vnd.test+octet-stream"
+          );
         });
       });
 
@@ -1009,14 +1106,18 @@ describe.each([
           const response = await req.get("/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "200" code for GET request to the "index" option', async () => {
           const response = await req.get("/index.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -1058,14 +1159,18 @@ describe.each([
           const response = await req.get("/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "200" code for GET request to the "index" option', async () => {
           const response = await req.get("/index.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -1079,7 +1184,7 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
-          
+
           req = request(app);
         });
 
@@ -1101,14 +1206,18 @@ describe.each([
           const response = await req.get("/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "200" code for GET request to the "index" option', async () => {
           const response = await req.get("/index.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -1151,21 +1260,27 @@ describe.each([
           const response = await req.get("/static/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "200" code for GET request to the "index" option', async () => {
           const response = await req.get("/static/index.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "404" code for GET request to the non-public path', async () => {
           const response = await req.get("/");
 
           expect(response.statusCode).toEqual(404);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -1219,14 +1334,18 @@ describe.each([
           const response = await req.get(`/static/${hash}/`);
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "200" code for GET request to the "index" option', async () => {
           const response = await req.get(`/static/${hash}/index.html`);
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "404" code for GET request to the non-public path', async () => {
@@ -1317,28 +1436,36 @@ describe.each([
           const response = await req.get(`/static-one/${hashOne}/`);
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "200" code for GET request to the "index" option for the first compiler', async () => {
           const response = await req.get(`/static-one/${hashOne}/index.html`);
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "200" code for GET request to the bundle file for the second compiler', async () => {
           const response = await req.get(`/static-two/${hashTwo}/bundle.js`);
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("application/javascript; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
         });
 
         it('should return "404" code for GET request to nonexistent file for the second compiler', async () => {
           const response = await req.get(`/static-two/${hashTwo}/invalid.js`);
 
           expect(response.statusCode).toEqual(404);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "404" code for GET request to the "public" path for the second compiler', async () => {
@@ -1392,14 +1519,18 @@ describe.each([
           const response = await req.get("/static-one/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "200" code for GET request to the "index" option for the first compiler', async () => {
           const response = await req.get("/static-one/index.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "200" code for GET request to the second bundle file', async () => {
@@ -1494,14 +1625,18 @@ describe.each([
           const response = await req.get("/my-public/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "200" code for GET request to the "index" option', async () => {
           const response = await req.get("/my-public/index.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "404" code for GET request to nonexistent file', async () => {
@@ -1566,21 +1701,27 @@ describe.each([
           const response = await req.get("/one-public/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "200" code for GET request to the "index" option for the first compiler', async () => {
           const response = await req.get("/one-public/index.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "200" code for GET request to the bundle file for the second compiler', async () => {
           const response = await req.get("/two-public/bundle-two.js");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("application/javascript; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
         });
 
         it('should return "404" code for GET request to nonexistent file to the second bundle file', async () => {
@@ -1593,14 +1734,18 @@ describe.each([
           const response = await req.get("/two-public/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "200" code for GET request to the "index" option for the second compiler', async () => {
           const response = await req.get("/two-public/index.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "404" code for GET request to nonexistent file', async () => {
@@ -1636,7 +1781,9 @@ describe.each([
           const response = await req.get("/static/bundle.js");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("application/javascript; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
         });
 
         it('should return "404" code for GET request to nonexistent file', async () => {
@@ -1649,14 +1796,18 @@ describe.each([
           const response = await req.get("/static/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "404" code for GET request to the "index" option', async () => {
           const response = await req.get("/static/index.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "404" code for GET request to non-public path', async () => {
@@ -1701,14 +1852,18 @@ describe.each([
           const response = await req.get("/static/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "404" code for GET request to the "index" option', async () => {
           const response = await req.get("/static/index.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "404" code for GET request to non-public path', async () => {
@@ -1772,14 +1927,18 @@ describe.each([
           const response = await req.get("/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return "404" code for GET request to the "index" option', async () => {
           const response = await req.get("/static/index.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -1856,7 +2015,9 @@ describe.each([
           const response = await req.get("/file.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
           expect(response.text).toEqual("welcome");
         });
       });
@@ -1900,7 +2061,9 @@ describe.each([
           const response = await req.get("/file.myhtml");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
           expect(response.text).toEqual("welcome");
         });
       });
@@ -1944,7 +2107,9 @@ describe.each([
           const response = await req.get("/file.jpg");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("image/vnd.test+jpeg");
+          expect(response.headers["content-type"]).toEqual(
+            "image/vnd.test+jpeg"
+          );
         });
       });
 
@@ -2994,14 +3159,18 @@ describe.each([
           const response = await req.get("/");
 
           expect(response.statusCode).toEqual(404);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return the "200" code for the "GET" request to the "index.html" file', async () => {
           const response = await req.get("/index.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -3025,14 +3194,18 @@ describe.each([
           const response = await req.get("/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
         it('should return the "200" code for the "GET" request to the public path', async () => {
           const response = await req.get("/index.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -3074,7 +3247,9 @@ describe.each([
           const response = await req.get("/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -3160,7 +3335,9 @@ describe.each([
           const response = await req.get("/");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toEqual("text/html; charset=utf-8");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
