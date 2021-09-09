@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.1.0](https://github.com/webpack/webpack-dev-middleware/compare/v5.0.0...v5.1.0) (2021-09-09)
+
+
+### Features
+
+* don't read full file if `Range` header is present ([e8b21f0](https://github.com/webpack/webpack-dev-middleware/commit/e8b21f0979c4807b28f7be45aff0d25cca1585ae))
+* output more information on errors ([#1024](https://github.com/webpack/webpack-dev-middleware/issues/1024)) ([7df9e44](https://github.com/webpack/webpack-dev-middleware/commit/7df9e449945a852622135f3f0857599ad7b8af64))
+
+
+### Bug Fixes
+
+* reduced package size by removing `mem` package ([#1027](https://github.com/webpack/webpack-dev-middleware/issues/1027)) ([0d55268](https://github.com/webpack/webpack-dev-middleware/commit/0d55268478f9cbba122855e2be9d7493350d4d5d))
+
 ## [5.0.0](https://github.com/webpack/webpack-dev-middleware/compare/v4.3.0...v5.0.0) (2021-06-02)
 
 
