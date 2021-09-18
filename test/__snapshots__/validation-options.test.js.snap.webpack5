@@ -1,12 +1,25 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`validation should throw an error on the "headers" option with "[]" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.headers should be a non-empty array."
+`;
+
+exports[`validation should throw an error on the "headers" option with "[{"foo":"bar"}]" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.headers[0] has an unknown property 'foo'. These properties are valid:
+   object { key?, value? }"
+`;
+
 exports[`validation should throw an error on the "headers" option with "1" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.headers should be one of these:
-   object { … } | function
+   [object { key?, value? }, ...] (should not have fewer than 1 item) | object { … } | function
    -> Allows to pass custom HTTP headers on each request
    -> Read more at https://github.com/webpack/webpack-dev-middleware#headers
    Details:
+    * options.headers should be an array:
+      [object { key?, value? }, ...] (should not have fewer than 1 item)
     * options.headers should be an object:
       object { … }
     * options.headers should be an instance of function."
@@ -15,10 +28,12 @@ exports[`validation should throw an error on the "headers" option with "1" value
 exports[`validation should throw an error on the "headers" option with "true" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.headers should be one of these:
-   object { … } | function
+   [object { key?, value? }, ...] (should not have fewer than 1 item) | object { … } | function
    -> Allows to pass custom HTTP headers on each request
    -> Read more at https://github.com/webpack/webpack-dev-middleware#headers
    Details:
+    * options.headers should be an array:
+      [object { key?, value? }, ...] (should not have fewer than 1 item)
     * options.headers should be an object:
       object { … }
     * options.headers should be an instance of function."
