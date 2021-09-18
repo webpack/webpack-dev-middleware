@@ -1012,6 +1012,7 @@ describe.each([
           instance = middleware(compiler);
 
           app = framework();
+          // eslint-disable-next-line no-shadow
           app.use((req, res, next) => {
             // Express API
             if (res.set) {
@@ -2133,6 +2134,7 @@ describe.each([
           app = framework();
           app.use(instance);
 
+          // eslint-disable-next-line no-shadow
           app.use("/file.jpg", (req, res) => {
             // Express API
             if (res.send) {
@@ -2762,6 +2764,7 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          // eslint-disable-next-line no-shadow
           app.use("/file.jpg", (req, res) => {
             // Express API
             if (res.send) {
@@ -2816,6 +2819,7 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          // eslint-disable-next-line no-shadow
           app.use("/file.jpg", (req, res) => {
             // Express API
             if (res.send) {
@@ -2863,6 +2867,7 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          // eslint-disable-next-line no-shadow
           app.use("/file.jpg", (req, res) => {
             // Express API
             if (res.send) {
@@ -2917,6 +2922,7 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          // eslint-disable-next-line no-shadow
           app.use("/file.jpg", (req, res) => {
             // Express API
             if (res.send) {
@@ -2940,7 +2946,7 @@ describe.each([
           const compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler, {
-            // eslint-disable-next-line no-unused-vars
+            // eslint-disable-next-line no-unused-vars, no-shadow
             headers: (req, res, context) => {
               res.setHeader("X-nonsense-1", "yes");
               res.setHeader("X-nonsense-2", "no");
@@ -2966,6 +2972,7 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          // eslint-disable-next-line no-shadow
           app.use("/file.jpg", (req, res) => {
             // Express API
             if (res.send) {
@@ -3043,6 +3050,7 @@ describe.each([
 
         app = framework();
         app.use(instance);
+        // eslint-disable-next-line no-shadow
         app.use((req, res) => {
           // eslint-disable-next-line prefer-destructuring
           locals = res.locals;
