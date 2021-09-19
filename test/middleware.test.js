@@ -2892,15 +2892,15 @@ describe.each([
 
           instance = middleware(compiler, {
             headers: () => [
-                {
-                  key: "X-Foo",
-                  value: "value1",
-                },
-                {
-                  key: "X-Bar",
-                  value: "value2",
-                },
-            ]
+              {
+                key: "X-Foo",
+                value: "value1",
+              },
+              {
+                key: "X-Bar",
+                value: "value2",
+              },
+            ],
           });
 
           app = framework();

@@ -28,7 +28,11 @@ describe("validation", () => {
       failure: [{}, true],
     },
     headers: {
-      success: [{ "X-Custom-Header": "yes" }, () => {}, [{ key: "foo", value: "bar" }]],
+      success: [
+        { "X-Custom-Header": "yes" },
+        () => {},
+        [{ key: "foo", value: "bar" }],
+      ],
       failure: [true, 1, [], [{ foo: "bar" }]],
     },
     publicPath: {
