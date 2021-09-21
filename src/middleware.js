@@ -87,13 +87,19 @@ export default function wrapper(context) {
         headers = headers(req, res, context);
       }
 
-      if (headers) {
-        const names = Object.keys(headers);
+      const allHeaders = [];
 
-        for (const name of names) {
-          setHeaderForResponse(res, name, headers[name]);
+      if (!Array.isArray(headers)) {
+        // eslint-disable-next-line guard-for-in
+        for (const name in headers) {
+          allHeaders.push({ key: name, value: headers[name] });
         }
+        headers = allHeaders;
       }
+
+      headers.forEach((header) => {
+        setHeaderForResponse(res, header.key, header.value);
+      });
 
       if (!getHeaderFromResponse(res, "Content-Type")) {
         // content-type name(like application/javascript; charset=utf-8) or false

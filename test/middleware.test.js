@@ -1012,6 +1012,7 @@ describe.each([
           instance = middleware(compiler);
 
           app = framework();
+          // eslint-disable-next-line no-shadow
           app.use((req, res, next) => {
             // Express API
             if (res.set) {
@@ -2133,6 +2134,7 @@ describe.each([
           app = framework();
           app.use(instance);
 
+          // eslint-disable-next-line no-shadow
           app.use("/file.jpg", (req, res) => {
             // Express API
             if (res.send) {
@@ -2762,6 +2764,7 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          // eslint-disable-next-line no-shadow
           app.use("/file.jpg", (req, res) => {
             // Express API
             if (res.send) {
@@ -2779,6 +2782,62 @@ describe.each([
           expect(res.headers["X-nonsense-2"]).toBeUndefined();
         });
       });
+
+      describe("works with array of objects", () => {
+        beforeEach((done) => {
+          const compiler = getCompiler(webpackConfig);
+
+          instance = middleware(compiler, {
+            headers: [
+              {
+                key: "X-Foo",
+                value: "value1",
+              },
+              {
+                key: "X-Bar",
+                value: "value2",
+              },
+            ],
+          });
+
+          app = framework();
+          app.use(instance);
+
+          listen = listenShorthand(done);
+
+          req = request(app);
+        });
+
+        afterEach(close);
+
+        it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["x-foo"]).toEqual("value1");
+          expect(response.headers["x-bar"]).toEqual("value2");
+        });
+
+        it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          // eslint-disable-next-line no-shadow
+          app.use("/file.jpg", (req, res) => {
+            // Express API
+            if (res.send) {
+              res.send("welcome");
+            }
+            // Connect API
+            else {
+              res.end("welcome");
+            }
+          });
+
+          const res = await request(app).get("/file.jpg");
+          expect(res.statusCode).toEqual(200);
+          expect(res.headers["x-foo"]).toBeUndefined();
+          expect(res.headers["x-bar"]).toBeUndefined();
+        });
+      });
+
       describe("works with function", () => {
         beforeEach((done) => {
           const compiler = getCompiler(webpackConfig);
@@ -2808,6 +2867,7 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          // eslint-disable-next-line no-shadow
           app.use("/file.jpg", (req, res) => {
             // Express API
             if (res.send) {
@@ -2826,12 +2886,67 @@ describe.each([
         });
       });
 
+      describe("works with function returning an array", () => {
+        beforeEach((done) => {
+          const compiler = getCompiler(webpackConfig);
+
+          instance = middleware(compiler, {
+            headers: () => [
+              {
+                key: "X-Foo",
+                value: "value1",
+              },
+              {
+                key: "X-Bar",
+                value: "value2",
+              },
+            ],
+          });
+
+          app = framework();
+          app.use(instance);
+
+          listen = listenShorthand(done);
+
+          req = request(app);
+        });
+
+        afterEach(close);
+
+        it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["x-foo"]).toEqual("value1");
+          expect(response.headers["x-bar"]).toEqual("value2");
+        });
+
+        it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          // eslint-disable-next-line no-shadow
+          app.use("/file.jpg", (req, res) => {
+            // Express API
+            if (res.send) {
+              res.send("welcome");
+            }
+            // Connect API
+            else {
+              res.end("welcome");
+            }
+          });
+
+          const res = await req.get("/file.jpg");
+          expect(res.statusCode).toEqual(200);
+          expect(res.headers["x-foo"]).toBeUndefined();
+          expect(res.headers["x-bar"]).toBeUndefined();
+        });
+      });
+
       describe("works with headers function with params", () => {
         beforeEach((done) => {
           const compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler, {
-            // eslint-disable-next-line no-unused-vars
+            // eslint-disable-next-line no-unused-vars, no-shadow
             headers: (req, res, context) => {
               res.setHeader("X-nonsense-1", "yes");
               res.setHeader("X-nonsense-2", "no");
@@ -2857,6 +2972,7 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          // eslint-disable-next-line no-shadow
           app.use("/file.jpg", (req, res) => {
             // Express API
             if (res.send) {
@@ -2934,6 +3050,7 @@ describe.each([
 
         app = framework();
         app.use(instance);
+        // eslint-disable-next-line no-shadow
         app.use((req, res) => {
           // eslint-disable-next-line prefer-destructuring
           locals = res.locals;

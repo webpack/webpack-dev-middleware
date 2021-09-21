@@ -70,7 +70,7 @@ This property allows a user to pass the list of HTTP request methods accepted by
 
 ### headers
 
-Type: `Object|Function`
+Type: `Array|Object|Function`
 Default: `undefined`
 
 This property allows a user to pass custom HTTP headers on each request.
@@ -94,6 +94,42 @@ or
 webpackDevMiddleware(compiler, {
   headers: (req, res, context) => {
     res.setHeader("Last-Modified", new Date());
+  },
+});
+```
+
+or
+
+```js
+webpackDevMiddleware(compiler, {
+  headers: [
+    {
+      key: "X-custom-header"
+      value: "foo"
+    },
+    {
+      key: "Y-custom-header",
+      value: "bar"
+    }
+  ]
+  },
+});
+```
+
+or
+
+```js
+webpackDevMiddleware(compiler, {
+  headers: () => [
+    {
+      key: "X-custom-header"
+      value: "foo"
+    },
+    {
+      key: "Y-custom-header",
+      value: "bar"
+    }
+  ]
   },
 });
 ```

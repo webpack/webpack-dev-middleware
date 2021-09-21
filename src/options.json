@@ -30,6 +30,24 @@
     "headers": {
       "anyOf": [
         {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "key": {
+                "description": "key of header.",
+                "type": "string"
+              },
+              "value": {
+                "description": "value of header.",
+                "type": "string"
+              }
+            }
+          },
+          "minItems": 1
+        },
+        {
           "type": "object"
         },
         {
