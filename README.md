@@ -59,6 +59,19 @@ See [below](#other-servers) for an example of use with fastify.
 
 ## Options
 
+
+|          Name           |     Type     |   Default   | Description               |
+| :---------------------: | :----------: | :---------: | :------------------------ |
+| **[`methods`](#methods)** | `Array` | `[ 'GET', 'HEAD' ]` | Allows to pass the list of HTTP request methods accepted by the middleware |
+| **[`headers`](#headers)** | `Array\|Object\|Function` | `undefined` | Allows to pass custom HTTP headers on each request. |
+| **[`index`](#index)** | `Boolean\|String` | `index.html` | If `false` (but not `undefined`), the server will not respond to requests to the root URL. |
+| **[`mimeTypes`](#mimetypes)** | `Object` | `undefined` | Allows to register custom mime types or extension mappings. |
+| **[`publicPath`](#publicpath)** | `String` | `output.publicPath` (from a configuration) | The public path that the middleware is bound to. |
+| **[`stats`](#stats)** | `Boolean\|String\|Object` | `stats` (from a configuration) | Stats options object or preset name. |
+| **[`serverSideRender`](#serversiderender)** | `Boolean` | `undefined` | Instructs the module to enable or disable the server-side rendering mode. |
+| **[`writeToDisk`](#writetodisk)** | `Boolean\|Function`  | `false` | Instructs the module to write files to the configured location on disk as specified in your `webpack` configuration. |
+| **[`outputFileSystem`](#outputfilesystem)** | `Object` | [`memfs`](https://github.com/streamich/memfs) | Set the default file system which will be used by webpack as primary destination of generated files. |
+
 The middleware accepts an `options` Object. The following is a property reference for the Object.
 
 ### methods
@@ -136,7 +149,7 @@ webpackDevMiddleware(compiler, {
 
 ### index
 
-Type: `Boolean|String`  
+Type: `Boolean|String`
 Default: `index.html`
 
 If `false` (but not `undefined`), the server will not respond to requests to the root URL.
