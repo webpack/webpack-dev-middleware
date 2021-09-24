@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.2.0](https://github.com/webpack/webpack-dev-middleware/compare/v5.1.0...v5.2.0) (2021-09-24)
+
+
+### Features
+
+* allow array for `headers` option ([#1042](https://github.com/webpack/webpack-dev-middleware/issues/1042)) ([5a6a3f0](https://github.com/webpack/webpack-dev-middleware/commit/5a6a3f0f8e6b0f8fef33629f0f6fa5bed545a88c))
+
 ## [5.1.0](https://github.com/webpack/webpack-dev-middleware/compare/v5.0.0...v5.1.0) (2021-09-09)
 
 
