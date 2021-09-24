@@ -1,5 +1,5 @@
 import webpack from "webpack";
-import colorette from "colorette";
+import { isColorSupported } from "nanocolors";
 
 export default function setupHooks(context) {
   function invalid() {
@@ -86,7 +86,7 @@ export default function setupHooks(context) {
 
             if (typeof childStatsOptions.colors === "undefined") {
               // eslint-disable-next-line no-param-reassign
-              childStatsOptions.colors = Boolean(colorette.options.enabled);
+              childStatsOptions.colors = isColorSupported;
             }
 
             return childStatsOptions;
@@ -96,7 +96,7 @@ export default function setupHooks(context) {
         statsOptions = normalizeStatsOptions(statsOptions);
 
         if (typeof statsOptions.colors === "undefined") {
-          statsOptions.colors = Boolean(colorette.options.enabled);
+          statsOptions.colors = isColorSupported;
         }
       }
 
