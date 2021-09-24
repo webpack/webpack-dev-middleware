@@ -42,7 +42,7 @@
   "dependencies": {
     "memfs": "^3.2.2",
     "mime-types": "^2.1.31",
-    "nanocolors": "^0.1.12",
+    "nanocolors": "^0.2.1",
     "range-parser": "^1.2.1",
     "schema-utils": "^3.1.0"
   },
