@@ -1,5 +1,5 @@
 import webpack from "webpack";
-import { isColorSupported } from "nanocolors";
+import { isColorSupported } from "colorette";
 
 export default function setupHooks(context) {
   function invalid() {
