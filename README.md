@@ -433,7 +433,7 @@ app.use(middleware(compiler, { serverSideRender: true }));
 app.use((req, res) => {
   const { devMiddleware } = res.locals.webpack;
   const outputFileSystem = devMiddleware.context.outputFileSystem;
-  const jsonWebpackStats = devMiddleware.stats.toJson();
+  const jsonWebpackStats = devMiddleware.context.stats.toJson();
   const { assetsByChunkName, outputPath } = jsonWebpackStats;
 
   // Then use `assetsByChunkName` for server-side rendering
