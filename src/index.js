@@ -36,7 +36,6 @@ export default function wdm(compiler, options = {}) {
     watching: null,
   };
 
-  // eslint-disable-next-line no-param-reassign
   context.logger = context.compiler.getInfrastructureLogger(
     "webpack-dev-middleware"
   );

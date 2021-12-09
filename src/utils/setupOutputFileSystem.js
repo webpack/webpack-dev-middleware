@@ -6,7 +6,6 @@ export default function setupOutputFileSystem(context) {
   let outputFileSystem;
 
   if (context.options.outputFileSystem) {
-    // eslint-disable-next-line no-shadow
     const { outputFileSystem: outputFileSystemFromOptions } = context.options;
 
     // Todo remove when we drop webpack@4 support
@@ -33,7 +32,6 @@ export default function setupOutputFileSystem(context) {
   const compilers = context.compiler.compilers || [context.compiler];
 
   for (const compiler of compilers) {
-    // eslint-disable-next-line no-param-reassign
     compiler.outputFileSystem = outputFileSystem;
   }
 
