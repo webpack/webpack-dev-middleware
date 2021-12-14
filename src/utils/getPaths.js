@@ -21,7 +21,9 @@ export default function getPaths(context) {
 
   for (const { compilation } of childStats) {
     // The `output.path` is always present and always absolute
-    const outputPath = compilation.getPath(compilation.outputOptions.path || "");
+    const outputPath = compilation.getPath(
+      compilation.outputOptions.path || ""
+    );
     const publicPath = options.publicPath
       ? compilation.getPath(options.publicPath)
       : compilation.outputOptions.publicPath

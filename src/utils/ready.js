@@ -12,7 +12,7 @@
 export default function ready(context, callback, req) {
   if (context.state) {
     callback(context.stats);
-    
+
     return;
   }
 

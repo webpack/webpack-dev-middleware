@@ -135,7 +135,10 @@ function send(req, res, bufferOtStream, byteLength) {
     return;
   }
 
-  if (typeof /** @type {Response & ExpectedResponse} */ (res).send === "function") {
+  if (
+    typeof (/** @type {Response & ExpectedResponse} */ (res).send) ===
+    "function"
+  ) {
     /** @type {Response & ExpectedResponse} */
     (res).send(bufferOtStream);
 
