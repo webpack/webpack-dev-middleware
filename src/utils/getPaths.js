@@ -1,10 +1,13 @@
-/** @typedef {import("../index.js").Context} Context */
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
+/** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
+/** @typedef {import("../index.js").ServerResponse} ServerResponse */
 
 /**
- * @param {Context} context
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {import("../index.js").Context<Request, Response>} context
  */
 export default function getPaths(context) {
   const { stats, options } = context;

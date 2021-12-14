@@ -1,13 +1,14 @@
 import webpack from "webpack";
 import { isColorSupported } from "colorette";
 
-/** @typedef {import("../index.js").Context} Context */
 /** @typedef {import("webpack").Configuration} Configuration */
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
 
+/** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
+/** @typedef {import("../index.js").ServerResponse} ServerResponse */
 /** @typedef {Configuration["stats"]} StatsOptions */
 /** @typedef {{ children: Configuration["stats"][] }} MultiStatsOptions */
 /** @typedef {Exclude<Configuration["stats"], boolean | string | undefined>} NormalizedStatsOptions */
@@ -15,7 +16,9 @@ import { isColorSupported } from "colorette";
 /** @typedef {{ children: StatsOptions[], colors?: any }} MultiNormalizedStatsOptions */
 
 /**
- * @param {Context} context
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {import("../index.js").Context<Request, Response>} context
  */
 export default function setupHooks(context) {
   function invalid() {
@@ -180,9 +183,14 @@ export default function setupHooks(context) {
       context.callbacks = [];
 
       // Execute callback that are delayed
-      callbacks.forEach((callback) => {
-        callback(stats);
-      });
+      callbacks.forEach(
+        /**
+         * @param {(...args: any[]) => Stats | MultiStats} callback
+         */
+        (callback) => {
+          callback(stats);
+        }
+      );
     });
   }
 

@@ -17,27 +17,18 @@ const noop = () => {};
 /** @typedef {import("webpack").Configuration} Configuration */
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
-/** @typedef {ReturnType<Compiler["getInfrastructureLogger"]>} Logger */
-/** @typedef {import("http").IncomingMessage} IncomingMessage */
-/** @typedef {import("http").ServerResponse} ServerResponse */
-/** @typedef {import("express").Request} ExpressRequest */
-/** @typedef {import("express").Response} ExpressResponse */
-
-/**
- * @typedef {any} TODO
- */
 
 // TODO fix me
 /**
- * @typedef {IncomingMessage | ExpressRequest} Request
+ * @typedef {Object} ExtendedServerResponse
+ * @property {{ webpack?: { devMiddleware?: Context<any, any> } }} [locals]
  */
 
-/**
- * @typedef {(ServerResponse | ExpressResponse) & { locals?: { webpack?: { devMiddleware?: Context } } }} Response
- */
+/** @typedef {import("http").IncomingMessage} IncomingMessage */
+/** @typedef {import("http").ServerResponse & ExtendedServerResponse} ServerResponse */
 
 /**
- * @callback Next
+ * @callback NextFunction
  * @param {any} [err]
  * @return {void}
  */
@@ -58,12 +49,21 @@ const noop = () => {};
  * @typedef {Compiler["outputFileSystem"] & { createReadStream?: import("fs").createReadStream, statSync?: import("fs").statSync, lstat?: import("fs").lstat, readFileSync?: import("fs").readFileSync }} OutputFileSystem
  */
 
+/** @typedef {ReturnType<Compiler["getInfrastructureLogger"]>} Logger */
+
 /**
+ * @callback Callback
+ * @param {Stats | MultiStats} [stats]
+ */
+
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
  * @typedef {Object} Context
  * @property {boolean} state
  * @property {Stats | MultiStats | undefined} stats
- * @property {Function[]} callbacks
- * @property {Options} options
+ * @property {Callback[]} callbacks
+ * @property {Options<Request, Response>} options
  * @property {Compiler | MultiCompiler} compiler
  * @property {Watching | MultiWatching} watching
  * @property {Logger} logger
@@ -71,16 +71,19 @@ const noop = () => {};
  */
 
 /**
- * @typedef {Record<string, number | string> | Array<{ key: string, value: number | string }> | ((req: Request, res: Response, context: Context) => Record<string, number | string>)} Headers
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @typedef {Record<string, string | number> | Array<{ key: string, value: number | string }> | ((req: Request, res: Response, context: Context<Request, Response>) =>  void | undefined | Record<string, string | number>) | undefined} Headers
  */
 
-// TODO test with memory-fs
 /**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
  * @typedef {Object} Options
  * @property {{[key: string]: string}} [mimeTypes]
- * @property {boolean | TODO} [writeToDisk]
+ * @property {boolean | ((targetPath: string) => boolean)} [writeToDisk]
  * @property {string} [methods]
- * @property {Headers} [headers]
+ * @property {Headers<Request, Response>} [headers]
  * @property {NonNullable<Configuration["output"]>["publicPath"]} [publicPath]
  * @property {Configuration["stats"]} [stats]
  * @property {boolean} [serverSideRender]
@@ -89,29 +92,59 @@ const noop = () => {};
  */
 
 /**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
  * @callback Middleware
  * @param {Request} req
  * @param {Response} res
- * @param {Next} next
+ * @param {NextFunction} next
+ * @return {Promise<void>}
  */
 
 /**
+ * @callback GetFilenameFromUrl
+ * @param {string} url
+ * @returns {string | undefined}
+ */
+
+/**
+ * @callback WaitUntilValid
+ * @param {Callback} callback
+ */
+
+/**
+ * @callback Invalidate
+ * @param {Callback} callback
+ */
+
+/**
+ * @callback Close
+ * @param {(err?: Error) => void} callback
+ */
+
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
  * @typedef {Object} AdditionalMethods
- * @property {TODO} getFilenameFromUrl
- * @property {TODO} waitUntilValid
- * @property {TODO} invalidate
- * @property {TODO} close
- * @property {Context} context
+ * @property {GetFilenameFromUrl} getFilenameFromUrl
+ * @property {WaitUntilValid} waitUntilValid
+ * @property {Invalidate} invalidate
+ * @property {Close} close
+ * @property {Context<Request, Response>} context
  */
 
 /**
- * @typedef {Middleware & AdditionalMethods} API
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @typedef {Middleware<Request, Response> & AdditionalMethods<Request, Response>} API
  */
 
 /**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
  * @param {Compiler | MultiCompiler} compiler
- * @param {Options} [options]
- * @returns {API}
+ * @param {Options<Request, Response>} [options]
+ * @returns {API<Request, Response>}
  */
 export default function wdm(compiler, options = {}) {
   validate(/** @type {Schema} */ (schema), options, {
@@ -131,7 +164,7 @@ export default function wdm(compiler, options = {}) {
   }
 
   /**
-   * @type {Context}
+   * @type {Context<Request, Response>}
    */
   const context = {
     state: false,
@@ -211,10 +244,10 @@ export default function wdm(compiler, options = {}) {
     }
   }
 
-  const instance = /** @type {API} */ (middleware(context));
+  const instance = /** @type {API<Request, Response>} */ (middleware(context));
 
   // API
-  /** @type {API} */
+  /** @type {API<Request, Response>} */
   (instance).getFilenameFromUrl =
     /**
      * @param {string} url
@@ -222,24 +255,24 @@ export default function wdm(compiler, options = {}) {
      */
     (url) => getFilenameFromUrl(context, url);
 
-  /** @type {API} */
+  /** @type {API<Request, Response>} */
   (instance).waitUntilValid = (callback = noop) => {
     ready(context, callback);
   };
 
-  /** @type {API} */
+  /** @type {API<Request, Response>} */
   (instance).invalidate = (callback = noop) => {
     ready(context, callback);
 
     context.watching.invalidate();
   };
 
-  /** @type {API} */
+  /** @type {API<Request, Response>} */
   (instance).close = (callback = noop) => {
     context.watching.close(callback);
   };
 
-  /** @type {API} */
+  /** @type {API<Request, Response>} */
   (instance).context = context;
 
   return instance;

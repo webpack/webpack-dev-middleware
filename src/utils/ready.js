@@ -1,9 +1,11 @@
-/** @typedef {import("../index.js").Context} Context */
-/** @typedef {import("../index.js").Request} Request */
+/** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
+/** @typedef {import("../index.js").ServerResponse} ServerResponse */
 
 /**
- * @param {Context} context
- * @param {Function} callback
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {import("../index.js").Context<Request, Response>} context
+ * @param {(...args: any[]) => any} callback
  * @param {Request} [req]
  * @returns {void}
  */

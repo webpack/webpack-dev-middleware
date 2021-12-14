@@ -4,6 +4,9 @@ import querystring from "querystring";
 
 import getPaths from "./getPaths";
 
+/** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
+/** @typedef {import("../index.js").ServerResponse} ServerResponse */
+
 const cacheStore = new WeakMap();
 
 /**
@@ -39,10 +42,10 @@ const mem = (fn, { cache = new Map() } = {}) => {
 };
 const memoizedParse = mem(parse);
 
-/** @typedef {import("../index.js").Context} Context */
-
 /**
- * @param {Context} context
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {import("../index.js").Context<Request, Response>} context
  * @param {string} url
  * @returns {string | undefined}
  */

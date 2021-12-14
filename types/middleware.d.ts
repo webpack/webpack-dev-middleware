@@ -1,10 +1,16 @@
+/// <reference types="node" />
 /**
- * @param {Context} context
- * @return {Middleware}
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {import("./index.js").Context<Request, Response>} context
+ * @return {import("./index.js").Middleware<Request, Response>}
  */
-export default function wrapper(context: Context): Middleware;
-export type Context = import("./index.js").Context;
-export type Request = import("./index.js").Request;
-export type Response = import("./index.js").Response;
-export type Next = import("./index.js").Next;
-export type Middleware = import("./index.js").Middleware;
+export default function wrapper<
+  Request_1 extends import("http").IncomingMessage,
+  Response_1 extends import("./index.js").ServerResponse
+>(
+  context: import("./index.js").Context<Request_1, Response_1>
+): import("./index.js").Middleware<Request_1, Response_1>;
+export type NextFunction = import("./index.js").NextFunction;
+export type IncomingMessage = import("./index.js").IncomingMessage;
+export type ServerResponse = import("./index.js").ServerResponse;

@@ -14,11 +14,9 @@ import {
 } from "./utils/compatibleAPI";
 import ready from "./utils/ready";
 
-/** @typedef {import("./index.js").Context} Context */
-/** @typedef {import("./index.js").Request} Request */
-/** @typedef {import("./index.js").Response} Response */
-/** @typedef {import("./index.js").Next} Next */
-/** @typedef {import("./index.js").Middleware} Middleware */
+/** @typedef {import("./index.js").NextFunction} NextFunction */
+/** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
+/** @typedef {import("./index.js").ServerResponse} ServerResponse */
 
 /**
  * @param {string} type
@@ -55,16 +53,12 @@ function createHtmlDocument(title, body) {
 const BYTES_RANGE_REGEXP = /^ *bytes/i;
 
 /**
- * @param {Context} context
- * @return {Middleware}
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {import("./index.js").Context<Request, Response>} context
+ * @return {import("./index.js").Middleware<Request, Response>}
  */
 export default function wrapper(context) {
-  /**
-   * @param {Request} req
-   * @param {Response} res
-   * @param {Next} next
-   * @returns {Promise<void>}
-   */
   return async function middleware(req, res, next) {
     const acceptedMethods = context.options.methods || ["GET", "HEAD"];
 
@@ -115,23 +109,35 @@ export default function wrapper(context) {
       let { headers } = context.options;
 
       if (typeof headers === "function") {
+        // @ts-ignore
         headers = headers(req, res, context);
       }
 
+      /**
+       * @type {{key: string, value: string | number}[]}
+       */
       const allHeaders = [];
 
-      if (!Array.isArray(headers)) {
-        // eslint-disable-next-line guard-for-in
-        for (const name in headers) {
-          allHeaders.push({ key: name, value: headers[name] });
+      if (typeof headers !== "undefined") {
+        if (!Array.isArray(headers)) {
+          // eslint-disable-next-line guard-for-in
+          for (const name in headers) {
+            // @ts-ignore
+            allHeaders.push({ key: name, value: headers[name] });
+          }
+
+          headers = allHeaders;
         }
 
-        headers = allHeaders;
+        headers.forEach(
+          /**
+           * @param {{key: string, value: any}} header
+           */
+          (header) => {
+            setHeaderForResponse(res, header.key, header.value);
+          }
+        );
       }
-
-      headers.forEach((header) => {
-        setHeaderForResponse(res, header.key, header.value);
-      });
 
       if (!getHeaderFromResponse(res, "Content-Type")) {
         // content-type name(like application/javascript; charset=utf-8) or false

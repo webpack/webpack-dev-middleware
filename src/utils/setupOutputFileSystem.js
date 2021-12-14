@@ -2,11 +2,14 @@ import path from "path";
 
 import { createFsFromVolume, Volume } from "memfs";
 
-/** @typedef {import("../index.js").Context} Context */
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
+/** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
+/** @typedef {import("../index.js").ServerResponse} ServerResponse */
 
 /**
- * @param {Context} context
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {import("../index.js").Context<Request, Response>} context
  */
 export default function setupOutputFileSystem(context) {
   let outputFileSystem;

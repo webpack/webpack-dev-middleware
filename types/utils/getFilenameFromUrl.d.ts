@@ -1,11 +1,17 @@
-/** @typedef {import("../index.js").Context} Context */
+/// <reference types="node" />
 /**
- * @param {Context} context
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {import("../index.js").Context<Request, Response>} context
  * @param {string} url
  * @returns {string | undefined}
  */
-export default function getFilenameFromUrl(
-  context: Context,
+export default function getFilenameFromUrl<
+  Request_1 extends import("http").IncomingMessage,
+  Response_1 extends import("../index.js").ServerResponse
+>(
+  context: import("../index.js").Context<Request_1, Response_1>,
   url: string
 ): string | undefined;
-export type Context = import("../index.js").Context;
+export type IncomingMessage = import("../index.js").IncomingMessage;
+export type ServerResponse = import("../index.js").ServerResponse;

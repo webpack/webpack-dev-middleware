@@ -1,15 +1,21 @@
-/** @typedef {import("../index.js").Context} Context */
-/** @typedef {import("../index.js").Request} Request */
+/// <reference types="node" />
+/** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
+/** @typedef {import("../index.js").ServerResponse} ServerResponse */
 /**
- * @param {Context} context
- * @param {Function} callback
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {import("../index.js").Context<Request, Response>} context
+ * @param {(...args: any[]) => any} callback
  * @param {Request} [req]
  * @returns {void}
  */
-export default function ready(
-  context: Context,
-  callback: Function,
-  req?: import("../index.js").Request | undefined
+export default function ready<
+  Request_1 extends import("http").IncomingMessage,
+  Response_1 extends import("../index.js").ServerResponse
+>(
+  context: import("../index.js").Context<Request_1, Response_1>,
+  callback: (...args: any[]) => any,
+  req?: Request_1 | undefined
 ): void;
-export type Context = import("../index.js").Context;
-export type Request = import("../index.js").Request;
+export type IncomingMessage = import("../index.js").IncomingMessage;
+export type ServerResponse = import("../index.js").ServerResponse;

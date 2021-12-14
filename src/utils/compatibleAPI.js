@@ -1,9 +1,21 @@
-/** @typedef {import("../index.js").Request} Request */
-/** @typedef {import("../index.js").Response} Response */
-/** @typedef {import("express").Request} ExpressRequest */
-/** @typedef {import("express").Response} ExpressResponse */
+/** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
+/** @typedef {import("../index.js").ServerResponse} ServerResponse */
 
 /**
+ * @typedef {Object} ExpectedRequest
+ * @property {(name: string) => string | undefined} get
+ */
+
+/**
+ * @typedef {Object} ExpectedResponse
+ * @property {(name: string) => string | string[] | undefined} get
+ * @property {(name: string, value: number | string | string[]) => void} set
+ * @property {(status: number) => void} status
+ * @property {(data: any) => void} send
+ */
+
+/**
+ * @template {ServerResponse} Response
  * @param {Response} res
  * @returns {string[]}
  */
@@ -11,22 +23,24 @@ function getHeaderNames(res) {
   if (typeof res.getHeaderNames !== "function") {
     // @ts-ignore
     // eslint-disable-next-line no-underscore-dangle
-    return Object.keys(/** @type {ExpressResponse} */ (res)._headers || {});
+    return Object.keys(res._headers || {});
   }
-  
-  
+
   return res.getHeaderNames();
 }
 
 /**
+ * @template {IncomingMessage} Request
  * @param {Request} req
  * @param {string} name
  * @returns {string | undefined}
  */
 function getHeaderFromRequest(req, name) {
   // Express API
-  if (typeof (/** @type {ExpressRequest} */ (req).get) === "function") {
-    return /** @type {ExpressRequest} */ (req).get("range");
+  if (
+    typeof (/** @type {Request & ExpectedRequest} */ (req).get) === "function"
+  ) {
+    return /** @type {Request & ExpectedRequest} */ (req).get("range");
   }
 
   // Node.js API
@@ -35,14 +49,17 @@ function getHeaderFromRequest(req, name) {
 }
 
 /**
+ * @template {ServerResponse} Response
  * @param {Response} res
  * @param {string} name
  * @returns {number | string | string[] | undefined}
  */
 function getHeaderFromResponse(res, name) {
   // Express API
-  if (typeof (/** @type {ExpressResponse} */ (res).get) === "function") {
-    return /** @type {ExpressResponse} */ (res).get(name);
+  if (
+    typeof (/** @type {Response & ExpectedResponse} */ (res).get) === "function"
+  ) {
+    return /** @type {Response & ExpectedResponse} */ (res).get(name);
   }
 
   // Node.js API
@@ -50,6 +67,7 @@ function getHeaderFromResponse(res, name) {
 }
 
 /**
+ * @template {ServerResponse} Response
  * @param {Response} res
  * @param {string} name
  * @param {number | string | string[]} value
@@ -57,8 +75,10 @@ function getHeaderFromResponse(res, name) {
  */
 function setHeaderForResponse(res, name, value) {
   // Express API
-  if (typeof (/** @type {ExpressResponse} */ (res).set) === "function") {
-    /** @type {ExpressResponse} */
+  if (
+    typeof (/** @type {Response & ExpectedResponse} */ (res).set) === "function"
+  ) {
+    /** @type {Response & ExpectedResponse} */
     (res).set(name, typeof value === "number" ? String(value) : value);
 
     return;
@@ -69,12 +89,16 @@ function setHeaderForResponse(res, name, value) {
 }
 
 /**
+ * @template {ServerResponse} Response
  * @param {Response} res
  * @param {number} code
  */
 function setStatusCode(res, code) {
-  if (typeof (/** @type {ExpressResponse} */ (res).status) === "function") {
-    /** @type {ExpressResponse} */
+  if (
+    typeof (/** @type {Response & ExpectedResponse} */ (res).status) ===
+    "function"
+  ) {
+    /** @type {Response & ExpectedResponse} */
     (res).status(code);
 
     return;
@@ -85,6 +109,8 @@ function setStatusCode(res, code) {
 }
 
 /**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
  * @param {Request} req
  * @param {Response} res
  * @param {string | Buffer | import("fs").ReadStream} bufferOtStream
@@ -109,8 +135,9 @@ function send(req, res, bufferOtStream, byteLength) {
     return;
   }
 
-  if (typeof (/** @type {ExpressResponse} */ (res).send) === "function") {
-    /** @type {ExpressResponse} */ (res).send(bufferOtStream);
+  if (typeof /** @type {Response & ExpectedResponse} */ (res).send === "function") {
+    /** @type {Response & ExpectedResponse} */
+    (res).send(bufferOtStream);
 
     return;
   }
