@@ -5,7 +5,17 @@ import querystring from "querystring";
 import getPaths from "./getPaths";
 
 const cacheStore = new WeakMap();
+
+/**
+ * @param {Function} fn
+ * @param {{ cache?: Map<any, any> }} [cache]
+ * @returns {any}
+ */
 const mem = (fn, { cache = new Map() } = {}) => {
+  /**
+   * @param {any} arguments_
+   * @return {any}
+   */
   const memoized = (...arguments_) => {
     const [key] = arguments_;
     const cacheItem = cache.get(key);
@@ -29,6 +39,13 @@ const mem = (fn, { cache = new Map() } = {}) => {
 };
 const memoizedParse = mem(parse);
 
+/** @typedef {import("../index.js").Context} Context */
+
+/**
+ * @param {Context} context
+ * @param {string} url
+ * @returns {string | undefined}
+ */
 export default function getFilenameFromUrl(context, url) {
   const { options } = context;
   const paths = getPaths(context);
@@ -77,7 +94,9 @@ export default function getFilenameFromUrl(context, url) {
       let fsStats;
 
       try {
-        fsStats = context.outputFileSystem.statSync(filename);
+        fsStats =
+          /** @type {import("fs").statSync} */
+          (context.outputFileSystem.statSync)(filename);
       } catch (_ignoreError) {
         // eslint-disable-next-line no-continue
         continue;
@@ -100,7 +119,9 @@ export default function getFilenameFromUrl(context, url) {
         filename = path.join(filename, indexValue);
 
         try {
-          fsStats = context.outputFileSystem.statSync(filename);
+          fsStats =
+            /** @type {import("fs").statSync} */
+            (context.outputFileSystem.statSync)(filename);
         } catch (__ignoreError) {
           // eslint-disable-next-line no-continue
           continue;

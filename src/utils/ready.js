@@ -1,7 +1,17 @@
-// eslint-disable-next-line consistent-return
+/** @typedef {import("../index.js").Context} Context */
+/** @typedef {import("../index.js").Request} Request */
+
+/**
+ * @param {Context} context
+ * @param {Function} callback
+ * @param {Request} [req]
+ * @returns {void}
+ */
 export default function ready(context, callback, req) {
   if (context.state) {
-    return callback(context.stats);
+    callback(context.stats);
+    
+    return;
   }
 
   const name = (req && req.url) || callback.name;

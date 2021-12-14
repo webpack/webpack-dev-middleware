@@ -14,10 +14,27 @@ import {
 } from "./utils/compatibleAPI";
 import ready from "./utils/ready";
 
+/** @typedef {import("./index.js").Context} Context */
+/** @typedef {import("./index.js").Request} Request */
+/** @typedef {import("./index.js").Response} Response */
+/** @typedef {import("./index.js").Next} Next */
+/** @typedef {import("./index.js").Middleware} Middleware */
+
+/**
+ * @param {string} type
+ * @param {number} size
+ * @param {import("range-parser").Range} [range]
+ * @returns {string}
+ */
 function getValueContentRangeHeader(type, size, range) {
   return `${type} ${range ? `${range.start}-${range.end}` : "*"}/${size}`;
 }
 
+/**
+ * @param {string | number} title
+ * @param {string} body
+ * @returns {string}
+ */
 function createHtmlDocument(title, body) {
   return (
     `${
@@ -37,7 +54,17 @@ function createHtmlDocument(title, body) {
 
 const BYTES_RANGE_REGEXP = /^ *bytes/i;
 
+/**
+ * @param {Context} context
+ * @return {Middleware}
+ */
 export default function wrapper(context) {
+  /**
+   * @param {Request} req
+   * @param {Response} res
+   * @param {Next} next
+   * @returns {Promise<void>}
+   */
   return async function middleware(req, res, next) {
     const acceptedMethods = context.options.methods || ["GET", "HEAD"];
 
@@ -45,7 +72,7 @@ export default function wrapper(context) {
     // eslint-disable-next-line no-param-reassign
     res.locals = res.locals || {};
 
-    if (!acceptedMethods.includes(req.method)) {
+    if (req.method && !acceptedMethods.includes(req.method)) {
       await goNext();
 
       return;
@@ -62,8 +89,9 @@ export default function wrapper(context) {
         ready(
           context,
           () => {
+            /** @type {any} */
             // eslint-disable-next-line no-param-reassign
-            res.locals.webpack = { devMiddleware: context };
+            (res.locals).webpack = { devMiddleware: context };
 
             resolve(next());
           },
@@ -73,7 +101,10 @@ export default function wrapper(context) {
     }
 
     async function processRequest() {
-      const filename = getFilenameFromUrl(context, req.url);
+      const filename = getFilenameFromUrl(
+        context,
+        /** @type {string} */ (req.url)
+      );
 
       if (!filename) {
         await goNext();
@@ -94,6 +125,7 @@ export default function wrapper(context) {
         for (const name in headers) {
           allHeaders.push({ key: name, value: headers[name] });
         }
+
         headers = allHeaders;
       }
 
@@ -123,7 +155,8 @@ export default function wrapper(context) {
 
       if (rangeHeader && BYTES_RANGE_REGEXP.test(rangeHeader)) {
         const size = await new Promise((resolve) => {
-          context.outputFileSystem.lstat(filename, (error, stats) => {
+          /** @type {import("fs").lstat} */
+          (context.outputFileSystem.lstat)(filename, (error, stats) => {
             if (error) {
               context.logger.error(error);
 
@@ -185,7 +218,11 @@ export default function wrapper(context) {
           setHeaderForResponse(
             res,
             "Content-Range",
-            getValueContentRangeHeader("bytes", size, parsedRanges[0])
+            getValueContentRangeHeader(
+              "bytes",
+              size,
+              /** @type {import("range-parser").Ranges} */ (parsedRanges)[0]
+            )
           );
 
           [{ start, end }] = parsedRanges;
@@ -204,13 +241,17 @@ export default function wrapper(context) {
           typeof end !== "undefined" &&
           isFsSupportsStream
         ) {
-          bufferOtStream = context.outputFileSystem.createReadStream(filename, {
-            start,
-            end,
-          });
+          bufferOtStream =
+            /** @type {import("fs").createReadStream} */
+            (context.outputFileSystem.createReadStream)(filename, {
+              start,
+              end,
+            });
           byteLength = end - start + 1;
         } else {
-          bufferOtStream = context.outputFileSystem.readFileSync(filename);
+          bufferOtStream = /** @type {import("fs").readFileSync} */ (
+            context.outputFileSystem.readFileSync
+          )(filename);
           ({ byteLength } = bufferOtStream);
         }
       } catch (_ignoreError) {
