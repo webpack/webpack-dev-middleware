@@ -14,10 +14,25 @@ import {
 } from "./utils/compatibleAPI";
 import ready from "./utils/ready";
 
+/** @typedef {import("./index.js").NextFunction} NextFunction */
+/** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
+/** @typedef {import("./index.js").ServerResponse} ServerResponse */
+
+/**
+ * @param {string} type
+ * @param {number} size
+ * @param {import("range-parser").Range} [range]
+ * @returns {string}
+ */
 function getValueContentRangeHeader(type, size, range) {
   return `${type} ${range ? `${range.start}-${range.end}` : "*"}/${size}`;
 }
 
+/**
+ * @param {string | number} title
+ * @param {string} body
+ * @returns {string}
+ */
 function createHtmlDocument(title, body) {
   return (
     `${
@@ -37,6 +52,12 @@ function createHtmlDocument(title, body) {
 
 const BYTES_RANGE_REGEXP = /^ *bytes/i;
 
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {import("./index.js").Context<Request, Response>} context
+ * @return {import("./index.js").Middleware<Request, Response>}
+ */
 export default function wrapper(context) {
   return async function middleware(req, res, next) {
     const acceptedMethods = context.options.methods || ["GET", "HEAD"];
@@ -45,7 +66,7 @@ export default function wrapper(context) {
     // eslint-disable-next-line no-param-reassign
     res.locals = res.locals || {};
 
-    if (!acceptedMethods.includes(req.method)) {
+    if (req.method && !acceptedMethods.includes(req.method)) {
       await goNext();
 
       return;
@@ -62,8 +83,9 @@ export default function wrapper(context) {
         ready(
           context,
           () => {
+            /** @type {any} */
             // eslint-disable-next-line no-param-reassign
-            res.locals.webpack = { devMiddleware: context };
+            (res.locals).webpack = { devMiddleware: context };
 
             resolve(next());
           },
@@ -73,7 +95,10 @@ export default function wrapper(context) {
     }
 
     async function processRequest() {
-      const filename = getFilenameFromUrl(context, req.url);
+      const filename = getFilenameFromUrl(
+        context,
+        /** @type {string} */ (req.url)
+      );
 
       if (!filename) {
         await goNext();
@@ -84,22 +109,35 @@ export default function wrapper(context) {
       let { headers } = context.options;
 
       if (typeof headers === "function") {
+        // @ts-ignore
         headers = headers(req, res, context);
       }
 
+      /**
+       * @type {{key: string, value: string | number}[]}
+       */
       const allHeaders = [];
 
-      if (!Array.isArray(headers)) {
-        // eslint-disable-next-line guard-for-in
-        for (const name in headers) {
-          allHeaders.push({ key: name, value: headers[name] });
-        }
-        headers = allHeaders;
-      }
+      if (typeof headers !== "undefined") {
+        if (!Array.isArray(headers)) {
+          // eslint-disable-next-line guard-for-in
+          for (const name in headers) {
+            // @ts-ignore
+            allHeaders.push({ key: name, value: headers[name] });
+          }
 
-      headers.forEach((header) => {
-        setHeaderForResponse(res, header.key, header.value);
-      });
+          headers = allHeaders;
+        }
+
+        headers.forEach(
+          /**
+           * @param {{key: string, value: any}} header
+           */
+          (header) => {
+            setHeaderForResponse(res, header.key, header.value);
+          }
+        );
+      }
 
       if (!getHeaderFromResponse(res, "Content-Type")) {
         // content-type name(like application/javascript; charset=utf-8) or false
@@ -123,7 +161,8 @@ export default function wrapper(context) {
 
       if (rangeHeader && BYTES_RANGE_REGEXP.test(rangeHeader)) {
         const size = await new Promise((resolve) => {
-          context.outputFileSystem.lstat(filename, (error, stats) => {
+          /** @type {import("fs").lstat} */
+          (context.outputFileSystem.lstat)(filename, (error, stats) => {
             if (error) {
               context.logger.error(error);
 
@@ -185,7 +224,11 @@ export default function wrapper(context) {
           setHeaderForResponse(
             res,
             "Content-Range",
-            getValueContentRangeHeader("bytes", size, parsedRanges[0])
+            getValueContentRangeHeader(
+              "bytes",
+              size,
+              /** @type {import("range-parser").Ranges} */ (parsedRanges)[0]
+            )
           );
 
           [{ start, end }] = parsedRanges;
@@ -204,13 +247,17 @@ export default function wrapper(context) {
           typeof end !== "undefined" &&
           isFsSupportsStream
         ) {
-          bufferOtStream = context.outputFileSystem.createReadStream(filename, {
-            start,
-            end,
-          });
+          bufferOtStream =
+            /** @type {import("fs").createReadStream} */
+            (context.outputFileSystem.createReadStream)(filename, {
+              start,
+              end,
+            });
           byteLength = end - start + 1;
         } else {
-          bufferOtStream = context.outputFileSystem.readFileSync(filename);
+          bufferOtStream = /** @type {import("fs").readFileSync} */ (
+            context.outputFileSystem.readFileSync
+          )(filename);
           ({ byteLength } = bufferOtStream);
         }
       } catch (_ignoreError) {
