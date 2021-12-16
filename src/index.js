@@ -18,10 +18,9 @@ const noop = () => {};
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
 
-// TODO fix me
 /**
  * @typedef {Object} ExtendedServerResponse
- * @property {{ webpack?: { devMiddleware?: Context<any, any> } }} [locals]
+ * @property {{ webpack?: { devMiddleware?: Context<IncomingMessage, ServerResponse> } }} [locals]
  */
 
 /** @typedef {import("http").IncomingMessage} IncomingMessage */

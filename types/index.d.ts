@@ -8,7 +8,7 @@ export = wdm;
 /** @typedef {import("webpack").MultiStats} MultiStats */
 /**
  * @typedef {Object} ExtendedServerResponse
- * @property {{ webpack?: { devMiddleware?: Context<any, any> } }} [locals]
+ * @property {{ webpack?: { devMiddleware?: Context<IncomingMessage, ServerResponse> } }} [locals]
  */
 /** @typedef {import("http").IncomingMessage} IncomingMessage */
 /** @typedef {import("http").ServerResponse & ExtendedServerResponse} ServerResponse */
@@ -186,7 +186,9 @@ type ExtendedServerResponse = {
     | {
         webpack?:
           | {
-              devMiddleware?: Context<any, any> | undefined;
+              devMiddleware?:
+                | Context<import("http").IncomingMessage, ServerResponse>
+                | undefined;
             }
           | undefined;
       }
