@@ -1,18 +1,18 @@
-import path from "path";
+const path = require("path");
 
-import mime from "mime-types";
-import parseRange from "range-parser";
+const mime = require("mime-types");
+const parseRange = require("range-parser");
 
-import getFilenameFromUrl from "./utils/getFilenameFromUrl";
-import {
+const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
+const {
   getHeaderNames,
   getHeaderFromRequest,
   getHeaderFromResponse,
   setHeaderForResponse,
   setStatusCode,
   send,
-} from "./utils/compatibleAPI";
-import ready from "./utils/ready";
+} = require("./utils/compatibleAPI");
+const ready = require("./utils/ready");
 
 /** @typedef {import("./index.js").NextFunction} NextFunction */
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
@@ -58,7 +58,7 @@ const BYTES_RANGE_REGEXP = /^ *bytes/i;
  * @param {import("./index.js").Context<Request, Response>} context
  * @return {import("./index.js").Middleware<Request, Response>}
  */
-export default function wrapper(context) {
+function wrapper(context) {
   return async function middleware(req, res, next) {
     const acceptedMethods = context.options.methods || ["GET", "HEAD"];
 
@@ -270,3 +270,5 @@ export default function wrapper(context) {
     }
   };
 }
+
+module.exports = wrapper;

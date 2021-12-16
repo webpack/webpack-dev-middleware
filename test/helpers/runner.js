@@ -4,7 +4,7 @@ const express = require("express");
 const webpack = require("webpack");
 const merge = require("deepmerge");
 
-const middleware = require("../../dist").default;
+const middleware = require("../../dist");
 const defaultConfig = require("../fixtures/webpack.config");
 
 const configEntries = [];

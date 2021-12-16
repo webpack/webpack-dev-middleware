@@ -1,6 +1,5 @@
-import path from "path";
-
-import { createFsFromVolume, Volume } from "memfs";
+const path = require("path");
+const memfs = require("memfs");
 
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
@@ -11,7 +10,7 @@ import { createFsFromVolume, Volume } from "memfs";
  * @template {ServerResponse} Response
  * @param {import("../index.js").Context<Request, Response>} context
  */
-export default function setupOutputFileSystem(context) {
+function setupOutputFileSystem(context) {
   let outputFileSystem;
 
   if (context.options.outputFileSystem) {
@@ -34,7 +33,7 @@ export default function setupOutputFileSystem(context) {
 
     outputFileSystem = outputFileSystemFromOptions;
   } else {
-    outputFileSystem = createFsFromVolume(new Volume());
+    outputFileSystem = memfs.createFsFromVolume(new memfs.Volume());
     // TODO: remove when we drop webpack@4 support
     // @ts-ignore
     outputFileSystem.join = path.join.bind(path);
@@ -52,3 +51,5 @@ export default function setupOutputFileSystem(context) {
   // eslint-disable-next-line no-param-reassign
   context.outputFileSystem = outputFileSystem;
 }
+
+module.exports = setupOutputFileSystem;

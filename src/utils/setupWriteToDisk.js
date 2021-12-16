@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+const fs = require("fs");
+const path = require("path");
 
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
@@ -12,7 +12,7 @@ import path from "path";
  * @template {ServerResponse} Response
  * @param {import("../index.js").Context<Request, Response>} context
  */
-export default function setupWriteToDisk(context) {
+function setupWriteToDisk(context) {
   /**
    * @type {Compiler[]}
    */
@@ -113,3 +113,5 @@ export default function setupWriteToDisk(context) {
     );
   }
 }
+
+module.exports = setupWriteToDisk;

@@ -1,13 +1,13 @@
-import { validate } from "schema-utils";
-import mime from "mime-types";
+const { validate } = require("schema-utils");
+const mime = require("mime-types");
 
-import middleware from "./middleware";
-import getFilenameFromUrl from "./utils/getFilenameFromUrl";
-import setupHooks from "./utils/setupHooks";
-import setupWriteToDisk from "./utils/setupWriteToDisk";
-import setupOutputFileSystem from "./utils/setupOutputFileSystem";
-import ready from "./utils/ready";
-import schema from "./options.json";
+const middleware = require("./middleware");
+const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
+const setupHooks = require("./utils/setupHooks");
+const setupWriteToDisk = require("./utils/setupWriteToDisk");
+const setupOutputFileSystem = require("./utils/setupOutputFileSystem");
+const ready = require("./utils/ready");
+const schema = require("./options.json");
 
 const noop = () => {};
 
@@ -18,10 +18,9 @@ const noop = () => {};
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
 
-// TODO fix me
 /**
  * @typedef {Object} ExtendedServerResponse
- * @property {{ webpack?: { devMiddleware?: Context<any, any> } }} [locals]
+ * @property {{ webpack?: { devMiddleware?: Context<IncomingMessage, ServerResponse> } }} [locals]
  */
 
 /** @typedef {import("http").IncomingMessage} IncomingMessage */
@@ -146,7 +145,7 @@ const noop = () => {};
  * @param {Options<Request, Response>} [options]
  * @returns {API<Request, Response>}
  */
-export default function wdm(compiler, options = {}) {
+function wdm(compiler, options = {}) {
   validate(/** @type {Schema} */ (schema), options, {
     name: "Dev Middleware",
     baseDataPath: "options",
@@ -277,3 +276,5 @@ export default function wdm(compiler, options = {}) {
 
   return instance;
 }
+
+module.exports = wdm;

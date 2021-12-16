@@ -9,7 +9,7 @@
  * @param {Request} [req]
  * @returns {void}
  */
-export default function ready(context, callback, req) {
+function ready(context, callback, req) {
   if (context.state) {
     callback(context.stats);
 
@@ -22,3 +22,5 @@ export default function ready(context, callback, req) {
 
   context.callbacks.push(callback);
 }
+
+module.exports = ready;

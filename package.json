@@ -11,13 +11,14 @@
     "type": "opencollective",
     "url": "https://opencollective.com/webpack"
   },
-  "main": "dist/cjs.js",
-  "types": "types/cjs.d.ts",
+  "main": "dist/index.js",
+  "types": "types/index.d.ts",
   "engines": {
     "node": ">= 12.13.0"
   },
   "scripts": {
     "commitlint": "commitlint --from=master",
+    "security": "npm audit --production",
     "fmt:check": "prettier \"{**/*,*}.{js,json,md,yml,css}\" --list-different",
     "lint:js": "eslint --cache src test",
     "lint:types": "tsc --pretty --noEmit",
@@ -25,17 +26,18 @@
     "fmt": "npm run fmt:check -- --write",
     "fix:js": "npm run lint:js -- --fix",
     "fix": "npm-run-all fix:js fmt",
-    "prepare": "husky install && npm run build",
+    "clean": "del-cli dist types",
+    "prebuild": "npm run clean",
     "build:types": "tsc --declaration --emitDeclarationOnly --outDir types && prettier \"types/**/*.ts\" --write",
     "build:code": "cross-env NODE_ENV=production babel src -d dist --copy-files",
     "build": "npm-run-all -p \"build:**\"",
-    "release": "standard-version",
-    "security": "npm audit --production",
     "test:only": "cross-env NODE_ENV=test jest",
     "test:watch": "npm run test:only -- --watch",
     "test:coverage": "npm run test:only -- --collectCoverageFrom=\"src/**/*.js\" --coverage",
     "pretest": "npm run lint",
-    "test": "npm run test:coverage"
+    "test": "npm run test:coverage",
+    "prepare": "husky install && npm run build",
+    "release": "standard-version"
   },
   "files": [
     "dist",

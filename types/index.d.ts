@@ -1,4 +1,5 @@
 /// <reference types="node" />
+export = wdm;
 /** @typedef {import("schema-utils/declarations/validate").Schema} Schema */
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
@@ -7,7 +8,7 @@
 /** @typedef {import("webpack").MultiStats} MultiStats */
 /**
  * @typedef {Object} ExtendedServerResponse
- * @property {{ webpack?: { devMiddleware?: Context<any, any> } }} [locals]
+ * @property {{ webpack?: { devMiddleware?: Context<IncomingMessage, ServerResponse> } }} [locals]
  */
 /** @typedef {import("http").IncomingMessage} IncomingMessage */
 /** @typedef {import("http").ServerResponse & ExtendedServerResponse} ServerResponse */
@@ -113,76 +114,47 @@
  * @param {Options<Request, Response>} [options]
  * @returns {API<Request, Response>}
  */
-export default function wdm<
+declare function wdm<
   Request_1 extends import("http").IncomingMessage,
   Response_1 extends ServerResponse
 >(
   compiler: Compiler | MultiCompiler,
   options?: Options<Request_1, Response_1> | undefined
 ): API<Request_1, Response_1>;
-export type Schema = import("schema-utils/declarations/validate").Schema;
-export type Compiler = import("webpack").Compiler;
-export type MultiCompiler = import("webpack").MultiCompiler;
-export type Configuration = import("webpack").Configuration;
-export type Stats = import("webpack").Stats;
-export type MultiStats = import("webpack").MultiStats;
-export type ExtendedServerResponse = {
-  locals?:
-    | {
-        webpack?:
-          | {
-              devMiddleware?: Context<any, any> | undefined;
-            }
-          | undefined;
-      }
-    | undefined;
-};
-export type IncomingMessage = import("http").IncomingMessage;
-export type ServerResponse = import("http").ServerResponse &
-  ExtendedServerResponse;
-export type NextFunction = (err?: any) => void;
-export type WatchOptions = NonNullable<Configuration["watchOptions"]>;
-export type Watching = Compiler["watching"];
-export type MultiWatching = ReturnType<Compiler["watch"]>;
-export type OutputFileSystem = Compiler["outputFileSystem"] & {
-  createReadStream?: typeof import("fs").createReadStream;
-  statSync?: import("fs").StatSyncFn;
-  lstat?: typeof import("fs").lstat;
-  readFileSync?: typeof import("fs").readFileSync;
-};
-export type Logger = ReturnType<Compiler["getInfrastructureLogger"]>;
-export type Callback = (
-  stats?: import("webpack").Stats | import("webpack").MultiStats | undefined
-) => any;
-export type Context<
-  Request_1 extends import("http").IncomingMessage,
-  Response_1 extends ServerResponse
-> = {
-  state: boolean;
-  stats: Stats | MultiStats | undefined;
-  callbacks: Callback[];
-  options: Options<Request_1, Response_1>;
-  compiler: Compiler | MultiCompiler;
-  watching: Watching | MultiWatching;
-  logger: Logger;
-  outputFileSystem: OutputFileSystem;
-};
-export type Headers<
-  Request_1 extends import("http").IncomingMessage,
-  Response_1 extends ServerResponse
-> =
-  | Record<string, string | number>
-  | {
-      key: string;
-      value: number | string;
-    }[]
-  | ((
-      req: Request_1,
-      res: Response_1,
-      context: Context<Request_1, Response_1>
-    ) => void | undefined | Record<string, string | number>)
-  | undefined;
-export type Options<
+declare namespace wdm {
+  export {
+    Schema,
+    Compiler,
+    MultiCompiler,
+    Configuration,
+    Stats,
+    MultiStats,
+    ExtendedServerResponse,
+    IncomingMessage,
+    ServerResponse,
+    NextFunction,
+    WatchOptions,
+    Watching,
+    MultiWatching,
+    OutputFileSystem,
+    Logger,
+    Callback,
+    Context,
+    Headers,
+    Options,
+    Middleware,
+    GetFilenameFromUrl,
+    WaitUntilValid,
+    Invalidate,
+    Close,
+    AdditionalMethods,
+    API,
+  };
+}
+type ServerResponse = import("http").ServerResponse & ExtendedServerResponse;
+type Compiler = import("webpack").Compiler;
+type MultiCompiler = import("webpack").MultiCompiler;
+type Options<
   Request_1 extends import("http").IncomingMessage,
   Response_1 extends ServerResponse
 > = {
@@ -200,15 +172,80 @@ export type Options<
   outputFileSystem?: OutputFileSystem | undefined;
   index?: string | boolean | undefined;
 };
-export type Middleware<
+type API<
+  Request_1 extends import("http").IncomingMessage,
+  Response_1 extends ServerResponse
+> = Middleware<Request_1, Response_1> &
+  AdditionalMethods<Request_1, Response_1>;
+type Schema = import("schema-utils/declarations/validate").Schema;
+type Configuration = import("webpack").Configuration;
+type Stats = import("webpack").Stats;
+type MultiStats = import("webpack").MultiStats;
+type ExtendedServerResponse = {
+  locals?:
+    | {
+        webpack?:
+          | {
+              devMiddleware?:
+                | Context<import("http").IncomingMessage, ServerResponse>
+                | undefined;
+            }
+          | undefined;
+      }
+    | undefined;
+};
+type IncomingMessage = import("http").IncomingMessage;
+type NextFunction = (err?: any) => void;
+type WatchOptions = NonNullable<Configuration["watchOptions"]>;
+type Watching = Compiler["watching"];
+type MultiWatching = ReturnType<Compiler["watch"]>;
+type OutputFileSystem = Compiler["outputFileSystem"] & {
+  createReadStream?: typeof import("fs").createReadStream;
+  statSync?: import("fs").StatSyncFn;
+  lstat?: typeof import("fs").lstat;
+  readFileSync?: typeof import("fs").readFileSync;
+};
+type Logger = ReturnType<Compiler["getInfrastructureLogger"]>;
+type Callback = (
+  stats?: import("webpack").Stats | import("webpack").MultiStats | undefined
+) => any;
+type Context<
+  Request_1 extends import("http").IncomingMessage,
+  Response_1 extends ServerResponse
+> = {
+  state: boolean;
+  stats: Stats | MultiStats | undefined;
+  callbacks: Callback[];
+  options: Options<Request_1, Response_1>;
+  compiler: Compiler | MultiCompiler;
+  watching: Watching | MultiWatching;
+  logger: Logger;
+  outputFileSystem: OutputFileSystem;
+};
+type Headers<
+  Request_1 extends import("http").IncomingMessage,
+  Response_1 extends ServerResponse
+> =
+  | Record<string, string | number>
+  | {
+      key: string;
+      value: number | string;
+    }[]
+  | ((
+      req: Request_1,
+      res: Response_1,
+      context: Context<Request_1, Response_1>
+    ) => void | undefined | Record<string, string | number>)
+  | undefined;
+type Middleware<
   Request_1 extends import("http").IncomingMessage,
   Response_1 extends ServerResponse
 > = (req: Request_1, res: Response_1, next: NextFunction) => Promise<void>;
-export type GetFilenameFromUrl = (url: string) => string | undefined;
-export type WaitUntilValid = (callback: Callback) => any;
-export type Invalidate = (callback: Callback) => any;
-export type Close = (callback: (err?: Error | undefined) => void) => any;
-export type AdditionalMethods<
+type GetFilenameFromUrl = (url: string) => string | undefined;
+type WaitUntilValid = (callback: Callback) => any;
+type Invalidate = (callback: Callback) => any;
+type Close = (callback: (err?: Error | undefined) => void) => any;
+type AdditionalMethods<
   Request_1 extends import("http").IncomingMessage,
   Response_1 extends ServerResponse
 > = {
@@ -218,8 +255,3 @@ export type AdditionalMethods<
   close: Close;
   context: Context<Request_1, Response_1>;
 };
-export type API<
-  Request_1 extends import("http").IncomingMessage,
-  Response_1 extends ServerResponse
-> = Middleware<Request_1, Response_1> &
-  AdditionalMethods<Request_1, Response_1>;
