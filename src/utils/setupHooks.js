@@ -1,5 +1,5 @@
-import webpack from "webpack";
-import { isColorSupported } from "colorette";
+const webpack = require("webpack");
+const { isColorSupported } = require("colorette");
 
 /** @typedef {import("webpack").Configuration} Configuration */
 /** @typedef {import("webpack").Compiler} Compiler */
@@ -20,7 +20,7 @@ import { isColorSupported } from "colorette";
  * @template {ServerResponse} Response
  * @param {import("../index.js").Context<Request, Response>} context
  */
-export default function setupHooks(context) {
+function setupHooks(context) {
   function invalid() {
     if (context.state) {
       context.logger.log("Compilation starting...");
@@ -198,3 +198,5 @@ export default function setupHooks(context) {
   context.compiler.hooks.invalid.tap("webpack-dev-middleware", invalid);
   context.compiler.hooks.done.tap("webpack-dev-middleware", done);
 }
+
+module.exports = setupHooks;

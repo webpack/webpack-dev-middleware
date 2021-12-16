@@ -9,7 +9,7 @@
  * @template {ServerResponse} Response
  * @param {import("../index.js").Context<Request, Response>} context
  */
-export default function getPaths(context) {
+function getPaths(context) {
   const { stats, options } = context;
   /** @type {Stats[]} */
   const childStats =
@@ -35,3 +35,5 @@ export default function getPaths(context) {
 
   return publicPaths;
 }
+
+module.exports = getPaths;

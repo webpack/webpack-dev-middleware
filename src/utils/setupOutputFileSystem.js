@@ -1,6 +1,6 @@
-import path from "path";
+const path = require("path");
 
-import { createFsFromVolume, Volume } from "memfs";
+const { createFsFromVolume, Volume } = require("memfs");
 
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
@@ -11,7 +11,7 @@ import { createFsFromVolume, Volume } from "memfs";
  * @template {ServerResponse} Response
  * @param {import("../index.js").Context<Request, Response>} context
  */
-export default function setupOutputFileSystem(context) {
+function setupOutputFileSystem(context) {
   let outputFileSystem;
 
   if (context.options.outputFileSystem) {
@@ -52,3 +52,5 @@ export default function setupOutputFileSystem(context) {
   // eslint-disable-next-line no-param-reassign
   context.outputFileSystem = outputFileSystem;
 }
+
+module.exports = setupOutputFileSystem;

@@ -1,4 +1,5 @@
 /// <reference types="node" />
+export = getPaths;
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
@@ -9,7 +10,7 @@
  * @template {ServerResponse} Response
  * @param {import("../index.js").Context<Request, Response>} context
  */
-export default function getPaths<
+declare function getPaths<
   Request_1 extends import("http").IncomingMessage,
   Response_1 extends import("../index.js").ServerResponse
 >(
@@ -18,8 +19,11 @@ export default function getPaths<
   outputPath: string;
   publicPath: string;
 }[];
-export type Compiler = import("webpack").Compiler;
-export type Stats = import("webpack").Stats;
-export type MultiStats = import("webpack").MultiStats;
-export type IncomingMessage = import("../index.js").IncomingMessage;
-export type ServerResponse = import("../index.js").ServerResponse;
+declare namespace getPaths {
+  export { Compiler, Stats, MultiStats, IncomingMessage, ServerResponse };
+}
+type Compiler = import("webpack").Compiler;
+type Stats = import("webpack").Stats;
+type MultiStats = import("webpack").MultiStats;
+type IncomingMessage = import("../index.js").IncomingMessage;
+type ServerResponse = import("../index.js").ServerResponse;

@@ -1,4 +1,5 @@
 /// <reference types="node" />
+export = ready;
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
 /**
@@ -9,7 +10,7 @@
  * @param {Request} [req]
  * @returns {void}
  */
-export default function ready<
+declare function ready<
   Request_1 extends import("http").IncomingMessage,
   Response_1 extends import("../index.js").ServerResponse
 >(
@@ -17,5 +18,8 @@ export default function ready<
   callback: (...args: any[]) => any,
   req?: Request_1 | undefined
 ): void;
-export type IncomingMessage = import("../index.js").IncomingMessage;
-export type ServerResponse = import("../index.js").ServerResponse;
+declare namespace ready {
+  export { IncomingMessage, ServerResponse };
+}
+type IncomingMessage = import("../index.js").IncomingMessage;
+type ServerResponse = import("../index.js").ServerResponse;

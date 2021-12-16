@@ -1,4 +1,5 @@
 /// <reference types="node" />
+export = setupHooks;
 /** @typedef {import("webpack").Configuration} Configuration */
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
@@ -15,26 +16,41 @@
  * @template {ServerResponse} Response
  * @param {import("../index.js").Context<Request, Response>} context
  */
-export default function setupHooks<
+declare function setupHooks<
   Request_1 extends import("http").IncomingMessage,
   Response_1 extends import("../index.js").ServerResponse
 >(context: import("../index.js").Context<Request_1, Response_1>): void;
-export type Configuration = import("webpack").Configuration;
-export type Compiler = import("webpack").Compiler;
-export type MultiCompiler = import("webpack").MultiCompiler;
-export type Stats = import("webpack").Stats;
-export type MultiStats = import("webpack").MultiStats;
-export type IncomingMessage = import("../index.js").IncomingMessage;
-export type ServerResponse = import("../index.js").ServerResponse;
-export type StatsOptions = Configuration["stats"];
-export type MultiStatsOptions = {
+declare namespace setupHooks {
+  export {
+    Configuration,
+    Compiler,
+    MultiCompiler,
+    Stats,
+    MultiStats,
+    IncomingMessage,
+    ServerResponse,
+    StatsOptions,
+    MultiStatsOptions,
+    NormalizedStatsOptions,
+    MultiNormalizedStatsOptions,
+  };
+}
+type Configuration = import("webpack").Configuration;
+type Compiler = import("webpack").Compiler;
+type MultiCompiler = import("webpack").MultiCompiler;
+type Stats = import("webpack").Stats;
+type MultiStats = import("webpack").MultiStats;
+type IncomingMessage = import("../index.js").IncomingMessage;
+type ServerResponse = import("../index.js").ServerResponse;
+type StatsOptions = Configuration["stats"];
+type MultiStatsOptions = {
   children: Configuration["stats"][];
 };
-export type NormalizedStatsOptions = Exclude<
+type NormalizedStatsOptions = Exclude<
   Configuration["stats"],
   boolean | string | undefined
 >;
-export type MultiNormalizedStatsOptions = {
+type MultiNormalizedStatsOptions = {
   children: StatsOptions[];
   colors?: any;
 };

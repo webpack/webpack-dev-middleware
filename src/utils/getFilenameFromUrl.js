@@ -1,8 +1,8 @@
-import path from "path";
-import { parse } from "url";
-import querystring from "querystring";
+const path = require("path");
+const { parse } = require("url");
+const querystring = require("querystring");
 
-import getPaths from "./getPaths";
+const getPaths = require("./getPaths");
 
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
@@ -49,7 +49,7 @@ const memoizedParse = mem(parse);
  * @param {string} url
  * @returns {string | undefined}
  */
-export default function getFilenameFromUrl(context, url) {
+function getFilenameFromUrl(context, url) {
   const { options } = context;
   const paths = getPaths(context);
 
@@ -142,3 +142,5 @@ export default function getFilenameFromUrl(context, url) {
   // eslint-disable-next-line consistent-return
   return foundFilename;
 }
+
+module.exports = getFilenameFromUrl;
