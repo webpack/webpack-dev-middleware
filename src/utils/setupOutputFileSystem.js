@@ -1,6 +1,5 @@
 const path = require("path");
-
-const { createFsFromVolume, Volume } = require("memfs");
+const memfs = require("memfs");
 
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
@@ -34,7 +33,7 @@ function setupOutputFileSystem(context) {
 
     outputFileSystem = outputFileSystemFromOptions;
   } else {
-    outputFileSystem = createFsFromVolume(new Volume());
+    outputFileSystem = memfs.createFsFromVolume(new memfs.Volume());
     // TODO: remove when we drop webpack@4 support
     // @ts-ignore
     outputFileSystem.join = path.join.bind(path);

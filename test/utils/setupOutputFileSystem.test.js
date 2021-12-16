@@ -20,7 +20,9 @@ describe("setupOutputFileSystem", () => {
       compiler: {},
       options: {},
     };
+
     setupOutputFileSystem(context);
+
     // make sure that this is the default fs created
     expect(context.compiler.outputFileSystem.testFs).toBeTruthy();
     expect(context.outputFileSystem.testFs).toBeTruthy();
@@ -36,7 +38,9 @@ describe("setupOutputFileSystem", () => {
       },
       options: {},
     };
+
     setupOutputFileSystem(context);
+
     context.compiler.compilers.forEach((comp) => {
       expect(comp.outputFileSystem).toBeTruthy();
     });
@@ -49,6 +53,7 @@ describe("setupOutputFileSystem", () => {
         outputFileSystem: {},
       },
     };
+
     expect(() => {
       setupOutputFileSystem(context);
     }).toThrow(/join/);
@@ -63,6 +68,7 @@ describe("setupOutputFileSystem", () => {
         },
       },
     };
+
     expect(() => {
       setupOutputFileSystem(context);
     }).toThrow(/mkdirp/);
@@ -78,7 +84,9 @@ describe("setupOutputFileSystem", () => {
         },
       },
     };
+
     setupOutputFileSystem(context);
+
     expect(context.outputFileSystem).toEqual(context.options.outputFileSystem);
   });
 });
