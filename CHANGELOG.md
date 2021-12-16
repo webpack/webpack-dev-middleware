@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.3.0](https://github.com/webpack/webpack-dev-middleware/compare/v5.2.2...v5.3.0) (2021-12-16)
+
+
+### Features
+
+* added types ([a2fa77f](https://github.com/webpack/webpack-dev-middleware/commit/a2fa77f87ad4d9912d08a68624e41380821d4d10))
+* removed cjs wrapper ([#1146](https://github.com/webpack/webpack-dev-middleware/issues/1146)) ([b6d53d3](https://github.com/webpack/webpack-dev-middleware/commit/b6d53d3f4d43c4c0e646e8d06355f3b4c9893a4f))
+
 ### [5.2.2](https://github.com/webpack/webpack-dev-middleware/compare/v5.2.1...v5.2.2) (2021-11-17)
 
 
