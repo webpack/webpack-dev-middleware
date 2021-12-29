@@ -40,7 +40,7 @@ function getHeaderFromRequest(req, name) {
   if (
     typeof (/** @type {Request & ExpectedRequest} */ (req).get) === "function"
   ) {
-    return /** @type {Request & ExpectedRequest} */ (req).get("range");
+    return /** @type {Request & ExpectedRequest} */ (req).get(name);
   }
 
   // Node.js API
