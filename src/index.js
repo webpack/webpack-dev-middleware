@@ -118,7 +118,7 @@ const noop = () => {};
 
 /**
  * @callback Close
- * @param {(err?: Error) => void} callback
+ * @param {(err: Error | null | undefined) => void} callback
  */
 
 /**
@@ -199,7 +199,7 @@ function wdm(compiler, options = {}) {
     let watchOptions;
 
     /**
-     * @param {Error | undefined} error
+     * @param {Error | null | undefined} error
      */
     const errorHandler = (error) => {
       if (error) {
