@@ -90,7 +90,7 @@ export = wdm;
  */
 /**
  * @callback Close
- * @param {(err?: Error) => void} callback
+ * @param {(err: Error | null | undefined) => void} callback
  */
 /**
  * @template {IncomingMessage} Request
@@ -244,7 +244,7 @@ type Middleware<
 type GetFilenameFromUrl = (url: string) => string | undefined;
 type WaitUntilValid = (callback: Callback) => any;
 type Invalidate = (callback: Callback) => any;
-type Close = (callback: (err?: Error | undefined) => void) => any;
+type Close = (callback: (err: Error | null | undefined) => void) => any;
 type AdditionalMethods<
   Request_1 extends import("http").IncomingMessage,
   Response_1 extends ServerResponse
