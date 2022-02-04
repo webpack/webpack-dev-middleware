@@ -16,12 +16,12 @@ about: Something went awry and you'd like to tell us about it.
 
 ### Actual Behavior
 
-<!-- Explain exactly how it behave -->
+<!-- Explain exactly how it behaves -->
 
 ### Expected Behavior
 
 <!-- "It should work" is not a helpful explanation -->
-<!-- Explain exactly how it should behaves -->
+<!-- Explain exactly how it should behave -->
 
 ### How Do We Reproduce?
 
