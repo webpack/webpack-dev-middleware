@@ -21,7 +21,7 @@ about: Something went awry and you'd like to tell us about it.
 ### Expected Behavior
 
 <!-- "It should work" is not a helpful explanation -->
-<!-- Explain exactly how it should behave -->
+<!-- Explain exactly how it should behaves -->
 
 ### How Do We Reproduce?
 
