@@ -281,7 +281,7 @@ describe.each([
           expect(response.headers["content-type"]).toEqual(
             "application/javascript; charset=utf-8"
           );
-          expect(response.text).toBe(codeContent.substr(3000, 501));
+          expect(response.text).toBe(codeContent.slice(3000, 3501));
           expect(response.text.length).toBe(501);
         });
 
@@ -314,7 +314,7 @@ describe.each([
           expect(response.headers["content-type"]).toEqual(
             "application/javascript; charset=utf-8"
           );
-          expect(response.text).toBe(codeContent.substr(3000, 501));
+          expect(response.text).toBe(codeContent.slice(3000, 3501));
           expect(response.text.length).toBe(501);
         });
 
@@ -331,7 +331,7 @@ describe.each([
           expect(response.headers["content-type"]).toEqual(
             "application/javascript; charset=utf-8"
           );
-          expect(response.text).toBe(codeContent.substr(3000, 501));
+          expect(response.text).toBe(codeContent.slice(3000, 3501));
           expect(response.text.length).toBe(501);
         });
 
@@ -348,7 +348,7 @@ describe.each([
           expect(response.headers["content-type"]).toEqual(
             "application/javascript; charset=utf-8"
           );
-          expect(response.text).toBe(codeContent.substr(0, 3501));
+          expect(response.text).toBe(codeContent.slice(0, 3501));
           expect(response.text.length).toBe(3501);
         });
 
@@ -365,7 +365,7 @@ describe.each([
           expect(response.headers["content-type"]).toEqual(
             "application/javascript; charset=utf-8"
           );
-          expect(response.text).toBe(codeContent.substr(0, 801));
+          expect(response.text).toBe(codeContent.slice(0, 801));
           expect(response.text.length).toBe(801);
         });
 

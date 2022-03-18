@@ -86,7 +86,7 @@ function getFilenameFromUrl(context, url) {
 
       // Strip the `pathname` property from the `publicPath` option from the start of requested url
       // `/complex/foo.js` => `foo.js`
-      const pathname = urlObject.pathname.substr(
+      const pathname = urlObject.pathname.slice(
         publicPathObject.pathname.length
       );
 
