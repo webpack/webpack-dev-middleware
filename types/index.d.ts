@@ -165,7 +165,7 @@ type Options<
     | undefined;
   writeToDisk?: boolean | ((targetPath: string) => boolean) | undefined;
   methods?: string | undefined;
-  headers?: Headers<Request_1, Response_1>;
+  headers?: Headers<Request, Response>;
   publicPath?: NonNullable<Configuration["output"]>["publicPath"];
   stats?: Configuration["stats"];
   serverSideRender?: boolean | undefined;
@@ -175,8 +175,7 @@ type Options<
 type API<
   Request_1 extends import("http").IncomingMessage,
   Response_1 extends ServerResponse
-> = Middleware<Request_1, Response_1> &
-  AdditionalMethods<Request_1, Response_1>;
+> = Middleware<Request, Response> & AdditionalMethods<Request, Response>;
 type Schema = import("schema-utils/declarations/validate").Schema;
 type Configuration = import("webpack").Configuration;
 type Stats = import("webpack").Stats;
@@ -216,7 +215,7 @@ type Context<
   state: boolean;
   stats: Stats | MultiStats | undefined;
   callbacks: Callback[];
-  options: Options<Request_1, Response_1>;
+  options: Options<Request, Response>;
   compiler: Compiler | MultiCompiler;
   watching: Watching | MultiWatching;
   logger: Logger;
@@ -232,15 +231,15 @@ type Headers<
       value: number | string;
     }[]
   | ((
-      req: Request_1,
-      res: Response_1,
-      context: Context<Request_1, Response_1>
+      req: Request,
+      res: Response,
+      context: Context<Request, Response>
     ) => void | undefined | Record<string, string | number>)
   | undefined;
 type Middleware<
   Request_1 extends import("http").IncomingMessage,
   Response_1 extends ServerResponse
-> = (req: Request_1, res: Response_1, next: NextFunction) => Promise<void>;
+> = (req: Request, res: Response, next: NextFunction) => Promise<void>;
 type GetFilenameFromUrl = (url: string) => string | undefined;
 type WaitUntilValid = (callback: Callback) => any;
 type Invalidate = (callback: Callback) => any;
@@ -253,5 +252,5 @@ type AdditionalMethods<
   waitUntilValid: WaitUntilValid;
   invalidate: Invalidate;
   close: Close;
-  context: Context<Request_1, Response_1>;
+  context: Context<Request, Response>;
 };
