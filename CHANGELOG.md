@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.3.2](https://github.com/webpack/webpack-dev-middleware/compare/v5.3.1...v5.3.2) (2022-05-17)
+
+
+### Bug Fixes
+
+* node types ([#1195](https://github.com/webpack/webpack-dev-middleware/issues/1195)) ([d68ab36](https://github.com/webpack/webpack-dev-middleware/commit/d68ab3607a43288dbb6efd9ee748ad3e650625a1))
+
 ### [5.3.1](https://github.com/webpack/webpack-dev-middleware/compare/v5.3.0...v5.3.1) (2022-02-01)
 
 
