@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.3.3](https://github.com/webpack/webpack-dev-middleware/compare/v5.3.2...v5.3.3) (2022-05-18)
+
+
+### Bug Fixes
+
+* types for `Request` and `Response` ([#1271](https://github.com/webpack/webpack-dev-middleware/issues/1271)) ([eeb8aa8](https://github.com/webpack/webpack-dev-middleware/commit/eeb8aa8b116038671b7436173fab1994d4645767))
+
 ### [5.3.2](https://github.com/webpack/webpack-dev-middleware/compare/v5.3.1...v5.3.2) (2022-05-17)
 
 
