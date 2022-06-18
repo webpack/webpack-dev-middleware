@@ -32,7 +32,9 @@ First thing's first, install the module:
 npm install webpack-dev-middleware --save-dev
 ```
 
-_Note: We do not recommend installing this module globally._
+> **Warning**
+>
+> _We do not recommend installing this module globally._
 
 ## Usage
 
