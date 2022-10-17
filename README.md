@@ -117,7 +117,7 @@ or
 webpackDevMiddleware(compiler, {
   headers: [
     {
-      key: "X-custom-header"
+      key: "X-custom-header",
       value: "foo"
     },
     {
@@ -135,7 +135,7 @@ or
 webpackDevMiddleware(compiler, {
   headers: () => [
     {
-      key: "X-custom-header"
+      key: "X-custom-header",
       value: "foo"
     },
     {
