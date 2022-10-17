@@ -14,6 +14,7 @@ const cacheStore = new WeakMap();
  * @param {{ cache?: Map<any, any> }} [cache]
  * @returns {any}
  */
+// @ts-ignore
 const mem = (fn, { cache = new Map() } = {}) => {
   /**
    * @param {any} arguments_
