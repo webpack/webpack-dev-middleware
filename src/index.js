@@ -56,13 +56,13 @@ const noop = () => {};
  */
 
 /**
- * @template {IncomingMessage} Request
- * @template {ServerResponse} Response
+ * @template {IncomingMessage} RequestInternal
+ * @template {ServerResponse} ResponseInternal
  * @typedef {Object} Context
  * @property {boolean} state
  * @property {Stats | MultiStats | undefined} stats
  * @property {Callback[]} callbacks
- * @property {Options<Request, Response>} options
+ * @property {Options<RequestInternal, ResponseInternal>} options
  * @property {Compiler | MultiCompiler} compiler
  * @property {Watching | MultiWatching} watching
  * @property {Logger} logger
@@ -70,19 +70,19 @@ const noop = () => {};
  */
 
 /**
- * @template {IncomingMessage} Request
- * @template {ServerResponse} Response
- * @typedef {Record<string, string | number> | Array<{ key: string, value: number | string }> | ((req: Request, res: Response, context: Context<Request, Response>) =>  void | undefined | Record<string, string | number>) | undefined} Headers
+ * @template {IncomingMessage} RequestInternal
+ * @template {ServerResponse} ResponseInternal
+ * @typedef {Record<string, string | number> | Array<{ key: string, value: number | string }> | ((req: RequestInternal, res: ResponseInternal, context: Context<RequestInternal, ResponseInternal>) =>  void | undefined | Record<string, string | number>) | undefined} Headers
  */
 
 /**
- * @template {IncomingMessage} Request
- * @template {ServerResponse} Response
+ * @template {IncomingMessage} RequestInternal
+ * @template {ServerResponse} ResponseInternal
  * @typedef {Object} Options
  * @property {{[key: string]: string}} [mimeTypes]
  * @property {boolean | ((targetPath: string) => boolean)} [writeToDisk]
  * @property {string} [methods]
- * @property {Headers<Request, Response>} [headers]
+ * @property {Headers<RequestInternal, ResponseInternal>} [headers]
  * @property {NonNullable<Configuration["output"]>["publicPath"]} [publicPath]
  * @property {Configuration["stats"]} [stats]
  * @property {boolean} [serverSideRender]
@@ -91,11 +91,11 @@ const noop = () => {};
  */
 
 /**
- * @template {IncomingMessage} Request
- * @template {ServerResponse} Response
+ * @template {IncomingMessage} RequestInternal
+ * @template {ServerResponse} ResponseInternal
  * @callback Middleware
- * @param {Request} req
- * @param {Response} res
+ * @param {RequestInternal} req
+ * @param {ResponseInternal} res
  * @param {NextFunction} next
  * @return {Promise<void>}
  */
@@ -122,28 +122,28 @@ const noop = () => {};
  */
 
 /**
- * @template {IncomingMessage} Request
- * @template {ServerResponse} Response
+ * @template {IncomingMessage} RequestInternal
+ * @template {ServerResponse} ResponseInternal
  * @typedef {Object} AdditionalMethods
  * @property {GetFilenameFromUrl} getFilenameFromUrl
  * @property {WaitUntilValid} waitUntilValid
  * @property {Invalidate} invalidate
  * @property {Close} close
- * @property {Context<Request, Response>} context
+ * @property {Context<RequestInternal, ResponseInternal>} context
  */
 
 /**
- * @template {IncomingMessage} Request
- * @template {ServerResponse} Response
- * @typedef {Middleware<Request, Response> & AdditionalMethods<Request, Response>} API
+ * @template {IncomingMessage} RequestInternal
+ * @template {ServerResponse} ResponseInternal
+ * @typedef {Middleware<RequestInternal, ResponseInternal> & AdditionalMethods<RequestInternal, ResponseInternal>} API
  */
 
 /**
- * @template {IncomingMessage} Request
- * @template {ServerResponse} Response
+ * @template {IncomingMessage} RequestInternal
+ * @template {ServerResponse} ResponseInternal
  * @param {Compiler | MultiCompiler} compiler
- * @param {Options<Request, Response>} [options]
- * @returns {API<Request, Response>}
+ * @param {Options<RequestInternal, ResponseInternal>} [options]
+ * @returns {API<RequestInternal, ResponseInternal>}
  */
 function wdm(compiler, options = {}) {
   validate(/** @type {Schema} */ (schema), options, {
@@ -163,7 +163,7 @@ function wdm(compiler, options = {}) {
   }
 
   /**
-   * @type {Context<Request, Response>}
+   * @type {Context<RequestInternal, ResponseInternal>}
    */
   const context = {
     state: false,
@@ -243,10 +243,12 @@ function wdm(compiler, options = {}) {
     }
   }
 
-  const instance = /** @type {API<Request, Response>} */ (middleware(context));
+  const instance = /** @type {API<RequestInternal, ResponseInternal>} */ (
+    middleware(context)
+  );
 
   // API
-  /** @type {API<Request, Response>} */
+  /** @type {API<RequestInternal, ResponseInternal>} */
   (instance).getFilenameFromUrl =
     /**
      * @param {string} url
@@ -254,24 +256,24 @@ function wdm(compiler, options = {}) {
      */
     (url) => getFilenameFromUrl(context, url);
 
-  /** @type {API<Request, Response>} */
+  /** @type {API<RequestInternal, ResponseInternal>} */
   (instance).waitUntilValid = (callback = noop) => {
     ready(context, callback);
   };
 
-  /** @type {API<Request, Response>} */
+  /** @type {API<RequestInternal, ResponseInternal>} */
   (instance).invalidate = (callback = noop) => {
     ready(context, callback);
 
     context.watching.invalidate();
   };
 
-  /** @type {API<Request, Response>} */
+  /** @type {API<RequestInternal, ResponseInternal>} */
   (instance).close = (callback = noop) => {
     context.watching.close(callback);
   };
 
-  /** @type {API<Request, Response>} */
+  /** @type {API<RequestInternal, ResponseInternal>} */
   (instance).context = context;
 
   return instance;
