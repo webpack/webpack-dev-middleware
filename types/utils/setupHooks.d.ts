@@ -10,7 +10,6 @@ export = setupHooks;
 /** @typedef {Configuration["stats"]} StatsOptions */
 /** @typedef {{ children: Configuration["stats"][] }} MultiStatsOptions */
 /** @typedef {Exclude<Configuration["stats"], boolean | string | undefined>} NormalizedStatsOptions */
-/** @typedef {{ children: StatsOptions[], colors?: any }} MultiNormalizedStatsOptions */
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
@@ -32,7 +31,6 @@ declare namespace setupHooks {
     StatsOptions,
     MultiStatsOptions,
     NormalizedStatsOptions,
-    MultiNormalizedStatsOptions,
   };
 }
 type Configuration = import("webpack").Configuration;
@@ -50,7 +48,3 @@ type NormalizedStatsOptions = Exclude<
   Configuration["stats"],
   boolean | string | undefined
 >;
-type MultiNormalizedStatsOptions = {
-  children: StatsOptions[];
-  colors?: any;
-};
