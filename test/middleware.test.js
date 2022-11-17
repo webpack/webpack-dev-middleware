@@ -3106,8 +3106,6 @@ describe.each([
           expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
             Stats
           );
-          expect(compiler.outputFileSystem).toHaveProperty("join");
-          expect(compiler.outputFileSystem).toHaveProperty("mkdirp");
         });
       });
 
@@ -3219,38 +3217,6 @@ describe.each([
           );
           expect(instance.context.outputFileSystem).toHaveProperty("join");
           expect(instance.context.outputFileSystem).toHaveProperty("mkdirp");
-        });
-      });
-
-      describe("should throw an error on the invalid fs value - no join method", () => {
-        it("should throw an error", () => {
-          expect(() => {
-            const compiler = getCompiler(webpackConfig);
-
-            middleware(compiler, {
-              outputFileSystem: {
-                mkdirp: () => {},
-              },
-            });
-          }).toThrow(
-            "Invalid options: options.outputFileSystem.join() method is expected"
-          );
-        });
-      });
-
-      describe("should throw an error on the invalid fs value - no mkdirp method", () => {
-        it("should throw an error", () => {
-          expect(() => {
-            const compiler = getCompiler(webpackConfig);
-
-            middleware(compiler, {
-              outputFileSystem: {
-                join: () => {},
-              },
-            });
-          }).toThrow(
-            "Invalid options: options.outputFileSystem.mkdirp() method is expected"
-          );
         });
       });
     });

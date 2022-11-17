@@ -26,8 +26,6 @@ describe("setupOutputFileSystem", () => {
     // make sure that this is the default fs created
     expect(context.compiler.outputFileSystem.testFs).toBeTruthy();
     expect(context.outputFileSystem.testFs).toBeTruthy();
-    // the join value of the fs is set for webpack@4
-    expect(context.outputFileSystem.join).toBeTruthy();
     expect(createFsFromVolume.mock.calls.length).toEqual(1);
   });
 
@@ -44,34 +42,6 @@ describe("setupOutputFileSystem", () => {
     context.compiler.compilers.forEach((comp) => {
       expect(comp.outputFileSystem).toBeTruthy();
     });
-  });
-
-  it("should throw on provided fs without join method", () => {
-    const context = {
-      compiler: {},
-      options: {
-        outputFileSystem: {},
-      },
-    };
-
-    expect(() => {
-      setupOutputFileSystem(context);
-    }).toThrow(/join/);
-  });
-
-  it("should throw on provided fs without mkdirp method", () => {
-    const context = {
-      compiler: {},
-      options: {
-        outputFileSystem: {
-          join: () => {},
-        },
-      },
-    };
-
-    expect(() => {
-      setupOutputFileSystem(context);
-    }).toThrow(/mkdirp/);
   });
 
   it("should use provided fs with correct methods", () => {

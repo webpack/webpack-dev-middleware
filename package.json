@@ -44,7 +44,7 @@
     "types"
   ],
   "peerDependencies": {
-    "webpack": "^4.0.0 || ^5.0.0"
+    "webpack": "^5.0.0"
   },
   "dependencies": {
     "colorette": "^2.0.10",
