@@ -202,7 +202,7 @@ type Watching = Compiler["watching"];
 type MultiWatching = ReturnType<Compiler["watch"]>;
 type OutputFileSystem = Compiler["outputFileSystem"] & {
   createReadStream?: typeof import("fs").createReadStream;
-  statSync?: typeof import("fs").statSync;
+  statSync?: import("fs").StatSyncFn;
   lstat?: typeof import("fs").lstat;
   readFileSync?: typeof import("fs").readFileSync;
 };

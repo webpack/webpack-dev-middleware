@@ -48,7 +48,7 @@
   },
   "dependencies": {
     "colorette": "^2.0.10",
-    "memfs": "^3.4.3",
+    "memfs": "^3.4.12",
     "mime-types": "^2.1.31",
     "range-parser": "^1.2.1",
     "schema-utils": "^4.0.0"
@@ -62,7 +62,7 @@
     "@types/connect": "^3.4.35",
     "@types/express": "^4.17.13",
     "@types/mime-types": "^2.1.1",
-    "@types/node": "^14.14.31",
+    "@types/node": "^18.11.9",
     "@webpack-contrib/eslint-config-webpack": "^3.0.0",
     "babel-jest": "^29.3.1",
     "chokidar": "^3.5.1",
