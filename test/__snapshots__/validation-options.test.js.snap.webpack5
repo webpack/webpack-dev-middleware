@@ -42,29 +42,29 @@ exports[`validation should throw an error on the "headers" option with "true" va
 exports[`validation should throw an error on the "index" option with "{}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.index should be one of these:
-   boolean | string
+   boolean | non-empty string
    -> Allows to serve an index of the directory.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#index
    Details:
     * options.index should be a boolean.
-    * options.index should be a string."
+    * options.index should be a non-empty string."
 `;
 
 exports[`validation should throw an error on the "index" option with "0" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.index should be one of these:
-   boolean | string
+   boolean | non-empty string
    -> Allows to serve an index of the directory.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#index
    Details:
     * options.index should be a boolean.
-    * options.index should be a string."
+    * options.index should be a non-empty string."
 `;
 
 exports[`validation should throw an error on the "methods" option with "{}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.methods should be an array:
-   [string, ...]
+   [non-empty string, ...]
    -> Allows to pass the list of HTTP request methods accepted by the middleware.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#methods"
 `;
@@ -72,7 +72,7 @@ exports[`validation should throw an error on the "methods" option with "{}" valu
 exports[`validation should throw an error on the "methods" option with "true" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.methods should be an array:
-   [string, ...]
+   [non-empty string, ...]
    -> Allows to pass the list of HTTP request methods accepted by the middleware.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#methods"
 `;

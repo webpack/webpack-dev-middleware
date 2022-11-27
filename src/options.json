@@ -24,7 +24,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "minlength": "1"
+        "minLength": 1
       }
     },
     "headers": {
@@ -116,7 +116,7 @@
         },
         {
           "type": "string",
-          "minlength": "1"
+          "minLength": 1
         }
       ]
     }
