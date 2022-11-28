@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.0.1](https://github.com/webpack/webpack-dev-middleware/compare/v6.0.0...v6.0.1) (2022-11-28)
+
+
+### Bug Fixes
+
+* update schema for `index` and `methods` properties ([#1397](https://github.com/webpack/webpack-dev-middleware/issues/1397)) ([cda328e](https://github.com/webpack/webpack-dev-middleware/commit/cda328ecd4692b873d9c09c8b2d0fa4bdfbeffe0))
+
 ## [6.0.0](https://github.com/webpack/webpack-dev-middleware/compare/v5.3.3...v6.0.0) (2022-11-20)
 
 
