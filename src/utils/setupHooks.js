@@ -1,7 +1,23 @@
-import webpack from "webpack";
-import colorette from "colorette";
+const { isColorSupported } = require("colorette");
 
-export default function setupHooks(context) {
+/** @typedef {import("webpack").Configuration} Configuration */
+/** @typedef {import("webpack").Compiler} Compiler */
+/** @typedef {import("webpack").MultiCompiler} MultiCompiler */
+/** @typedef {import("webpack").Stats} Stats */
+/** @typedef {import("webpack").MultiStats} MultiStats */
+
+/** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
+/** @typedef {import("../index.js").ServerResponse} ServerResponse */
+/** @typedef {Configuration["stats"]} StatsOptions */
+/** @typedef {{ children: Configuration["stats"][] }} MultiStatsOptions */
+/** @typedef {Exclude<Configuration["stats"], boolean | string | undefined>} NormalizedStatsOptions */
+
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {import("../index.js").Context<Request, Response>} context
+ */
+function setupHooks(context) {
   function invalid() {
     if (context.state) {
       context.logger.log("Compilation starting...");
@@ -14,24 +30,11 @@ export default function setupHooks(context) {
     context.stats = undefined;
   }
 
-  const statsForWebpack4 = webpack.Stats && webpack.Stats.presetToOptions;
-
+  /**
+   * @param {Configuration["stats"]} statsOptions
+   * @returns {NormalizedStatsOptions}
+   */
   function normalizeStatsOptions(statsOptions) {
-    if (statsForWebpack4) {
-      if (typeof statsOptions === "undefined") {
-        // eslint-disable-next-line no-param-reassign
-        statsOptions = {};
-      } else if (
-        typeof statsOptions === "boolean" ||
-        typeof statsOptions === "string"
-      ) {
-        // eslint-disable-next-line no-param-reassign
-        statsOptions = webpack.Stats.presetToOptions(statsOptions);
-      }
-
-      return statsOptions;
-    }
-
     if (typeof statsOptions === "undefined") {
       // eslint-disable-next-line no-param-reassign
       statsOptions = { preset: "normal" };
@@ -46,6 +49,9 @@ export default function setupHooks(context) {
     return statsOptions;
   }
 
+  /**
+   * @param {Stats | MultiStats} stats
+   */
   function done(stats) {
     // We are now on valid state
     // eslint-disable-next-line no-param-reassign
@@ -64,47 +70,64 @@ export default function setupHooks(context) {
 
       logger.log("Compilation finished");
 
-      const isMultiCompilerMode = Boolean(compiler.compilers);
+      const isMultiCompilerMode = Boolean(
+        /** @type {MultiCompiler} */
+        (compiler).compilers
+      );
 
+      /**
+       * @type {StatsOptions | MultiStatsOptions | NormalizedStatsOptions}
+       */
       let statsOptions;
 
       if (typeof options.stats !== "undefined") {
         statsOptions = isMultiCompilerMode
-          ? { children: compiler.compilers.map(() => options.stats) }
+          ? {
+              children:
+                /** @type {MultiCompiler} */
+                (compiler).compilers.map(() => options.stats),
+            }
           : options.stats;
       } else {
         statsOptions = isMultiCompilerMode
-          ? { children: compiler.compilers.map((child) => child.options.stats) }
-          : compiler.options.stats;
+          ? {
+              children:
+                /** @type {MultiCompiler} */
+                (compiler).compilers.map((child) => child.options.stats),
+            }
+          : /** @type {Compiler} */ (compiler).options.stats;
       }
 
       if (isMultiCompilerMode) {
-        statsOptions.children = statsOptions.children.map(
-          (childStatsOptions) => {
-            // eslint-disable-next-line no-param-reassign
-            childStatsOptions = normalizeStatsOptions(childStatsOptions);
-
-            if (typeof childStatsOptions.colors === "undefined") {
+        /** @type {MultiStatsOptions} */
+        (statsOptions).children =
+          /** @type {MultiStatsOptions} */
+          (statsOptions).children.map(
+            /**
+             * @param {StatsOptions} childStatsOptions
+             * @return {NormalizedStatsOptions}
+             */
+            (childStatsOptions) => {
               // eslint-disable-next-line no-param-reassign
-              childStatsOptions.colors = Boolean(colorette.options.enabled);
-            }
+              childStatsOptions = normalizeStatsOptions(childStatsOptions);
 
-            return childStatsOptions;
-          }
-        );
+              if (typeof childStatsOptions.colors === "undefined") {
+                // eslint-disable-next-line no-param-reassign
+                childStatsOptions.colors = isColorSupported;
+              }
+
+              return childStatsOptions;
+            }
+          );
       } else {
-        statsOptions = normalizeStatsOptions(statsOptions);
+        /** @type {NormalizedStatsOptions} */
+        (statsOptions) = normalizeStatsOptions(
+          /** @type {StatsOptions} */ (statsOptions)
+        );
 
         if (typeof statsOptions.colors === "undefined") {
-          statsOptions.colors = Boolean(colorette.options.enabled);
+          statsOptions.colors = isColorSupported;
         }
-      }
-
-      // TODO webpack@4 doesn't support `{ children: [{ colors: true }, { colors: true }] }` for stats
-      if (compiler.compilers && statsForWebpack4) {
-        statsOptions.colors = statsOptions.children.some(
-          (child) => child.colors
-        );
       }
 
       const printedStats = stats.toString(statsOptions);
@@ -119,16 +142,20 @@ export default function setupHooks(context) {
       context.callbacks = [];
 
       // Execute callback that are delayed
-      callbacks.forEach((callback) => {
-        callback(stats);
-      });
+      callbacks.forEach(
+        /**
+         * @param {(...args: any[]) => Stats | MultiStats} callback
+         */
+        (callback) => {
+          callback(stats);
+        }
+      );
     });
   }
 
   context.compiler.hooks.watchRun.tap("webpack-dev-middleware", invalid);
   context.compiler.hooks.invalid.tap("webpack-dev-middleware", invalid);
-  (context.compiler.webpack
-    ? context.compiler.hooks.afterDone
-    : context.compiler.hooks.done
-  ).tap("webpack-dev-middleware", done);
+  context.compiler.hooks.done.tap("webpack-dev-middleware", done);
 }
+
+module.exports = setupHooks;

@@ -1,14 +1,56 @@
-import path from "path";
-import { parse } from "url";
-import querystring from "querystring";
+const path = require("path");
+const { parse } = require("url");
+const querystring = require("querystring");
 
-import mem from "mem";
+const getPaths = require("./getPaths");
 
-import getPaths from "./getPaths";
+/** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
+/** @typedef {import("../index.js").ServerResponse} ServerResponse */
 
+const cacheStore = new WeakMap();
+
+/**
+ * @param {Function} fn
+ * @param {{ cache?: Map<any, any> }} [cache]
+ * @returns {any}
+ */
+// @ts-ignore
+const mem = (fn, { cache = new Map() } = {}) => {
+  /**
+   * @param {any} arguments_
+   * @return {any}
+   */
+  const memoized = (...arguments_) => {
+    const [key] = arguments_;
+    const cacheItem = cache.get(key);
+
+    if (cacheItem) {
+      return cacheItem.data;
+    }
+
+    const result = fn.apply(this, arguments_);
+
+    cache.set(key, {
+      data: result,
+    });
+
+    return result;
+  };
+
+  cacheStore.set(memoized, cache);
+
+  return memoized;
+};
 const memoizedParse = mem(parse);
 
-export default function getFilenameFromUrl(context, url) {
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {import("../index.js").Context<Request, Response>} context
+ * @param {string} url
+ * @returns {string | undefined}
+ */
+function getFilenameFromUrl(context, url) {
   const { options } = context;
   const paths = getPaths(context);
 
@@ -45,7 +87,7 @@ export default function getFilenameFromUrl(context, url) {
 
       // Strip the `pathname` property from the `publicPath` option from the start of requested url
       // `/complex/foo.js` => `foo.js`
-      const pathname = urlObject.pathname.substr(
+      const pathname = urlObject.pathname.slice(
         publicPathObject.pathname.length
       );
 
@@ -62,7 +104,9 @@ export default function getFilenameFromUrl(context, url) {
 
       let fsStats;
       try {
-        fsStats = context.outputFileSystem.statSync(filename);
+        fsStats =
+          /** @type {import("fs").statSync} */
+          (context.outputFileSystem.statSync)(filename);
       } catch (_ignoreError) {
         // eslint-disable-next-line no-continue
         continue;
@@ -85,7 +129,9 @@ export default function getFilenameFromUrl(context, url) {
         filename = path.join(filename, indexValue);
 
         try {
-          fsStats = context.outputFileSystem.statSync(filename);
+          fsStats =
+            /** @type {import("fs").statSync} */
+            (context.outputFileSystem.statSync)(filename);
         } catch (__ignoreError) {
           // eslint-disable-next-line no-continue
           continue;
@@ -103,3 +149,5 @@ export default function getFilenameFromUrl(context, url) {
   // eslint-disable-next-line consistent-return
   return foundFilename;
 }
+
+module.exports = getFilenameFromUrl;
