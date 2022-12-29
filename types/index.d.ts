@@ -172,6 +172,7 @@ type Options<
   serverSideRender?: boolean | undefined;
   outputFileSystem?: OutputFileSystem | undefined;
   index?: string | boolean | undefined;
+  historyApiFallback?: boolean;
 };
 type API<
   RequestInternal extends import("http").IncomingMessage,
@@ -204,6 +205,7 @@ type OutputFileSystem = Compiler["outputFileSystem"] & {
   createReadStream?: typeof import("fs").createReadStream;
   statSync?: import("fs").StatSyncFn;
   lstat?: typeof import("fs").lstat;
+  existsSync?: typeof import("fs").existsSync;
   readFileSync?: typeof import("fs").readFileSync;
 };
 type Logger = ReturnType<Compiler["getInfrastructureLogger"]>;
