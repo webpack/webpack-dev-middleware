@@ -66,6 +66,7 @@ export = wdm;
  * @property {boolean} [serverSideRender]
  * @property {OutputFileSystem} [outputFileSystem]
  * @property {boolean | string} [index]
+ * @property {boolean | undefined} [historyApiFallback]
  */
 /**
  * @template {IncomingMessage} RequestInternal
