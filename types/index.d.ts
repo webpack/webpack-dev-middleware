@@ -28,7 +28,7 @@ export = wdm;
  * @typedef {ReturnType<Compiler["watch"]>} MultiWatching
  */
 /**
- * @typedef {Compiler["outputFileSystem"] & { createReadStream?: import("fs").createReadStream, statSync?: import("fs").statSync, lstat?: import("fs").lstat, readFileSync?: import("fs").readFileSync }} OutputFileSystem
+ * @typedef {Compiler["outputFileSystem"] & { createReadStream?: import("fs").createReadStream, statSync?: import("fs").statSync, lstat?: import("fs").lstat, existsSync?: import("fs").existsSync, readFileSync?: import("fs").readFileSync }} OutputFileSystem
  */
 /** @typedef {ReturnType<Compiler["getInfrastructureLogger"]>} Logger */
 /**
@@ -116,150 +116,128 @@ export = wdm;
  * @param {Options<RequestInternal, ResponseInternal>} [options]
  * @returns {API<RequestInternal, ResponseInternal>}
  */
-declare function wdm<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse
->(
-  compiler: Compiler | MultiCompiler,
-  options?: Options<RequestInternal, ResponseInternal> | undefined
+declare function wdm<RequestInternal extends import('http').IncomingMessage, ResponseInternal extends ServerResponse>(
+	compiler: Compiler | MultiCompiler,
+	options?: Options<RequestInternal, ResponseInternal> | undefined
 ): API<RequestInternal, ResponseInternal>;
 declare namespace wdm {
-  export {
-    Schema,
-    Compiler,
-    MultiCompiler,
-    Configuration,
-    Stats,
-    MultiStats,
-    ExtendedServerResponse,
-    IncomingMessage,
-    ServerResponse,
-    NextFunction,
-    WatchOptions,
-    Watching,
-    MultiWatching,
-    OutputFileSystem,
-    Logger,
-    Callback,
-    Context,
-    Headers,
-    Options,
-    Middleware,
-    GetFilenameFromUrl,
-    WaitUntilValid,
-    Invalidate,
-    Close,
-    AdditionalMethods,
-    API,
-  };
+	export {
+		Schema,
+		Compiler,
+		MultiCompiler,
+		Configuration,
+		Stats,
+		MultiStats,
+		ExtendedServerResponse,
+		IncomingMessage,
+		ServerResponse,
+		NextFunction,
+		WatchOptions,
+		Watching,
+		MultiWatching,
+		OutputFileSystem,
+		Logger,
+		Callback,
+		Context,
+		Headers,
+		Options,
+		Middleware,
+		GetFilenameFromUrl,
+		WaitUntilValid,
+		Invalidate,
+		Close,
+		AdditionalMethods,
+		API,
+	};
 }
-type ServerResponse = import("http").ServerResponse & ExtendedServerResponse;
-type Compiler = import("webpack").Compiler;
-type MultiCompiler = import("webpack").MultiCompiler;
-type Options<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse
-> = {
-  mimeTypes?:
-    | {
-        [key: string]: string;
-      }
-    | undefined;
-  writeToDisk?: boolean | ((targetPath: string) => boolean) | undefined;
-  methods?: string | undefined;
-  headers?: Headers<RequestInternal, ResponseInternal>;
-  publicPath?: NonNullable<Configuration["output"]>["publicPath"];
-  stats?: Configuration["stats"];
-  serverSideRender?: boolean | undefined;
-  outputFileSystem?: OutputFileSystem | undefined;
-  index?: string | boolean | undefined;
-  historyApiFallback?: boolean;
+type ServerResponse = import('http').ServerResponse & ExtendedServerResponse;
+type Compiler = import('webpack').Compiler;
+type MultiCompiler = import('webpack').MultiCompiler;
+type Options<RequestInternal extends import('http').IncomingMessage, ResponseInternal extends ServerResponse> = {
+	mimeTypes?:
+		| {
+				[key: string]: string;
+		  }
+		| undefined;
+	writeToDisk?: boolean | ((targetPath: string) => boolean) | undefined;
+	methods?: string | undefined;
+	headers?: Headers<RequestInternal, ResponseInternal>;
+	publicPath?: NonNullable<Configuration['output']>['publicPath'];
+	stats?: Configuration['stats'];
+	serverSideRender?: boolean | undefined;
+	outputFileSystem?: OutputFileSystem | undefined;
+	index?: string | boolean | undefined;
+	historyApiFallback?: boolean | undefined;
 };
-type API<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse
-> = Middleware<RequestInternal, ResponseInternal> &
-  AdditionalMethods<RequestInternal, ResponseInternal>;
-type Schema = import("schema-utils/declarations/validate").Schema;
-type Configuration = import("webpack").Configuration;
-type Stats = import("webpack").Stats;
-type MultiStats = import("webpack").MultiStats;
+type API<RequestInternal extends import('http').IncomingMessage, ResponseInternal extends ServerResponse> = Middleware<
+	RequestInternal,
+	ResponseInternal
+> &
+	AdditionalMethods<RequestInternal, ResponseInternal>;
+type Schema = import('schema-utils/declarations/validate').Schema;
+type Configuration = import('webpack').Configuration;
+type Stats = import('webpack').Stats;
+type MultiStats = import('webpack').MultiStats;
 type ExtendedServerResponse = {
-  locals?:
-    | {
-        webpack?:
-          | {
-              devMiddleware?:
-                | Context<import("http").IncomingMessage, ServerResponse>
-                | undefined;
-            }
-          | undefined;
-      }
-    | undefined;
+	locals?:
+		| {
+				webpack?:
+					| {
+							devMiddleware?: Context<import('http').IncomingMessage, ServerResponse> | undefined;
+					  }
+					| undefined;
+		  }
+		| undefined;
 };
-type IncomingMessage = import("http").IncomingMessage;
+type IncomingMessage = import('http').IncomingMessage;
 type NextFunction = (err?: any) => void;
-type WatchOptions = NonNullable<Configuration["watchOptions"]>;
-type Watching = Compiler["watching"];
-type MultiWatching = ReturnType<Compiler["watch"]>;
-type OutputFileSystem = Compiler["outputFileSystem"] & {
-  createReadStream?: typeof import("fs").createReadStream;
-  statSync?: import("fs").StatSyncFn;
-  lstat?: typeof import("fs").lstat;
-  existsSync?: typeof import("fs").existsSync;
-  readFileSync?: typeof import("fs").readFileSync;
+type WatchOptions = NonNullable<Configuration['watchOptions']>;
+type Watching = Compiler['watching'];
+type MultiWatching = ReturnType<Compiler['watch']>;
+type OutputFileSystem = Compiler['outputFileSystem'] & {
+	createReadStream?: typeof import('fs').createReadStream;
+	statSync?: import('fs').StatSyncFn;
+	lstat?: typeof import('fs').lstat;
+	existsSync?: typeof import('fs').existsSync;
+	readFileSync?: typeof import('fs').readFileSync;
 };
-type Logger = ReturnType<Compiler["getInfrastructureLogger"]>;
-type Callback = (
-  stats?: import("webpack").Stats | import("webpack").MultiStats | undefined
-) => any;
-type Context<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse
-> = {
-  state: boolean;
-  stats: Stats | MultiStats | undefined;
-  callbacks: Callback[];
-  options: Options<RequestInternal, ResponseInternal>;
-  compiler: Compiler | MultiCompiler;
-  watching: Watching | MultiWatching;
-  logger: Logger;
-  outputFileSystem: OutputFileSystem;
+type Logger = ReturnType<Compiler['getInfrastructureLogger']>;
+type Callback = (stats?: import('webpack').Stats | import('webpack').MultiStats | undefined) => any;
+type Context<RequestInternal extends import('http').IncomingMessage, ResponseInternal extends ServerResponse> = {
+	state: boolean;
+	stats: Stats | MultiStats | undefined;
+	callbacks: Callback[];
+	options: Options<RequestInternal, ResponseInternal>;
+	compiler: Compiler | MultiCompiler;
+	watching: Watching | MultiWatching;
+	logger: Logger;
+	outputFileSystem: OutputFileSystem;
 };
-type Headers<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse
-> =
-  | Record<string, string | number>
-  | {
-      key: string;
-      value: number | string;
-    }[]
-  | ((
-      req: RequestInternal,
-      res: ResponseInternal,
-      context: Context<RequestInternal, ResponseInternal>
-    ) => void | undefined | Record<string, string | number>)
-  | undefined;
-type Middleware<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse
-> = (
-  req: RequestInternal,
-  res: ResponseInternal,
-  next: NextFunction
+type Headers<RequestInternal extends import('http').IncomingMessage, ResponseInternal extends ServerResponse> =
+	| Record<string, string | number>
+	| {
+			key: string;
+			value: number | string;
+	  }[]
+	| ((
+			req: RequestInternal,
+			res: ResponseInternal,
+			context: Context<RequestInternal, ResponseInternal>
+	  ) => void | undefined | Record<string, string | number>)
+	| undefined;
+type Middleware<RequestInternal extends import('http').IncomingMessage, ResponseInternal extends ServerResponse> = (
+	req: RequestInternal,
+	res: ResponseInternal,
+	next: NextFunction
 ) => Promise<void>;
 type GetFilenameFromUrl = (url: string) => string | undefined;
 type WaitUntilValid = (callback: Callback) => any;
 type Invalidate = (callback: Callback) => any;
 type Close = (callback: (err: Error | null | undefined) => void) => any;
-type AdditionalMethods<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse
-> = {
-  getFilenameFromUrl: GetFilenameFromUrl;
-  waitUntilValid: WaitUntilValid;
-  invalidate: Invalidate;
-  close: Close;
-  context: Context<RequestInternal, ResponseInternal>;
+type AdditionalMethods<RequestInternal extends import('http').IncomingMessage, ResponseInternal extends ServerResponse> = {
+	getFilenameFromUrl: GetFilenameFromUrl;
+	waitUntilValid: WaitUntilValid;
+	invalidate: Invalidate;
+	close: Close;
+	context: Context<RequestInternal, ResponseInternal>;
 };
