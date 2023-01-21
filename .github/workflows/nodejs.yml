@@ -30,8 +30,6 @@ jobs:
     concurrency:
       group: lint-${{ matrix.os }}-v${{ matrix.node-version }}-${{ github.ref }}
       cancel-in-progress: true
-
-
     steps:
       - uses: actions/checkout@v3
         with:
