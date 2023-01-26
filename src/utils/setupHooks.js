@@ -1,4 +1,3 @@
-const webpack = require("webpack");
 const { isColorSupported } = require("colorette");
 
 /** @typedef {import("webpack").Configuration} Configuration */
@@ -12,8 +11,6 @@ const { isColorSupported } = require("colorette");
 /** @typedef {Configuration["stats"]} StatsOptions */
 /** @typedef {{ children: Configuration["stats"][] }} MultiStatsOptions */
 /** @typedef {Exclude<Configuration["stats"], boolean | string | undefined>} NormalizedStatsOptions */
-// TODO remove `color` after dropping webpack v4
-/** @typedef {{ children: StatsOptions[], colors?: any }} MultiNormalizedStatsOptions */
 
 /**
  * @template {IncomingMessage} Request
@@ -33,31 +30,11 @@ function setupHooks(context) {
     context.stats = undefined;
   }
 
-  // @ts-ignore
-  const statsForWebpack4 = webpack.Stats && webpack.Stats.presetToOptions;
-
   /**
    * @param {Configuration["stats"]} statsOptions
    * @returns {NormalizedStatsOptions}
    */
   function normalizeStatsOptions(statsOptions) {
-    if (statsForWebpack4) {
-      if (typeof statsOptions === "undefined") {
-        // eslint-disable-next-line no-param-reassign
-        statsOptions = {};
-      } else if (
-        typeof statsOptions === "boolean" ||
-        typeof statsOptions === "string"
-      ) {
-        // @ts-ignore
-        // eslint-disable-next-line no-param-reassign
-        statsOptions = webpack.Stats.presetToOptions(statsOptions);
-      }
-
-      // @ts-ignore
-      return statsOptions;
-    }
-
     if (typeof statsOptions === "undefined") {
       // eslint-disable-next-line no-param-reassign
       statsOptions = { preset: "normal" };
@@ -99,7 +76,7 @@ function setupHooks(context) {
       );
 
       /**
-       * @type {StatsOptions | MultiStatsOptions | NormalizedStatsOptions | MultiNormalizedStatsOptions}
+       * @type {StatsOptions | MultiStatsOptions | NormalizedStatsOptions}
        */
       let statsOptions;
 
@@ -122,7 +99,7 @@ function setupHooks(context) {
       }
 
       if (isMultiCompilerMode) {
-        /** @type {MultiNormalizedStatsOptions} */
+        /** @type {MultiStatsOptions} */
         (statsOptions).children =
           /** @type {MultiStatsOptions} */
           (statsOptions).children.map(
@@ -151,24 +128,6 @@ function setupHooks(context) {
         if (typeof statsOptions.colors === "undefined") {
           statsOptions.colors = isColorSupported;
         }
-      }
-
-      // TODO webpack@4 doesn't support `{ children: [{ colors: true }, { colors: true }] }` for stats
-      if (
-        /** @type {MultiCompiler} */
-        (compiler).compilers &&
-        statsForWebpack4
-      ) {
-        /** @type {MultiNormalizedStatsOptions} */
-        (statsOptions).colors =
-          /** @type {MultiNormalizedStatsOptions} */
-          (statsOptions).children.some(
-            /**
-             * @param {StatsOptions} child
-             */
-            // @ts-ignore
-            (child) => child.colors
-          );
       }
 
       const printedStats = stats.toString(statsOptions);

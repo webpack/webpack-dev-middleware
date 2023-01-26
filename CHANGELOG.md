@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.0.1](https://github.com/webpack/webpack-dev-middleware/compare/v6.0.0...v6.0.1) (2022-11-28)
+
+
+### Bug Fixes
+
+* update schema for `index` and `methods` properties ([#1397](https://github.com/webpack/webpack-dev-middleware/issues/1397)) ([cda328e](https://github.com/webpack/webpack-dev-middleware/commit/cda328ecd4692b873d9c09c8b2d0fa4bdfbeffe0))
+
+## [6.0.0](https://github.com/webpack/webpack-dev-middleware/compare/v5.3.3...v6.0.0) (2022-11-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* minimum supported webpack version is 5.0.0
+* minimum supported Nodejs version is 14.15.0
+
+### [5.3.3](https://github.com/webpack/webpack-dev-middleware/compare/v5.3.2...v5.3.3) (2022-05-18)
+
+
+### Bug Fixes
+
+* types for `Request` and `Response` ([#1271](https://github.com/webpack/webpack-dev-middleware/issues/1271)) ([eeb8aa8](https://github.com/webpack/webpack-dev-middleware/commit/eeb8aa8b116038671b7436173fab1994d4645767))
+
+### [5.3.2](https://github.com/webpack/webpack-dev-middleware/compare/v5.3.1...v5.3.2) (2022-05-17)
+
+
+### Bug Fixes
+
+* node types ([#1195](https://github.com/webpack/webpack-dev-middleware/issues/1195)) ([d68ab36](https://github.com/webpack/webpack-dev-middleware/commit/d68ab3607a43288dbb6efd9ee748ad3e650625a1))
+
 ### [5.3.1](https://github.com/webpack/webpack-dev-middleware/compare/v5.3.0...v5.3.1) (2022-02-01)
 
 

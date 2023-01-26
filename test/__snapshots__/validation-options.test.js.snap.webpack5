@@ -42,29 +42,29 @@ exports[`validation should throw an error on the "headers" option with "true" va
 exports[`validation should throw an error on the "index" option with "{}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.index should be one of these:
-   boolean | string
+   boolean | non-empty string
    -> Allows to serve an index of the directory.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#index
    Details:
     * options.index should be a boolean.
-    * options.index should be a string."
+    * options.index should be a non-empty string."
 `;
 
 exports[`validation should throw an error on the "index" option with "0" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.index should be one of these:
-   boolean | string
+   boolean | non-empty string
    -> Allows to serve an index of the directory.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#index
    Details:
     * options.index should be a boolean.
-    * options.index should be a string."
+    * options.index should be a non-empty string."
 `;
 
 exports[`validation should throw an error on the "methods" option with "{}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.methods should be an array:
-   [string, ...]
+   [non-empty string, ...]
    -> Allows to pass the list of HTTP request methods accepted by the middleware.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#methods"
 `;
@@ -72,7 +72,7 @@ exports[`validation should throw an error on the "methods" option with "{}" valu
 exports[`validation should throw an error on the "methods" option with "true" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.methods should be an array:
-   [string, ...]
+   [non-empty string, ...]
    -> Allows to pass the list of HTTP request methods accepted by the middleware.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#methods"
 `;
@@ -96,11 +96,11 @@ exports[`validation should throw an error on the "outputFileSystem" option with 
 exports[`validation should throw an error on the "publicPath" option with "false" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.publicPath should be one of these:
-   \\"auto\\" | string | function
+   "auto" | string | function
    -> The \`publicPath\` specifies the public URL address of the output files when referenced in a browser.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#publicpath
    Details:
-    * options.publicPath should be \\"auto\\".
+    * options.publicPath should be "auto".
     * options.publicPath should be a string.
     * options.publicPath should be an instance of function."
 `;
@@ -122,12 +122,12 @@ exports[`validation should throw an error on the "serverSideRender" option with 
 exports[`validation should throw an error on the "stats" option with "0" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.stats should be one of these:
-   \\"none\\" | \\"summary\\" | \\"errors-only\\" | \\"errors-warnings\\" | \\"minimal\\" | \\"normal\\" | \\"detailed\\" | \\"verbose\\" | boolean | object { … }
+   "none" | "summary" | "errors-only" | "errors-warnings" | "minimal" | "normal" | "detailed" | "verbose" | boolean | object { … }
    -> Stats options object or preset name.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#stats
    Details:
     * options.stats should be one of these:
-      \\"none\\" | \\"summary\\" | \\"errors-only\\" | \\"errors-warnings\\" | \\"minimal\\" | \\"normal\\" | \\"detailed\\" | \\"verbose\\"
+      "none" | "summary" | "errors-only" | "errors-warnings" | "minimal" | "normal" | "detailed" | "verbose"
     * options.stats should be a boolean.
     * options.stats should be an object:
       object { … }"
