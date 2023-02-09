@@ -140,9 +140,12 @@ function wrapper(context) {
       }
 
       if (!getHeaderFromResponse(res, "Content-Type")) {
-        // content-type name(like application/javascript; charset=utf-8) or false
         const extname = path.extname(filename);
-        const contentType = extname === ".ts" ? mime.contentType(".js") : mime.contentType(extname); // Only set content-type header if media type is known
+        // content-type name(like application/javascript; charset=utf-8) or false
+        const contentType =
+          extname === ".ts"
+            ? mime.contentType(".js")
+            : mime.contentType(extname);
         // Only set content-type header if media type is known
         // https://tools.ietf.org/html/rfc7231#section-3.1.1.5
         if (contentType) {
