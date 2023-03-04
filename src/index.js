@@ -183,11 +183,11 @@ function wdm(compiler, options = {}) {
 
   setupHooks(context);
 
+  setupOutputFileSystem(context);
+
   if (options.writeToDisk) {
     setupWriteToDisk(context);
   }
-
-  setupOutputFileSystem(context);
 
   // Start watching
   if (/** @type {Compiler} */ (context.compiler).watching) {

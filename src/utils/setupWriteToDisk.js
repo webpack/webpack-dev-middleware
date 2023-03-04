@@ -21,6 +21,20 @@ function setupWriteToDisk(context) {
     (context.compiler).compilers || [context.compiler];
 
   for (const compiler of compilers) {
+    if (compiler.outputFileSystem && compiler.options.output.clean) {
+      /** @type {Compiler["outputFileSystem"]} */
+      const { unlink: originalUnlink } = compiler.outputFileSystem;
+      if (originalUnlink) {
+        compiler.outputFileSystem.unlink = (
+          /** @type {String} */ originalPath,
+          /** @type {(arg0?: null | NodeJS.ErrnoException) => void} */ originalCallback
+        ) => {
+          fs.unlink(originalPath, () => {});
+          originalUnlink(originalPath, originalCallback);
+        };
+      }
+    }
+
     compiler.hooks.emit.tap(
       "DevMiddleware",
       /**
