@@ -96,8 +96,9 @@ function getFilenameFromUrl(context, url) {
       }
 
       if (
-        options.historyApiFallback &&
-        !context.outputFileSystem.existsSync(filename)
+        context.outputFileSystem.existsSync &&
+        !context.outputFileSystem.existsSync(filename) &&
+        options.historyApiFallback
       ) {
         filename = path.join(outputPath);
       }
