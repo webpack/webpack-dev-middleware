@@ -14,6 +14,7 @@ This PR contains a:
 - [ ] new **feature**
 - [ ] **code refactor**
 - [ ] **test update** <!-- if bug or feature is checked, this should be too -->
+- [ ] **documentation update**
 - [ ] **typo fix**
 - [ ] **metadata update**
 

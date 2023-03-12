@@ -1,12 +1,64 @@
-import path from "path";
+const path = require("path");
 
-import mime from "mime-types";
+const mime = require("mime-types");
+const parseRange = require("range-parser");
 
-import getFilenameFromUrl from "./utils/getFilenameFromUrl";
-import handleRangeHeaders from "./utils/handleRangeHeaders";
-import ready from "./utils/ready";
+const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
+const {
+  getHeaderNames,
+  getHeaderFromRequest,
+  getHeaderFromResponse,
+  setHeaderForResponse,
+  setStatusCode,
+  send,
+} = require("./utils/compatibleAPI");
+const ready = require("./utils/ready");
 
-export default function wrapper(context) {
+/** @typedef {import("./index.js").NextFunction} NextFunction */
+/** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
+/** @typedef {import("./index.js").ServerResponse} ServerResponse */
+
+/**
+ * @param {string} type
+ * @param {number} size
+ * @param {import("range-parser").Range} [range]
+ * @returns {string}
+ */
+function getValueContentRangeHeader(type, size, range) {
+  return `${type} ${range ? `${range.start}-${range.end}` : "*"}/${size}`;
+}
+
+/**
+ * @param {string | number} title
+ * @param {string} body
+ * @returns {string}
+ */
+function createHtmlDocument(title, body) {
+  return (
+    `${
+      "<!DOCTYPE html>\n" +
+      '<html lang="en">\n' +
+      "<head>\n" +
+      '<meta charset="utf-8">\n' +
+      "<title>"
+    }${title}</title>\n` +
+    `</head>\n` +
+    `<body>\n` +
+    `<pre>${body}</pre>\n` +
+    `</body>\n` +
+    `</html>\n`
+  );
+}
+
+const BYTES_RANGE_REGEXP = /^ *bytes/i;
+
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {import("./index.js").Context<Request, Response>} context
+ * @return {import("./index.js").Middleware<Request, Response>}
+ */
+function wrapper(context) {
   return async function middleware(req, res, next) {
     const acceptedMethods = context.options.methods || ["GET", "HEAD"];
 
@@ -14,8 +66,9 @@ export default function wrapper(context) {
     // eslint-disable-next-line no-param-reassign
     res.locals = res.locals || {};
 
-    if (!acceptedMethods.includes(req.method)) {
+    if (req.method && !acceptedMethods.includes(req.method)) {
       await goNext();
+
       return;
     }
 
@@ -30,8 +83,9 @@ export default function wrapper(context) {
         ready(
           context,
           () => {
+            /** @type {any} */
             // eslint-disable-next-line no-param-reassign
-            res.locals.webpack = { devMiddleware: context };
+            (res.locals).webpack = { devMiddleware: context };
 
             resolve(next());
           },
@@ -41,81 +95,180 @@ export default function wrapper(context) {
     }
 
     async function processRequest() {
-      const filename = getFilenameFromUrl(context, req.url);
-      let { headers } = context.options;
-
-      if (typeof headers === "function") {
-        headers = headers(req, res, context);
-      }
-
-      let content;
+      const filename = getFilenameFromUrl(
+        context,
+        /** @type {string} */ (req.url)
+      );
 
       if (!filename) {
         await goNext();
+
         return;
       }
 
-      try {
-        content = context.outputFileSystem.readFileSync(filename);
-      } catch (_ignoreError) {
-        await goNext();
-        return;
+      let { headers } = context.options;
+
+      if (typeof headers === "function") {
+        // @ts-ignore
+        headers = headers(req, res, context);
       }
 
-      const contentTypeHeader = res.get
-        ? res.get("Content-Type")
-        : res.getHeader("Content-Type");
+      /**
+       * @type {{key: string, value: string | number}[]}
+       */
+      const allHeaders = [];
 
-      if (!contentTypeHeader) {
+      if (typeof headers !== "undefined") {
+        if (!Array.isArray(headers)) {
+          // eslint-disable-next-line guard-for-in
+          for (const name in headers) {
+            // @ts-ignore
+            allHeaders.push({ key: name, value: headers[name] });
+          }
+
+          headers = allHeaders;
+        }
+
+        headers.forEach(
+          /**
+           * @param {{key: string, value: any}} header
+           */
+          (header) => {
+            setHeaderForResponse(res, header.key, header.value);
+          }
+        );
+      }
+
+      if (!getHeaderFromResponse(res, "Content-Type")) {
         // content-type name(like application/javascript; charset=utf-8) or false
         const contentType = mime.contentType(path.extname(filename));
 
         // Only set content-type header if media type is known
         // https://tools.ietf.org/html/rfc7231#section-3.1.1.5
         if (contentType) {
-          // Express API
-          if (res.set) {
-            res.set("Content-Type", contentType);
-          }
-          // Node.js API
-          else {
-            res.setHeader("Content-Type", contentType);
-          }
+          setHeaderForResponse(res, "Content-Type", contentType);
         }
       }
 
-      if (headers) {
-        const names = Object.keys(headers);
+      if (!getHeaderFromResponse(res, "Accept-Ranges")) {
+        setHeaderForResponse(res, "Accept-Ranges", "bytes");
+      }
 
-        for (const name of names) {
-          // Express API
-          if (res.set) {
-            res.set(name, headers[name]);
+      const rangeHeader = getHeaderFromRequest(req, "range");
+
+      let start;
+      let end;
+
+      if (rangeHeader && BYTES_RANGE_REGEXP.test(rangeHeader)) {
+        const size = await new Promise((resolve) => {
+          /** @type {import("fs").lstat} */
+          (context.outputFileSystem.lstat)(filename, (error, stats) => {
+            if (error) {
+              context.logger.error(error);
+
+              return;
+            }
+
+            resolve(stats.size);
+          });
+        });
+
+        const parsedRanges = parseRange(size, rangeHeader, {
+          combine: true,
+        });
+
+        if (parsedRanges === -1) {
+          const message = "Unsatisfiable range for 'Range' header.";
+
+          context.logger.error(message);
+
+          const existingHeaders = getHeaderNames(res);
+
+          for (let i = 0; i < existingHeaders.length; i++) {
+            res.removeHeader(existingHeaders[i]);
           }
-          // Node.js API
-          else {
-            res.setHeader(name, headers[name]);
-          }
+
+          setStatusCode(res, 416);
+          setHeaderForResponse(
+            res,
+            "Content-Range",
+            getValueContentRangeHeader("bytes", size)
+          );
+          setHeaderForResponse(res, "Content-Type", "text/html; charset=utf-8");
+
+          const document = createHtmlDocument(416, `Error: ${message}`);
+          const byteLength = Buffer.byteLength(document);
+
+          setHeaderForResponse(
+            res,
+            "Content-Length",
+            Buffer.byteLength(document)
+          );
+
+          send(req, res, document, byteLength);
+
+          return;
+        } else if (parsedRanges === -2) {
+          context.logger.error(
+            "A malformed 'Range' header was provided. A regular response will be sent for this request."
+          );
+        } else if (parsedRanges.length > 1) {
+          context.logger.error(
+            "A 'Range' header with multiple ranges was provided. Multiple ranges are not supported, so a regular response will be sent for this request."
+          );
+        }
+
+        if (parsedRanges !== -2 && parsedRanges.length === 1) {
+          // Content-Range
+          setStatusCode(res, 206);
+          setHeaderForResponse(
+            res,
+            "Content-Range",
+            getValueContentRangeHeader(
+              "bytes",
+              size,
+              /** @type {import("range-parser").Ranges} */ (parsedRanges)[0]
+            )
+          );
+
+          [{ start, end }] = parsedRanges;
         }
       }
 
-      // Buffer
-      content = handleRangeHeaders(context, content, req, res);
+      const isFsSupportsStream =
+        typeof context.outputFileSystem.createReadStream === "function";
 
-      // Express API
-      if (res.send) {
-        res.send(content);
-      }
-      // Node.js API
-      else {
-        res.setHeader("Content-Length", content.length);
+      let bufferOtStream;
+      let byteLength;
 
-        if (req.method === "HEAD") {
-          res.end();
+      try {
+        if (
+          typeof start !== "undefined" &&
+          typeof end !== "undefined" &&
+          isFsSupportsStream
+        ) {
+          bufferOtStream =
+            /** @type {import("fs").createReadStream} */
+            (context.outputFileSystem.createReadStream)(filename, {
+              start,
+              end,
+            });
+          byteLength = end - start + 1;
         } else {
-          res.end(content);
+          bufferOtStream = /** @type {import("fs").readFileSync} */ (
+            context.outputFileSystem.readFileSync
+          )(filename);
+          ({ byteLength } = bufferOtStream);
         }
+      } catch (_ignoreError) {
+        await goNext();
+
+        return;
       }
+
+      send(req, res, bufferOtStream, byteLength);
     }
   };
 }
+
+module.exports = wrapper;

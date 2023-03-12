@@ -30,6 +30,7 @@ describe.each([
     let instance;
     let listen;
     let app;
+    let req;
 
     function listenShorthand(done) {
       return app.listen((error) => {
@@ -64,6 +65,7 @@ describe.each([
     describe("basic", () => {
       describe("should work", () => {
         let compiler;
+        let codeContent;
         let codeLength;
 
         const outputPath = path.resolve(__dirname, "./outputs/basic-test");
@@ -84,7 +86,9 @@ describe.each([
 
           listen = listenShorthand(() => {
             compiler.hooks.afterCompile.tap("wdm-test", (params) => {
-              codeLength = params.assets["bundle.js"].source().length;
+              codeContent = params.assets["bundle.js"].source();
+              codeLength = Buffer.byteLength(codeContent);
+
               done();
             });
           });
@@ -95,6 +99,10 @@ describe.each([
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "image.svg"),
             "svg image"
+          );
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "byte-length.html"),
+            "\u00bd + \u00bc = \u00be"
           );
           instance.context.outputFileSystem.mkdirSync(
             path.resolve(outputPath, "directory/nested-directory"),
@@ -112,180 +120,321 @@ describe.each([
             path.resolve(outputPath, "unknown"),
             "unknown"
           );
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it("should not find the bundle file on disk", (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect("Content-Type", "application/javascript; charset=utf-8")
-            .expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
+        it("should not find the bundle file on disk", async () => {
+          const response = await req.get("/bundle.js");
 
-              expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
-                false
-              );
-
-              return done();
-            });
-        });
-
-        it('should return the "200" code for the "GET" request to the bundle file', (done) => {
-          const fileData = instance.context.outputFileSystem.readFileSync(
-            path.resolve(outputPath, "bundle.js")
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
           );
-
-          request(app)
-            .get("/bundle.js")
-            .expect("Content-Length", fileData.byteLength.toString())
-            .expect("Content-Type", "application/javascript; charset=utf-8")
-            .expect(200, fileData.toString(), done);
+          expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
+            false
+          );
         });
 
-        it('should return the "200" code for the "HEAD" request to the bundle file', (done) => {
-          request(app)
-            .head("/bundle.js")
-            .expect(
-              "Content-Length",
-              instance.context.outputFileSystem
-                .readFileSync(path.resolve(outputPath, "bundle.js"))
-                .byteLength.toString()
-            )
-            .expect("Content-Type", "application/javascript; charset=utf-8")
-            // eslint-disable-next-line no-undefined
-            .expect(200, undefined, done);
+        it('should return the "200" code for the "GET" request to the bundle file', async () => {
+          const response = await req.get("/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            String(codeLength)
+          );
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
+          expect(response.text).toEqual(codeContent);
         });
 
-        it('should return the "404" code for the "POST" request to the bundle file', (done) => {
-          request(app).post("/bundle.js").expect(404, done);
+        it('should return the "200" code for the "HEAD" request to the bundle file', async () => {
+          const response = await req.head("/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            String(codeLength)
+          );
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
+          expect(response.text).toBeUndefined();
         });
 
-        it('should return the "200" code for the "GET" request to the "image.svg" file', (done) => {
+        it('should return the "404" code for the "POST" request to the bundle file', async () => {
+          const response = await req.post("/bundle.js");
+
+          expect(response.statusCode).toEqual(404);
+        });
+
+        it('should return the "200" code for the "GET" request to the "image.svg" file', async () => {
           const fileData = instance.context.outputFileSystem.readFileSync(
             path.resolve(outputPath, "image.svg")
           );
 
-          request(app)
-            .get("/image.svg")
-            .expect("Content-Length", fileData.byteLength.toString())
-            .expect("Content-Type", "image/svg+xml")
-            .expect(200, fileData, done);
+          const response = await req.get("/image.svg");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString()
+          );
+          expect(response.headers["content-type"]).toEqual("image/svg+xml");
         });
 
-        it('should return the "200" code for the "GET" request to the directory', (done) => {
+        it('should return the "200" code for the "GET" request to the directory', async () => {
           const fileData = fs.readFileSync(
             path.resolve(__dirname, "./fixtures/index.html")
           );
 
-          request(app)
-            .get("/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect("Content-Length", fileData.byteLength.toString())
-            .expect(200, fileData.toString(), done);
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString()
+          );
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
+          expect(response.text).toEqual(fileData.toString());
         });
 
-        it('should return the "200" code for the "GET" request to the subdirectory with "index.html"', (done) => {
+        it('should return the "200" code for the "GET" request to the subdirectory with "index.html"', async () => {
           const fileData = instance.context.outputFileSystem.readFileSync(
             path.resolve(outputPath, "directory/nested-directory/index.html")
           );
 
-          request(app)
-            .get("/directory/nested-directory/")
-            .expect("Content-Length", fileData.byteLength.toString())
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, fileData.toString(), done);
+          const response = await req.get("/directory/nested-directory/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString()
+          );
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
+          expect(response.text).toEqual(fileData.toString());
         });
 
-        it('should return the "200" code for the "GET" request to the subdirectory with "index.html" without trailing slash', (done) => {
+        it('should return the "200" code for the "GET" request to the subdirectory with "index.html" without trailing slash', async () => {
           const fileData = instance.context.outputFileSystem.readFileSync(
             path.resolve(outputPath, "directory/nested-directory/index.html")
           );
 
-          request(app)
-            .get("/directory/nested-directory")
-            .expect("Content-Length", fileData.byteLength.toString())
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, fileData.toString(), done);
+          const response = await req.get("/directory/nested-directory");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString()
+          );
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
+          expect(response.text).toEqual(fileData.toString());
         });
 
-        it('should return the "200" code for the "GET" request to the subdirectory with "index.html"', (done) => {
+        it('should return the "200" code for the "GET" request to the subdirectory with "index.html"', async () => {
           const fileData = instance.context.outputFileSystem.readFileSync(
             path.resolve(outputPath, "directory/nested-directory/index.html")
           );
 
-          request(app)
-            .get("/directory/nested-directory/index.html")
-            .expect("Content-Length", fileData.byteLength.toString())
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, fileData.toString(), done);
+          const response = await req.get(
+            "/directory/nested-directory/index.html"
+          );
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString()
+          );
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
+          expect(response.text).toEqual(fileData.toString());
         });
 
-        it('should return the "416" code for the "GET" request with the invalid range header', (done) => {
-          request(app)
+        it('should return the "416" code for the "GET" request with the invalid range header', async () => {
+          const response = await req
             .get("/bundle.js")
-            .set("Range", "bytes=9999999-")
-            .expect(416, done);
+            .set("Range", "bytes=9999999-");
+
+          expect(response.statusCode).toEqual(416);
+          expect(response.headers["content-range"]).toEqual(
+            `bytes */${codeLength}`
+          );
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return the "206" code for the "GET" request with the valid range header', (done) => {
-          request(app)
+        it('should return the "206" code for the "GET" request with the valid range header', async () => {
+          const response = await req
             .get("/bundle.js")
-            .set("Range", "bytes=3000-3500")
-            .expect("Content-Length", "501")
-            .expect("Content-Range", `bytes 3000-3500/${codeLength}`)
-            .expect(206, done);
+            .set("Range", "bytes=3000-3500");
+
+          expect(response.statusCode).toEqual(206);
+          expect(response.headers["content-range"]).toEqual(
+            `bytes 3000-3500/${codeLength}`
+          );
+          expect(response.headers["content-length"]).toEqual("501");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
+          expect(response.text).toBe(codeContent.slice(3000, 3501));
+          expect(response.text.length).toBe(501);
         });
 
-        it('should return the "200" code for the "GET" request with malformed range header which is ignored', (done) => {
-          request(app).get("/bundle.js").set("Range", "abc").expect(200, done);
+        it('should return the "206" code for the "GET" request with the valid range header for "HEAD" request', async () => {
+          const response = await req
+            .head("/bundle.js")
+            .set("Range", "bytes=3000-3500");
+
+          expect(response.statusCode).toEqual(206);
+          expect(response.headers["content-range"]).toEqual(
+            `bytes 3000-3500/${codeLength}`
+          );
+          expect(response.headers["content-length"]).toEqual("501");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
+          expect(response.text).toBeUndefined();
         });
 
-        it('should return the "200" code for the "GET" request with multiple range header which is ignored', (done) => {
-          request(app)
+        it('should return the "206" code for the "GET" request with the valid range header (lowercase)', async () => {
+          const response = await req
             .get("/bundle.js")
-            .set("Range", "bytes=3000-3100,3200-3300")
-            .expect(200, done);
+            .set("range", "bytes=3000-3500");
+
+          expect(response.statusCode).toEqual(206);
+          expect(response.headers["content-range"]).toEqual(
+            `bytes 3000-3500/${codeLength}`
+          );
+          expect(response.headers["content-length"]).toEqual("501");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
+          expect(response.text).toBe(codeContent.slice(3000, 3501));
+          expect(response.text.length).toBe(501);
         });
 
-        it('should return the "404" code for the "GET" request with to the non-public path', (done) => {
-          request(app)
-            .get("/nonpublic/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(404, done);
+        it('should return the "206" code for the "GET" request with the valid range header (uppercase)', async () => {
+          const response = await req
+            .get("/bundle.js")
+            .set("RANGE", "BYTES=3000-3500");
+
+          expect(response.statusCode).toEqual(206);
+          expect(response.headers["content-range"]).toEqual(
+            `bytes 3000-3500/${codeLength}`
+          );
+          expect(response.headers["content-length"]).toEqual("501");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
+          expect(response.text).toBe(codeContent.slice(3000, 3501));
+          expect(response.text.length).toBe(501);
         });
 
-        it('should return the "404" code for the "GET" request to the deleted file', (done) => {
+        it('should return the "206" code for the "GET" request with the valid range header when range starts with 0', async () => {
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", "bytes=0-3500");
+
+          expect(response.statusCode).toEqual(206);
+          expect(response.headers["content-range"]).toEqual(
+            `bytes 0-3500/${codeLength}`
+          );
+          expect(response.headers["content-length"]).toEqual("3501");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
+          expect(response.text).toBe(codeContent.slice(0, 3501));
+          expect(response.text.length).toBe(3501);
+        });
+
+        it('should return the "206" code for the "GET" request with the valid range header with multiple values', async () => {
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", "bytes=0-499, 499-800");
+
+          expect(response.statusCode).toEqual(206);
+          expect(response.headers["content-range"]).toEqual(
+            `bytes 0-800/${codeLength}`
+          );
+          expect(response.headers["content-length"]).toEqual("801");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
+          expect(response.text).toBe(codeContent.slice(0, 801));
+          expect(response.text.length).toBe(801);
+        });
+
+        it('should return the "200" code for the "GET" request with malformed range header which is ignored', async () => {
+          const response = await req.get("/bundle.js").set("Range", "abc");
+
+          expect(response.statusCode).toEqual(200);
+        });
+
+        it('should return the "200" code for the "GET" request with malformed range header which is ignored #2', async () => {
+          const response = await req.get("/bundle.js").set("Range", "bytes");
+
+          expect(response.statusCode).toEqual(200);
+        });
+
+        it('should return the "200" code for the "GET" request with multiple range header which is ignored', async () => {
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", "bytes=3000-3100,3200-3300");
+
+          expect(response.statusCode).toEqual(200);
+        });
+
+        it('should return the "404" code for the "GET" request with to the non-public path', async () => {
+          const response = await req.get("/nonpublic/");
+
+          expect(response.statusCode).toEqual(404);
+        });
+
+        it('should return the "404" code for the "GET" request to the deleted file', async () => {
           const spy = jest
             .spyOn(instance.context.outputFileSystem, "readFileSync")
             .mockImplementation(() => {
               throw new Error("error");
             });
 
-          request(app)
-            .get("/public/throw-an-exception-on-readFileSync.txt")
-            .expect(404, (error) => {
-              if (error) {
-                return done(error);
-              }
+          const response = await req.get(
+            "/public/throw-an-exception-on-readFileSync.txt/"
+          );
 
-              spy.mockRestore();
+          expect(response.statusCode).toEqual(404);
 
-              return done();
-            });
+          spy.mockRestore();
         });
 
-        it('should return "200" code code for the "GET" request to the file without extension', (done) => {
+        it('should return "200" code code for the "GET" request to the file without extension', async () => {
           const fileData = instance.context.outputFileSystem.readFileSync(
             path.resolve(outputPath, "unknown")
           );
 
-          request(app)
-            .get("/unknown")
-            .expect("Content-Length", fileData.byteLength.toString())
-            .expect(200, done);
+          const response = await req.get("/unknown");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString()
+          );
+        });
+
+        it('should return "200" code code for the "GET" request and "Content-Length" to the file with unicode', async () => {
+          const response = await req.get("/byte-length.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual("12");
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
+          expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
+            false
+          );
         });
       });
 
@@ -310,12 +459,16 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return the "400" code for the "GET" request to the bundle file', (done) => {
-          request(app).get("/bundle.js").expect(404, done);
+        it('should return the "400" code for the "GET" request to the bundle file', async () => {
+          const response = await req.get("/bundle.js");
+
+          expect(response.statusCode).toEqual(404);
         });
       });
 
@@ -329,67 +482,91 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
-          request(app).get("/static-one/bundle.js").expect(200, done);
+        it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
+          const response = await req.get("/static-one/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "404" code for GET request to a non existing file for the first compiler', (done) => {
-          request(app).get("/static-one/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to a non existing file for the first compiler', async () => {
+          const response = await req.get("/static-one/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "200" code for GET request to the "public" path for the first compiler', (done) => {
-          request(app)
-            .get("/static-one/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "public" path for the first compiler', async () => {
+          const response = await req.get("/static-one/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
-          request(app)
-            .get("/static-one/index.html")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "index" option for the first compiler', async () => {
+          const response = await req.get("/static-one/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "200" code for GET request for the bundle file for the second compiler', (done) => {
-          request(app).get("/static-two/bundle.js").expect(200, done);
+        it('should return "200" code for GET request for the bundle file for the second compiler', async () => {
+          const response = await req.get("/static-two/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "404" code for GET request to a non existing file for the second compiler', (done) => {
-          request(app).get("/static-two/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to a non existing file for the second compiler', async () => {
+          const response = await req.get("/static-two/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "404" code for GET request to the "public" path for the second compiler', (done) => {
-          request(app).get("/static-two/").expect(404, done);
+        it('should return "404" code for GET request to the "public" path for the second compiler', async () => {
+          const response = await req.get("/static-two/");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "404" code for GET request to the "index" option for the second compiler', (done) => {
-          request(app).get("/static-two/index.html").expect(404, done);
+        it('should return "404" code for GET request to the "index" option for the second compiler', async () => {
+          const response = await req.get("/static-two/index.html");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "404" code for GET request to the non-public path', (done) => {
-          request(app)
-            .get("/static-three/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(404, done);
+        it('should return "404" code for GET request to the non-public path', async () => {
+          const response = await req.get("/static-three/");
+
+          expect(response.statusCode).toEqual(404);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "404" code for GET request to the non-public path', (done) => {
-          request(app)
-            .get("/static-three/invalid.js")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(404, done);
+        it('should return "404" code for GET request to the non-public path', async () => {
+          const response = await req.get("/static-three/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "404" code for GET request to the non-public path', (done) => {
-          request(app)
-            .get("/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(404, done);
+        it('should return "404" code for GET request to the non-public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(404);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -780,6 +957,8 @@ describe.each([
 
               listen = listenShorthand(done);
 
+              req = request(app);
+
               const {
                 context: {
                   outputFileSystem: { mkdirSync, writeFileSync },
@@ -801,22 +980,24 @@ describe.each([
             for (const { data, urls } of fixtures) {
               for (const { value, contentType, code } of urls) {
                 // eslint-disable-next-line no-loop-func
-                it(`should return the "${code}" code for the "GET" request for the "${value}" url`, (done) => {
-                  request(app)
-                    .get(`${publicPathForRequest}${value}`)
-                    .expect(
-                      "Content-Length",
-                      data ? String(data.length) : /\d+/
-                    )
-                    .expect(code)
-                    .then((res) => {
-                      if (contentType) {
-                        expect(res.headers["content-type"]).toEqual(
-                          contentType
-                        );
-                      }
-                    })
-                    .then(done);
+                it(`should return the "${code}" code for the "GET" request for the "${value}" url`, async () => {
+                  const response = await req.get(
+                    `${publicPathForRequest}${value}`
+                  );
+
+                  expect(response.statusCode).toEqual(code);
+
+                  if (data) {
+                    expect(response.headers["content-length"]).toEqual(
+                      String(data.length)
+                    );
+                  }
+
+                  if (contentType) {
+                    expect(response.headers["content-type"]).toEqual(
+                      contentType
+                    );
+                  }
                 });
               }
             }
@@ -831,6 +1012,7 @@ describe.each([
           instance = middleware(compiler);
 
           app = framework();
+          // eslint-disable-next-line no-shadow
           app.use((req, res, next) => {
             // Express API
             if (res.set) {
@@ -848,15 +1030,19 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should not modify the "Content-Type" header', (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect("Content-Type", "application/vnd.test+octet-stream")
-            .expect(200, done);
+        it('should not modify the "Content-Type" header', async () => {
+          const response = await req.get("/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "application/vnd.test+octet-stream"
+          );
         });
       });
 
@@ -899,30 +1085,40 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return "200" code for GET request to the bundle file', (done) => {
-          request(app).get("/main.js").expect(200, done);
+        it('should return "200" code for GET request to the bundle file', async () => {
+          const response = await req.get("/main.js");
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "404" code for GET request to a nonexistent file', (done) => {
-          request(app).get("/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to a nonexistent file', async () => {
+          const response = await req.get("/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "200" code for GET request to the non-public path', (done) => {
-          request(app)
-            .get("/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the non-public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "200" code for GET request to the "index" option', (done) => {
-          request(app)
-            .get("/index.html")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "index" option', async () => {
+          const response = await req.get("/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -942,30 +1138,40 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return "200" code for GET request to the bundle file', (done) => {
-          request(app).get("/bundle.js").expect(200, done);
+        it('should return "200" code for GET request to the bundle file', async () => {
+          const response = await req.get("/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "404" code for GET request to a nonexistent file', (done) => {
-          request(app).get("/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to a nonexistent file', async () => {
+          const response = await req.get("/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "200" code for GET request to the non-public path', (done) => {
-          request(app)
-            .get("/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the non-public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "200" code for GET request to the "index" option', (done) => {
-          request(app)
-            .get("/index.html")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "index" option', async () => {
+          const response = await req.get("/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -979,30 +1185,40 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return "200" code for GET request to the bundle file', (done) => {
-          request(app).get("/bundle.js").expect(200, done);
+        it('should return "200" code for GET request to the bundle file', async () => {
+          const response = await req.get("/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "404" code for GET request to a nonexistent file', (done) => {
-          request(app).get("/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to a nonexistent file', async () => {
+          const response = await req.get("/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "200" code for GET request to the non-public path', (done) => {
-          request(app)
-            .get("/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the non-public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "200" code for GET request to the "index" option', (done) => {
-          request(app)
-            .get("/index.html")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "index" option', async () => {
+          const response = await req.get("/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -1023,37 +1239,49 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return "200" code for GET request to the bundle file', (done) => {
-          request(app).get("/static/bundle.js").expect(200, done);
+        it('should return "200" code for GET request to the bundle file', async () => {
+          const response = await req.get("/static/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "404" code for GET request to a nonexistent file', (done) => {
-          request(app).get("/static/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to a nonexistent file', async () => {
+          const response = await req.get("/static/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "200" code for GET request to the public path', (done) => {
-          request(app)
-            .get("/static/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the public path', async () => {
+          const response = await req.get("/static/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "200" code for GET request to the "index" option', (done) => {
-          request(app)
-            .get("/static/index.html")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "index" option', async () => {
+          const response = await req.get("/static/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "404" code for GET request to the non-public path', (done) => {
-          request(app)
-            .get("/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(404, done);
+        it('should return "404" code for GET request to the non-public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(404);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -1085,34 +1313,46 @@ describe.each([
               done();
             });
           });
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return "200" code for GET request to the bundle file', (done) => {
-          request(app).get(`/static/${hash}/bundle.js`).expect(200, done);
+        it('should return "200" code for GET request to the bundle file', async () => {
+          const response = await req.get(`/static/${hash}/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "404" code for GET request to a nonexistent file', (done) => {
-          request(app).get("/static/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to a nonexistent file', async () => {
+          const response = await req.get("/static/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "200" code for GET request to the public path', (done) => {
-          request(app)
-            .get(`/static/${hash}/`)
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the public path', async () => {
+          const response = await req.get(`/static/${hash}/`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "200" code for GET request to the "index" option', (done) => {
-          request(app)
-            .get(`/static/${hash}/index.html`)
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "index" option', async () => {
+          const response = await req.get(`/static/${hash}/index.html`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "404" code for GET request to the non-public path', (done) => {
-          request(app).get("/").expect(404, done);
+        it('should return "404" code for GET request to the non-public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(404);
         });
       });
 
@@ -1175,60 +1415,76 @@ describe.each([
               done();
             });
           });
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
-          request(app)
-            .get(`/static-one/${hashOne}/bundle.js`)
-            .expect(200, done);
+        it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
+          const response = await req.get(`/static-one/${hashOne}/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "404" code for GET request to nonexistent file for the first compiler', (done) => {
-          request(app)
-            .get(`/static-one/${hashOne}/invalid.js`)
-            .expect(404, done);
+        it('should return "404" code for GET request to nonexistent file for the first compiler', async () => {
+          const response = await req.get(`/static-one/${hashOne}/invalid.js`);
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "200" code for GET request for the second bundle file', (done) => {
-          request(app)
-            .get(`/static-one/${hashOne}/`)
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request for the second bundle file', async () => {
+          const response = await req.get(`/static-one/${hashOne}/`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
-          request(app)
-            .get(`/static-one/${hashOne}/index.html`)
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "index" option for the first compiler', async () => {
+          const response = await req.get(`/static-one/${hashOne}/index.html`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "200" code for GET request to the bundle file for the second compiler', (done) => {
-          request(app)
-            .get(`/static-two/${hashTwo}/bundle.js`)
-            .expect(200, done);
+        it('should return "200" code for GET request to the bundle file for the second compiler', async () => {
+          const response = await req.get(`/static-two/${hashTwo}/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
         });
 
-        it('should return "404" code for GET request to nonexistent file for the second compiler', (done) => {
-          request(app)
-            .get(`/static-two/${hashTwo}/invalid.js`)
-            .expect(404, done);
+        it('should return "404" code for GET request to nonexistent file for the second compiler', async () => {
+          const response = await req.get(`/static-two/${hashTwo}/invalid.js`);
+
+          expect(response.statusCode).toEqual(404);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "404" code for GET request to the "public" path for the second compiler', (done) => {
-          request(app).get(`/static-two/${hashTwo}/`).expect(404, done);
+        it('should return "404" code for GET request to the "public" path for the second compiler', async () => {
+          const response = await req.get(`/static-two/${hashTwo}/`);
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "404" code for GET request to the "index" option for the second compiler', (done) => {
-          request(app)
-            .get(`/static-two/${hashTwo}/index.html`)
-            .expect(404, done);
+        it('should return "404" code for GET request to the "index" option for the second compiler', async () => {
+          const response = await req.get(`/static-two/${hashTwo}/index.html`);
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "404" code for GET request to non-public path', (done) => {
-          request(app).get("/").expect(404, done);
+        it('should return "404" code for GET request to non-public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(404);
         });
       });
 
@@ -1242,54 +1498,76 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
-          request(app).get("/static-one/bundle.js").expect(200, done);
+        it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
+          const response = await req.get("/static-one/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "404" code for GET request to nonexistent file for the first compiler', (done) => {
-          request(app).get("/static-one/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to nonexistent file for the first compiler', async () => {
+          const response = await req.get("/static-one/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "200" code for GET request to the "public" path for the first compiler', (done) => {
-          request(app)
-            .get("/static-one/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "public" path for the first compiler', async () => {
+          const response = await req.get("/static-one/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
-          request(app)
-            .get("/static-one/index.html")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "index" option for the first compiler', async () => {
+          const response = await req.get("/static-one/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "200" code for GET request to the second bundle file', (done) => {
-          request(app).get("/static-two/bundle.js").expect(200, done);
+        it('should return "200" code for GET request to the second bundle file', async () => {
+          const response = await req.get("/static-two/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "404" code for GET request to nonexistent file for the second compiler', (done) => {
-          request(app).get("/static-two/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to nonexistent file for the second compiler', async () => {
+          const response = await req.get("/static-two/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "200" code for GET request to the "public" path for the second compiler', (done) => {
-          request(app).get("/static-two/").expect(404, done);
+        it('should return "200" code for GET request to the "public" path for the second compiler', async () => {
+          const response = await req.get("/static-two/");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "200" code for GET request to the "index" option for the second compiler', (done) => {
-          request(app).get("/static-two/index.html").expect(404, done);
+        it('should return "200" code for GET request to the "index" option for the second compiler', async () => {
+          const response = await req.get("/static-two/index.html");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "404" code for GET request to nonexistent file', (done) => {
-          request(app).get("/static/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to nonexistent file', async () => {
+          const response = await req.get("/static/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "404" code for GET request to non-public path', (done) => {
-          request(app).get("/").expect(404, done);
+        it('should return "404" code for GET request to non-public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(404);
         });
       });
 
@@ -1320,42 +1598,58 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
-          request(app).get("/my-public/bundle-one.js").expect(200, done);
+        it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
+          const response = await req.get("/my-public/bundle-one.js");
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "200" code for GET request to the bundle file for the second compiler', (done) => {
-          request(app).get("/my-public/bundle-two.js").expect(200, done);
+        it('should return "200" code for GET request to the bundle file for the second compiler', async () => {
+          const response = await req.get("/my-public/bundle-two.js");
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "404" code for GET request to nonexistent file', (done) => {
-          request(app).get("/my-public/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to nonexistent file', async () => {
+          const response = await req.get("/my-public/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "200" code for GET request to the "public" path', (done) => {
-          request(app)
-            .get("/my-public/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "public" path', async () => {
+          const response = await req.get("/my-public/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "200" code for GET request to the "index" option', (done) => {
-          request(app)
-            .get("/my-public/index.html")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "index" option', async () => {
+          const response = await req.get("/my-public/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "404" code for GET request to nonexistent file', (done) => {
-          request(app).get("/static/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to nonexistent file', async () => {
+          const response = await req.get("/static/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "404" code for GET request to non-public path', (done) => {
-          request(app).get("/").expect(404, done);
+        it('should return "404" code for GET request to non-public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(404);
         });
       });
 
@@ -1386,60 +1680,85 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return "200" code for GET request to the bundle file for the first compiler', (done) => {
-          request(app).get("/one-public/bundle-one.js").expect(200, done);
+        it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
+          const response = await req.get("/one-public/bundle-one.js");
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "404" code for GET request to nonexistent file to the first bundle file', (done) => {
-          request(app).get("/one-public/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to nonexistent file to the first bundle file', async () => {
+          const response = await req.get("/one-public/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "200" code for GET request to the "public" path for the first compiler', (done) => {
-          request(app)
-            .get("/one-public/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "public" path for the first compiler', async () => {
+          const response = await req.get("/one-public/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "200" code for GET request to the "index" option for the first compiler', (done) => {
-          request(app)
-            .get("/one-public/index.html")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "index" option for the first compiler', async () => {
+          const response = await req.get("/one-public/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "200" code for GET request to the bundle file for the second compiler', (done) => {
-          request(app).get("/two-public/bundle-two.js").expect(200, done);
+        it('should return "200" code for GET request to the bundle file for the second compiler', async () => {
+          const response = await req.get("/two-public/bundle-two.js");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
         });
 
-        it('should return "404" code for GET request to nonexistent file to the second bundle file', (done) => {
-          request(app).get("/two-public/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to nonexistent file to the second bundle file', async () => {
+          const response = await req.get("/two-public/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "200" code for GET request to the "public" path for the second compiler', (done) => {
-          request(app)
-            .get("/two-public/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "public" path for the second compiler', async () => {
+          const response = await req.get("/two-public/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "200" code for GET request to the "index" option for the second compiler', (done) => {
-          request(app)
-            .get("/two-public/index.html")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the "index" option for the second compiler', async () => {
+          const response = await req.get("/two-public/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "404" code for GET request to nonexistent file', (done) => {
-          request(app).get("/static/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to nonexistent file', async () => {
+          const response = await req.get("/static/invalid");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "404" code for GET request to non-public path', (done) => {
-          request(app).get("/").expect(404, done);
+        it('should return "404" code for GET request to non-public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(404);
         });
       });
 
@@ -1453,34 +1772,49 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return "200" code for GET request to the bundle file', (done) => {
-          request(app).get("/static/bundle.js").expect(200, done);
+        it('should return "200" code for GET request to the bundle file', async () => {
+          const response = await req.get("/static/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8"
+          );
         });
 
-        it('should return "404" code for GET request to nonexistent file', (done) => {
-          request(app).get("/static/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to nonexistent file', async () => {
+          const response = await req.get("/static/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "404" code for GET request to the public path', (done) => {
-          request(app)
-            .get("/static/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "404" code for GET request to the public path', async () => {
+          const response = await req.get("/static/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "404" code for GET request to the "index" option', (done) => {
-          request(app)
-            .get("/static/index.html")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "404" code for GET request to the "index" option', async () => {
+          const response = await req.get("/static/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "404" code for GET request to non-public path', (done) => {
-          request(app).get("/").expect(404, done);
+        it('should return "404" code for GET request to non-public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(404);
         });
       });
 
@@ -1497,34 +1831,46 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return "200" code for GET request to the bundle file', (done) => {
-          request(app).get("/static/bundle.js").expect(200, done);
+        it('should return "200" code for GET request to the bundle file', async () => {
+          const response = await req.get("/static/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "404" code for GET request to nonexistent file', (done) => {
-          request(app).get("/static/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to nonexistent file', async () => {
+          const response = await req.get("/static/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "404" code for GET request to the public path', (done) => {
-          request(app)
-            .get("/static/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "404" code for GET request to the public path', async () => {
+          const response = await req.get("/static/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "404" code for GET request to the "index" option', (done) => {
-          request(app)
-            .get("/static/index.html")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "404" code for GET request to the "index" option', async () => {
+          const response = await req.get("/static/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "404" code for GET request to non-public path', (done) => {
-          request(app).get("/").expect(404, done);
+        it('should return "404" code for GET request to non-public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(404);
         });
       });
 
@@ -1554,34 +1900,46 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return "200" code for GET request to the bundle file', (done) => {
-          request(app).get("/static/bundle-one.js").expect(200, done);
+        it('should return "200" code for GET request to the bundle file', async () => {
+          const response = await req.get("/static/bundle-one.js");
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "404" code for GET request to a nonexistent file', (done) => {
-          request(app).get("/static/invalid.js").expect(404, done);
+        it('should return "404" code for GET request to a nonexistent file', async () => {
+          const response = await req.get("/static/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
         });
 
-        it('should return "404" code for GET request to the public path', (done) => {
-          request(app).get("/static/").expect(200, done);
+        it('should return "404" code for GET request to the public path', async () => {
+          const response = await req.get("/static/");
+
+          expect(response.statusCode).toEqual(200);
         });
 
-        it('should return "200" code for GET request to the non-public path', (done) => {
-          request(app)
-            .get("/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "200" code for GET request to the non-public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return "404" code for GET request to the "index" option', (done) => {
-          request(app)
-            .get("/static/index.html")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return "404" code for GET request to the "index" option', async () => {
+          const response = await req.get("/static/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -1608,12 +1966,16 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return the "200" code for the "GET" request to the bundle file', (done) => {
-          request(app).get("/bundle.js").expect(200, done);
+        it('should return the "200" code for the "GET" request to the bundle file', async () => {
+          const response = await req.get("/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
         });
       });
     });
@@ -1637,6 +1999,8 @@ describe.each([
 
           listen = listenShorthand(done);
 
+          req = request(app);
+
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
           });
@@ -1648,11 +2012,14 @@ describe.each([
 
         afterAll(close);
 
-        it('should return the "200" code for the "GET" request to "file.html"', (done) => {
-          request(app)
-            .get("/file.html")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, "welcome", done);
+        it('should return the "200" code for the "GET" request to "file.html"', async () => {
+          const response = await req.get("/file.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
+          expect(response.text).toEqual("welcome");
         });
       });
 
@@ -1678,6 +2045,8 @@ describe.each([
 
           listen = listenShorthand(done);
 
+          req = request(app);
+
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
           });
@@ -1689,11 +2058,14 @@ describe.each([
 
         afterAll(close);
 
-        it('should return the "200" code for the "GET" request "file.phtml"', (done) => {
-          request(app)
-            .get("/file.myhtml")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, "welcome", done);
+        it('should return the "200" code for the "GET" request "file.phtml"', async () => {
+          const response = await req.get("/file.myhtml");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
+          expect(response.text).toEqual("welcome");
         });
       });
 
@@ -1719,6 +2091,8 @@ describe.each([
 
           listen = listenShorthand(done);
 
+          req = request(app);
+
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
           });
@@ -1730,11 +2104,13 @@ describe.each([
 
         afterAll(close);
 
-        it('should return the "200" code for the "GET" request "file.jpg"', (done) => {
-          request(app)
-            .get("/file.jpg")
-            .expect("Content-Type", "image/vnd.test+jpeg")
-            .expect(200, done);
+        it('should return the "200" code for the "GET" request "file.jpg"', async () => {
+          const response = await req.get("/file.jpg");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "image/vnd.test+jpeg"
+          );
         });
       });
 
@@ -1758,6 +2134,7 @@ describe.each([
           app = framework();
           app.use(instance);
 
+          // eslint-disable-next-line no-shadow
           app.use("/file.jpg", (req, res) => {
             // Express API
             if (res.send) {
@@ -1771,15 +2148,17 @@ describe.each([
           });
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return the "200" code for the "GET" request "file.jpg" with default content type', (done) => {
-          request(app)
-            .get("/file.jpg")
-            .expect("Content-Type", /text\/html/)
-            .expect(200, done);
+        it('should return the "200" code for the "GET" request "file.jpg" with default content type', async () => {
+          const response = await req.get("/file.jpg");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toMatch(/text\/html/);
         });
       });
     });
@@ -1800,6 +2179,8 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll((done) => {
@@ -1808,19 +2189,12 @@ describe.each([
           close(done);
         });
 
-        it('should pass arguments to the "watch" method', (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
+        it('should pass arguments to the "watch" method', async () => {
+          const response = await req.get("/bundle.js");
 
-              expect(spy).toHaveBeenCalledTimes(1);
-              expect(spy.mock.calls[0][0]).toEqual({});
-
-              return done();
-            });
+          expect(response.statusCode).toEqual(200);
+          expect(spy).toHaveBeenCalledTimes(1);
+          expect(spy.mock.calls[0][0]).toEqual({});
         });
       });
 
@@ -1839,6 +2213,8 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll((done) => {
@@ -1847,22 +2223,15 @@ describe.each([
           close(done);
         });
 
-        it('should pass arguments to the "watch" method', (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect(200, (error) => {
-              if (error) {
-                return done(done);
-              }
+        it('should pass arguments to the "watch" method', async () => {
+          const response = await req.get("/bundle.js");
 
-              expect(spy).toHaveBeenCalledTimes(1);
-              expect(spy.mock.calls[0][0]).toEqual({
-                aggregateTimeout: 300,
-                poll: true,
-              });
-
-              return done(error);
-            });
+          expect(response.statusCode).toEqual(200);
+          expect(spy).toHaveBeenCalledTimes(1);
+          expect(spy.mock.calls[0][0]).toEqual({
+            aggregateTimeout: 300,
+            poll: true,
+          });
         });
       });
 
@@ -1881,6 +2250,8 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll((done) => {
@@ -1889,30 +2260,19 @@ describe.each([
           close(done);
         });
 
-        it('should pass arguments to the "watch" method', (done) => {
-          request(app)
-            .get("/static-one/bundle.js")
-            .expect(200, (firstError) => {
-              if (firstError) {
-                return done(firstError);
-              }
+        it('should pass arguments to the "watch" method', async () => {
+          const response1 = await req.get("/static-one/bundle.js");
 
-              return request(app)
-                .get("/static-two/bundle.js")
-                .expect(200, (secondError) => {
-                  if (secondError) {
-                    return done(secondError);
-                  }
+          expect(response1.statusCode).toEqual(200);
 
-                  expect(spy).toHaveBeenCalledTimes(1);
-                  expect(spy.mock.calls[0][0]).toEqual([
-                    { aggregateTimeout: 800, poll: false },
-                    { aggregateTimeout: 300, poll: true },
-                  ]);
+          const response2 = await req.get("/static-two/bundle.js");
 
-                  return done();
-                });
-            });
+          expect(response2.statusCode).toEqual(200);
+          expect(spy).toHaveBeenCalledTimes(1);
+          expect(spy.mock.calls[0][0]).toEqual([
+            { aggregateTimeout: 800, poll: false },
+            { aggregateTimeout: 300, poll: true },
+          ]);
         });
       });
     });
@@ -1936,6 +2296,8 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll((done) => {
@@ -2067,6 +2429,8 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll((done) => {
@@ -2080,23 +2444,17 @@ describe.each([
           close(done);
         });
 
-        it("should find the bundle file on disk", (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
+        it("should find the bundle file on disk", async () => {
+          const response = await req.get("/bundle.js");
 
-              const bundlePath = path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-function-true/bundle.js"
-              );
+          expect(response.statusCode).toEqual(200);
 
-              expect(fs.existsSync(bundlePath)).toBe(true);
+          const bundlePath = path.resolve(
+            __dirname,
+            "./outputs/write-to-disk-function-true/bundle.js"
+          );
 
-              return done();
-            });
+          expect(fs.existsSync(bundlePath)).toBe(true);
         });
       });
 
@@ -2136,23 +2494,17 @@ describe.each([
           close(done);
         });
 
-        it("should not find the bundle file on disk", (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
+        it("should not find the bundle file on disk", async () => {
+          const response = await req.get("/bundle.js");
 
-              const bundlePath = path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-function-false/bundle.js"
-              );
+          expect(response.statusCode).toEqual(200);
 
-              expect(fs.existsSync(bundlePath)).toBe(false);
+          const bundlePath = path.resolve(
+            __dirname,
+            "./outputs/write-to-disk-function-false/bundle.js"
+          );
 
-              return done();
-            });
+          expect(fs.existsSync(bundlePath)).toBe(false);
         });
       });
 
@@ -2177,6 +2529,8 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll((done) => {
@@ -2190,23 +2544,17 @@ describe.each([
           close(done);
         });
 
-        it("should find the bundle file on disk with no querystring", (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
+        it("should find the bundle file on disk with no querystring", async () => {
+          const response = await req.get("/bundle.js");
 
-              const bundlePath = path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-query-string/bundle.js"
-              );
+          expect(response.statusCode).toEqual(200);
 
-              expect(fs.existsSync(bundlePath)).toBe(true);
+          const bundlePath = path.resolve(
+            __dirname,
+            "./outputs/write-to-disk-query-string/bundle.js"
+          );
 
-              return done();
-            });
+          expect(fs.existsSync(bundlePath)).toBe(true);
         });
       });
 
@@ -2245,6 +2593,8 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll((done) => {
@@ -2258,36 +2608,27 @@ describe.each([
           close(done);
         });
 
-        it("should find the bundle files on disk", (done) => {
-          request(app)
-            .get("/static-one/bundle.js")
-            .expect(200, (firstError) => {
-              if (firstError) {
-                return done(firstError);
-              }
+        it("should find the bundle files on disk", async () => {
+          const response1 = await req.get("/static-one/bundle.js");
 
-              return request(app)
-                .get("/static-two/bundle.js")
-                .expect(200, (secondError) => {
-                  if (secondError) {
-                    return done(secondError);
-                  }
-                  const bundleFiles = [
-                    "./outputs/write-to-disk-multi-compiler/static-one/bundle.js",
-                    "./outputs/write-to-disk-multi-compiler/static-one/index.html",
-                    "./outputs/write-to-disk-multi-compiler/static-one/svg.svg",
-                    "./outputs/write-to-disk-multi-compiler/static-two/bundle.js",
-                  ];
+          expect(response1.statusCode).toEqual(200);
 
-                  for (const bundleFile of bundleFiles) {
-                    const bundlePath = path.resolve(__dirname, bundleFile);
+          const response2 = await req.get("/static-two/bundle.js");
 
-                    expect(fs.existsSync(bundlePath)).toBe(true);
-                  }
+          expect(response2.statusCode).toEqual(200);
 
-                  return done();
-                });
-            });
+          const bundleFiles = [
+            "./outputs/write-to-disk-multi-compiler/static-one/bundle.js",
+            "./outputs/write-to-disk-multi-compiler/static-one/index.html",
+            "./outputs/write-to-disk-multi-compiler/static-one/svg.svg",
+            "./outputs/write-to-disk-multi-compiler/static-two/bundle.js",
+          ];
+
+          for (const bundleFile of bundleFiles) {
+            const bundlePath = path.resolve(__dirname, bundleFile);
+
+            expect(fs.existsSync(bundlePath)).toBe(true);
+          }
         });
       });
 
@@ -2328,6 +2669,8 @@ describe.each([
               done();
             });
           });
+
+          req = request(app);
         });
 
         afterAll((done) => {
@@ -2338,23 +2681,17 @@ describe.each([
           close(done);
         });
 
-        it("should find the bundle file on disk", (done) => {
-          request(app)
-            .get(`/static/${hash}/bundle.js`)
-            .expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
+        it("should find the bundle file on disk", async () => {
+          const response = await req.get(`/static/${hash}/bundle.js`);
 
-              const bundlePath = path.resolve(
-                __dirname,
-                `./outputs/write-to-disk-with-hash/dist_${hash}/bundle.js`
-              );
+          expect(response.statusCode).toEqual(200);
 
-              expect(fs.existsSync(bundlePath)).toBe(true);
+          const bundlePath = path.resolve(
+            __dirname,
+            `./outputs/write-to-disk-with-hash/dist_${hash}/bundle.js`
+          );
 
-              return done();
-            });
+          expect(fs.existsSync(bundlePath)).toBe(true);
         });
       });
     });
@@ -2374,20 +2711,28 @@ describe.each([
         app.use(instance);
 
         listen = listenShorthand(done);
+
+        req = request(app);
       });
 
       afterAll(close);
 
-      it('should return the "200" code for the "POST" request to the bundle file', (done) => {
-        request(app).post("/public/bundle.js").expect(200, done);
+      it('should return the "200" code for the "POST" request to the bundle file', async () => {
+        const response = await req.post(`/public/bundle.js`);
+
+        expect(response.statusCode).toEqual(200);
       });
 
-      it('should return the "404" code for the "GET" request to the bundle file', (done) => {
-        request(app).get("/public/bundle.js").expect(404, done);
+      it('should return the "404" code for the "GET" request to the bundle file', async () => {
+        const response = await req.get(`/public/bundle.js`);
+
+        expect(response.statusCode).toEqual(404);
       });
 
-      it('should return the "200" code for the "HEAD" request to the bundle file', (done) => {
-        request(app).head("/public/bundle.js").expect(404, done);
+      it('should return the "200" code for the "HEAD" request to the bundle file', async () => {
+        const response = await req.head(`/public/bundle.js`);
+
+        expect(response.statusCode).toEqual(404);
       });
     });
 
@@ -2404,19 +2749,22 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterEach(close);
 
-        it('should return the "200" code for the "GET" request to the bundle file and return headers', (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect("X-nonsense-1", "yes")
-            .expect("X-nonsense-2", "no")
-            .expect(200, done);
+        it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["x-nonsense-1"]).toEqual("yes");
+          expect(response.headers["x-nonsense-2"]).toEqual("no");
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          // eslint-disable-next-line no-shadow
           app.use("/file.jpg", (req, res) => {
             // Express API
             if (res.send) {
@@ -2434,6 +2782,62 @@ describe.each([
           expect(res.headers["X-nonsense-2"]).toBeUndefined();
         });
       });
+
+      describe("works with array of objects", () => {
+        beforeEach((done) => {
+          const compiler = getCompiler(webpackConfig);
+
+          instance = middleware(compiler, {
+            headers: [
+              {
+                key: "X-Foo",
+                value: "value1",
+              },
+              {
+                key: "X-Bar",
+                value: "value2",
+              },
+            ],
+          });
+
+          app = framework();
+          app.use(instance);
+
+          listen = listenShorthand(done);
+
+          req = request(app);
+        });
+
+        afterEach(close);
+
+        it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["x-foo"]).toEqual("value1");
+          expect(response.headers["x-bar"]).toEqual("value2");
+        });
+
+        it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          // eslint-disable-next-line no-shadow
+          app.use("/file.jpg", (req, res) => {
+            // Express API
+            if (res.send) {
+              res.send("welcome");
+            }
+            // Connect API
+            else {
+              res.end("welcome");
+            }
+          });
+
+          const res = await request(app).get("/file.jpg");
+          expect(res.statusCode).toEqual(200);
+          expect(res.headers["x-foo"]).toBeUndefined();
+          expect(res.headers["x-bar"]).toBeUndefined();
+        });
+      });
+
       describe("works with function", () => {
         beforeEach((done) => {
           const compiler = getCompiler(webpackConfig);
@@ -2448,19 +2852,22 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterEach(close);
 
-        it('should return the "200" code for the "GET" request to the bundle file and return headers', (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect("X-nonsense-1", "yes")
-            .expect("X-nonsense-2", "no")
-            .expect(200, done);
+        it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["x-nonsense-1"]).toEqual("yes");
+          expect(response.headers["x-nonsense-2"]).toEqual("no");
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          // eslint-disable-next-line no-shadow
           app.use("/file.jpg", (req, res) => {
             // Express API
             if (res.send) {
@@ -2472,18 +2879,74 @@ describe.each([
             }
           });
 
-          const res = await request(app).get("/file.jpg");
+          const res = await req.get("/file.jpg");
           expect(res.statusCode).toEqual(200);
           expect(res.headers["X-nonsense-1"]).toBeUndefined();
           expect(res.headers["X-nonsense-2"]).toBeUndefined();
         });
       });
+
+      describe("works with function returning an array", () => {
+        beforeEach((done) => {
+          const compiler = getCompiler(webpackConfig);
+
+          instance = middleware(compiler, {
+            headers: () => [
+              {
+                key: "X-Foo",
+                value: "value1",
+              },
+              {
+                key: "X-Bar",
+                value: "value2",
+              },
+            ],
+          });
+
+          app = framework();
+          app.use(instance);
+
+          listen = listenShorthand(done);
+
+          req = request(app);
+        });
+
+        afterEach(close);
+
+        it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["x-foo"]).toEqual("value1");
+          expect(response.headers["x-bar"]).toEqual("value2");
+        });
+
+        it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          // eslint-disable-next-line no-shadow
+          app.use("/file.jpg", (req, res) => {
+            // Express API
+            if (res.send) {
+              res.send("welcome");
+            }
+            // Connect API
+            else {
+              res.end("welcome");
+            }
+          });
+
+          const res = await req.get("/file.jpg");
+          expect(res.statusCode).toEqual(200);
+          expect(res.headers["x-foo"]).toBeUndefined();
+          expect(res.headers["x-bar"]).toBeUndefined();
+        });
+      });
+
       describe("works with headers function with params", () => {
         beforeEach((done) => {
           const compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler, {
-            // eslint-disable-next-line no-unused-vars
+            // eslint-disable-next-line no-unused-vars, no-shadow
             headers: (req, res, context) => {
               res.setHeader("X-nonsense-1", "yes");
               res.setHeader("X-nonsense-2", "no");
@@ -2494,19 +2957,22 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterEach(close);
 
-        it('should return the "200" code for the "GET" request to the bundle file and return headers', (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect("X-nonsense-1", "yes")
-            .expect("X-nonsense-2", "no")
-            .expect(200, done);
+        it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["x-nonsense-1"]).toEqual("yes");
+          expect(response.headers["x-nonsense-2"]).toEqual("no");
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
+          // eslint-disable-next-line no-shadow
           app.use("/file.jpg", (req, res) => {
             // Express API
             if (res.send) {
@@ -2518,7 +2984,7 @@ describe.each([
             }
           });
 
-          const res = await request(app).get("/file.jpg");
+          const res = await req.get("/file.jpg");
           expect(res.statusCode).toEqual(200);
           expect(res.headers["X-nonsense-1"]).toBeUndefined();
           expect(res.headers["X-nonsense-2"]).toBeUndefined();
@@ -2537,12 +3003,16 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return the "200" code for the "GET" request to the bundle file', (done) => {
-          request(app).get("/public/bundle.js").expect(200, done);
+        it('should return the "200" code for the "GET" request to the bundle file', async () => {
+          const response = await req.get(`/public/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
         });
       });
 
@@ -2556,12 +3026,16 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return the "200" code for the "GET" request to the bundle file', (done) => {
-          request(app).get("/bundle.js").expect(200, done);
+        it('should return the "200" code for the "GET" request to the bundle file', async () => {
+          const response = await req.get("/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
         });
       });
     });
@@ -2597,6 +3071,7 @@ describe.each([
 
         app = framework();
         app.use(instance);
+        // eslint-disable-next-line no-shadow
         app.use((req, res) => {
           // eslint-disable-next-line prefer-destructuring
           locals = res.locals;
@@ -2614,22 +3089,17 @@ describe.each([
         });
 
         listen = listenShorthand(done);
+
+        req = request(app);
       });
 
       afterAll(close);
 
-      it('should return the "200" code for the "GET" request', (done) => {
-        request(app)
-          .get("/foo/bar")
-          .expect(200, (error) => {
-            if (error) {
-              return done(error);
-            }
+      it('should return the "200" code for the "GET" request', async () => {
+        const response = await req.get("/foo/bar");
 
-            expect(locals.webpack.devMiddleware).toBeDefined();
-
-            return done();
-          });
+        expect(response.statusCode).toEqual(200);
+        expect(locals.webpack.devMiddleware).toBeDefined();
       });
     });
 
@@ -2657,8 +3127,6 @@ describe.each([
           expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
             Stats
           );
-          expect(compiler.outputFileSystem).toHaveProperty("join");
-          expect(compiler.outputFileSystem).toHaveProperty("mkdirp");
         });
       });
 
@@ -2772,38 +3240,6 @@ describe.each([
           expect(instance.context.outputFileSystem).toHaveProperty("mkdirp");
         });
       });
-
-      describe("should throw an error on the invalid fs value - no join method", () => {
-        it("should throw an error", () => {
-          expect(() => {
-            const compiler = getCompiler(webpackConfig);
-
-            middleware(compiler, {
-              outputFileSystem: {
-                mkdirp: () => {},
-              },
-            });
-          }).toThrow(
-            "Invalid options: options.outputFileSystem.join() method is expected"
-          );
-        });
-      });
-
-      describe("should throw an error on the invalid fs value - no mkdirp method", () => {
-        it("should throw an error", () => {
-          expect(() => {
-            const compiler = getCompiler(webpackConfig);
-
-            middleware(compiler, {
-              outputFileSystem: {
-                join: () => {},
-              },
-            });
-          }).toThrow(
-            "Invalid options: options.outputFileSystem.mkdirp() method is expected"
-          );
-        });
-      });
     });
 
     describe("index option", () => {
@@ -2817,22 +3253,28 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return the "404" code for the "GET" request to the public path', (done) => {
-          request(app)
-            .get("/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(404, done);
+        it('should return the "404" code for the "GET" request to the public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(404);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return the "200" code for the "GET" request to the "index.html" file', (done) => {
-          request(app)
-            .get("/index.html")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return the "200" code for the "GET" request to the "index.html" file', async () => {
+          const response = await req.get("/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -2846,22 +3288,28 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll(close);
 
-        it('should return the "200" code for the "GET" request to the public path', (done) => {
-          request(app)
-            .get("/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return the "200" code for the "GET" request to the public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
 
-        it('should return the "200" code for the "GET" request to the public path', (done) => {
-          request(app)
-            .get("/index.html")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return the "200" code for the "GET" request to the public path', async () => {
+          const response = await req.get("/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -2886,6 +3334,8 @@ describe.each([
 
           listen = listenShorthand(done);
 
+          req = request(app);
+
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
           });
@@ -2897,11 +3347,13 @@ describe.each([
 
         afterAll(close);
 
-        it('should return the "200" code for the "GET" request to the public path', (done) => {
-          request(app)
-            .get("/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return the "200" code for the "GET" request to the public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -2926,6 +3378,8 @@ describe.each([
 
           listen = listenShorthand(done);
 
+          req = request(app);
+
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
           });
@@ -2937,8 +3391,10 @@ describe.each([
 
         afterAll(close);
 
-        it('should return the "200" code for the "GET" request to the public path', (done) => {
-          request(app).get("/").expect(200, done);
+        it('should return the "200" code for the "GET" request to the public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(200);
         });
       });
 
@@ -2966,6 +3422,8 @@ describe.each([
 
           listen = listenShorthand(done);
 
+          req = request(app);
+
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
           });
@@ -2977,11 +3435,13 @@ describe.each([
 
         afterAll(close);
 
-        it('should return the "200" code for the "GET" request to the public path', (done) => {
-          request(app)
-            .get("/")
-            .expect("Content-Type", "text/html; charset=utf-8")
-            .expect(200, done);
+        it('should return the "200" code for the "GET" request to the public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
         });
       });
 
@@ -3003,6 +3463,8 @@ describe.each([
 
           listen = listenShorthand(done);
 
+          req = request(app);
+
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
           });
@@ -3014,8 +3476,10 @@ describe.each([
 
         afterAll(close);
 
-        it('should return the "200" code for the "GET" request to the public path', (done) => {
-          request(app).get("/").expect(200, done);
+        it('should return the "200" code for the "GET" request to the public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(200);
         });
       });
 
@@ -3040,6 +3504,8 @@ describe.each([
 
           listen = listenShorthand(done);
 
+          req = request(app);
+
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
           });
@@ -3050,8 +3516,10 @@ describe.each([
 
         afterAll(close);
 
-        it('should return the "404" code for the "GET" request to the public path', (done) => {
-          request(app).get("/").expect(404, done);
+        it('should return the "404" code for the "GET" request to the public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(404);
         });
       });
 
@@ -3080,6 +3548,8 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(done);
+
+          req = request(app);
         });
 
         afterAll((done) => {
@@ -3088,8 +3558,10 @@ describe.each([
           close(done);
         });
 
-        it('should return the "404" code for the "GET" request to the public path', (done) => {
-          request(app).get("/").expect(404, done);
+        it('should return the "404" code for the "GET" request to the public path', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(404);
         });
       });
     });

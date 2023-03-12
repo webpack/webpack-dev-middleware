@@ -6,7 +6,6 @@
 
 [![npm][npm]][npm-url]
 [![node][node]][node-url]
-[![deps][deps]][deps-url]
 [![tests][tests]][tests-url]
 [![coverage][cover]][cover-url]
 [![chat][chat]][chat-url]
@@ -33,7 +32,9 @@ First thing's first, install the module:
 npm install webpack-dev-middleware --save-dev
 ```
 
-_Note: We do not recommend installing this module globally._
+> **Warning**
+>
+> _We do not recommend installing this module globally._
 
 ## Usage
 
@@ -59,6 +60,18 @@ See [below](#other-servers) for an example of use with fastify.
 
 ## Options
 
+|                    Name                     |           Type            |                    Default                    | Description                                                                                                          |
+| :-----------------------------------------: | :-----------------------: | :-------------------------------------------: | :------------------------------------------------------------------------------------------------------------------- |
+|          **[`methods`](#methods)**          |          `Array`          |              `[ 'GET', 'HEAD' ]`              | Allows to pass the list of HTTP request methods accepted by the middleware                                           |
+|          **[`headers`](#headers)**          | `Array\|Object\|Function` |                  `undefined`                  | Allows to pass custom HTTP headers on each request.                                                                  |
+|            **[`index`](#index)**            |     `Boolean\|String`     |                 `index.html`                  | If `false` (but not `undefined`), the server will not respond to requests to the root URL.                           |
+|        **[`mimeTypes`](#mimetypes)**        |         `Object`          |                  `undefined`                  | Allows to register custom mime types or extension mappings.                                                          |
+|       **[`publicPath`](#publicpath)**       |         `String`          |  `output.publicPath` (from a configuration)   | The public path that the middleware is bound to.                                                                     |
+|            **[`stats`](#stats)**            | `Boolean\|String\|Object` |        `stats` (from a configuration)         | Stats options object or preset name.                                                                                 |
+| **[`serverSideRender`](#serversiderender)** |         `Boolean`         |                  `undefined`                  | Instructs the module to enable or disable the server-side rendering mode.                                            |
+|      **[`writeToDisk`](#writetodisk)**      |    `Boolean\|Function`    |                    `false`                    | Instructs the module to write files to the configured location on disk as specified in your `webpack` configuration. |
+| **[`outputFileSystem`](#outputfilesystem)** |         `Object`          | [`memfs`](https://github.com/streamich/memfs) | Set the default file system which will be used by webpack as primary destination of generated files.                 |
+
 The middleware accepts an `options` Object. The following is a property reference for the Object.
 
 ### methods
@@ -70,7 +83,7 @@ This property allows a user to pass the list of HTTP request methods accepted by
 
 ### headers
 
-Type: `Object|Function`
+Type: `Array|Object|Function`
 Default: `undefined`
 
 This property allows a user to pass custom HTTP headers on each request.
@@ -98,9 +111,45 @@ webpackDevMiddleware(compiler, {
 });
 ```
 
+or
+
+```js
+webpackDevMiddleware(compiler, {
+  headers: [
+    {
+      key: "X-custom-header",
+      value: "foo"
+    },
+    {
+      key: "Y-custom-header",
+      value: "bar"
+    }
+  ]
+  },
+});
+```
+
+or
+
+```js
+webpackDevMiddleware(compiler, {
+  headers: () => [
+    {
+      key: "X-custom-header",
+      value: "foo"
+    },
+    {
+      key: "Y-custom-header",
+      value: "bar"
+    }
+  ]
+  },
+});
+```
+
 ### index
 
-Type: `Boolean|String`  
+Type: `Boolean|String`
 Default: `index.html`
 
 If `false` (but not `undefined`), the server will not respond to requests to the root URL.
@@ -356,8 +405,8 @@ In order to develop an app using server-side rendering, we need access to the
 [`stats`](https://github.com/webpack/docs/wiki/node.js-api#stats), which is
 generated with each build.
 
-With server-side rendering enabled, `webpack-dev-middleware` sets the `stats` to `res.locals.webpack.devMiddleware.stats`
-and the filesystem to `res.locals.webpack.devMiddleware.outputFileSystem` before invoking the next middleware,
+With server-side rendering enabled, `webpack-dev-middleware` sets the `stats` to `res.locals.webpack.devMiddleware.context.stats`
+and the filesystem to `res.locals.webpack.devMiddleware.context.outputFileSystem` before invoking the next middleware,
 allowing a developer to render the page body and manage the response to clients.
 
 _Note: Requests for bundle files will still be handled by
@@ -391,8 +440,8 @@ app.use(middleware(compiler, { serverSideRender: true }));
 // The following middleware would not be invoked until the latest build is finished.
 app.use((req, res) => {
   const { devMiddleware } = res.locals.webpack;
-  const outputFileSystem = devMiddleware.outputFileSystem;
-  const jsonWebpackStats = devMiddleware.stats.toJson();
+  const outputFileSystem = devMiddleware.context.outputFileSystem;
+  const jsonWebpackStats = devMiddleware.context.stats.toJson();
   const { assetsByChunkName, outputPath } = jsonWebpackStats;
 
   // Then use `assetsByChunkName` for server-side rendering
@@ -484,8 +533,6 @@ Please take a moment to read our contributing guidelines if you haven't yet done
 [npm-url]: https://npmjs.com/package/webpack-dev-middleware
 [node]: https://img.shields.io/node/v/webpack-dev-middleware.svg
 [node-url]: https://nodejs.org
-[deps]: https://david-dm.org/webpack/webpack-dev-middleware.svg
-[deps-url]: https://david-dm.org/webpack/webpack-dev-middleware
 [tests]: https://github.com/webpack/webpack-dev-middleware/workflows/webpack-dev-middleware/badge.svg
 [tests-url]: https://github.com/webpack/webpack-dev-middleware/actions
 [cover]: https://codecov.io/gh/webpack/webpack-dev-middleware/branch/master/graph/badge.svg

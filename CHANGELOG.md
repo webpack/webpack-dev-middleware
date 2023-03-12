@@ -2,6 +2,81 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.0.1](https://github.com/webpack/webpack-dev-middleware/compare/v6.0.0...v6.0.1) (2022-11-28)
+
+
+### Bug Fixes
+
+* update schema for `index` and `methods` properties ([#1397](https://github.com/webpack/webpack-dev-middleware/issues/1397)) ([cda328e](https://github.com/webpack/webpack-dev-middleware/commit/cda328ecd4692b873d9c09c8b2d0fa4bdfbeffe0))
+
+## [6.0.0](https://github.com/webpack/webpack-dev-middleware/compare/v5.3.3...v6.0.0) (2022-11-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* minimum supported webpack version is 5.0.0
+* minimum supported Nodejs version is 14.15.0
+
+### [5.3.3](https://github.com/webpack/webpack-dev-middleware/compare/v5.3.2...v5.3.3) (2022-05-18)
+
+
+### Bug Fixes
+
+* types for `Request` and `Response` ([#1271](https://github.com/webpack/webpack-dev-middleware/issues/1271)) ([eeb8aa8](https://github.com/webpack/webpack-dev-middleware/commit/eeb8aa8b116038671b7436173fab1994d4645767))
+
+### [5.3.2](https://github.com/webpack/webpack-dev-middleware/compare/v5.3.1...v5.3.2) (2022-05-17)
+
+
+### Bug Fixes
+
+* node types ([#1195](https://github.com/webpack/webpack-dev-middleware/issues/1195)) ([d68ab36](https://github.com/webpack/webpack-dev-middleware/commit/d68ab3607a43288dbb6efd9ee748ad3e650625a1))
+
+### [5.3.1](https://github.com/webpack/webpack-dev-middleware/compare/v5.3.0...v5.3.1) (2022-02-01)
+
+
+### Bug Fixes
+
+* types ([#1187](https://github.com/webpack/webpack-dev-middleware/issues/1187)) ([0f82e1d](https://github.com/webpack/webpack-dev-middleware/commit/0f82e1d6ebb9e11c60dc8ee668dd6f953042ada8))
+
+## [5.3.0](https://github.com/webpack/webpack-dev-middleware/compare/v5.2.2...v5.3.0) (2021-12-16)
+
+
+### Features
+
+* added types ([a2fa77f](https://github.com/webpack/webpack-dev-middleware/commit/a2fa77f87ad4d9912d08a68624e41380821d4d10))
+* removed cjs wrapper ([#1146](https://github.com/webpack/webpack-dev-middleware/issues/1146)) ([b6d53d3](https://github.com/webpack/webpack-dev-middleware/commit/b6d53d3f4d43c4c0e646e8d06355f3b4c9893a4f))
+
+### [5.2.2](https://github.com/webpack/webpack-dev-middleware/compare/v5.2.1...v5.2.2) (2021-11-17)
+
+
+### Chore
+
+* update `schema-utils` package to `4.0.0` version
+
+### [5.2.1](https://github.com/webpack/webpack-dev-middleware/compare/v5.2.0...v5.2.1) (2021-09-25)
+
+* internal release, no visible changes and features
+
+## [5.2.0](https://github.com/webpack/webpack-dev-middleware/compare/v5.1.0...v5.2.0) (2021-09-24)
+
+
+### Features
+
+* allow array for `headers` option ([#1042](https://github.com/webpack/webpack-dev-middleware/issues/1042)) ([5a6a3f0](https://github.com/webpack/webpack-dev-middleware/commit/5a6a3f0f8e6b0f8fef33629f0f6fa5bed545a88c))
+
+## [5.1.0](https://github.com/webpack/webpack-dev-middleware/compare/v5.0.0...v5.1.0) (2021-09-09)
+
+
+### Features
+
+* don't read full file if `Range` header is present ([e8b21f0](https://github.com/webpack/webpack-dev-middleware/commit/e8b21f0979c4807b28f7be45aff0d25cca1585ae))
+* output more information on errors ([#1024](https://github.com/webpack/webpack-dev-middleware/issues/1024)) ([7df9e44](https://github.com/webpack/webpack-dev-middleware/commit/7df9e449945a852622135f3f0857599ad7b8af64))
+
+
+### Bug Fixes
+
+* reduced package size by removing `mem` package ([#1027](https://github.com/webpack/webpack-dev-middleware/issues/1027)) ([0d55268](https://github.com/webpack/webpack-dev-middleware/commit/0d55268478f9cbba122855e2be9d7493350d4d5d))
+
 ## [5.0.0](https://github.com/webpack/webpack-dev-middleware/compare/v4.3.0...v5.0.0) (2021-06-02)
 
 

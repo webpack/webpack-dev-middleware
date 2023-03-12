@@ -96,6 +96,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdout).toContain("\u001b[1m");
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
@@ -134,6 +138,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -176,6 +184,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdout).not.toContain("\u001b[1m");
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
@@ -214,6 +226,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -255,6 +271,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
       expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
@@ -292,6 +312,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -334,6 +358,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdout).toContain("\u001b[1m");
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
@@ -372,6 +400,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -413,6 +445,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
       expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
@@ -450,6 +486,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -492,6 +532,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdout).toContain("\u001b[1m");
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
@@ -530,6 +574,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -572,6 +620,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdout).toContain("\u001b[1m");
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
@@ -610,6 +662,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -652,6 +708,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdout).toContain("\u001b[1m");
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
@@ -690,6 +750,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -733,6 +797,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdout).toContain("\u001b[1m");
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
@@ -771,6 +839,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -813,6 +885,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdout).toContain("\u001b[1m");
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
@@ -841,6 +917,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -889,6 +969,10 @@ describe("logging", () => {
         proc.stdin.write("|exit|");
       });
 
+      proc.on("error", (error) => {
+        done(error);
+      });
+
       proc.on("exit", () => {
         expect(extractErrorEntry(stderr)).toMatch("Error: EACCES");
 
@@ -932,6 +1016,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdout).toContain("\u001b[1m");
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
@@ -971,6 +1059,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -1013,6 +1105,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
       expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
@@ -1051,6 +1147,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -1094,6 +1194,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdout).toContain("\u001b[1m");
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
@@ -1133,6 +1237,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -1176,6 +1284,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdout).toContain("\u001b[1m");
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
@@ -1215,6 +1327,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -1258,6 +1374,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdout).toContain("\u001b[1m");
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
@@ -1299,6 +1419,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
       expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
@@ -1337,6 +1461,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -1380,6 +1508,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdout).toContain("\u001b[1m");
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
@@ -1419,6 +1551,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {
@@ -1462,6 +1598,10 @@ describe("logging", () => {
       proc.stdin.write("|exit|");
     });
 
+    proc.on("error", (error) => {
+      done(error);
+    });
+
     proc.on("exit", () => {
       expect(stdout).not.toContain("\u001b[1m");
       expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
@@ -1500,6 +1640,10 @@ describe("logging", () => {
     proc.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
       proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
     });
 
     proc.on("exit", () => {

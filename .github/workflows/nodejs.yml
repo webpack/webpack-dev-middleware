@@ -10,6 +10,9 @@ on:
       - master
       - next
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Lint - ${{ matrix.os }} - Node v${{ matrix.node-version }}
@@ -20,22 +23,23 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        node-version: [12.x]
+        node-version: [lts/*]
 
     runs-on: ${{ matrix.os }}
 
+    concurrency:
+      group: lint-${{ matrix.os }}-v${{ matrix.node-version }}-${{ github.ref }}
+      cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-
-      - name: Use latest NPM
-        run: sudo npm i -g npm
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -43,11 +47,17 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Build types
+        run: npm run build:types
+
+      - name: Check types
+        run: if [ -n "$(git status types --porcelain)" ]; then echo "Missing types. Update types by running 'npm run build:types'"; exit 1; else echo "All types are valid"; fi
+
       - name: Security audit
         run: npm run security
 
       - name: Check commit message
-        uses: wagoid/commitlint-github-action@v1
+        uses: wagoid/commitlint-github-action@v4
 
   test:
     name: Test - ${{ matrix.os }} - Node v${{ matrix.node-version }}, Webpack ${{ matrix.webpack-version }}
@@ -55,52 +65,31 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        node-version: [12.x, 14.x, 16.x]
-        webpack-version: [4, latest]
+        node-version: [14.x, 16.x, 18.x, 19.x]
+        webpack-version: [latest]
 
     runs-on: ${{ matrix.os }}
 
+    concurrency:
+      group: test-${{ matrix.os }}-v${{ matrix.node-version }}-${{ matrix.webpack-version }}-${{ github.ref }}
+      cancel-in-progress: true
+
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-
-      - name: Use latest NPM on ubuntu/macos
-        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
-        run: sudo npm i -g npm
-
-      - name: Use latest NPM on windows
-        if: matrix.os == 'windows-latest'
-        run: npm i -g npm
-
-      - name: Get npm cache directory
-        id: npm-cache-dir
-        run: |
-          echo "::set-output name=dir::$(npm config get cache)"
-
-      - name: Cache Node.js modules
-        id: cache
-        uses: actions/cache@v2
-        with:
-          path: ${{ steps.npm-cache-dir.outputs.dir }}
-          key: ${{ runner.os }}-${{ matrix.webpack-version }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.webpack-version }}-node-
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Install webpack ${{ matrix.webpack-version }}
-        if: matrix.webpack-version == '4'
-        run: npm i webpack@${{ matrix.webpack-version }}
 
       - name: Run tests for webpack version ${{ matrix.webpack-version }}
         run: npm run test:coverage -- --ci
 
       - name: Submit coverage data to codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
