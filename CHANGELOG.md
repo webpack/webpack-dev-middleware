@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.0.2](https://github.com/webpack/webpack-dev-middleware/compare/v6.0.1...v6.0.2) (2023-03-19)
+
+
+### Bug Fixes
+
+* make webpack optional peerDep ([#1488](https://github.com/webpack/webpack-dev-middleware/issues/1488)) ([81c39ba](https://github.com/webpack/webpack-dev-middleware/commit/81c39ba7709da6061335686a0a36b82ba8cab40a))
+
 ### [6.0.1](https://github.com/webpack/webpack-dev-middleware/compare/v6.0.0...v6.0.1) (2022-11-28)
 
 
