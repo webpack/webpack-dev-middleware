@@ -46,6 +46,11 @@
   "peerDependencies": {
     "webpack": "^5.0.0"
   },
+  "peerDependenciesMeta": {
+    "webpack": {
+      "optional": true
+    }
+  },
   "dependencies": {
     "colorette": "^2.0.10",
     "memfs": "^3.4.12",
