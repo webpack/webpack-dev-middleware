@@ -28,7 +28,7 @@ export = wdm;
  * @typedef {ReturnType<Compiler["watch"]>} MultiWatching
  */
 /**
- * @typedef {Compiler["outputFileSystem"] & { createReadStream?: import("fs").createReadStream, statSync?: import("fs").statSync, lstat?: import("fs").lstat, readFileSync?: import("fs").readFileSync }} OutputFileSystem
+ * @typedef {Compiler["outputFileSystem"] & { createReadStream?: import("fs").createReadStream, statSync?: import("fs").statSync, lstat?: import("fs").lstat, existsSync?: import("fs").existsSync, readFileSync?: import("fs").readFileSync }} OutputFileSystem
  */
 /** @typedef {ReturnType<Compiler["getInfrastructureLogger"]>} Logger */
 /**
@@ -66,6 +66,7 @@ export = wdm;
  * @property {boolean} [serverSideRender]
  * @property {OutputFileSystem} [outputFileSystem]
  * @property {boolean | string} [index]
+ * @property {boolean | undefined} [historyApiFallback]
  */
 /**
  * @template {IncomingMessage} RequestInternal
@@ -172,6 +173,7 @@ type Options<
   serverSideRender?: boolean | undefined;
   outputFileSystem?: OutputFileSystem | undefined;
   index?: string | boolean | undefined;
+  historyApiFallback?: boolean | undefined;
 };
 type API<
   RequestInternal extends import("http").IncomingMessage,
@@ -204,6 +206,7 @@ type OutputFileSystem = Compiler["outputFileSystem"] & {
   createReadStream?: typeof import("fs").createReadStream;
   statSync?: import("fs").StatSyncFn;
   lstat?: typeof import("fs").lstat;
+  existsSync?: typeof import("fs").existsSync;
   readFileSync?: typeof import("fs").readFileSync;
 };
 type Logger = ReturnType<Compiler["getInfrastructureLogger"]>;

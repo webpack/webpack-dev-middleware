@@ -39,6 +39,18 @@ exports[`validation should throw an error on the "headers" option with "true" va
     * options.headers should be an instance of function."
 `;
 
+exports[`validation should throw an error on the "historyApiFallback" option with "10" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.historyApiFallback should be a boolean.
+   -> When using the HTML5 History API, the index.html page will likely have to be served in place of any 404 responses. Enable historyApiFallback by setting it to true"
+`;
+
+exports[`validation should throw an error on the "historyApiFallback" option with "foo" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.historyApiFallback should be a boolean.
+   -> When using the HTML5 History API, the index.html page will likely have to be served in place of any 404 responses. Enable historyApiFallback by setting it to true"
+`;
+
 exports[`validation should throw an error on the "index" option with "{}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.index should be one of these:

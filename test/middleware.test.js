@@ -3040,6 +3040,27 @@ describe.each([
       });
     });
 
+    describe("historyApiFallback option", () => {
+      describe("index.html page will likely have to be served in place of any 404 responses", () => {
+        beforeAll((done) => {
+          const compiler = getCompiler(webpackConfig);
+
+          instance = middleware(compiler, { historyApiFallback: true });
+
+          app = framework();
+          app.use(instance);
+
+          listen = listenShorthand(done);
+        });
+
+        afterAll(close);
+
+        it('should return the "200" code for the "GET" request', (done) => {
+          request(app).get("/foo/bar/baz").expect(200, done);
+        });
+      });
+    });
+
     describe("serverSideRender option", () => {
       let locals;
 

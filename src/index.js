@@ -45,7 +45,7 @@ const noop = () => {};
  */
 
 /**
- * @typedef {Compiler["outputFileSystem"] & { createReadStream?: import("fs").createReadStream, statSync?: import("fs").statSync, lstat?: import("fs").lstat, readFileSync?: import("fs").readFileSync }} OutputFileSystem
+ * @typedef {Compiler["outputFileSystem"] & { createReadStream?: import("fs").createReadStream, statSync?: import("fs").statSync, lstat?: import("fs").lstat, existsSync?: import("fs").existsSync, readFileSync?: import("fs").readFileSync }} OutputFileSystem
  */
 
 /** @typedef {ReturnType<Compiler["getInfrastructureLogger"]>} Logger */
@@ -88,6 +88,7 @@ const noop = () => {};
  * @property {boolean} [serverSideRender]
  * @property {OutputFileSystem} [outputFileSystem]
  * @property {boolean | string} [index]
+ * @property {boolean | undefined} [historyApiFallback]
  */
 
 /**

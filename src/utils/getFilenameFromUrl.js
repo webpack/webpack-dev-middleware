@@ -95,8 +95,15 @@ function getFilenameFromUrl(context, url) {
         filename = path.join(outputPath, querystring.unescape(pathname));
       }
 
-      let fsStats;
+      if (
+        options.historyApiFallback &&
+        context.outputFileSystem.existsSync &&
+        !context.outputFileSystem.existsSync(filename)
+      ) {
+        filename = path.join(outputPath);
+      }
 
+      let fsStats;
       try {
         fsStats =
           /** @type {import("fs").statSync} */
