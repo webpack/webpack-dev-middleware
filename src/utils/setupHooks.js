@@ -1,5 +1,3 @@
-const { isColorSupported } = require("colorette");
-
 /** @typedef {import("webpack").Configuration} Configuration */
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
@@ -113,7 +111,9 @@ function setupHooks(context) {
 
               if (typeof childStatsOptions.colors === "undefined") {
                 // eslint-disable-next-line no-param-reassign
-                childStatsOptions.colors = isColorSupported;
+                childStatsOptions.colors =
+                  // eslint-disable-next-line global-require
+                  require("colorette").isColorSupported;
               }
 
               return childStatsOptions;
@@ -126,7 +126,8 @@ function setupHooks(context) {
         );
 
         if (typeof statsOptions.colors === "undefined") {
-          statsOptions.colors = isColorSupported;
+          // eslint-disable-next-line global-require
+          statsOptions.colors = require("colorette").isColorSupported;
         }
       }
 
