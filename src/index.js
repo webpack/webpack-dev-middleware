@@ -80,6 +80,7 @@ const noop = () => {};
  * @template {ServerResponse} ResponseInternal
  * @typedef {Object} Options
  * @property {{[key: string]: string}} [mimeTypes]
+ * @property {string | undefined} [mimeTypeDefault]
  * @property {boolean | ((targetPath: string) => boolean)} [writeToDisk]
  * @property {string} [methods]
  * @property {Headers<RequestInternal, ResponseInternal>} [headers]

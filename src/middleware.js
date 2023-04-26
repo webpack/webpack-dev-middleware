@@ -146,6 +146,12 @@ function wrapper(context) {
         // https://tools.ietf.org/html/rfc7231#section-3.1.1.5
         if (contentType) {
           setHeaderForResponse(res, "Content-Type", contentType);
+        } else if (context.options.mimeTypeDefault) {
+          setHeaderForResponse(
+            res,
+            "Content-Type",
+            context.options.mimeTypeDefault
+          );
         }
       }
 

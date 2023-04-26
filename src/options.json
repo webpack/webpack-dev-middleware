@@ -6,6 +6,11 @@
       "link": "https://github.com/webpack/webpack-dev-middleware#mimetypes",
       "type": "object"
     },
+    "mimeTypeDefault": {
+      "description": "Allows a user to register a default mime type when we can't determine the content type.",
+      "link": "https://github.com/webpack/webpack-dev-middleware#mimetypedefault",
+      "type": "string"
+    },
     "writeToDisk": {
       "description": "Allows to write generated files on disk.",
       "link": "https://github.com/webpack/webpack-dev-middleware#writetodisk",
