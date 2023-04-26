@@ -58,6 +58,7 @@ export = wdm;
  * @template {ServerResponse} ResponseInternal
  * @typedef {Object} Options
  * @property {{[key: string]: string}} [mimeTypes]
+ * @property {string | undefined} [mimeTypeDefault]
  * @property {boolean | ((targetPath: string) => boolean)} [writeToDisk]
  * @property {string} [methods]
  * @property {Headers<RequestInternal, ResponseInternal>} [headers]
@@ -164,6 +165,7 @@ type Options<
         [key: string]: string;
       }
     | undefined;
+  mimeTypeDefault?: string | undefined;
   writeToDisk?: boolean | ((targetPath: string) => boolean) | undefined;
   methods?: string | undefined;
   headers?: Headers<RequestInternal, ResponseInternal>;
