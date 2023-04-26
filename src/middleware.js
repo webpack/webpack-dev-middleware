@@ -1,7 +1,6 @@
 const path = require("path");
 
 const mime = require("mime-types");
-const parseRange = require("range-parser");
 
 const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
 const {
@@ -173,7 +172,8 @@ function wrapper(context) {
           });
         });
 
-        const parsedRanges = parseRange(size, rangeHeader, {
+        // eslint-disable-next-line global-require
+        const parsedRanges = require("range-parser")(size, rangeHeader, {
           combine: true,
         });
 
