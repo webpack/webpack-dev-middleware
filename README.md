@@ -388,15 +388,34 @@ instance.waitUntilValid(() => {
 });
 ```
 
-## Known Issues
+## FAQ
 
-### Multiple Successive Builds
+### Avoid blocking requests to non-webpack resources.
 
-Watching will frequently cause multiple compilations
-as the bundle changes during compilation. This is due in part to cross-platform
-differences in file watchers, so that webpack doesn't loose file changes when
-watched files change rapidly. If you run into this situation, please make use of
-the [`TimeFixPlugin`](https://github.com/egoist/time-fix-plugin).
+Since `output.publicPath` and `output.filename`/`output.chunkFilename` can be dynamic, it's not possible to know which files are webpack bundles (and they public paths) and which are not, so we can't avoid blocking requests.
+
+But there is a solution to avoid it - mount the middleware to a non-root route, for example:
+
+```js
+const webpack = require("webpack");
+const middleware = require("webpack-dev-middleware");
+const compiler = webpack({
+  // webpack options
+});
+const express = require("express");
+const app = express();
+
+// Mounting the middleware to the non-root route allows avoids this.
+// Note - check your public path, if you want to handle `/dist/`, you need to setup `output.publicPath` to `/` value.
+app.use(
+  "/dist/",
+  middleware(compiler, {
+    // webpack-dev-middleware options
+  })
+);
+
+app.listen(3000, () => console.log("Example app listening on port 3000!"));
+```
 
 ## Server-Side Rendering
 
