@@ -10,7 +10,6 @@ import del from "del";
 import middleware from "../src";
 
 import getCompiler from "./helpers/getCompiler";
-import isWebpack5 from "./helpers/isWebpack5";
 
 import webpackConfig from "./fixtures/webpack.config";
 import webpackMultiConfig from "./fixtures/webpack.array.config";
@@ -20,7 +19,7 @@ import webpackQueryStringConfig from "./fixtures/webpack.querystring.config";
 import webpackClientServerConfig from "./fixtures/webpack.client.server.config";
 
 // Suppress unnecessary stats output
-global.console.log = jest.fn();
+// global.console.log = jest.fn();
 
 describe.each([
   ["express", express],
@@ -1293,12 +1292,8 @@ describe.each([
             ...webpackConfig,
             output: {
               filename: "bundle.js",
-              publicPath: isWebpack5()
-                ? "/static/[fullhash]/"
-                : "/static/[hash]/",
-              path: isWebpack5()
-                ? path.resolve(__dirname, "./outputs/other-basic-[fullhash]")
-                : path.resolve(__dirname, "./outputs/other-basic-[hash]"),
+              publicPath: "/static/[fullhash]/",
+              path: path.resolve(__dirname, "./outputs/other-basic-[fullhash]"),
             },
           });
 
@@ -1366,36 +1361,22 @@ describe.each([
               ...webpackMultiConfig[0],
               output: {
                 filename: "bundle.js",
-                path: isWebpack5()
-                  ? path.resolve(
-                      __dirname,
-                      "./outputs/array-[fullhash]/static-one"
-                    )
-                  : path.resolve(
-                      __dirname,
-                      "./outputs/array-[hash]/static-one"
-                    ),
-                publicPath: isWebpack5()
-                  ? "/static-one/[fullhash]/"
-                  : "/static-one/[hash]/",
+                path: path.resolve(
+                  __dirname,
+                  "./outputs/array-[fullhash]/static-one"
+                ),
+                publicPath: "/static-one/[fullhash]/",
               },
             },
             {
               ...webpackMultiConfig[1],
               output: {
                 filename: "bundle.js",
-                path: isWebpack5()
-                  ? path.resolve(
-                      __dirname,
-                      "./outputs/array-[fullhash]/static-two"
-                    )
-                  : path.resolve(
-                      __dirname,
-                      "./outputs/array-[hash]/static-two"
-                    ),
-                publicPath: isWebpack5()
-                  ? "/static-two/[fullhash]/"
-                  : "/static-two/[hash]/",
+                path: path.resolve(
+                  __dirname,
+                  "./outputs/array-[fullhash]/static-two"
+                ),
+                publicPath: "/static-two/[fullhash]/",
               },
             },
           ]);
@@ -2688,18 +2669,11 @@ describe.each([
             ...{
               output: {
                 filename: "bundle.js",
-                publicPath: isWebpack5()
-                  ? "/static/[fullhash]/"
-                  : "/static/[hash]/",
-                path: isWebpack5()
-                  ? path.resolve(
-                      __dirname,
-                      "./outputs/write-to-disk-with-hash/dist_[fullhash]"
-                    )
-                  : path.resolve(
-                      __dirname,
-                      "./outputs/write-to-disk-with-hash/dist_[hash]"
-                    ),
+                publicPath: "/static/[fullhash]/",
+                path: path.resolve(
+                  __dirname,
+                  "./outputs/write-to-disk-with-hash/dist_[fullhash]"
+                ),
               },
             },
           });
@@ -3587,6 +3561,64 @@ describe.each([
           const response = await req.get("/");
 
           expect(response.statusCode).toEqual(404);
+        });
+      });
+    });
+
+    describe("modifyResponseData option", () => {
+      describe("should work", () => {
+        let compiler;
+
+        beforeAll((done) => {
+          const outputPath = path.resolve(
+            __dirname,
+            "./outputs/modify-response-data"
+          );
+
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          instance = middleware(compiler, {
+            modifyResponseData: () => {
+              const result = Buffer.from("test");
+
+              return { data: result, byteLength: result.length };
+            },
+          });
+
+          app = framework();
+          app.use(instance);
+
+          listen = listenShorthand(done);
+
+          req = request(app);
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "file.html"),
+            "welcome"
+          );
+        });
+
+        afterAll((done) => {
+          close(done);
+        });
+
+        it("should modify file", async () => {
+          const response = await req.get("/file.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8"
+          );
+          expect(response.text).toEqual("test");
         });
       });
     });

@@ -124,6 +124,11 @@
           "minLength": 1
         }
       ]
+    },
+    "modifyResponseData": {
+      "description": "Allows to set up a callback to change the response data.",
+      "link": "https://github.com/webpack/webpack-dev-middleware#modifyresponsedata",
+      "instanceof": "Function"
     }
   },
   "additionalProperties": false

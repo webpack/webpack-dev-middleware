@@ -77,12 +77,26 @@ exports[`validation should throw an error on the "methods" option with "true" va
    -> Read more at https://github.com/webpack/webpack-dev-middleware#methods"
 `;
 
+exports[`validation should throw an error on the "mimeTypeDefault" option with "0" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.mimeTypeDefault should be a string.
+   -> Allows a user to register a default mime type when we can't determine the content type.
+   -> Read more at https://github.com/webpack/webpack-dev-middleware#mimetypedefault"
+`;
+
 exports[`validation should throw an error on the "mimeTypes" option with "foo" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.mimeTypes should be an object:
    object { … }
    -> Allows a user to register custom mime types or extension mappings.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#mimetypes"
+`;
+
+exports[`validation should throw an error on the "modifyResponseData" option with "true" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.modifyResponseData should be an instance of function.
+   -> Allows to set up a callback to change the response data.
+   -> Read more at https://github.com/webpack/webpack-dev-middleware#modifyresponsedata"
 `;
 
 exports[`validation should throw an error on the "outputFileSystem" option with "false" value 1`] = `

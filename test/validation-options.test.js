@@ -55,6 +55,14 @@ describe("validation", () => {
       success: [true, false, "normal", "verbose", { all: false, assets: true }],
       failure: [0],
     },
+    mimeTypeDefault: {
+      success: ["text/plain"],
+      failure: [0],
+    },
+    modifyResponseData: {
+      success: [(_ignore, _ignore1, foo, bar) => {return { foo, bar }}],
+      failure: [true],
+    },
   };
 
   function stringifyValue(value) {

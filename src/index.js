@@ -17,6 +17,7 @@ const noop = () => {};
 /** @typedef {import("webpack").Configuration} Configuration */
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
+/** @typedef {import("fs").ReadStream} ReadStream */
 
 /**
  * @typedef {Object} ExtendedServerResponse
@@ -56,6 +57,23 @@ const noop = () => {};
  */
 
 /**
+ * @typedef {Object} ResponseData
+ * @property {string | Buffer | ReadStream} data
+ * @property {number} byteLength
+ */
+
+/**
+ * @template {IncomingMessage} RequestInternal
+ * @template {ServerResponse} ResponseInternal
+ * @callback ModifyResponseData
+ * @param {RequestInternal} req
+ * @param {ResponseInternal} res
+ * @param {string | Buffer | ReadStream} data
+ * @param {number} byteLength
+ * @return {ResponseData}
+ */
+
+/**
  * @template {IncomingMessage} RequestInternal
  * @template {ServerResponse} ResponseInternal
  * @typedef {Object} Context
@@ -89,6 +107,7 @@ const noop = () => {};
  * @property {boolean} [serverSideRender]
  * @property {OutputFileSystem} [outputFileSystem]
  * @property {boolean | string} [index]
+ * @property {ModifyResponseData<RequestInternal, ResponseInternal>} [modifyResponseData]
  */
 
 /**
