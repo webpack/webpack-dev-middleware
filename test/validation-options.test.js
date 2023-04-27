@@ -60,7 +60,11 @@ describe("validation", () => {
       failure: [0],
     },
     modifyResponseData: {
-      success: [(_ignore, _ignore1, foo, bar) => {return { foo, bar }}],
+      success: [
+        (_ignore, _ignore1, foo, bar) => {
+          return { foo, bar };
+        },
+      ],
       failure: [true],
     },
   };
