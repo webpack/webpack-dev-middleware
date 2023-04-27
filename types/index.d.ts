@@ -7,6 +7,7 @@ export = wdm;
 /** @typedef {import("webpack").Configuration} Configuration */
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
+/** @typedef {import("fs").ReadStream} ReadStream */
 /**
  * @typedef {Object} ExtendedServerResponse
  * @property {{ webpack?: { devMiddleware?: Context<IncomingMessage, ServerResponse> } }} [locals]
@@ -34,6 +35,21 @@ export = wdm;
 /**
  * @callback Callback
  * @param {Stats | MultiStats} [stats]
+ */
+/**
+ * @typedef {Object} ResponseData
+ * @property {string | Buffer | ReadStream} data
+ * @property {number} byteLength
+ */
+/**
+ * @template {IncomingMessage} RequestInternal
+ * @template {ServerResponse} ResponseInternal
+ * @callback ModifyResponseData
+ * @param {RequestInternal} req
+ * @param {ResponseInternal} res
+ * @param {string | Buffer | ReadStream} data
+ * @param {number} byteLength
+ * @return {ResponseData}
  */
 /**
  * @template {IncomingMessage} RequestInternal
@@ -67,6 +83,7 @@ export = wdm;
  * @property {boolean} [serverSideRender]
  * @property {OutputFileSystem} [outputFileSystem]
  * @property {boolean | string} [index]
+ * @property {ModifyResponseData<RequestInternal, ResponseInternal>} [modifyResponseData]
  */
 /**
  * @template {IncomingMessage} RequestInternal
@@ -131,6 +148,7 @@ declare namespace wdm {
     Configuration,
     Stats,
     MultiStats,
+    ReadStream,
     ExtendedServerResponse,
     IncomingMessage,
     ServerResponse,
@@ -141,6 +159,8 @@ declare namespace wdm {
     OutputFileSystem,
     Logger,
     Callback,
+    ResponseData,
+    ModifyResponseData,
     Context,
     Headers,
     Options,
@@ -174,6 +194,9 @@ type Options<
   serverSideRender?: boolean | undefined;
   outputFileSystem?: OutputFileSystem | undefined;
   index?: string | boolean | undefined;
+  modifyResponseData?:
+    | ModifyResponseData<RequestInternal, ResponseInternal>
+    | undefined;
 };
 type API<
   RequestInternal extends import("http").IncomingMessage,
@@ -184,6 +207,7 @@ type Schema = import("schema-utils/declarations/validate").Schema;
 type Configuration = import("webpack").Configuration;
 type Stats = import("webpack").Stats;
 type MultiStats = import("webpack").MultiStats;
+type ReadStream = import("fs").ReadStream;
 type ExtendedServerResponse = {
   locals?:
     | {
@@ -212,6 +236,19 @@ type Logger = ReturnType<Compiler["getInfrastructureLogger"]>;
 type Callback = (
   stats?: import("webpack").Stats | import("webpack").MultiStats | undefined
 ) => any;
+type ResponseData = {
+  data: string | Buffer | ReadStream;
+  byteLength: number;
+};
+type ModifyResponseData<
+  RequestInternal extends import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse
+> = (
+  req: RequestInternal,
+  res: ResponseInternal,
+  data: string | Buffer | ReadStream,
+  byteLength: number
+) => ResponseData;
 type Context<
   RequestInternal extends import("http").IncomingMessage,
   ResponseInternal extends ServerResponse

@@ -202,14 +202,25 @@ function wrapper(context) {
           );
           setHeaderForResponse(res, "Content-Type", "text/html; charset=utf-8");
 
-          const document = createHtmlDocument(416, `Error: ${message}`);
-          const byteLength = Buffer.byteLength(document);
+          /** @type {string | Buffer | import("fs").ReadStream} */
+          let document = createHtmlDocument(416, `Error: ${message}`);
+          let byteLength = Buffer.byteLength(document);
 
           setHeaderForResponse(
             res,
             "Content-Length",
             Buffer.byteLength(document)
           );
+
+          if (context.options.modifyResponseData) {
+            ({ data: document, byteLength } =
+              context.options.modifyResponseData(
+                req,
+                res,
+                document,
+                byteLength
+              ));
+          }
 
           send(req, res, document, byteLength);
 
@@ -244,7 +255,7 @@ function wrapper(context) {
       const isFsSupportsStream =
         typeof context.outputFileSystem.createReadStream === "function";
 
-      let bufferOtStream;
+      let bufferOrStream;
       let byteLength;
 
       try {
@@ -253,7 +264,7 @@ function wrapper(context) {
           typeof end !== "undefined" &&
           isFsSupportsStream
         ) {
-          bufferOtStream =
+          bufferOrStream =
             /** @type {import("fs").createReadStream} */
             (context.outputFileSystem.createReadStream)(filename, {
               start,
@@ -261,10 +272,10 @@ function wrapper(context) {
             });
           byteLength = end - start + 1;
         } else {
-          bufferOtStream = /** @type {import("fs").readFileSync} */ (
+          bufferOrStream = /** @type {import("fs").readFileSync} */ (
             context.outputFileSystem.readFileSync
           )(filename);
-          ({ byteLength } = bufferOtStream);
+          ({ byteLength } = bufferOrStream);
         }
       } catch (_ignoreError) {
         await goNext();
@@ -272,7 +283,17 @@ function wrapper(context) {
         return;
       }
 
-      send(req, res, bufferOtStream, byteLength);
+      if (context.options.modifyResponseData) {
+        ({ data: bufferOrStream, byteLength } =
+          context.options.modifyResponseData(
+            req,
+            res,
+            bufferOrStream,
+            byteLength
+          ));
+      }
+
+      send(req, res, bufferOrStream, byteLength);
     }
   };
 }
