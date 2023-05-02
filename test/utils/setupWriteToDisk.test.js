@@ -1,5 +1,4 @@
 import fs from "fs";
-import path from "path";
 
 import setupWriteToDisk from "../../src/utils/setupWriteToDisk";
 
@@ -82,34 +81,6 @@ describe("setupWriteToDisk", () => {
 
     expect(filter.mock.calls.length).toEqual(1);
     expect(filter.mock.calls[0][0]).toEqual("targetPath");
-    // the callback should always be called
-    expect(cb.mock.calls.length).toEqual(1);
-    // the filter prevents a directory from being made
-    expect(mkdirSpy.mock.calls.length).toEqual(0);
-  });
-
-  it("handles query string with webpack@4", () => {
-    const filter = jest.fn(() => false);
-    context.options = {
-      writeToDisk: filter,
-    };
-    setupWriteToDisk(context);
-    const cb = jest.fn();
-    // webpack@4 info style
-    runAssetEmitted(
-      "file?query=example",
-      {
-        targetPath: "targetPath",
-      },
-      cb
-    );
-
-    // the getPath helper is needed for webpack@4
-    expect(getPath.mock.calls.length).toEqual(1);
-
-    expect(filter.mock.calls.length).toEqual(1);
-    // need to fix path for windows test
-    expect(filter.mock.calls[0][0]).toEqual(path.join("/output/path/file"));
     // the callback should always be called
     expect(cb.mock.calls.length).toEqual(1);
     // the filter prevents a directory from being made
