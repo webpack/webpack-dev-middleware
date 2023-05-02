@@ -5,6 +5,7 @@ import setupWriteToDisk from "../../src/utils/setupWriteToDisk";
 
 const mkdirSpy = jest.spyOn(fs, "mkdir");
 const writeFileSpy = jest.spyOn(fs, "writeFile");
+const unlinkFileSpy = jest.spyOn(fs, "unlink");
 
 describe("setupWriteToDisk", () => {
   let context;
@@ -41,6 +42,7 @@ describe("setupWriteToDisk", () => {
     getPath.mockClear();
     mkdirSpy.mockClear();
     writeFileSpy.mockClear();
+    unlinkFileSpy.mockClear();
   });
 
   const runAssetEmitted = (...args) => {
@@ -178,6 +180,48 @@ describe("setupWriteToDisk", () => {
       expect(cb.mock.calls.length).toEqual(1);
       // no errors are expected
       expect(cb.mock.calls).toMatchSnapshot();
+    });
+  });
+
+  const cleanOptions = [
+    {
+      title: "true",
+      value: true,
+    },
+    {
+      title: "false",
+      value: false,
+    },
+    {
+      title: "an object",
+      value: { keep: () => true },
+    },
+  ];
+
+  cleanOptions.forEach((cleanOption) => {
+    it(`calls node fs unlink when using memfs and clean is ${cleanOption.title}`, (done) => {
+      const unlink = jest.fn((_, callback) => callback());
+      context.compiler.outputFileSystem = { unlink };
+      context.compiler.options = {
+        output: {
+          clean: cleanOption.value,
+        },
+      };
+      context.options = {
+        writeToDisk: true,
+      };
+      setupWriteToDisk(context);
+
+      context.compiler.outputFileSystem.unlink("/target/path/file", () => {
+        // the memfs unlink should always be called
+        expect(unlink.mock.calls.length).toEqual(1);
+
+        // the fs unlink should be called when the clean value is truthy
+        const expectedCallCount = cleanOption.value ? 1 : 0;
+        expect(unlinkFileSpy.mock.calls.length).toEqual(expectedCallCount);
+
+        done();
+      });
     });
   });
 });
