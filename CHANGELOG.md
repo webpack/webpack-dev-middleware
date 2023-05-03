@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [6.1.0](https://github.com/webpack/webpack-dev-middleware/compare/v6.0.2...v6.1.0) (2023-05-03)
+
+
+### Features
+
+* added `mimeTypeDefault` option ([#1527](https://github.com/webpack/webpack-dev-middleware/issues/1527)) ([503d290](https://github.com/webpack/webpack-dev-middleware/commit/503d290b13f33fbbcde6353e98d28f665310655b))
+* added `modifyResponseData` option ([#1529](https://github.com/webpack/webpack-dev-middleware/issues/1529)) ([35dac70](https://github.com/webpack/webpack-dev-middleware/commit/35dac7054ce9004a30e434b909c3837e63e3df7d))
+
+
+### Bug Fixes
+
+* don't use `memory-fs` when `writeToDisk` is `true` ([#1537](https://github.com/webpack/webpack-dev-middleware/issues/1537)) ([852245e](https://github.com/webpack/webpack-dev-middleware/commit/852245e3ef601827c760596cbd0b19e706ebe3ea))
+* faster startup time ([f5f033b](https://github.com/webpack/webpack-dev-middleware/commit/f5f033b2ee03c2255ba759a914e3a1ea86c99cf6))
+
 ### [6.0.2](https://github.com/webpack/webpack-dev-middleware/compare/v6.0.1...v6.0.2) (2023-03-19)
 
 
