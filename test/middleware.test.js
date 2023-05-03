@@ -2373,6 +2373,84 @@ describe.each([
         });
       });
 
+      describe('should work with "true" value when the `output.clean` is `true`', () => {
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/write-to-disk-true-with-clean"
+        );
+
+        let compiler;
+
+        beforeAll((done) => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              clean: true,
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          instance = middleware(compiler, { writeToDisk: true });
+
+          fs.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          fs.writeFileSync(path.resolve(outputPath, "test.json"), "{}");
+
+          app = framework();
+          app.use(instance);
+
+          listen = listenShorthand(done);
+
+          req = request(app);
+        });
+
+        afterAll((done) => {
+          del.sync(outputPath);
+
+          close(done);
+        });
+
+        it("should find the bundle file on disk", (done) => {
+          request(app)
+            .get("/bundle.js")
+            .expect(200, (error) => {
+              if (error) {
+                return done(error);
+              }
+
+              const bundlePath = path.resolve(outputPath, "bundle.js");
+
+              expect(fs.existsSync(path.resolve(outputPath, "test.json"))).toBe(
+                false
+              );
+
+              expect(
+                compiler.hooks.assetEmitted.taps.filter(
+                  (hook) => hook.name === "DevMiddleware"
+                ).length
+              ).toBe(1);
+              expect(fs.existsSync(bundlePath)).toBe(true);
+
+              instance.invalidate();
+
+              return compiler.hooks.done.tap(
+                "DevMiddlewareWriteToDiskTest",
+                () => {
+                  expect(
+                    compiler.hooks.assetEmitted.taps.filter(
+                      (hook) => hook.name === "DevMiddleware"
+                    ).length
+                  ).toBe(1);
+
+                  done();
+                }
+              );
+            });
+        });
+      });
+
       describe('should work with "false" value', () => {
         let compiler;
 
