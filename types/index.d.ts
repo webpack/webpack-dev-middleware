@@ -76,7 +76,7 @@ export = wdm;
  * @property {{[key: string]: string}} [mimeTypes]
  * @property {string | undefined} [mimeTypeDefault]
  * @property {boolean | ((targetPath: string) => boolean)} [writeToDisk]
- * @property {string} [methods]
+ * @property {string[]} [methods]
  * @property {Headers<RequestInternal, ResponseInternal>} [headers]
  * @property {NonNullable<Configuration["output"]>["publicPath"]} [publicPath]
  * @property {Configuration["stats"]} [stats]
@@ -187,7 +187,7 @@ type Options<
     | undefined;
   mimeTypeDefault?: string | undefined;
   writeToDisk?: boolean | ((targetPath: string) => boolean) | undefined;
-  methods?: string | undefined;
+  methods?: string[] | undefined;
   headers?: Headers<RequestInternal, ResponseInternal>;
   publicPath?: NonNullable<Configuration["output"]>["publicPath"];
   stats?: Configuration["stats"];
