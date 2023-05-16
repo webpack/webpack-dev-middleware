@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.1.1](https://github.com/webpack/webpack-dev-middleware/compare/v6.1.0...v6.1.1) (2023-05-16)
+
+
+### Bug Fixes
+
+* **types:** `methods` should be string array ([#1550](https://github.com/webpack/webpack-dev-middleware/issues/1550)) ([41b2f77](https://github.com/webpack/webpack-dev-middleware/commit/41b2f77106358acb7a9d518b17b30016c3a15872))
+
 ## [6.1.0](https://github.com/webpack/webpack-dev-middleware/compare/v6.0.2...v6.1.0) (2023-05-03)
 
 
