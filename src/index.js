@@ -285,12 +285,18 @@ function wdm(compiler, options = {}) {
   (instance).invalidate = (callback = noop) => {
     ready(context, callback);
 
-    context.watching.invalidate();
+    /**
+     * @type {NonNullable<Context<RequestInternal, ResponseInternal>["watching"]>}
+     */
+    (context.watching).invalidate();
   };
 
   /** @type {API<RequestInternal, ResponseInternal>} */
   (instance).close = (callback = noop) => {
-    context.watching.close(callback);
+    /**
+     * @type {NonNullable<Context<RequestInternal, ResponseInternal>["watching"]>}
+     */
+    (context.watching).close(callback);
   };
 
   /** @type {API<RequestInternal, ResponseInternal>} */

@@ -173,31 +173,8 @@ declare namespace wdm {
     API,
   };
 }
-type ServerResponse = import("http").ServerResponse & ExtendedServerResponse;
 type Compiler = import("webpack").Compiler;
 type MultiCompiler = import("webpack").MultiCompiler;
-type Options<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse
-> = {
-  mimeTypes?:
-    | {
-        [key: string]: string;
-      }
-    | undefined;
-  mimeTypeDefault?: string | undefined;
-  writeToDisk?: boolean | ((targetPath: string) => boolean) | undefined;
-  methods?: string[] | undefined;
-  headers?: Headers<RequestInternal, ResponseInternal>;
-  publicPath?: NonNullable<Configuration["output"]>["publicPath"];
-  stats?: Configuration["stats"];
-  serverSideRender?: boolean | undefined;
-  outputFileSystem?: OutputFileSystem | undefined;
-  index?: string | boolean | undefined;
-  modifyResponseData?:
-    | ModifyResponseData<RequestInternal, ResponseInternal>
-    | undefined;
-};
 type API<
   RequestInternal extends import("http").IncomingMessage,
   ResponseInternal extends ServerResponse
@@ -222,6 +199,7 @@ type ExtendedServerResponse = {
     | undefined;
 };
 type IncomingMessage = import("http").IncomingMessage;
+type ServerResponse = import("http").ServerResponse & ExtendedServerResponse;
 type NextFunction = (err?: any) => void;
 type WatchOptions = NonNullable<Configuration["watchOptions"]>;
 type Watching = Compiler["watching"];
@@ -277,6 +255,28 @@ type Headers<
       context: Context<RequestInternal, ResponseInternal>
     ) => void | undefined | Record<string, string | number>)
   | undefined;
+type Options<
+  RequestInternal extends import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse
+> = {
+  mimeTypes?:
+    | {
+        [key: string]: string;
+      }
+    | undefined;
+  mimeTypeDefault?: string | undefined;
+  writeToDisk?: boolean | ((targetPath: string) => boolean) | undefined;
+  methods?: string[] | undefined;
+  headers?: Headers<RequestInternal, ResponseInternal>;
+  publicPath?: NonNullable<Configuration["output"]>["publicPath"];
+  stats?: Configuration["stats"];
+  serverSideRender?: boolean | undefined;
+  outputFileSystem?: OutputFileSystem | undefined;
+  index?: string | boolean | undefined;
+  modifyResponseData?:
+    | ModifyResponseData<RequestInternal, ResponseInternal>
+    | undefined;
+};
 type Middleware<
   RequestInternal extends import("http").IncomingMessage,
   ResponseInternal extends ServerResponse
