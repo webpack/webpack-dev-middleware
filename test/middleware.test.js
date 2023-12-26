@@ -3251,6 +3251,7 @@ describe.each([
           const configuredFs = createFsFromVolume(new Volume());
 
           configuredFs.join = path.join.bind(path);
+          configuredFs.mkdirp = () => {};
 
           instance = middleware(compiler, {
             outputFileSystem: configuredFs,
@@ -3273,6 +3274,7 @@ describe.each([
           );
           expect(compiler.outputFileSystem).toHaveProperty("join");
           expect(compiler.outputFileSystem).toHaveProperty("mkdirp");
+          expect(compiler.outputFileSystem).toHaveProperty("mkdirSync");
         });
       });
 
