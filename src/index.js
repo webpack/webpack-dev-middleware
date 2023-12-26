@@ -241,7 +241,7 @@ function wdm(compiler, options = {}) {
            * @param {Compiler} childCompiler
            * @returns {WatchOptions}
            */
-          (childCompiler) => childCompiler.options.watchOptions || {}
+          (childCompiler) => childCompiler.options.watchOptions || {},
         );
 
       context.watching =
@@ -250,7 +250,7 @@ function wdm(compiler, options = {}) {
           context.compiler.watch(
             /** @type {WatchOptions}} */
             (watchOptions),
-            errorHandler
+            errorHandler,
           )
         );
     } else {

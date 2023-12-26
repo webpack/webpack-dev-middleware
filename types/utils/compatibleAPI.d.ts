@@ -29,7 +29,7 @@ export type ExpectedResponse = {
  * @returns {string[]}
  */
 export function getHeaderNames<
-  Response_1 extends import("../index.js").ServerResponse
+  Response_1 extends import("../index.js").ServerResponse,
 >(res: Response_1): string[];
 /**
  * @template {IncomingMessage} Request
@@ -38,7 +38,7 @@ export function getHeaderNames<
  * @returns {string | undefined}
  */
 export function getHeaderFromRequest<
-  Request_1 extends import("http").IncomingMessage
+  Request_1 extends import("http").IncomingMessage,
 >(req: Request_1, name: string): string | undefined;
 /**
  * @template {ServerResponse} Response
@@ -47,7 +47,7 @@ export function getHeaderFromRequest<
  * @returns {number | string | string[] | undefined}
  */
 export function getHeaderFromResponse<
-  Response_1 extends import("../index.js").ServerResponse
+  Response_1 extends import("../index.js").ServerResponse,
 >(res: Response_1, name: string): number | string | string[] | undefined;
 /**
  * @template {ServerResponse} Response
@@ -57,7 +57,7 @@ export function getHeaderFromResponse<
  * @returns {void}
  */
 export function setHeaderForResponse<
-  Response_1 extends import("../index.js").ServerResponse
+  Response_1 extends import("../index.js").ServerResponse,
 >(res: Response_1, name: string, value: number | string | string[]): void;
 /**
  * @template {ServerResponse} Response
@@ -65,7 +65,7 @@ export function setHeaderForResponse<
  * @param {number} code
  */
 export function setStatusCode<
-  Response_1 extends import("../index.js").ServerResponse
+  Response_1 extends import("../index.js").ServerResponse,
 >(res: Response_1, code: number): void;
 /**
  * @template {IncomingMessage} Request
@@ -77,10 +77,10 @@ export function setStatusCode<
  */
 export function send<
   Request_1 extends import("http").IncomingMessage,
-  Response_1 extends import("../index.js").ServerResponse
+  Response_1 extends import("../index.js").ServerResponse,
 >(
   req: Request_1,
   res: Response_1,
   bufferOtStream: string | Buffer | import("fs").ReadStream,
-  byteLength: number
+  byteLength: number,
 ): void;

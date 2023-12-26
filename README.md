@@ -50,7 +50,7 @@ const app = express();
 app.use(
   middleware(compiler, {
     // webpack-dev-middleware options
-  })
+  }),
 );
 
 app.listen(3000, () => console.log("Example app listening on port 3000!"));
@@ -432,7 +432,7 @@ app.use(
   "/dist/",
   middleware(compiler, {
     // webpack-dev-middleware options
-  })
+  }),
 );
 
 app.listen(3000, () => console.log("Example app listening on port 3000!"));

@@ -73,7 +73,7 @@ describe("setupWriteToDisk", () => {
         compilation: {},
         targetPath: "targetPath",
       },
-      cb
+      cb,
     );
 
     // the getPath helper is not needed for webpack@5
@@ -118,7 +118,7 @@ describe("setupWriteToDisk", () => {
           targetPath: "/target/path/file",
           content: "content",
         },
-        cb
+        cb,
       );
 
       // the getPath helper is not needed for webpack@5

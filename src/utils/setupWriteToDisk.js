@@ -47,7 +47,7 @@ function setupWriteToDisk(context) {
           return fs.mkdir(dir, { recursive: true }, (mkdirError) => {
             if (mkdirError) {
               context.logger.error(
-                `${name}Unable to write "${dir}" directory to disk:\n${mkdirError}`
+                `${name}Unable to write "${dir}" directory to disk:\n${mkdirError}`,
               );
 
               return callback(mkdirError);
@@ -56,20 +56,20 @@ function setupWriteToDisk(context) {
             return fs.writeFile(targetPath, content, (writeFileError) => {
               if (writeFileError) {
                 context.logger.error(
-                  `${name}Unable to write "${targetPath}" asset to disk:\n${writeFileError}`
+                  `${name}Unable to write "${targetPath}" asset to disk:\n${writeFileError}`,
                 );
 
                 return callback(writeFileError);
               }
 
               context.logger.log(
-                `${name}Asset written to disk: "${targetPath}"`
+                `${name}Asset written to disk: "${targetPath}"`,
               );
 
               return callback();
             });
           });
-        }
+        },
       );
 
       // @ts-ignore

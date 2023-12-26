@@ -88,7 +88,7 @@ function wrapper(context) {
 
             resolve(next());
           },
-          req
+          req,
         );
       });
     }
@@ -96,7 +96,7 @@ function wrapper(context) {
     async function processRequest() {
       const filename = getFilenameFromUrl(
         context,
-        /** @type {string} */ (req.url)
+        /** @type {string} */ (req.url),
       );
 
       if (!filename) {
@@ -134,7 +134,7 @@ function wrapper(context) {
            */
           (header) => {
             setHeaderForResponse(res, header.key, header.value);
-          }
+          },
         );
       }
 
@@ -150,7 +150,7 @@ function wrapper(context) {
           setHeaderForResponse(
             res,
             "Content-Type",
-            context.options.mimeTypeDefault
+            context.options.mimeTypeDefault,
           );
         }
       }
@@ -198,7 +198,7 @@ function wrapper(context) {
           setHeaderForResponse(
             res,
             "Content-Range",
-            getValueContentRangeHeader("bytes", size)
+            getValueContentRangeHeader("bytes", size),
           );
           setHeaderForResponse(res, "Content-Type", "text/html; charset=utf-8");
 
@@ -209,7 +209,7 @@ function wrapper(context) {
           setHeaderForResponse(
             res,
             "Content-Length",
-            Buffer.byteLength(document)
+            Buffer.byteLength(document),
           );
 
           if (context.options.modifyResponseData) {
@@ -218,7 +218,7 @@ function wrapper(context) {
                 req,
                 res,
                 document,
-                byteLength
+                byteLength,
               ));
           }
 
@@ -227,11 +227,11 @@ function wrapper(context) {
           return;
         } else if (parsedRanges === -2) {
           context.logger.error(
-            "A malformed 'Range' header was provided. A regular response will be sent for this request."
+            "A malformed 'Range' header was provided. A regular response will be sent for this request.",
           );
         } else if (parsedRanges.length > 1) {
           context.logger.error(
-            "A 'Range' header with multiple ranges was provided. Multiple ranges are not supported, so a regular response will be sent for this request."
+            "A 'Range' header with multiple ranges was provided. Multiple ranges are not supported, so a regular response will be sent for this request.",
           );
         }
 
@@ -244,8 +244,8 @@ function wrapper(context) {
             getValueContentRangeHeader(
               "bytes",
               size,
-              /** @type {import("range-parser").Ranges} */ (parsedRanges)[0]
-            )
+              /** @type {import("range-parser").Ranges} */ (parsedRanges)[0],
+            ),
           );
 
           [{ start, end }] = parsedRanges;
@@ -289,7 +289,7 @@ function wrapper(context) {
             req,
             res,
             bufferOrStream,
-            byteLength
+            byteLength,
           ));
       }
 
