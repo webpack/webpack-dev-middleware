@@ -70,7 +70,7 @@ function setupHooks(context) {
 
       const isMultiCompilerMode = Boolean(
         /** @type {MultiCompiler} */
-        (compiler).compilers
+        (compiler).compilers,
       );
 
       /**
@@ -117,12 +117,12 @@ function setupHooks(context) {
               }
 
               return childStatsOptions;
-            }
+            },
           );
       } else {
         /** @type {NormalizedStatsOptions} */
         (statsOptions) = normalizeStatsOptions(
-          /** @type {StatsOptions} */ (statsOptions)
+          /** @type {StatsOptions} */ (statsOptions),
         );
 
         if (typeof statsOptions.colors === "undefined") {
@@ -149,7 +149,7 @@ function setupHooks(context) {
          */
         (callback) => {
           callback(stats);
-        }
+        },
       );
     });
   }

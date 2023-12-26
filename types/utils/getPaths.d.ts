@@ -12,9 +12,9 @@ export = getPaths;
  */
 declare function getPaths<
   Request_1 extends import("http").IncomingMessage,
-  Response_1 extends import("../index.js").ServerResponse
+  Response_1 extends import("../index.js").ServerResponse,
 >(
-  context: import("../index.js").Context<Request_1, Response_1>
+  context: import("../index.js").Context<Request_1, Response_1>,
 ): {
   outputPath: string;
   publicPath: string;

@@ -97,27 +97,27 @@ describe.each([
           });
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "image.svg"),
-            "svg image"
+            "svg image",
           );
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "byte-length.html"),
-            "\u00bd + \u00bc = \u00be"
+            "\u00bd + \u00bc = \u00be",
           );
           instance.context.outputFileSystem.mkdirSync(
             path.resolve(outputPath, "directory/nested-directory"),
-            { recursive: true }
+            { recursive: true },
           );
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "directory/nested-directory/index.html"),
-            "My Index."
+            "My Index.",
           );
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "throw-an-exception-on-readFileSync.txt"),
-            "exception"
+            "exception",
           );
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "unknown"),
-            "unknown"
+            "unknown",
           );
 
           req = request(app);
@@ -130,10 +130,10 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8"
+            "application/javascript; charset=utf-8",
           );
           expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
-            false
+            false,
           );
         });
 
@@ -142,10 +142,10 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual(
-            String(codeLength)
+            String(codeLength),
           );
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8"
+            "application/javascript; charset=utf-8",
           );
           expect(response.text).toEqual(codeContent);
         });
@@ -155,10 +155,10 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual(
-            String(codeLength)
+            String(codeLength),
           );
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8"
+            "application/javascript; charset=utf-8",
           );
           expect(response.text).toBeUndefined();
         });
@@ -171,84 +171,84 @@ describe.each([
 
         it('should return the "200" code for the "GET" request to the "image.svg" file', async () => {
           const fileData = instance.context.outputFileSystem.readFileSync(
-            path.resolve(outputPath, "image.svg")
+            path.resolve(outputPath, "image.svg"),
           );
 
           const response = await req.get("/image.svg");
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual(
-            fileData.byteLength.toString()
+            fileData.byteLength.toString(),
           );
           expect(response.headers["content-type"]).toEqual("image/svg+xml");
         });
 
         it('should return the "200" code for the "GET" request to the directory', async () => {
           const fileData = fs.readFileSync(
-            path.resolve(__dirname, "./fixtures/index.html")
+            path.resolve(__dirname, "./fixtures/index.html"),
           );
 
           const response = await req.get("/");
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual(
-            fileData.byteLength.toString()
+            fileData.byteLength.toString(),
           );
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
           expect(response.text).toEqual(fileData.toString());
         });
 
         it('should return the "200" code for the "GET" request to the subdirectory with "index.html"', async () => {
           const fileData = instance.context.outputFileSystem.readFileSync(
-            path.resolve(outputPath, "directory/nested-directory/index.html")
+            path.resolve(outputPath, "directory/nested-directory/index.html"),
           );
 
           const response = await req.get("/directory/nested-directory/");
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual(
-            fileData.byteLength.toString()
+            fileData.byteLength.toString(),
           );
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
           expect(response.text).toEqual(fileData.toString());
         });
 
         it('should return the "200" code for the "GET" request to the subdirectory with "index.html" without trailing slash', async () => {
           const fileData = instance.context.outputFileSystem.readFileSync(
-            path.resolve(outputPath, "directory/nested-directory/index.html")
+            path.resolve(outputPath, "directory/nested-directory/index.html"),
           );
 
           const response = await req.get("/directory/nested-directory");
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual(
-            fileData.byteLength.toString()
+            fileData.byteLength.toString(),
           );
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
           expect(response.text).toEqual(fileData.toString());
         });
 
         it('should return the "200" code for the "GET" request to the subdirectory with "index.html"', async () => {
           const fileData = instance.context.outputFileSystem.readFileSync(
-            path.resolve(outputPath, "directory/nested-directory/index.html")
+            path.resolve(outputPath, "directory/nested-directory/index.html"),
           );
 
           const response = await req.get(
-            "/directory/nested-directory/index.html"
+            "/directory/nested-directory/index.html",
           );
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual(
-            fileData.byteLength.toString()
+            fileData.byteLength.toString(),
           );
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
           expect(response.text).toEqual(fileData.toString());
         });
@@ -260,10 +260,10 @@ describe.each([
 
           expect(response.statusCode).toEqual(416);
           expect(response.headers["content-range"]).toEqual(
-            `bytes */${codeLength}`
+            `bytes */${codeLength}`,
           );
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -274,11 +274,11 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 3000-3500/${codeLength}`
+            `bytes 3000-3500/${codeLength}`,
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8"
+            "application/javascript; charset=utf-8",
           );
           expect(response.text).toBe(codeContent.slice(3000, 3501));
           expect(response.text.length).toBe(501);
@@ -291,11 +291,11 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 3000-3500/${codeLength}`
+            `bytes 3000-3500/${codeLength}`,
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8"
+            "application/javascript; charset=utf-8",
           );
           expect(response.text).toBeUndefined();
         });
@@ -307,11 +307,11 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 3000-3500/${codeLength}`
+            `bytes 3000-3500/${codeLength}`,
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8"
+            "application/javascript; charset=utf-8",
           );
           expect(response.text).toBe(codeContent.slice(3000, 3501));
           expect(response.text.length).toBe(501);
@@ -324,11 +324,11 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 3000-3500/${codeLength}`
+            `bytes 3000-3500/${codeLength}`,
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8"
+            "application/javascript; charset=utf-8",
           );
           expect(response.text).toBe(codeContent.slice(3000, 3501));
           expect(response.text.length).toBe(501);
@@ -341,11 +341,11 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 0-3500/${codeLength}`
+            `bytes 0-3500/${codeLength}`,
           );
           expect(response.headers["content-length"]).toEqual("3501");
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8"
+            "application/javascript; charset=utf-8",
           );
           expect(response.text).toBe(codeContent.slice(0, 3501));
           expect(response.text.length).toBe(3501);
@@ -358,11 +358,11 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 0-800/${codeLength}`
+            `bytes 0-800/${codeLength}`,
           );
           expect(response.headers["content-length"]).toEqual("801");
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8"
+            "application/javascript; charset=utf-8",
           );
           expect(response.text).toBe(codeContent.slice(0, 801));
           expect(response.text.length).toBe(801);
@@ -402,7 +402,7 @@ describe.each([
             });
 
           const response = await req.get(
-            "/public/throw-an-exception-on-readFileSync.txt/"
+            "/public/throw-an-exception-on-readFileSync.txt/",
           );
 
           expect(response.statusCode).toEqual(404);
@@ -412,14 +412,14 @@ describe.each([
 
         it('should return "200" code code for the "GET" request to the file without extension', async () => {
           const fileData = instance.context.outputFileSystem.readFileSync(
-            path.resolve(outputPath, "unknown")
+            path.resolve(outputPath, "unknown"),
           );
 
           const response = await req.get("/unknown");
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual(
-            fileData.byteLength.toString()
+            fileData.byteLength.toString(),
           );
         });
 
@@ -429,10 +429,10 @@ describe.each([
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual("12");
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
           expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
-            false
+            false,
           );
         });
       });
@@ -504,7 +504,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -513,7 +513,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -546,7 +546,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -555,7 +555,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -564,7 +564,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
       });
@@ -903,7 +903,7 @@ describe.each([
                   code: 200,
                 },
               ],
-            }
+            },
           );
 
           configurations.push(
@@ -927,7 +927,7 @@ describe.each([
                 publicPath: "/my%20static/",
               },
               publicPathForRequest: "/my%20static/",
-            }
+            },
           );
         }
 
@@ -981,20 +981,20 @@ describe.each([
                 // eslint-disable-next-line no-loop-func
                 it(`should return the "${code}" code for the "GET" request for the "${value}" url`, async () => {
                   const response = await req.get(
-                    `${publicPathForRequest}${value}`
+                    `${publicPathForRequest}${value}`,
                   );
 
                   expect(response.statusCode).toEqual(code);
 
                   if (data) {
                     expect(response.headers["content-length"]).toEqual(
-                      String(data.length)
+                      String(data.length),
                     );
                   }
 
                   if (contentType) {
                     expect(response.headers["content-type"]).toEqual(
-                      contentType
+                      contentType,
                     );
                   }
                 });
@@ -1021,7 +1021,7 @@ describe.each([
             else {
               res.setHeader(
                 "Content-Type",
-                "application/vnd.test+octet-stream"
+                "application/vnd.test+octet-stream",
               );
             }
             next();
@@ -1040,7 +1040,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "application/vnd.test+octet-stream"
+            "application/vnd.test+octet-stream",
           );
         });
       });
@@ -1107,7 +1107,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1116,7 +1116,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
       });
@@ -1160,7 +1160,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1169,7 +1169,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
       });
@@ -1207,7 +1207,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1216,7 +1216,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
       });
@@ -1261,7 +1261,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1270,7 +1270,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1279,7 +1279,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
       });
@@ -1331,7 +1331,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1340,7 +1340,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1363,7 +1363,7 @@ describe.each([
                 filename: "bundle.js",
                 path: path.resolve(
                   __dirname,
-                  "./outputs/array-[fullhash]/static-one"
+                  "./outputs/array-[fullhash]/static-one",
                 ),
                 publicPath: "/static-one/[fullhash]/",
               },
@@ -1374,7 +1374,7 @@ describe.each([
                 filename: "bundle.js",
                 path: path.resolve(
                   __dirname,
-                  "./outputs/array-[fullhash]/static-two"
+                  "./outputs/array-[fullhash]/static-two",
                 ),
                 publicPath: "/static-two/[fullhash]/",
               },
@@ -1419,7 +1419,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1428,7 +1428,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1437,7 +1437,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8"
+            "application/javascript; charset=utf-8",
           );
         });
 
@@ -1446,7 +1446,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1502,7 +1502,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1511,7 +1511,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1608,7 +1608,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1617,7 +1617,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1684,7 +1684,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1693,7 +1693,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1702,7 +1702,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8"
+            "application/javascript; charset=utf-8",
           );
         });
 
@@ -1717,7 +1717,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1726,7 +1726,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1764,7 +1764,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8"
+            "application/javascript; charset=utf-8",
           );
         });
 
@@ -1779,7 +1779,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1788,7 +1788,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1835,7 +1835,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1844,7 +1844,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1910,7 +1910,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -1919,7 +1919,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
       });
@@ -1987,7 +1987,7 @@ describe.each([
           });
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "file.html"),
-            "welcome"
+            "welcome",
           );
         });
 
@@ -1998,7 +1998,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
           expect(response.text).toEqual("welcome");
         });
@@ -2033,7 +2033,7 @@ describe.each([
           });
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "file.myhtml"),
-            "welcome"
+            "welcome",
           );
         });
 
@@ -2044,7 +2044,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
           expect(response.text).toEqual("welcome");
         });
@@ -2079,7 +2079,7 @@ describe.each([
           });
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "file.jpg"),
-            "welcome"
+            "welcome",
           );
         });
 
@@ -2090,7 +2090,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "image/vnd.test+jpeg"
+            "image/vnd.test+jpeg",
           );
         });
       });
@@ -2172,7 +2172,7 @@ describe.each([
           });
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "file.unknown"),
-            "welcome"
+            "welcome",
           );
         });
 
@@ -2183,7 +2183,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(
-            response.headers["content-type"].startsWith("text/plain")
+            response.headers["content-type"].startsWith("text/plain"),
           ).toBe(true);
           expect(response.text).toEqual("welcome");
         });
@@ -2329,7 +2329,7 @@ describe.each([
 
         afterAll((done) => {
           del.sync(
-            path.posix.resolve(__dirname, "./outputs/write-to-disk-true")
+            path.posix.resolve(__dirname, "./outputs/write-to-disk-true"),
           );
 
           close(done);
@@ -2345,13 +2345,13 @@ describe.each([
 
               const bundlePath = path.resolve(
                 __dirname,
-                "./outputs/write-to-disk-true/bundle.js"
+                "./outputs/write-to-disk-true/bundle.js",
               );
 
               expect(
                 compiler.hooks.assetEmitted.taps.filter(
-                  (hook) => hook.name === "DevMiddleware"
-                ).length
+                  (hook) => hook.name === "DevMiddleware",
+                ).length,
               ).toBe(1);
               expect(fs.existsSync(bundlePath)).toBe(true);
 
@@ -2362,12 +2362,12 @@ describe.each([
                 () => {
                   expect(
                     compiler.hooks.assetEmitted.taps.filter(
-                      (hook) => hook.name === "DevMiddleware"
-                    ).length
+                      (hook) => hook.name === "DevMiddleware",
+                    ).length,
                   ).toBe(1);
 
                   done();
-                }
+                },
               );
             });
         });
@@ -2376,7 +2376,7 @@ describe.each([
       describe('should work with "true" value when the `output.clean` is `true`', () => {
         const outputPath = path.resolve(
           __dirname,
-          "./outputs/write-to-disk-true-with-clean"
+          "./outputs/write-to-disk-true-with-clean",
         );
 
         let compiler;
@@ -2423,13 +2423,13 @@ describe.each([
               const bundlePath = path.resolve(outputPath, "bundle.js");
 
               expect(fs.existsSync(path.resolve(outputPath, "test.json"))).toBe(
-                false
+                false,
               );
 
               expect(
                 compiler.hooks.assetEmitted.taps.filter(
-                  (hook) => hook.name === "DevMiddleware"
-                ).length
+                  (hook) => hook.name === "DevMiddleware",
+                ).length,
               ).toBe(1);
               expect(fs.existsSync(bundlePath)).toBe(true);
 
@@ -2440,12 +2440,12 @@ describe.each([
                 () => {
                   expect(
                     compiler.hooks.assetEmitted.taps.filter(
-                      (hook) => hook.name === "DevMiddleware"
-                    ).length
+                      (hook) => hook.name === "DevMiddleware",
+                    ).length,
                   ).toBe(1);
 
                   done();
-                }
+                },
               );
             });
         });
@@ -2483,13 +2483,13 @@ describe.each([
 
               const bundlePath = path.resolve(
                 __dirname,
-                "./outputs/write-to-disk-false/bundle.js"
+                "./outputs/write-to-disk-false/bundle.js",
               );
 
               expect(
                 compiler.hooks.assetEmitted.taps.filter(
-                  (hook) => hook.name === "DevMiddleware"
-                ).length
+                  (hook) => hook.name === "DevMiddleware",
+                ).length,
               ).toBe(0);
               expect(fs.existsSync(bundlePath)).toBe(false);
 
@@ -2500,12 +2500,12 @@ describe.each([
                 () => {
                   expect(
                     compiler.hooks.assetEmitted.taps.filter(
-                      (hook) => hook.name === "DevMiddleware"
-                    ).length
+                      (hook) => hook.name === "DevMiddleware",
+                    ).length,
                   ).toBe(0);
 
                   done();
-                }
+                },
               );
             });
         });
@@ -2521,7 +2521,7 @@ describe.each([
               filename: "bundle.js",
               path: path.resolve(
                 __dirname,
-                "./outputs/write-to-disk-function-true"
+                "./outputs/write-to-disk-function-true",
               ),
             },
           });
@@ -2542,8 +2542,8 @@ describe.each([
           del.sync(
             path.posix.resolve(
               __dirname,
-              "./outputs/write-to-disk-function-true"
-            )
+              "./outputs/write-to-disk-function-true",
+            ),
           );
 
           close(done);
@@ -2556,7 +2556,7 @@ describe.each([
 
           const bundlePath = path.resolve(
             __dirname,
-            "./outputs/write-to-disk-function-true/bundle.js"
+            "./outputs/write-to-disk-function-true/bundle.js",
           );
 
           expect(fs.existsSync(bundlePath)).toBe(true);
@@ -2573,7 +2573,7 @@ describe.each([
               filename: "bundle.js",
               path: path.resolve(
                 __dirname,
-                "./outputs/write-to-disk-function-false"
+                "./outputs/write-to-disk-function-false",
               ),
             },
           });
@@ -2592,8 +2592,8 @@ describe.each([
           del.sync(
             path.posix.resolve(
               __dirname,
-              "./outputs/write-to-disk-function-false"
-            )
+              "./outputs/write-to-disk-function-false",
+            ),
           );
 
           close(done);
@@ -2606,7 +2606,7 @@ describe.each([
 
           const bundlePath = path.resolve(
             __dirname,
-            "./outputs/write-to-disk-function-false/bundle.js"
+            "./outputs/write-to-disk-function-false/bundle.js",
           );
 
           expect(fs.existsSync(bundlePath)).toBe(false);
@@ -2623,7 +2623,7 @@ describe.each([
               filename: "bundle.js?[contenthash]",
               path: path.resolve(
                 __dirname,
-                "./outputs/write-to-disk-query-string"
+                "./outputs/write-to-disk-query-string",
               ),
             },
           });
@@ -2642,8 +2642,8 @@ describe.each([
           del.sync(
             path.posix.resolve(
               __dirname,
-              "./outputs/write-to-disk-query-string"
-            )
+              "./outputs/write-to-disk-query-string",
+            ),
           );
 
           close(done);
@@ -2656,7 +2656,7 @@ describe.each([
 
           const bundlePath = path.resolve(
             __dirname,
-            "./outputs/write-to-disk-query-string/bundle.js"
+            "./outputs/write-to-disk-query-string/bundle.js",
           );
 
           expect(fs.existsSync(bundlePath)).toBe(true);
@@ -2674,7 +2674,7 @@ describe.each([
                 filename: "bundle.js",
                 path: path.resolve(
                   __dirname,
-                  "./outputs/write-to-disk-multi-compiler/static-one"
+                  "./outputs/write-to-disk-multi-compiler/static-one",
                 ),
                 publicPath: "/static-one/",
               },
@@ -2685,7 +2685,7 @@ describe.each([
                 filename: "bundle.js",
                 path: path.resolve(
                   __dirname,
-                  "./outputs/write-to-disk-multi-compiler/static-two"
+                  "./outputs/write-to-disk-multi-compiler/static-two",
                 ),
                 publicPath: "/static-two/",
               },
@@ -2706,8 +2706,8 @@ describe.each([
           del.sync(
             path.posix.resolve(
               __dirname,
-              "./outputs/write-to-disk-multi-compiler/"
-            )
+              "./outputs/write-to-disk-multi-compiler/",
+            ),
           );
 
           close(done);
@@ -2750,7 +2750,7 @@ describe.each([
                 publicPath: "/static/[fullhash]/",
                 path: path.resolve(
                   __dirname,
-                  "./outputs/write-to-disk-with-hash/dist_[fullhash]"
+                  "./outputs/write-to-disk-with-hash/dist_[fullhash]",
                 ),
               },
             },
@@ -2773,7 +2773,7 @@ describe.each([
 
         afterAll((done) => {
           del.sync(
-            path.posix.resolve(__dirname, "./outputs/write-to-disk-with-hash/")
+            path.posix.resolve(__dirname, "./outputs/write-to-disk-with-hash/"),
           );
 
           close(done);
@@ -2786,7 +2786,7 @@ describe.each([
 
           const bundlePath = path.resolve(
             __dirname,
-            `./outputs/write-to-disk-with-hash/dist_${hash}/bundle.js`
+            `./outputs/write-to-disk-with-hash/dist_${hash}/bundle.js`,
           );
 
           expect(fs.existsSync(bundlePath)).toBe(true);
@@ -3202,7 +3202,7 @@ describe.each([
 
           expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
           expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
-            Stats
+            Stats,
           );
         });
       });
@@ -3235,7 +3235,7 @@ describe.each([
 
           expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
           expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
-            Stats
+            Stats,
           );
           expect(compiler.outputFileSystem).toHaveProperty("join");
           expect(compiler.outputFileSystem).toHaveProperty("mkdirp");
@@ -3270,7 +3270,7 @@ describe.each([
 
           expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
           expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
-            Stats
+            Stats,
           );
           expect(compiler.outputFileSystem).toHaveProperty("join");
           expect(compiler.outputFileSystem).toHaveProperty("mkdirp");
@@ -3306,14 +3306,14 @@ describe.each([
 
           for (const childCompiler of compiler.compilers) {
             expect(new childCompiler.outputFileSystem.Stats()).toBeInstanceOf(
-              Stats
+              Stats,
             );
             expect(childCompiler.outputFileSystem).toHaveProperty("join");
             expect(childCompiler.outputFileSystem).toHaveProperty("mkdirp");
           }
 
           expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
-            Stats
+            Stats,
           );
           expect(instance.context.outputFileSystem).toHaveProperty("join");
           expect(instance.context.outputFileSystem).toHaveProperty("mkdirp");
@@ -3343,7 +3343,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -3352,7 +3352,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
       });
@@ -3378,7 +3378,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
 
@@ -3387,7 +3387,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
       });
@@ -3420,7 +3420,7 @@ describe.each([
           });
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "default.html"),
-            "hello"
+            "hello",
           );
         });
 
@@ -3431,7 +3431,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
       });
@@ -3464,7 +3464,7 @@ describe.each([
           });
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "index.custom"),
-            "hello"
+            "hello",
           );
         });
 
@@ -3508,7 +3508,7 @@ describe.each([
           });
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "index.mycustom"),
-            "hello"
+            "hello",
           );
         });
 
@@ -3519,7 +3519,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
         });
       });
@@ -3549,7 +3549,7 @@ describe.each([
           });
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "noextension"),
-            "hello"
+            "hello",
           );
         });
 
@@ -3589,7 +3589,7 @@ describe.each([
             recursive: true,
           });
           instance.context.outputFileSystem.mkdirSync(
-            path.resolve(outputPath, "custom.html")
+            path.resolve(outputPath, "custom.html"),
           );
         });
 
@@ -3652,7 +3652,7 @@ describe.each([
         beforeAll((done) => {
           const outputPath = path.resolve(
             __dirname,
-            "./outputs/modify-response-data"
+            "./outputs/modify-response-data",
           );
 
           compiler = getCompiler({
@@ -3683,7 +3683,7 @@ describe.each([
           });
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "file.html"),
-            "welcome"
+            "welcome",
           );
         });
 
@@ -3696,7 +3696,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8"
+            "text/html; charset=utf-8",
           );
           expect(response.text).toEqual("test");
         });

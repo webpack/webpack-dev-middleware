@@ -72,7 +72,7 @@ function getFilenameFromUrl(context, url) {
       publicPathObject = memoizedParse(
         publicPath !== "auto" && publicPath ? publicPath : "/",
         false,
-        true
+        true,
       );
     } catch (_ignoreError) {
       // eslint-disable-next-line no-continue
@@ -88,7 +88,7 @@ function getFilenameFromUrl(context, url) {
       // Strip the `pathname` property from the `publicPath` option from the start of requested url
       // `/complex/foo.js` => `foo.js`
       const pathname = urlObject.pathname.slice(
-        publicPathObject.pathname.length
+        publicPathObject.pathname.length,
       );
 
       if (pathname) {

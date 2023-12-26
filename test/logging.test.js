@@ -30,11 +30,11 @@ function stdoutToSnapshot(stdout) {
 
   cleanedStdout = cleanedStdout.replace(
     /LOG from .+webpack/s,
-    "LOG from xxx\n...\nwebpack"
+    "LOG from xxx\n...\nwebpack",
   );
   cleanedStdout = cleanedStdout.replace(
     /webpack \d+.\d+.\d+/g,
-    "webpack x.x.x"
+    "webpack x.x.x",
   );
   cleanedStdout = cleanedStdout.replace(/\([0-9a-z]+\)/g, "(xxxx)");
 
@@ -936,7 +936,7 @@ describe("logging", () => {
       const clearDirectory = require("./helpers/clearDirectory").default;
       const outputDir = path.resolve(
         __dirname,
-        "./outputs/write-to-disk-mkdir-error"
+        "./outputs/write-to-disk-mkdir-error",
       );
 
       if (!fs.existsSync(outputDir)) {

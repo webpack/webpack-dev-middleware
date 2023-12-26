@@ -31,7 +31,7 @@ function setupOutputFileSystem(context) {
       const compiler =
         /** @type {MultiCompiler} */
         (context.compiler).compilers.filter((item) =>
-          Object.prototype.hasOwnProperty.call(item.options, "devServer")
+          Object.prototype.hasOwnProperty.call(item.options, "devServer"),
         );
 
       ({ outputFileSystem } =
