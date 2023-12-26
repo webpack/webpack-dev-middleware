@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.0.0](https://github.com/webpack/webpack-dev-middleware/compare/v6.1.1...v7.0.0) (2023-12-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* minimum supported Node.js version is 18.12.0 (#1694)
+* updated memfs@4 (#1693)
+
+### Features
+
+* updated memfs@4 ([#1693](https://github.com/webpack/webpack-dev-middleware/issues/1693)) ([244d9f8](https://github.com/webpack/webpack-dev-middleware/commit/244d9f88daa1e3900e5095c58f6b52a4ee53c061))
+
+
+* minimum supported Node.js version is 18.12.0 ([#1694](https://github.com/webpack/webpack-dev-middleware/issues/1694)) ([e273d61](https://github.com/webpack/webpack-dev-middleware/commit/e273d61ba774ef464399279f347a540762a9a9d7))
+
 ### [6.1.1](https://github.com/webpack/webpack-dev-middleware/compare/v6.1.0...v6.1.1) (2023-05-16)
 
 
