@@ -12,7 +12,7 @@ Here are the guidelines we'd like you to follow:
 ## <a name="question"></a> Got a Question or Problem?
 
 Please submit support requests and questions to StackOverflow using the tag [[webpack]](http://stackoverflow.com/tags/webpack).
-StackOverflow is better suited for this kind of support though you may also inquire in [Webpack Gitter](https://gitter.im/webpack/webpack).
+StackOverflow is better suited for this kind of support though you may also inquire in [Webpack discussions](https://github.com/webpack/webpack/discussions).
 The issue tracker is for bug reports and feature discussions.
 
 ## <a name="issue"></a> Found an Issue or Bug?

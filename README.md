@@ -522,7 +522,7 @@ Your first-stop-shop for support for webpack-dev-server should by the excellent
 of those docs, please head over to the [webpack.js.org repo][wjo-url] and open a
 pull request.
 
-From there, we encourage users to visit the [webpack Gitter chat][chat-url] and
+From there, we encourage users to visit the [webpack discussions][chat-url] and
 talk to the fine folks there. If your quest for answers comes up dry in chat,
 head over to [StackOverflow][stack-url] and do a quick search or open a new
 question. Remember; It's always much easier to answer questions that include your
@@ -586,4 +586,5 @@ Please take a moment to read our contributing guidelines if you haven't yet done
 [hash-url]: https://twitter.com/search?q=webpack
 [middleware-url]: https://github.com/webpack/webpack-dev-middleware
 [stack-url]: https://stackoverflow.com/questions/tagged/webpack-dev-middleware
+[chat-url]: https://github.com/webpack/webpack/discussions
 [wjo-url]: https://github.com/webpack/webpack.js.org
