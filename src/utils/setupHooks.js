@@ -131,8 +131,6 @@ function setupHooks(context) {
         }
       }
 
-      console.log(statsOptions);
-
       const printedStats = stats.toString(
         /** @type {NormalizedStatsOptions} */ (statsOptions),
       );
