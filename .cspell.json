@@ -16,7 +16,8 @@
     "leadinghash",
     "myhtml",
     "configurated",
-    "mycustom"
+    "mycustom",
+    "commitlint"
   ],
   "ignorePaths": [
     "CHANGELOG.md",

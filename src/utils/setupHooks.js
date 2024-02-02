@@ -131,7 +131,9 @@ function setupHooks(context) {
         }
       }
 
-      const printedStats = stats.toString(statsOptions);
+      const printedStats = stats.toString(
+        /** @type {NormalizedStatsOptions} */ (statsOptions),
+      );
 
       // Avoid extra empty line when `stats: 'none'`
       if (printedStats) {
