@@ -8,7 +8,7 @@
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
 /** @typedef {Configuration["stats"]} StatsOptions */
 /** @typedef {{ children: Configuration["stats"][] }} MultiStatsOptions */
-/** @typedef {Exclude<Configuration["stats"], boolean | string | undefined>} NormalizedStatsOptions */
+/** @typedef {Exclude<Configuration["stats"], boolean | string | undefined>} StatsObjectOptions */
 
 /**
  * @template {IncomingMessage} Request
@@ -29,8 +29,8 @@ function setupHooks(context) {
   }
 
   /**
-   * @param {Configuration["stats"]} statsOptions
-   * @returns {NormalizedStatsOptions}
+   * @param {StatsOptions} statsOptions
+   * @returns {StatsObjectOptions}
    */
   function normalizeStatsOptions(statsOptions) {
     if (typeof statsOptions === "undefined") {
@@ -74,7 +74,7 @@ function setupHooks(context) {
       );
 
       /**
-       * @type {StatsOptions | MultiStatsOptions | NormalizedStatsOptions}
+       * @type {StatsOptions | MultiStatsOptions | undefined}
        */
       let statsOptions;
 
@@ -103,7 +103,7 @@ function setupHooks(context) {
           (statsOptions).children.map(
             /**
              * @param {StatsOptions} childStatsOptions
-             * @return {NormalizedStatsOptions}
+             * @return {StatsObjectOptions}
              */
             (childStatsOptions) => {
               // eslint-disable-next-line no-param-reassign
@@ -120,8 +120,7 @@ function setupHooks(context) {
             },
           );
       } else {
-        /** @type {NormalizedStatsOptions} */
-        (statsOptions) = normalizeStatsOptions(
+        statsOptions = normalizeStatsOptions(
           /** @type {StatsOptions} */ (statsOptions),
         );
 
@@ -132,7 +131,7 @@ function setupHooks(context) {
       }
 
       const printedStats = stats.toString(
-        /** @type {NormalizedStatsOptions} */ (statsOptions),
+        /** @type {StatsObjectOptions} */ (statsOptions),
       );
 
       // Avoid extra empty line when `stats: 'none'`
