@@ -16,9 +16,9 @@ export = setupHooks;
  * @param {import("../index.js").Context<Request, Response>} context
  */
 declare function setupHooks<
-  Request_1 extends import("http").IncomingMessage,
-  Response_1 extends import("../index.js").ServerResponse,
->(context: import("../index.js").Context<Request_1, Response_1>): void;
+  Request extends import("http").IncomingMessage,
+  Response extends import("../index.js").ServerResponse,
+>(context: import("../index.js").Context<Request, Response>): void;
 declare namespace setupHooks {
   export {
     Configuration,

@@ -7,11 +7,11 @@ export = wrapper;
  * @return {import("./index.js").Middleware<Request, Response>}
  */
 declare function wrapper<
-  Request_1 extends import("http").IncomingMessage,
-  Response_1 extends import("./index.js").ServerResponse,
+  Request extends import("http").IncomingMessage,
+  Response extends import("./index.js").ServerResponse,
 >(
-  context: import("./index.js").Context<Request_1, Response_1>,
-): import("./index.js").Middleware<Request_1, Response_1>;
+  context: import("./index.js").Context<Request, Response>,
+): import("./index.js").Middleware<Request, Response>;
 declare namespace wrapper {
   export { NextFunction, IncomingMessage, ServerResponse };
 }
