@@ -29,8 +29,8 @@ export type ExpectedResponse = {
  * @returns {string[]}
  */
 export function getHeaderNames<
-  Response_1 extends import("../index.js").ServerResponse,
->(res: Response_1): string[];
+  Response extends import("../index.js").ServerResponse,
+>(res: Response): string[];
 /**
  * @template {IncomingMessage} Request
  * @param {Request} req
@@ -38,8 +38,8 @@ export function getHeaderNames<
  * @returns {string | undefined}
  */
 export function getHeaderFromRequest<
-  Request_1 extends import("http").IncomingMessage,
->(req: Request_1, name: string): string | undefined;
+  Request extends import("http").IncomingMessage,
+>(req: Request, name: string): string | undefined;
 /**
  * @template {ServerResponse} Response
  * @param {Response} res
@@ -47,8 +47,8 @@ export function getHeaderFromRequest<
  * @returns {number | string | string[] | undefined}
  */
 export function getHeaderFromResponse<
-  Response_1 extends import("../index.js").ServerResponse,
->(res: Response_1, name: string): number | string | string[] | undefined;
+  Response extends import("../index.js").ServerResponse,
+>(res: Response, name: string): number | string | string[] | undefined;
 /**
  * @template {ServerResponse} Response
  * @param {Response} res
@@ -57,16 +57,16 @@ export function getHeaderFromResponse<
  * @returns {void}
  */
 export function setHeaderForResponse<
-  Response_1 extends import("../index.js").ServerResponse,
->(res: Response_1, name: string, value: number | string | string[]): void;
+  Response extends import("../index.js").ServerResponse,
+>(res: Response, name: string, value: number | string | string[]): void;
 /**
  * @template {ServerResponse} Response
  * @param {Response} res
  * @param {number} code
  */
 export function setStatusCode<
-  Response_1 extends import("../index.js").ServerResponse,
->(res: Response_1, code: number): void;
+  Response extends import("../index.js").ServerResponse,
+>(res: Response, code: number): void;
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
@@ -76,11 +76,11 @@ export function setStatusCode<
  * @param {number} byteLength
  */
 export function send<
-  Request_1 extends import("http").IncomingMessage,
-  Response_1 extends import("../index.js").ServerResponse,
+  Request extends import("http").IncomingMessage,
+  Response extends import("../index.js").ServerResponse,
 >(
-  req: Request_1,
-  res: Response_1,
+  req: Request,
+  res: Response,
   bufferOtStream: string | Buffer | import("fs").ReadStream,
   byteLength: number,
 ): void;
