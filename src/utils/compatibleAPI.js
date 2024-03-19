@@ -95,6 +95,24 @@ function setHeaderForResponse(res, name, value) {
 /**
  * @template {ServerResponse} Response
  * @param {Response} res
+ * @param {Record<string, number | string | string[] | undefined>} headers
+ */
+function setHeadersForResponse(res, headers) {
+  const keys = Object.keys(headers);
+
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const value = headers[key];
+
+    if (typeof value !== "undefined") {
+      setHeaderForResponse(res, key, value);
+    }
+  }
+}
+
+/**
+ * @template {ServerResponse} Response
+ * @param {Response} res
  */
 function clearHeadersForResponse(res) {
   const headers = getHeaderNames(res);
@@ -160,51 +178,117 @@ function destroyStream(stream, suppress) {
 /** @type {Record<number, string>} */
 const statuses = {
   404: "Not Found",
+  416: "Range Not Satisfiable",
   500: "Internal Server Error",
 };
 
 /**
+ * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
+ * @param {Request} req response
  * @param {Response} res response
  * @param {number} status status
+ * @param {Partial<SendOptions<Request, Response>>=} options options
  * @returns {void}
  */
-function sendError(res, status) {
-  const msg = statuses[status] || String(status);
-  const doc = `<!DOCTYPE html>
+function sendError(req, res, status, options) {
+  const content = statuses[status] || String(status);
+  let document = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <title>Error</title>
 </head>
 <body>
-<pre>${escapeHtml(msg)}</pre>
+<pre>${escapeHtml(content)}</pre>
 </body>
 </html>`;
 
   // Clear existing headers
   clearHeadersForResponse(res);
+
+  if (options && options.headers) {
+    setHeadersForResponse(res, options.headers);
+  }
+
   // Send basic response
   setStatusCode(res, status);
   setHeaderForResponse(res, "Content-Type", "text/html; charset=UTF-8");
-  setHeaderForResponse(res, "Content-Length", Buffer.byteLength(doc));
   setHeaderForResponse(res, "Content-Security-Policy", "default-src 'none'");
   setHeaderForResponse(res, "X-Content-Type-Options", "nosniff");
 
-  res.end(doc);
+  let byteLength = Buffer.byteLength(document);
+
+  if (options && options.modifyResponseData) {
+    ({ data: document, byteLength } =
+      /** @type {{data: string, byteLength: number }} */
+      (options.modifyResponseData(req, res, document, byteLength)));
+  }
+
+  setHeaderForResponse(res, "Content-Length", byteLength);
+
+  res.end(document);
 }
+
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @typedef {Object} SendOptions send error options
+ * @property {Record<string, number | string | string[] | undefined>=} headers headers
+ * @property {import("../index").ModifyResponseData<Request, Response>=} modifyResponseData modify response data callback
+ * @property {import("../index").OutputFileSystem} outputFileSystem modify response data callback
+ */
 
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
  * @param {Request} req
  * @param {Response} res
- * @param {string | Buffer | import("fs").ReadStream} bufferOtStream
- * @param {number} byteLength
+ * @param {string} filename
+ * @param {number} start
+ * @param {number} end
+ * @param {() => Promise<void>} goNext
+ * @param {SendOptions<Request, Response>} options
  */
-function send(req, res, bufferOtStream, byteLength) {
+async function send(req, res, filename, start, end, goNext, options) {
+  const isFsSupportsStream =
+    typeof options.outputFileSystem.createReadStream === "function";
+
+  let bufferOrStream;
+  let byteLength;
+
+  try {
+    if (isFsSupportsStream) {
+      bufferOrStream =
+        /** @type {import("fs").createReadStream} */
+        (options.outputFileSystem.createReadStream)(filename, {
+          start,
+          end,
+        });
+      byteLength = end - start + 1;
+    } else {
+      bufferOrStream = /** @type {import("fs").readFileSync} */ (
+        options.outputFileSystem.readFileSync
+      )(filename);
+      ({ byteLength } = bufferOrStream);
+    }
+  } catch (_ignoreError) {
+    await goNext();
+
+    return;
+  }
+
+  if (options.modifyResponseData) {
+    ({ data: bufferOrStream, byteLength } = options.modifyResponseData(
+      req,
+      res,
+      bufferOrStream,
+      byteLength,
+    ));
+  }
+
   if (
-    typeof (/** @type {import("fs").ReadStream} */ (bufferOtStream).pipe) ===
+    typeof (/** @type {import("fs").ReadStream} */ (bufferOrStream).pipe) ===
     "function"
   ) {
     setHeaderForResponse(res, "Content-Length", byteLength);
@@ -215,12 +299,12 @@ function send(req, res, bufferOtStream, byteLength) {
     }
 
     /** @type {import("fs").ReadStream} */
-    (bufferOtStream).pipe(res);
+    (bufferOrStream).pipe(res);
 
     // Cleanup
     const cleanup = () => {
       destroyStream(
-        /** @type {import("fs").ReadStream} */ (bufferOtStream),
+        /** @type {import("fs").ReadStream} */ (bufferOrStream),
         true,
       );
     };
@@ -230,7 +314,7 @@ function send(req, res, bufferOtStream, byteLength) {
 
     // error handling
     /** @type {import("fs").ReadStream} */
-    (bufferOtStream).on("error", (error) => {
+    (bufferOrStream).on("error", (error) => {
       // clean up stream early
       cleanup();
 
@@ -239,10 +323,10 @@ function send(req, res, bufferOtStream, byteLength) {
         case "ENAMETOOLONG":
         case "ENOENT":
         case "ENOTDIR":
-          sendError(res, 404);
+          sendError(req, res, 404, options);
           break;
         default:
-          sendError(res, 500);
+          sendError(req, res, 500, options);
           break;
       }
     });
@@ -250,12 +334,13 @@ function send(req, res, bufferOtStream, byteLength) {
     return;
   }
 
+  // Express API
   if (
     typeof (/** @type {Response & ExpectedResponse} */ (res).send) ===
     "function"
   ) {
     /** @type {Response & ExpectedResponse} */
-    (res).send(bufferOtStream);
+    (res).send(bufferOrStream);
     return;
   }
 
@@ -265,7 +350,7 @@ function send(req, res, bufferOtStream, byteLength) {
   if (req.method === "HEAD") {
     res.end();
   } else {
-    res.end(bufferOtStream);
+    res.end(bufferOrStream);
   }
 }
 
@@ -276,4 +361,5 @@ module.exports = {
   setHeaderForResponse,
   setStatusCode,
   send,
+  sendError,
 };

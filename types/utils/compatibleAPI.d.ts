@@ -10,6 +10,28 @@ export type ExpectedResponse = {
   status: (status: number) => void;
   send: (data: any) => void;
 };
+/**
+ * send error options
+ */
+export type SendOptions<
+  Request extends import("http").IncomingMessage,
+  Response extends import("../index.js").ServerResponse,
+> = {
+  /**
+   * headers
+   */
+  headers?: Record<string, number | string | string[] | undefined> | undefined;
+  /**
+   * modify response data callback
+   */
+  modifyResponseData?:
+    | import("../index").ModifyResponseData<Request, Response>
+    | undefined;
+  /**
+   * modify response data callback
+   */
+  outputFileSystem: import("../index").OutputFileSystem;
+};
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
 /**
@@ -70,10 +92,21 @@ export function setStatusCode<
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
+ * @typedef {Object} SendOptions send error options
+ * @property {Record<string, number | string | string[] | undefined>=} headers headers
+ * @property {import("../index").ModifyResponseData<Request, Response>=} modifyResponseData modify response data callback
+ * @property {import("../index").OutputFileSystem} outputFileSystem modify response data callback
+ */
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
  * @param {Request} req
  * @param {Response} res
- * @param {string | Buffer | import("fs").ReadStream} bufferOtStream
- * @param {number} byteLength
+ * @param {string} filename
+ * @param {number} start
+ * @param {number} end
+ * @param {() => Promise<void>} goNext
+ * @param {SendOptions<Request, Response>} options
  */
 export function send<
   Request extends import("http").IncomingMessage,
@@ -81,6 +114,27 @@ export function send<
 >(
   req: Request,
   res: Response,
-  bufferOtStream: string | Buffer | import("fs").ReadStream,
-  byteLength: number,
+  filename: string,
+  start: number,
+  end: number,
+  goNext: () => Promise<void>,
+  options: SendOptions<Request, Response>,
+): Promise<void>;
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {Request} req response
+ * @param {Response} res response
+ * @param {number} status status
+ * @param {Partial<SendOptions<Request, Response>>=} options options
+ * @returns {void}
+ */
+export function sendError<
+  Request extends import("http").IncomingMessage,
+  Response extends import("../index.js").ServerResponse,
+>(
+  req: Request,
+  res: Response,
+  status: number,
+  options?: Partial<SendOptions<Request, Response>> | undefined,
 ): void;
