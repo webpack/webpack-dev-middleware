@@ -19,7 +19,7 @@ import webpackQueryStringConfig from "./fixtures/webpack.querystring.config";
 import webpackClientServerConfig from "./fixtures/webpack.client.server.config";
 
 // Suppress unnecessary stats output
-// global.console.log = jest.fn();
+global.console.log = jest.fn();
 
 describe.each([
   ["express", express],
@@ -2130,14 +2130,14 @@ describe.each([
         });
       });
 
-      describe.only("should work without `fs.createReadStream`", () => {
+      describe("should work without `fs.createReadStream`", () => {
         let compiler;
         let codeContent;
         let codeLength;
 
         const outputPath = path.resolve(
           __dirname,
-          "./outputs/basic-test-errors",
+          "./outputs/basic-test-no-createReadStream",
         );
 
         beforeAll((done) => {
