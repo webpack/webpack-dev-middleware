@@ -188,7 +188,7 @@ const statuses = {
  * @param {Request} req response
  * @param {Response} res response
  * @param {number} status status
- * @param {SendOptions<Request, Response>=} options options
+ * @param {Partial<SendOptions<Request, Response>>=} options options
  * @returns {void}
  */
 function sendError(req, res, status, options) {
@@ -236,6 +236,7 @@ function sendError(req, res, status, options) {
  * @typedef {Object} SendOptions send error options
  * @property {Record<string, number | string | string[] | undefined>=} headers headers
  * @property {import("../index").ModifyResponseData<Request, Response>=} modifyResponseData modify response data callback
+ * @property {import("../index").OutputFileSystem} outputFileSystem modify response data callback
  */
 
 /**
@@ -243,27 +244,58 @@ function sendError(req, res, status, options) {
  * @template {ServerResponse} Response
  * @param {Request} req
  * @param {Response} res
- * @param {string | Buffer | import("fs").ReadStream} bufferOrStream
- * @param {number} byteLength
+ * @param {string} filename
+ * @param {number | undefined} start
+ * @param {number | undefined} end
+ * @param {() => Promise<void>} goNext
  * @param {SendOptions<Request, Response>} options
  */
-function send(req, res, bufferOrStream, byteLength, options) {
-  let body = bufferOrStream;
-  let length = byteLength;
+async function send(req, res, filename, start, end, goNext, options) {
+  const isFsSupportsStream =
+    typeof options.outputFileSystem.createReadStream === "function";
+
+  let bufferOrStream;
+  let byteLength;
+
+  try {
+    if (
+      typeof start !== "undefined" &&
+      typeof end !== "undefined" &&
+      isFsSupportsStream
+    ) {
+      bufferOrStream =
+        /** @type {import("fs").createReadStream} */
+        (options.outputFileSystem.createReadStream)(filename, {
+          start,
+          end,
+        });
+      byteLength = end - start + 1;
+    } else {
+      bufferOrStream = /** @type {import("fs").readFileSync} */ (
+        options.outputFileSystem.readFileSync
+      )(filename);
+      ({ byteLength } = bufferOrStream);
+    }
+  } catch (_ignoreError) {
+    await goNext();
+
+    return;
+  }
 
   if (options.modifyResponseData) {
-    ({ data: body, byteLength: length } = options.modifyResponseData(
+    ({ data: bufferOrStream, byteLength } = options.modifyResponseData(
       req,
       res,
-      body,
-      length,
+      bufferOrStream,
+      byteLength,
     ));
   }
 
   if (
-    typeof (/** @type {import("fs").ReadStream} */ (body).pipe) === "function"
+    typeof (/** @type {import("fs").ReadStream} */ (bufferOrStream).pipe) ===
+    "function"
   ) {
-    setHeaderForResponse(res, "Content-Length", length);
+    setHeaderForResponse(res, "Content-Length", byteLength);
 
     if (req.method === "HEAD") {
       res.end();
@@ -271,11 +303,14 @@ function send(req, res, bufferOrStream, byteLength, options) {
     }
 
     /** @type {import("fs").ReadStream} */
-    (body).pipe(res);
+    (bufferOrStream).pipe(res);
 
     // Cleanup
     const cleanup = () => {
-      destroyStream(/** @type {import("fs").ReadStream} */ (body), true);
+      destroyStream(
+        /** @type {import("fs").ReadStream} */ (bufferOrStream),
+        true,
+      );
     };
 
     // Response finished, cleanup
@@ -283,7 +318,7 @@ function send(req, res, bufferOrStream, byteLength, options) {
 
     // error handling
     /** @type {import("fs").ReadStream} */
-    (body).on("error", (error) => {
+    (bufferOrStream).on("error", (error) => {
       // clean up stream early
       cleanup();
 
@@ -309,17 +344,17 @@ function send(req, res, bufferOrStream, byteLength, options) {
     "function"
   ) {
     /** @type {Response & ExpectedResponse} */
-    (res).send(body);
+    (res).send(bufferOrStream);
     return;
   }
 
   // Only Node.js API used
-  res.setHeader("Content-Length", length);
+  res.setHeader("Content-Length", byteLength);
 
   if (req.method === "HEAD") {
     res.end();
   } else {
-    res.end(body);
+    res.end(bufferOrStream);
   }
 }
 

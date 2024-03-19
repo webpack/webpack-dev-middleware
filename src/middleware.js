@@ -204,39 +204,9 @@ function wrapper(context) {
         }
       }
 
-      const isFsSupportsStream =
-        typeof context.outputFileSystem.createReadStream === "function";
-
-      let bufferOrStream;
-      let byteLength;
-
-      try {
-        if (
-          typeof start !== "undefined" &&
-          typeof end !== "undefined" &&
-          isFsSupportsStream
-        ) {
-          bufferOrStream =
-            /** @type {import("fs").createReadStream} */
-            (context.outputFileSystem.createReadStream)(filename, {
-              start,
-              end,
-            });
-          byteLength = end - start + 1;
-        } else {
-          bufferOrStream = /** @type {import("fs").readFileSync} */ (
-            context.outputFileSystem.readFileSync
-          )(filename);
-          ({ byteLength } = bufferOrStream);
-        }
-      } catch (_ignoreError) {
-        await goNext();
-
-        return;
-      }
-
-      send(req, res, bufferOrStream, byteLength, {
+      send(req, res, filename, start, end, goNext, {
         modifyResponseData: context.options.modifyResponseData,
+        outputFileSystem: context.outputFileSystem,
       });
     }
   };
