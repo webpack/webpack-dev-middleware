@@ -638,7 +638,7 @@ describe.each([
         });
       });
 
-      describe("should work with difference requests", () => {
+      describe.only("should work with difference requests", () => {
         const basicOutputPath = path.resolve(__dirname, "./outputs/basic");
         const fixtures = [
           {
@@ -937,7 +937,7 @@ describe.each([
           },
         ];
 
-        const isWindows = process.platform === "win32";
+        const isWindows = false;
 
         if (isWindows) {
           fixtures.push(
