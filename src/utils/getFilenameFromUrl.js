@@ -44,13 +44,19 @@ const mem = (fn, { cache = new Map() } = {}) => {
 const memoizedParse = mem(parse);
 
 /**
+ * @typedef {Object} Extra
+ * @property {import("fs").Stats=} stats
+ */
+
+/**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
  * @param {import("../index.js").Context<Request, Response>} context
  * @param {string} url
+ * @param {Extra=} extra
  * @returns {string | undefined}
  */
-function getFilenameFromUrl(context, url) {
+function getFilenameFromUrl(context, url, extra = {}) {
   const { options } = context;
   const paths = getPaths(context);
 
@@ -95,10 +101,9 @@ function getFilenameFromUrl(context, url) {
         filename = path.join(outputPath, querystring.unescape(pathname));
       }
 
-      let fsStats;
-
       try {
-        fsStats =
+        // eslint-disable-next-line no-param-reassign
+        extra.stats =
           /** @type {import("fs").statSync} */
           (context.outputFileSystem.statSync)(filename);
       } catch (_ignoreError) {
@@ -106,12 +111,12 @@ function getFilenameFromUrl(context, url) {
         continue;
       }
 
-      if (fsStats.isFile()) {
+      if (extra.stats.isFile()) {
         foundFilename = filename;
 
         break;
       } else if (
-        fsStats.isDirectory() &&
+        extra.stats.isDirectory() &&
         (typeof options.index === "undefined" || options.index)
       ) {
         const indexValue =
@@ -123,7 +128,7 @@ function getFilenameFromUrl(context, url) {
         filename = path.join(filename, indexValue);
 
         try {
-          fsStats =
+          extra.stats =
             /** @type {import("fs").statSync} */
             (context.outputFileSystem.statSync)(filename);
         } catch (__ignoreError) {
@@ -131,7 +136,7 @@ function getFilenameFromUrl(context, url) {
           continue;
         }
 
-        if (fsStats.isFile()) {
+        if (extra.stats.isFile()) {
           foundFilename = filename;
 
           break;

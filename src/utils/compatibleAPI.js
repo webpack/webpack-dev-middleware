@@ -245,8 +245,8 @@ function sendError(req, res, status, options) {
  * @param {Request} req
  * @param {Response} res
  * @param {string} filename
- * @param {number | undefined} start
- * @param {number | undefined} end
+ * @param {number} start
+ * @param {number} end
  * @param {() => Promise<void>} goNext
  * @param {SendOptions<Request, Response>} options
  */
@@ -258,11 +258,7 @@ async function send(req, res, filename, start, end, goNext, options) {
   let byteLength;
 
   try {
-    if (
-      typeof start !== "undefined" &&
-      typeof end !== "undefined" &&
-      isFsSupportsStream
-    ) {
+    if (isFsSupportsStream) {
       bufferOrStream =
         /** @type {import("fs").createReadStream} */
         (options.outputFileSystem.createReadStream)(filename, {

@@ -103,8 +103,8 @@ export function setStatusCode<
  * @param {Request} req
  * @param {Response} res
  * @param {string} filename
- * @param {number | undefined} start
- * @param {number | undefined} end
+ * @param {number} start
+ * @param {number} end
  * @param {() => Promise<void>} goNext
  * @param {SendOptions<Request, Response>} options
  */
@@ -115,8 +115,8 @@ export function send<
   req: Request,
   res: Response,
   filename: string,
-  start: number | undefined,
-  end: number | undefined,
+  start: number,
+  end: number,
   goNext: () => Promise<void>,
   options: SendOptions<Request, Response>,
 ): Promise<void>;

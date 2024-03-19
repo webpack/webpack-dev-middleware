@@ -72,9 +72,12 @@ function wrapper(context) {
     }
 
     async function processRequest() {
+      /** @type {import("./utils/getFilenameFromUrl").Extra} */
+      const extra = {};
       const filename = getFilenameFromUrl(
         context,
         /** @type {string} */ (req.url),
+        extra,
       );
 
       if (!filename) {
@@ -139,25 +142,12 @@ function wrapper(context) {
 
       const rangeHeader = getHeaderFromRequest(req, "range");
 
-      let start;
-      let end;
+      let len = /** @type {import("fs").Stats} */ (extra.stats).size;
+      let offset = 0;
 
       if (rangeHeader && BYTES_RANGE_REGEXP.test(rangeHeader)) {
-        const size = await new Promise((resolve) => {
-          /** @type {import("fs").lstat} */
-          (context.outputFileSystem.lstat)(filename, (error, stats) => {
-            if (error) {
-              context.logger.error(error);
-
-              return;
-            }
-
-            resolve(stats.size);
-          });
-        });
-
         // eslint-disable-next-line global-require
-        const parsedRanges = require("range-parser")(size, rangeHeader, {
+        const parsedRanges = require("range-parser")(len, rangeHeader, {
           combine: true,
         });
 
@@ -167,7 +157,7 @@ function wrapper(context) {
           setHeaderForResponse(
             res,
             "Content-Range",
-            getValueContentRangeHeader("bytes", size),
+            getValueContentRangeHeader("bytes", len),
           );
 
           sendError(req, res, 416, {
@@ -195,14 +185,18 @@ function wrapper(context) {
             "Content-Range",
             getValueContentRangeHeader(
               "bytes",
-              size,
+              len,
               /** @type {import("range-parser").Ranges} */ (parsedRanges)[0],
             ),
           );
 
-          [{ start, end }] = parsedRanges;
+          offset += parsedRanges[0].start;
+          len = parsedRanges[0].end - parsedRanges[0].start + 1;
         }
       }
+
+      const start = offset;
+      const end = Math.max(offset, offset + len - 1);
 
       send(req, res, filename, start, end, goNext, {
         modifyResponseData: context.options.modifyResponseData,

@@ -1974,12 +1974,10 @@ describe.each([
 
       describe("should handle custom fs errors and response 500 code", () => {
         let compiler;
-        let codeContent;
-        let codeLength;
 
         const outputPath = path.resolve(
           __dirname,
-          "./outputs/basic-test-errors",
+          "./outputs/basic-test-errors-500",
         );
 
         beforeAll((done) => {
@@ -1997,10 +1995,7 @@ describe.each([
           app.use(instance);
 
           listen = listenShorthand(() => {
-            compiler.hooks.afterCompile.tap("wdm-test", (params) => {
-              codeContent = params.assets["bundle.js"].source();
-              codeLength = Buffer.byteLength(codeContent);
-
+            compiler.hooks.afterCompile.tap("wdm-test", () => {
               done();
             });
           });
@@ -2032,19 +2027,6 @@ describe.each([
 
         afterAll(close);
 
-        it('should return the "200" code for the "GET" request to the bundle file', async () => {
-          const response = await req.get("/bundle.js");
-
-          expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-length"]).toEqual(
-            String(codeLength),
-          );
-          expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
-          );
-          expect(response.text).toEqual(codeContent);
-        });
-
         it('should return the "500" code for the "GET" request to the "image.svg" file', async () => {
           const response = await req.get("/image.svg").set("Range", "bytes=0-");
 
@@ -2068,6 +2050,87 @@ describe.each([
       });
 
       describe("should handle known fs errors and response 404 code", () => {
+        let compiler;
+
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-test-errors-404",
+        );
+
+        beforeAll((done) => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          instance = middleware(compiler);
+
+          app = framework();
+          app.use(instance);
+
+          listen = listenShorthand(() => {
+            compiler.hooks.afterCompile.tap("wdm-test", () => {
+              done();
+            });
+          });
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "image.svg"),
+            "svg image",
+          );
+
+          instance.context.outputFileSystem.createReadStream =
+            function createReadStream(...args) {
+              const brokenStream = new this.ReadStream(...args);
+
+              // eslint-disable-next-line no-underscore-dangle
+              brokenStream._read = function _read() {
+                const error = new Error("test");
+
+                error.code = "ENAMETOOLONG";
+
+                this.emit("error", error);
+                this.end();
+                this.destroy();
+              };
+
+              return brokenStream;
+            };
+
+          req = request(app);
+        });
+
+        afterAll(close);
+
+        it('should return the "404" code for the "GET" request to the "image.svg" file', async () => {
+          const response = await req.get("/image.svg").set("Range", "bytes=0-");
+
+          expect(response.statusCode).toEqual(404);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=UTF-8",
+          );
+          expect(response.text).toEqual(
+            "<!DOCTYPE html>\n" +
+              '<html lang="en">\n' +
+              "<head>\n" +
+              '<meta charset="utf-8">\n' +
+              "<title>Error</title>\n" +
+              "</head>\n" +
+              "<body>\n" +
+              "<pre>Not Found</pre>\n" +
+              "</body>\n" +
+              "</html>",
+          );
+        });
+      });
+
+      describe("should work without `fs.createReadStream`", () => {
         let compiler;
         let codeContent;
         let codeLength;
@@ -2108,23 +2171,7 @@ describe.each([
             "svg image",
           );
 
-          instance.context.outputFileSystem.createReadStream =
-            function createReadStream(...args) {
-              const brokenStream = new this.ReadStream(...args);
-
-              // eslint-disable-next-line no-underscore-dangle
-              brokenStream._read = function _read() {
-                const error = new Error("test");
-
-                error.code = "ENAMETOOLONG";
-
-                this.emit("error", error);
-                this.end();
-                this.destroy();
-              };
-
-              return brokenStream;
-            };
+          instance.context.outputFileSystem.createReadStream = null;
 
           req = request(app);
         });
@@ -2144,25 +2191,18 @@ describe.each([
           expect(response.text).toEqual(codeContent);
         });
 
-        it('should return the "404" code for the "GET" request to the "image.svg" file', async () => {
-          const response = await req.get("/image.svg").set("Range", "bytes=0-");
+        it('should return the "500" code for the "GET" request to the "image.svg" file', async () => {
+          const fileData = instance.context.outputFileSystem.readFileSync(
+            path.resolve(outputPath, "image.svg"),
+          );
 
-          expect(response.statusCode).toEqual(404);
-          expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=UTF-8",
+          const response = await req.get("/image.svg");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString(),
           );
-          expect(response.text).toEqual(
-            "<!DOCTYPE html>\n" +
-              '<html lang="en">\n' +
-              "<head>\n" +
-              '<meta charset="utf-8">\n' +
-              "<title>Error</title>\n" +
-              "</head>\n" +
-              "<body>\n" +
-              "<pre>Not Found</pre>\n" +
-              "</body>\n" +
-              "</html>",
-          );
+          expect(response.headers["content-type"]).toEqual("image/svg+xml");
         });
       });
     });

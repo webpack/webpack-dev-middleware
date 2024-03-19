@@ -120,9 +120,12 @@ const noop = () => {};
  * @return {Promise<void>}
  */
 
+/** @typedef {import("./utils/getFilenameFromUrl").Extra} Extra */
+
 /**
  * @callback GetFilenameFromUrl
  * @param {string} url
+ * @param {Extra=} extra
  * @returns {string | undefined}
  */
 
@@ -263,18 +266,14 @@ function wdm(compiler, options = {}) {
     }
   }
 
-  const instance = /** @type {API<RequestInternal, ResponseInternal>} */ (
-    middleware(context)
-  );
+  const instance =
+    /** @type {API<RequestInternal, ResponseInternal>} */
+    (middleware(context));
 
   // API
   /** @type {API<RequestInternal, ResponseInternal>} */
-  (instance).getFilenameFromUrl =
-    /**
-     * @param {string} url
-     * @returns {string|undefined}
-     */
-    (url) => getFilenameFromUrl(context, url);
+  (instance).getFilenameFromUrl = (url, extra) =>
+    getFilenameFromUrl(context, url, extra);
 
   /** @type {API<RequestInternal, ResponseInternal>} */
   (instance).waitUntilValid = (callback = noop) => {
