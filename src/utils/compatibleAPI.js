@@ -1,4 +1,3 @@
- 
 const onFinishedStream = require("on-finished");
 
 const escapeHtml = require("./escapeHtml");
