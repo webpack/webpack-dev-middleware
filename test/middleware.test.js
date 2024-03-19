@@ -19,7 +19,7 @@ import webpackQueryStringConfig from "./fixtures/webpack.querystring.config";
 import webpackClientServerConfig from "./fixtures/webpack.client.server.config";
 
 // Suppress unnecessary stats output
-global.console.log = jest.fn();
+// global.console.log = jest.fn();
 
 describe.each([
   ["express", express],
@@ -2130,7 +2130,7 @@ describe.each([
         });
       });
 
-      describe("should work without `fs.createReadStream`", () => {
+      describe.only("should work without `fs.createReadStream`", () => {
         let compiler;
         let codeContent;
         let codeLength;
@@ -2191,7 +2191,7 @@ describe.each([
           expect(response.text).toEqual(codeContent);
         });
 
-        it('should return the "500" code for the "GET" request to the "image.svg" file', async () => {
+        it('should return the "200" code for the "GET" request to the "image.svg" file', async () => {
           const fileData = instance.context.outputFileSystem.readFileSync(
             path.resolve(outputPath, "image.svg"),
           );
@@ -2203,6 +2203,21 @@ describe.each([
             fileData.byteLength.toString(),
           );
           expect(response.headers["content-type"]).toEqual("image/svg+xml");
+        });
+
+        it('should return the "200" code for the "HEAD" request to the "image.svg" file', async () => {
+          const fileData = instance.context.outputFileSystem.readFileSync(
+            path.resolve(outputPath, "image.svg"),
+          );
+
+          const response = await req.head("/image.svg");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString(),
+          );
+          expect(response.headers["content-type"]).toEqual("image/svg+xml");
+          expect(response.body).toEqual({});
         });
       });
     });
