@@ -977,27 +977,27 @@ describe.each([
           );*/
 
           configurations.push(
-            {
+           /* {
               output: {
                 path: path.join(basicOutputPath, "my static"),
                 publicPath: "/static/",
               },
               publicPathForRequest: "/static/",
             },
-           /* {
+            {
               output: {
                 path: path.join(basicOutputPath, "my%20static"),
                 publicPath: "/static/",
               },
               publicPathForRequest: "/static/",
-            },
+            },*/
             {
               output: {
                 path: path.join(basicOutputPath, "my %20 static"),
                 publicPath: "/my%20static/",
               },
               publicPathForRequest: "/my%20static/",
-            },*/
+            },
           );
         }
 
