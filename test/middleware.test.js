@@ -19,7 +19,7 @@ import webpackQueryStringConfig from "./fixtures/webpack.querystring.config";
 import webpackClientServerConfig from "./fixtures/webpack.client.server.config";
 
 // Suppress unnecessary stats output
-// global.console.log = jest.fn();
+global.console.log = jest.fn();
 
 describe.each([
   ["express", express],
@@ -638,10 +638,10 @@ describe.each([
         });
       });
 
-      describe.only("should work with difference requests", () => {
+      describe("should work with difference requests", () => {
         const basicOutputPath = path.resolve(__dirname, "./outputs/basic");
         const fixtures = [
-          /*{
+          {
             urls: [
               {
                 value: "bundle.js",
@@ -722,12 +722,12 @@ describe.each([
                 code: 200,
               },
             ],
-          },*/
+          },
           {
             file: "/complex/foo.js",
             data: 'console.log("foo");',
             urls: [
-              /*{
+              {
                 value: "complex/foo.js",
                 contentType: "application/javascript; charset=utf-8",
                 code: 200,
@@ -736,7 +736,7 @@ describe.each([
                 value: "complex/./foo.js",
                 contentType: "application/javascript; charset=utf-8",
                 code: 200,
-              },*/
+              },
               {
                 value: "complex/foo/../foo.js",
                 contentType: "application/javascript; charset=utf-8",
@@ -744,7 +744,7 @@ describe.each([
               },
             ],
           },
-          /*{
+          {
             file: "/complex/complex/foo.js",
             data: 'console.log("foo");',
             urls: [
@@ -755,7 +755,6 @@ describe.each([
               },
             ],
           },
-
           {
             file: "/föö.js",
             data: 'console.log("foo");',
@@ -859,11 +858,11 @@ describe.each([
                 code: 200,
               },
             ],
-          },*/
+          },
         ];
 
         const configurations = [
-          /* {
+          {
             output: { path: basicOutputPath, publicPath: "" },
             publicPathForRequest: "/",
           },
@@ -934,13 +933,13 @@ describe.each([
               publicPath: "//test.domain/",
             },
             publicPathForRequest: "/",
-          },*/
+          },
         ];
 
         const isWindows = process.platform === "win32";
 
         if (isWindows) {
-          /*fixtures.push(
+          fixtures.push(
             {
               file: "windows.txt",
               data: "windows.txt content",
@@ -974,10 +973,10 @@ describe.each([
                 },
               ],
             },
-          );*/
+          );
 
           configurations.push(
-           /* {
+            {
               output: {
                 path: path.join(basicOutputPath, "my static"),
                 publicPath: "/static/",
@@ -990,7 +989,7 @@ describe.each([
                 publicPath: "/static/",
               },
               publicPathForRequest: "/static/",
-            },*/
+            },
             {
               output: {
                 path: path.join(basicOutputPath, "my %20 static"),

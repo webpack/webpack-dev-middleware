@@ -131,8 +131,6 @@ function getFilenameFromUrl(context, url, extra = {}) {
         pathname.slice(publicPathPathname.length),
       );
 
-      console.log("Filename", filename);
-
       try {
         // eslint-disable-next-line no-param-reassign
         extra.stats =
@@ -142,8 +140,6 @@ function getFilenameFromUrl(context, url, extra = {}) {
         // eslint-disable-next-line no-continue
         continue;
       }
-
-      console.log("Stats", extra.stats);
 
       if (extra.stats.isFile()) {
         foundFilename = filename;
