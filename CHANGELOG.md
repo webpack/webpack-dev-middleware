@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.1.0](https://github.com/webpack/webpack-dev-middleware/compare/v7.0.0...v7.1.0) (2024-03-19)
+
+
+### Features
+
+* prefer to use `fs.createReadStream` over `fs.readFileSync` to read files ([ab533de](https://github.com/webpack/webpack-dev-middleware/commit/ab533de933c6684218172b86992f35c3ca6c58a4))
+
+
+### Bug Fixes
+
+* cleaup stream and handle errors ([#1769](https://github.com/webpack/webpack-dev-middleware/issues/1769)) ([1258fdd](https://github.com/webpack/webpack-dev-middleware/commit/1258fdd3d9c175dbacf6bc3b36d5c3c545738f13))
+* **security:** do not allow to read files above ([#1771](https://github.com/webpack/webpack-dev-middleware/issues/1771)) ([e10008c](https://github.com/webpack/webpack-dev-middleware/commit/e10008c762e4d5821ed6990348dabf0d4d93a10e))
+
 ## [7.0.0](https://github.com/webpack/webpack-dev-middleware/compare/v6.1.1...v7.0.0) (2023-12-26)
 
 
