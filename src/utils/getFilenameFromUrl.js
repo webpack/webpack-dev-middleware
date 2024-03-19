@@ -104,6 +104,9 @@ function getFilenameFromUrl(context, url, extra = {}) {
 
     let { pathname } = urlObject;
 
+    console.log("PATHNAME", pathname)
+    console.log("PUBLIC PATH", publicPathObject.pathname)
+
     if (pathname && pathname.startsWith(publicPathObject.pathname)) {
       pathname = decode(pathname);
 
