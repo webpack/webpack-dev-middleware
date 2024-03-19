@@ -744,7 +744,7 @@ describe.each([
               },
             ],
           },
-          /*{
+          {
             file: "/complex/complex/foo.js",
             data: 'console.log("foo");',
             urls: [
@@ -755,6 +755,7 @@ describe.each([
               },
             ],
           },
+          /*
           {
             file: "/föö.js",
             data: 'console.log("foo");',
@@ -866,7 +867,7 @@ describe.each([
             output: { path: basicOutputPath, publicPath: "" },
             publicPathForRequest: "/",
           },
-         /* {
+          {
             output: {
               path: path.join(basicOutputPath, "dist"),
               publicPath: "",
@@ -933,12 +934,12 @@ describe.each([
               publicPath: "//test.domain/",
             },
             publicPathForRequest: "/",
-          },*/
+          },
         ];
 
         const isWindows = process.platform === "win32";
 
-        /*if (isWindows) {
+        if (isWindows) {
           fixtures.push(
             {
               file: "windows.txt",
@@ -998,7 +999,7 @@ describe.each([
               publicPathForRequest: "/my%20static/",
             },
           );
-        }*/
+        }
 
         for (const configuration of configurations) {
           // eslint-disable-next-line no-loop-func
