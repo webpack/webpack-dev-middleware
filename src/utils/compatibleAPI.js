@@ -1,3 +1,7 @@
+const onFinishedStream = require("on-finished");
+
+const escapeHtml = require("./escapeHtml");
+
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
 
@@ -91,6 +95,18 @@ function setHeaderForResponse(res, name, value) {
 /**
  * @template {ServerResponse} Response
  * @param {Response} res
+ */
+function clearHeadersForResponse(res) {
+  const headers = getHeaderNames(res);
+
+  for (let i = 0; i < headers.length; i++) {
+    res.removeHeader(headers[i]);
+  }
+}
+
+/**
+ * @template {ServerResponse} Response
+ * @param {Response} res
  * @param {number} code
  */
 function setStatusCode(res, code) {
@@ -106,6 +122,76 @@ function setStatusCode(res, code) {
 
   // eslint-disable-next-line no-param-reassign
   res.statusCode = code;
+}
+
+/**
+ * @param {import("fs").ReadStream} stream stream
+ * @param {boolean} suppress do need suppress?
+ * @returns {void}
+ */
+function destroyStream(stream, suppress) {
+  if (typeof stream.destroy === "function") {
+    stream.destroy();
+  }
+
+  if (typeof stream.close === "function") {
+    // Node.js core bug workaround
+    stream.on(
+      "open",
+      /**
+       * @this {import("fs").ReadStream}
+       */
+      function onOpenClose() {
+        // @ts-ignore
+        if (typeof this.fd === "number") {
+          // actually close down the fd
+          this.close();
+        }
+      },
+    );
+  }
+
+  if (typeof stream.addListener === "function" && suppress) {
+    stream.removeAllListeners("error");
+    stream.addListener("error", () => {});
+  }
+}
+
+/** @type {Record<number, string>} */
+const statuses = {
+  404: "Not Found",
+  500: "Internal Server Error",
+};
+
+/**
+ * @template {ServerResponse} Response
+ * @param {Response} res response
+ * @param {number} status status
+ * @returns {void}
+ */
+function sendError(res, status) {
+  const msg = statuses[status] || String(status);
+  const doc = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>${escapeHtml(msg)}</pre>
+</body>
+</html>`;
+
+  // Clear existing headers
+  clearHeadersForResponse(res);
+  // Send basic response
+  setStatusCode(res, status);
+  setHeaderForResponse(res, "Content-Type", "text/html; charset=UTF-8");
+  setHeaderForResponse(res, "Content-Length", Buffer.byteLength(doc));
+  setHeaderForResponse(res, "Content-Security-Policy", "default-src 'none'");
+  setHeaderForResponse(res, "X-Content-Type-Options", "nosniff");
+
+  res.end(doc);
 }
 
 /**
@@ -125,12 +211,41 @@ function send(req, res, bufferOtStream, byteLength) {
 
     if (req.method === "HEAD") {
       res.end();
-
       return;
     }
 
     /** @type {import("fs").ReadStream} */
     (bufferOtStream).pipe(res);
+
+    // Cleanup
+    const cleanup = () => {
+      destroyStream(
+        /** @type {import("fs").ReadStream} */ (bufferOtStream),
+        true,
+      );
+    };
+
+    // Response finished, cleanup
+    onFinishedStream(res, cleanup);
+
+    // error handling
+    /** @type {import("fs").ReadStream} */
+    (bufferOtStream).on("error", (error) => {
+      // clean up stream early
+      cleanup();
+
+      // Handle Error
+      switch (/** @type {NodeJS.ErrnoException} */ (error).code) {
+        case "ENAMETOOLONG":
+        case "ENOENT":
+        case "ENOTDIR":
+          sendError(res, 404);
+          break;
+        default:
+          sendError(res, 500);
+          break;
+      }
+    });
 
     return;
   }
@@ -141,7 +256,6 @@ function send(req, res, bufferOtStream, byteLength) {
   ) {
     /** @type {Response & ExpectedResponse} */
     (res).send(bufferOtStream);
-
     return;
   }
 
