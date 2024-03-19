@@ -18,7 +18,8 @@
     "configurated",
     "mycustom",
     "commitlint",
-    "nosniff"
+    "nosniff",
+    "deoptimize"
   ],
   "ignorePaths": [
     "CHANGELOG.md",

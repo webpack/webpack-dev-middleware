@@ -43,11 +43,28 @@ const mem = (fn, { cache = new Map() } = {}) => {
 };
 const memoizedParse = mem(parse);
 
+const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
+
 /**
  * @typedef {Object} Extra
  * @property {import("fs").Stats=} stats
+ * @property {number=} errorCode
  */
 
+/**
+ * decodeURIComponent.
+ *
+ * Allows V8 to only deoptimize this fn instead of all of send().
+ *
+ * @param {string} input
+ * @returns {string}
+ */
+
+function decode(input) {
+  return querystring.unescape(input);
+}
+
+// TODO refactor me in the next major release, this function should return `{ filename, stats, error }`
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
@@ -85,21 +102,34 @@ function getFilenameFromUrl(context, url, extra = {}) {
       continue;
     }
 
-    if (
-      urlObject.pathname &&
-      urlObject.pathname.startsWith(publicPathObject.pathname)
-    ) {
-      filename = outputPath;
+    const pathname = decode(urlObject.pathname);
+    const publicPathPathname = decode(publicPathObject.pathname);
+
+    if (pathname && pathname.startsWith(publicPathPathname)) {
+      // Null byte(s)
+      if (pathname.includes("\0")) {
+        // eslint-disable-next-line no-param-reassign
+        extra.errorCode = 400;
+
+        return;
+      }
+
+      // ".." is malicious
+      if (UP_PATH_REGEXP.test(path.normalize(`./${pathname}`))) {
+        // eslint-disable-next-line no-param-reassign
+        extra.errorCode = 403;
+
+        return;
+      }
 
       // Strip the `pathname` property from the `publicPath` option from the start of requested url
       // `/complex/foo.js` => `foo.js`
-      const pathname = urlObject.pathname.slice(
-        publicPathObject.pathname.length,
+      // and add outputPath
+      // `foo.js` => `/home/user/my-project/dist/foo.js`
+      filename = path.join(
+        outputPath,
+        pathname.slice(publicPathPathname.length),
       );
-
-      if (pathname) {
-        filename = path.join(outputPath, querystring.unescape(pathname));
-      }
 
       try {
         // eslint-disable-next-line no-param-reassign

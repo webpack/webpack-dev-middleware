@@ -100,6 +100,10 @@ describe.each([
             "svg image",
           );
           instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "image image.svg"),
+            "svg image",
+          );
+          instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "byte-length.html"),
             "\u00bd + \u00bc = \u00be",
           );
@@ -175,6 +179,36 @@ describe.each([
           );
 
           const response = await req.get("/image.svg");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString(),
+          );
+          expect(response.headers["content-type"]).toEqual("image/svg+xml");
+        });
+
+        it('should return the "200" code for the "GET" request to the "image.svg" file with "/../"', async () => {
+          const fileData = instance.context.outputFileSystem.readFileSync(
+            path.resolve(outputPath, "image.svg"),
+          );
+
+          const response = await req.get("/public/../image.svg");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString(),
+          );
+          expect(response.headers["content-type"]).toEqual("image/svg+xml");
+        });
+
+        it('should return the "200" code for the "GET" request to the "image.svg" file with "/../../../"', async () => {
+          const fileData = instance.context.outputFileSystem.readFileSync(
+            path.resolve(outputPath, "image.svg"),
+          );
+
+          const response = await req.get(
+            "/public/assets/images/../../../image.svg",
+          );
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual(
@@ -263,7 +297,7 @@ describe.each([
             `bytes */${codeLength}`,
           );
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=UTF-8",
+            "text/html; charset=utf-8",
           );
           expect(response.text).toEqual(
             `<!DOCTYPE html>
@@ -445,6 +479,29 @@ describe.each([
           );
           expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
             false,
+          );
+        });
+
+        it('should return the "200" code for the "GET" request to the "image image.svg" file', async () => {
+          const fileData = instance.context.outputFileSystem.readFileSync(
+            path.resolve(outputPath, "image image.svg"),
+          );
+
+          const response = await req.get("/image image.svg");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString(),
+          );
+          expect(response.headers["content-type"]).toEqual("image/svg+xml");
+        });
+
+        it('should return the "404" code for the "GET" request to the "%FF" file', async () => {
+          const response = await req.get("/%FF");
+
+          expect(response.statusCode).toEqual(404);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
           );
         });
       });
@@ -2032,7 +2089,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(500);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=UTF-8",
+            "text/html; charset=utf-8",
           );
           expect(response.text).toEqual(
             "<!DOCTYPE html>\n" +
@@ -2113,7 +2170,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=UTF-8",
+            "text/html; charset=utf-8",
           );
           expect(response.text).toEqual(
             "<!DOCTYPE html>\n" +
@@ -2575,6 +2632,7 @@ describe.each([
             output: {
               filename: "bundle.js",
               path: path.resolve(__dirname, "./outputs/write-to-disk-true"),
+              publicPath: "/public/",
             },
           });
 
@@ -2598,7 +2656,7 @@ describe.each([
 
         it("should find the bundle file on disk", (done) => {
           request(app)
-            .get("/bundle.js")
+            .get("/public/bundle.js")
             .expect(200, (error) => {
               if (error) {
                 return done(error);
@@ -2631,6 +2689,25 @@ describe.each([
                 },
               );
             });
+        });
+
+        it("should not allow to get files above root", async () => {
+          const response = await req.get("/public/..%2f../middleware.test.js");
+
+          expect(response.statusCode).toEqual(403);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toEqual(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Forbidden</pre>
+</body>
+</html>`);
         });
       });
 
