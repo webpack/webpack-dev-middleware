@@ -102,17 +102,17 @@ function getFilenameFromUrl(context, url, extra = {}) {
       continue;
     }
 
-    let pathname = decode(urlObject.pathname);
-
-    // Null byte(s)
-    if (pathname.includes("\0")) {
-      // eslint-disable-next-line no-param-reassign
-      extra.errorCode = 400;
-
-      return;
-    }
+    const pathname = decode(urlObject.pathname);
 
     if (pathname && pathname.startsWith(publicPathObject.pathname)) {
+      // Null byte(s)
+      if (pathname.includes("\0")) {
+        // eslint-disable-next-line no-param-reassign
+        extra.errorCode = 400;
+
+        return;
+      }
+
       // ".." is malicious
       if (UP_PATH_REGEXP.test(path.normalize(`.${path.sep}${pathname}`))) {
         // eslint-disable-next-line no-param-reassign
@@ -123,8 +123,11 @@ function getFilenameFromUrl(context, url, extra = {}) {
 
       // Strip the `pathname` property from the `publicPath` option from the start of requested url
       // `/complex/foo.js` => `foo.js`
-      pathname = pathname.slice(publicPathObject.pathname.length);
-      filename = path.join(outputPath, pathname);
+      // and add outputPath
+      // `foo.js` => `/home/user/my-project/dist/foo.js`
+      filename = path.normalize(
+        path.join(outputPath, pathname.slice(publicPathObject.pathname.length)),
+      );
 
       try {
         // eslint-disable-next-line no-param-reassign
