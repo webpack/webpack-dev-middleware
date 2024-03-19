@@ -1,10 +1,6 @@
 /// <reference types="node" />
 export = getFilenameFromUrl;
 /**
- * @typedef {Object} Extra
- * @property {import("fs").Stats=} stats
- */
-/**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
  * @param {import("../index.js").Context<Request, Response>} context
@@ -25,6 +21,7 @@ declare namespace getFilenameFromUrl {
 }
 type Extra = {
   stats?: import("fs").Stats | undefined;
+  errorCode?: number | undefined;
 };
 type IncomingMessage = import("../index.js").IncomingMessage;
 type ServerResponse = import("../index.js").ServerResponse;

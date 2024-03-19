@@ -80,6 +80,18 @@ function wrapper(context) {
         extra,
       );
 
+      if (extra.errorCode) {
+        if (extra.errorCode === 403) {
+          context.logger.error(`Malicious path "${filename}".`);
+        }
+
+        sendError(req, res, extra.errorCode, {
+          modifyResponseData: context.options.modifyResponseData,
+        });
+
+        return;
+      }
+
       if (!filename) {
         await goNext();
 
@@ -164,6 +176,7 @@ function wrapper(context) {
             headers: {
               "Content-Range": res.getHeader("Content-Range"),
             },
+            modifyResponseData: context.options.modifyResponseData,
           });
 
           return;

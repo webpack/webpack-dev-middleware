@@ -177,6 +177,8 @@ function destroyStream(stream, suppress) {
 
 /** @type {Record<number, string>} */
 const statuses = {
+  400: "Bad Request",
+  403: "Forbidden",
   404: "Not Found",
   416: "Range Not Satisfiable",
   500: "Internal Server Error",
@@ -213,7 +215,7 @@ function sendError(req, res, status, options) {
 
   // Send basic response
   setStatusCode(res, status);
-  setHeaderForResponse(res, "Content-Type", "text/html; charset=UTF-8");
+  setHeaderForResponse(res, "Content-Type", "text/html; charset=utf-8");
   setHeaderForResponse(res, "Content-Security-Policy", "default-src 'none'");
   setHeaderForResponse(res, "X-Content-Type-Options", "nosniff");
 

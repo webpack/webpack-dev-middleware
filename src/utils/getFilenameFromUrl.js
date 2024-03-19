@@ -43,11 +43,28 @@ const mem = (fn, { cache = new Map() } = {}) => {
 };
 const memoizedParse = mem(parse);
 
+const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
+
 /**
  * @typedef {Object} Extra
  * @property {import("fs").Stats=} stats
+ * @property {number=} errorCode
  */
 
+/**
+ * decodeURIComponent.
+ *
+ * Allows V8 to only deoptimize this fn instead of all of send().
+ *
+ * @param {string} input
+ * @returns {string}
+ */
+
+function decode(input) {
+  return querystring.unescape(input);
+}
+
+// TODO refactor me in the next major release, this function should return `{ filename, stats, error }`
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
@@ -85,21 +102,29 @@ function getFilenameFromUrl(context, url, extra = {}) {
       continue;
     }
 
-    if (
-      urlObject.pathname &&
-      urlObject.pathname.startsWith(publicPathObject.pathname)
-    ) {
-      filename = outputPath;
+    let pathname = decode(urlObject.pathname);
+
+    // Null byte(s)
+    if (pathname.includes("\0")) {
+      // eslint-disable-next-line no-param-reassign
+      extra.errorCode = 400;
+
+      return;
+    }
+
+    if (pathname && pathname.startsWith(publicPathObject.pathname)) {
+      // ".." is malicious
+      if (UP_PATH_REGEXP.test(path.normalize(`.${path.sep}${pathname}`))) {
+        // eslint-disable-next-line no-param-reassign
+        extra.errorCode = 403;
+
+        return;
+      }
 
       // Strip the `pathname` property from the `publicPath` option from the start of requested url
       // `/complex/foo.js` => `foo.js`
-      const pathname = urlObject.pathname.slice(
-        publicPathObject.pathname.length,
-      );
-
-      if (pathname) {
-        filename = path.join(outputPath, querystring.unescape(pathname));
-      }
+      pathname = pathname.slice(publicPathObject.pathname.length);
+      filename = path.join(outputPath, pathname);
 
       try {
         // eslint-disable-next-line no-param-reassign
