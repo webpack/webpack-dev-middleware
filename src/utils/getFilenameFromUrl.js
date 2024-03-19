@@ -104,11 +104,10 @@ function getFilenameFromUrl(context, url, extra = {}) {
 
     let { pathname } = urlObject;
 
-    console.log("PATHNAME", pathname)
-    console.log("PUBLIC PATH", publicPathObject.pathname)
-
     if (pathname && pathname.startsWith(publicPathObject.pathname)) {
       pathname = decode(pathname);
+
+      console.log("DECODED PATHNAME", pathname);
 
       // Null byte(s)
       if (pathname.includes("\0")) {
@@ -135,6 +134,8 @@ function getFilenameFromUrl(context, url, extra = {}) {
         pathname.slice(publicPathObject.pathname.length),
       );
 
+      console.log("Filename", filename);
+
       try {
         // eslint-disable-next-line no-param-reassign
         extra.stats =
@@ -144,6 +145,8 @@ function getFilenameFromUrl(context, url, extra = {}) {
         // eslint-disable-next-line no-continue
         continue;
       }
+
+      console.log("Stats", extra.stats);
 
       if (extra.stats.isFile()) {
         foundFilename = filename;
