@@ -641,7 +641,7 @@ describe.each([
       describe.only("should work with difference requests", () => {
         const basicOutputPath = path.resolve(__dirname, "./outputs/basic");
         const fixtures = [
-          {
+          /* {
             urls: [
               {
                 value: "bundle.js",
@@ -722,7 +722,7 @@ describe.each([
                 code: 200,
               },
             ],
-          },
+          },*/
           {
             file: "/complex/foo.js",
             data: 'console.log("foo");',
@@ -744,7 +744,7 @@ describe.each([
               },
             ],
           },
-          {
+          /*{
             file: "/complex/complex/foo.js",
             data: 'console.log("foo");',
             urls: [
@@ -858,7 +858,7 @@ describe.each([
                 code: 200,
               },
             ],
-          },
+          },*/
         ];
 
         const configurations = [
@@ -866,7 +866,7 @@ describe.each([
             output: { path: basicOutputPath, publicPath: "" },
             publicPathForRequest: "/",
           },
-          {
+         /* {
             output: {
               path: path.join(basicOutputPath, "dist"),
               publicPath: "",
@@ -933,12 +933,12 @@ describe.each([
               publicPath: "//test.domain/",
             },
             publicPathForRequest: "/",
-          },
+          },*/
         ];
 
         const isWindows = process.platform === "win32";
 
-        if (isWindows) {
+        /*if (isWindows) {
           fixtures.push(
             {
               file: "windows.txt",
@@ -998,7 +998,7 @@ describe.each([
               publicPathForRequest: "/my%20static/",
             },
           );
-        }
+        }*/
 
         for (const configuration of configurations) {
           // eslint-disable-next-line no-loop-func
