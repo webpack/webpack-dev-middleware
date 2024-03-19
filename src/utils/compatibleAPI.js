@@ -95,21 +95,6 @@ function setHeaderForResponse(res, name, value) {
 /**
  * @template {ServerResponse} Response
  * @param {Response} res
- * @param {Record<string, number | string | string[]>} headers
- */
-function setHeadersForResponse(res, headers) {
-  const keys = Object.keys(headers);
-
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-
-    setHeaderForResponse(res, key, headers[key]);
-  }
-}
-
-/**
- * @template {ServerResponse} Response
- * @param {Response} res
  */
 function clearHeadersForResponse(res) {
   const headers = getHeaderNames(res);
@@ -182,10 +167,9 @@ const statuses = {
  * @template {ServerResponse} Response
  * @param {Response} res response
  * @param {number} status status
- * @param {Error & { headers?: Record<string, number | string | string[]>}} err error
  * @returns {void}
  */
-function sendError(res, status, err) {
+function sendError(res, status) {
   const msg = statuses[status] || String(status);
   const doc = `<!DOCTYPE html>
 <html lang="en">
@@ -200,12 +184,6 @@ function sendError(res, status, err) {
 
   // Clear existing headers
   clearHeadersForResponse(res);
-
-  // Add error headers
-  if (err && err.headers) {
-    setHeadersForResponse(res, err.headers);
-  }
-
   // Send basic response
   setStatusCode(res, status);
   setHeaderForResponse(res, "Content-Type", "text/html; charset=UTF-8");
@@ -261,10 +239,10 @@ function send(req, res, bufferOtStream, byteLength) {
         case "ENAMETOOLONG":
         case "ENOENT":
         case "ENOTDIR":
-          sendError(res, 404, error);
+          sendError(res, 404);
           break;
         default:
-          sendError(res, 500, error);
+          sendError(res, 500);
           break;
       }
     });
