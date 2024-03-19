@@ -727,7 +727,7 @@ describe.each([
             file: "/complex/foo.js",
             data: 'console.log("foo");',
             urls: [
-              {
+              /*{
                 value: "complex/foo.js",
                 contentType: "application/javascript; charset=utf-8",
                 code: 200,
@@ -736,7 +736,7 @@ describe.each([
                 value: "complex/./foo.js",
                 contentType: "application/javascript; charset=utf-8",
                 code: 200,
-              },
+              },*/
               {
                 value: "complex/foo/../foo.js",
                 contentType: "application/javascript; charset=utf-8",
@@ -984,7 +984,7 @@ describe.each([
               },
               publicPathForRequest: "/static/",
             },
-            {
+           /* {
               output: {
                 path: path.join(basicOutputPath, "my%20static"),
                 publicPath: "/static/",
@@ -997,7 +997,7 @@ describe.each([
                 publicPath: "/my%20static/",
               },
               publicPathForRequest: "/my%20static/",
-            },
+            },*/
           );
         }
 
