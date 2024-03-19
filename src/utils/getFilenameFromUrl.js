@@ -102,13 +102,10 @@ function getFilenameFromUrl(context, url, extra = {}) {
       continue;
     }
 
-    let { pathname } = urlObject;
+    const pathname = decode(urlObject.pathname);
+    const publicPathPathname = decode(publicPathObject.pathname);
 
-    if (pathname && pathname.startsWith(publicPathObject.pathname)) {
-      pathname = decode(pathname);
-
-      console.log("DECODED PATHNAME", pathname);
-
+    if (pathname && pathname.startsWith(publicPathPathname)) {
       // Null byte(s)
       if (pathname.includes("\0")) {
         // eslint-disable-next-line no-param-reassign
@@ -131,7 +128,7 @@ function getFilenameFromUrl(context, url, extra = {}) {
       // `foo.js` => `/home/user/my-project/dist/foo.js`
       filename = path.join(
         outputPath,
-        pathname.slice(publicPathObject.pathname.length),
+        pathname.slice(publicPathPathname.length),
       );
 
       console.log("Filename", filename);
