@@ -19,7 +19,7 @@ import webpackQueryStringConfig from "./fixtures/webpack.querystring.config";
 import webpackClientServerConfig from "./fixtures/webpack.client.server.config";
 
 // Suppress unnecessary stats output
-// global.console.log = jest.fn();
+global.console.log = jest.fn();
 
 describe.each([
   ["express", express],
@@ -638,10 +638,10 @@ describe.each([
         });
       });
 
-      describe.only("should work with difference requests", () => {
+      describe("should work with difference requests", () => {
         const basicOutputPath = path.resolve(__dirname, "./outputs/basic");
         const fixtures = [
-          /* {
+          {
             urls: [
               {
                 value: "bundle.js",
@@ -722,7 +722,7 @@ describe.each([
                 code: 200,
               },
             ],
-          },*/
+          },
           {
             file: "/complex/foo.js",
             data: 'console.log("foo");',
@@ -755,7 +755,7 @@ describe.each([
               },
             ],
           },
-          /*
+
           {
             file: "/föö.js",
             data: 'console.log("foo");',
@@ -859,7 +859,7 @@ describe.each([
                 code: 200,
               },
             ],
-          },*/
+          },
         ];
 
         const configurations = [

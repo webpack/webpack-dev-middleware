@@ -102,19 +102,18 @@ function getFilenameFromUrl(context, url, extra = {}) {
       continue;
     }
 
-    const pathname = decode(urlObject.pathname);
-
-    // Null byte(s)
-    if (pathname.includes("\0")) {
-      // eslint-disable-next-line no-param-reassign
-      extra.errorCode = 400;
-
-      return;
-    }
+    let { pathname } = urlObject;
 
     if (pathname && pathname.startsWith(publicPathObject.pathname)) {
-      console.log("Pathname", pathname);
-      console.log("Normalize pathname", path.normalize(`./${pathname}`));
+      pathname = decode(pathname);
+
+      // Null byte(s)
+      if (pathname.includes("\0")) {
+        // eslint-disable-next-line no-param-reassign
+        extra.errorCode = 400;
+
+        return;
+      }
 
       // ".." is malicious
       if (UP_PATH_REGEXP.test(path.normalize(`./${pathname}`))) {
@@ -132,8 +131,6 @@ function getFilenameFromUrl(context, url, extra = {}) {
         outputPath,
         pathname.slice(publicPathObject.pathname.length),
       );
-
-      console.log("Filename", filename);
 
       try {
         // eslint-disable-next-line no-param-reassign
