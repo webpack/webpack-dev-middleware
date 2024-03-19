@@ -4,12 +4,12 @@ const mime = require("mime-types");
 
 const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
 const {
-  getHeaderNames,
   getHeaderFromRequest,
   getHeaderFromResponse,
   setHeaderForResponse,
   setStatusCode,
   send,
+  sendError,
 } = require("./utils/compatibleAPI");
 const ready = require("./utils/ready");
 
@@ -25,28 +25,6 @@ const ready = require("./utils/ready");
  */
 function getValueContentRangeHeader(type, size, range) {
   return `${type} ${range ? `${range.start}-${range.end}` : "*"}/${size}`;
-}
-
-/**
- * @param {string | number} title
- * @param {string} body
- * @returns {string}
- */
-function createHtmlDocument(title, body) {
-  return (
-    `${
-      "<!DOCTYPE html>\n" +
-      '<html lang="en">\n' +
-      "<head>\n" +
-      '<meta charset="utf-8">\n' +
-      "<title>"
-    }${title}</title>\n` +
-    `</head>\n` +
-    `<body>\n` +
-    `<pre>${body}</pre>\n` +
-    `</body>\n` +
-    `</html>\n`
-  );
 }
 
 const BYTES_RANGE_REGEXP = /^ *bytes/i;
@@ -184,45 +162,19 @@ function wrapper(context) {
         });
 
         if (parsedRanges === -1) {
-          const message = "Unsatisfiable range for 'Range' header.";
+          context.logger.error("Unsatisfiable range for 'Range' header.");
 
-          context.logger.error(message);
-
-          const existingHeaders = getHeaderNames(res);
-
-          for (let i = 0; i < existingHeaders.length; i++) {
-            res.removeHeader(existingHeaders[i]);
-          }
-
-          setStatusCode(res, 416);
           setHeaderForResponse(
             res,
             "Content-Range",
             getValueContentRangeHeader("bytes", size),
           );
-          setHeaderForResponse(res, "Content-Type", "text/html; charset=utf-8");
 
-          /** @type {string | Buffer | import("fs").ReadStream} */
-          let document = createHtmlDocument(416, `Error: ${message}`);
-          let byteLength = Buffer.byteLength(document);
-
-          setHeaderForResponse(
-            res,
-            "Content-Length",
-            Buffer.byteLength(document),
-          );
-
-          if (context.options.modifyResponseData) {
-            ({ data: document, byteLength } =
-              context.options.modifyResponseData(
-                req,
-                res,
-                document,
-                byteLength,
-              ));
-          }
-
-          send(req, res, document, byteLength);
+          sendError(req, res, 416, {
+            headers: {
+              "Content-Range": res.getHeader("Content-Range"),
+            },
+          });
 
           return;
         } else if (parsedRanges === -2) {
@@ -283,17 +235,9 @@ function wrapper(context) {
         return;
       }
 
-      if (context.options.modifyResponseData) {
-        ({ data: bufferOrStream, byteLength } =
-          context.options.modifyResponseData(
-            req,
-            res,
-            bufferOrStream,
-            byteLength,
-          ));
-      }
-
-      send(req, res, bufferOrStream, byteLength);
+      send(req, res, bufferOrStream, byteLength, {
+        modifyResponseData: context.options.modifyResponseData,
+      });
     }
   };
 }

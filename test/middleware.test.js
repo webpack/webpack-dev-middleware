@@ -263,7 +263,19 @@ describe.each([
             `bytes */${codeLength}`,
           );
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8",
+            "text/html; charset=UTF-8",
+          );
+          expect(response.text).toEqual(
+            `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Range Not Satisfiable</pre>
+</body>
+</html>`,
           );
         });
 
