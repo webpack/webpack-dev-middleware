@@ -10,6 +10,28 @@ export type ExpectedResponse = {
   status: (status: number) => void;
   send: (data: any) => void;
 };
+/**
+ * send error options
+ */
+export type SendOptions<
+  Request_1 extends import("http").IncomingMessage,
+  Response_1 extends import("../index.js").ServerResponse
+> = {
+  /**
+   * headers
+   */
+  headers?: Record<string, number | string | string[] | undefined> | undefined;
+  /**
+   * modify response data callback
+   */
+  modifyResponseData?:
+    | import("../index").ModifyResponseData<Request, Response>
+    | undefined;
+  /**
+   * modify response data callback
+   */
+  outputFileSystem: import("../index").OutputFileSystem;
+};
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
 /**
@@ -83,4 +105,30 @@ export function send<
   res: Response_1,
   bufferOtStream: string | Buffer | import("fs").ReadStream,
   byteLength: number
+): void;
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @typedef {Object} SendOptions send error options
+ * @property {Record<string, number | string | string[] | undefined>=} headers headers
+ * @property {import("../index").ModifyResponseData<Request, Response>=} modifyResponseData modify response data callback
+ * @property {import("../index").OutputFileSystem} outputFileSystem modify response data callback
+ */
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {Request} req response
+ * @param {Response} res response
+ * @param {number} status status
+ * @param {Partial<SendOptions<Request, Response>>=} options options
+ * @returns {void}
+ */
+export function sendError<
+  Request_1 extends import("http").IncomingMessage,
+  Response_1 extends import("../index.js").ServerResponse
+>(
+  req: Request_1,
+  res: Response_1,
+  status: number,
+  options?: Partial<SendOptions<Request_1, Response_1>> | undefined
 ): void;
