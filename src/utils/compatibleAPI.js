@@ -155,6 +155,121 @@ function send(req, res, bufferOtStream, byteLength) {
   }
 }
 
+/**
+ * @template {ServerResponse} Response
+ * @param {Response} res
+ */
+function clearHeadersForResponse(res) {
+  const headers = getHeaderNames(res);
+
+  for (let i = 0; i < headers.length; i++) {
+    res.removeHeader(headers[i]);
+  }
+}
+
+const matchHtmlRegExp = /["'&<>]/;
+
+/**
+ * @param {string} string raw HTML
+ * @returns {string} escaped HTML
+ */
+function escapeHtml(string) {
+  const str = `${string}`;
+  const match = matchHtmlRegExp.exec(str);
+
+  if (!match) {
+    return str;
+  }
+
+  let escape;
+  let html = "";
+  let index = 0;
+  let lastIndex = 0;
+
+  for ({ index } = match; index < str.length; index++) {
+    switch (str.charCodeAt(index)) {
+      // "
+      case 34:
+        escape = "&quot;";
+        break;
+      // &
+      case 38:
+        escape = "&amp;";
+        break;
+      // '
+      case 39:
+        escape = "&#39;";
+        break;
+      // <
+      case 60:
+        escape = "&lt;";
+        break;
+      // >
+      case 62:
+        escape = "&gt;";
+        break;
+      default:
+        // eslint-disable-next-line no-continue
+        continue;
+    }
+
+    if (lastIndex !== index) {
+      html += str.substring(lastIndex, index);
+    }
+
+    lastIndex = index + 1;
+    html += escape;
+  }
+
+  return lastIndex !== index ? html + str.substring(lastIndex, index) : html;
+}
+
+/** @type {Record<number, string>} */
+const statuses = {
+  400: "Bad Request",
+  403: "Forbidden",
+  404: "Not Found",
+  416: "Range Not Satisfiable",
+  500: "Internal Server Error",
+};
+
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {Request} req response
+ * @param {Response} res response
+ * @param {number} status status
+ * @returns {void}
+ */
+function sendError(req, res, status) {
+  const content = statuses[status] || String(status);
+  const document = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>${escapeHtml(content)}</pre>
+</body>
+</html>`;
+
+  // Clear existing headers
+  clearHeadersForResponse(res);
+
+  // Send basic response
+  setStatusCode(res, status);
+  setHeaderForResponse(res, "Content-Type", "text/html; charset=utf-8");
+  setHeaderForResponse(res, "Content-Security-Policy", "default-src 'none'");
+  setHeaderForResponse(res, "X-Content-Type-Options", "nosniff");
+
+  const byteLength = Buffer.byteLength(document);
+
+  setHeaderForResponse(res, "Content-Length", byteLength);
+
+  res.end(document);
+}
+
 module.exports = {
   getHeaderNames,
   getHeaderFromRequest,
@@ -162,4 +277,5 @@ module.exports = {
   setHeaderForResponse,
   setStatusCode,
   send,
+  sendError,
 };

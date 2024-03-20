@@ -10,11 +10,14 @@ const getPaths = require("./getPaths");
 const cacheStore = new WeakMap();
 
 /**
+ * @template T
  * @param {Function} fn
- * @param {{ cache?: Map<any, any> }} [cache]
+ * @param {{ cache?: Map<string, { data: T }> } | undefined} cache
+ * @param {(value: T) => T} callback
  * @returns {any}
  */
-const mem = (fn, { cache = new Map() } = {}) => {
+// @ts-ignore
+const mem = (fn, { cache = new Map() } = {}, callback) => {
   /**
    * @param {any} arguments_
    * @return {any}
@@ -27,7 +30,8 @@ const mem = (fn, { cache = new Map() } = {}) => {
       return cacheItem.data;
     }
 
-    const result = fn.apply(this, arguments_);
+    let result = fn.apply(this, arguments_);
+    result = callback(result);
 
     cache.set(key, {
       data: result,
@@ -40,20 +44,52 @@ const mem = (fn, { cache = new Map() } = {}) => {
 
   return memoized;
 };
-const memoizedParse = mem(parse);
+// eslint-disable-next-line no-undefined
+const memoizedParse = mem(parse, undefined, (value) => {
+  if (value.pathname) {
+    // eslint-disable-next-line no-param-reassign
+    value.pathname = decode(value.pathname);
+  }
+
+  return value;
+});
+
+const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
+
+/**
+ * @typedef {Object} Extra
+ * @property {import("fs").Stats=} stats
+ * @property {number=} errorCode
+ */
+
+/**
+ * decodeURIComponent.
+ *
+ * Allows V8 to only deoptimize this fn instead of all of send().
+ *
+ * @param {string} input
+ * @returns {string}
+ */
+
+function decode(input) {
+  return querystring.unescape(input);
+}
 
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
  * @param {import("../index.js").Context<Request, Response>} context
  * @param {string} url
+ * @param {Extra=} extra
  * @returns {string | undefined}
  */
-function getFilenameFromUrl(context, url) {
+function getFilenameFromUrl(context, url, extra = {}) {
   const { options } = context;
   const paths = getPaths(context);
 
+  /** @type {string | undefined} */
   let foundFilename;
+  /** @type {URL} */
   let urlObject;
 
   try {
@@ -64,7 +100,9 @@ function getFilenameFromUrl(context, url) {
   }
 
   for (const { publicPath, outputPath } of paths) {
+    /** @type {string | undefined} */
     let filename;
+    /** @type {URL} */
     let publicPathObject;
 
     try {
@@ -78,26 +116,38 @@ function getFilenameFromUrl(context, url) {
       continue;
     }
 
-    if (
-      urlObject.pathname &&
-      urlObject.pathname.startsWith(publicPathObject.pathname)
-    ) {
-      filename = outputPath;
+    const { pathname } = urlObject;
+    const { pathname: publicPathPathname } = publicPathObject;
+
+    if (pathname && pathname.startsWith(publicPathPathname)) {
+      // Null byte(s)
+      if (pathname.includes("\0")) {
+        // eslint-disable-next-line no-param-reassign
+        extra.errorCode = 400;
+
+        return;
+      }
+
+      // ".." is malicious
+      if (UP_PATH_REGEXP.test(path.normalize(`./${pathname}`))) {
+        // eslint-disable-next-line no-param-reassign
+        extra.errorCode = 403;
+
+        return;
+      }
 
       // Strip the `pathname` property from the `publicPath` option from the start of requested url
       // `/complex/foo.js` => `foo.js`
-      const pathname = urlObject.pathname.slice(
-        publicPathObject.pathname.length
+      // and add outputPath
+      // `foo.js` => `/home/user/my-project/dist/foo.js`
+      filename = path.join(
+        outputPath,
+        pathname.slice(publicPathPathname.length)
       );
 
-      if (pathname) {
-        filename = path.join(outputPath, querystring.unescape(pathname));
-      }
-
-      let fsStats;
-
       try {
-        fsStats =
+        // eslint-disable-next-line no-param-reassign
+        extra.stats =
           /** @type {import("fs").statSync} */
           (context.outputFileSystem.statSync)(filename);
       } catch (_ignoreError) {
@@ -105,12 +155,12 @@ function getFilenameFromUrl(context, url) {
         continue;
       }
 
-      if (fsStats.isFile()) {
+      if (extra.stats.isFile()) {
         foundFilename = filename;
 
         break;
       } else if (
-        fsStats.isDirectory() &&
+        extra.stats.isDirectory() &&
         (typeof options.index === "undefined" || options.index)
       ) {
         const indexValue =
@@ -122,7 +172,8 @@ function getFilenameFromUrl(context, url) {
         filename = path.join(filename, indexValue);
 
         try {
-          fsStats =
+          // eslint-disable-next-line no-param-reassign
+          extra.stats =
             /** @type {import("fs").statSync} */
             (context.outputFileSystem.statSync)(filename);
         } catch (__ignoreError) {
@@ -130,7 +181,7 @@ function getFilenameFromUrl(context, url) {
           continue;
         }
 
-        if (fsStats.isFile()) {
+        if (extra.stats.isFile()) {
           foundFilename = filename;
 
           break;
