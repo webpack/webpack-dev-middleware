@@ -84,3 +84,15 @@ export function send<
   bufferOtStream: string | Buffer | import("fs").ReadStream,
   byteLength: number
 ): void;
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {Request} req response
+ * @param {Response} res response
+ * @param {number} status status
+ * @returns {void}
+ */
+export function sendError<
+  Request_1 extends import("http").IncomingMessage,
+  Response_1 extends import("../index.js").ServerResponse
+>(req: Request_1, res: Response_1, status: number): void;
