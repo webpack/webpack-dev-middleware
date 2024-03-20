@@ -859,6 +859,39 @@ describe.each([
               },
             ],
           },
+          {
+            file: "windows.txt",
+            data: "windows.txt content",
+            urls: [
+              {
+                value: "windows.txt",
+                contentType: "text/plain; charset=utf-8",
+                code: 200,
+              },
+            ],
+          },
+          {
+            file: "windows 2.txt",
+            data: "windows 2.txt content",
+            urls: [
+              {
+                value: "windows%202.txt",
+                contentType: "text/plain; charset=utf-8",
+                code: 200,
+              },
+            ],
+          },
+          {
+            file: "test & test & %20.txt",
+            data: "test & test & %20.txt content",
+            urls: [
+              {
+                value: "test%20%26%20test%20%26%20%2520.txt",
+                contentType: "text/plain; charset=utf-8",
+                code: 200,
+              },
+            ],
+          },
         ];
 
         const configurations = [
@@ -934,71 +967,28 @@ describe.each([
             },
             publicPathForRequest: "/",
           },
+          {
+            output: {
+              path: path.join(basicOutputPath, "my static"),
+              publicPath: "/static/",
+            },
+            publicPathForRequest: "/static/",
+          },
+          {
+            output: {
+              path: path.join(basicOutputPath, "my%20static"),
+              publicPath: "/static/",
+            },
+            publicPathForRequest: "/static/",
+          },
+          {
+            output: {
+              path: path.join(basicOutputPath, "my %20 static"),
+              publicPath: "/my%20static/",
+            },
+            publicPathForRequest: "/my%20static/",
+          },
         ];
-
-        const isWindows = process.platform === "win32";
-
-        if (isWindows) {
-          fixtures.push(
-            {
-              file: "windows.txt",
-              data: "windows.txt content",
-              urls: [
-                {
-                  value: "windows.txt",
-                  contentType: "text/plain; charset=utf-8",
-                  code: 200,
-                },
-              ],
-            },
-            {
-              file: "windows 2.txt",
-              data: "windows 2.txt content",
-              urls: [
-                {
-                  value: "windows%202.txt",
-                  contentType: "text/plain; charset=utf-8",
-                  code: 200,
-                },
-              ],
-            },
-            {
-              file: "test & test & %20.txt",
-              data: "test & test & %20.txt content",
-              urls: [
-                {
-                  value: "test%20%26%20test%20%26%20%2520.txt",
-                  contentType: "text/plain; charset=utf-8",
-                  code: 200,
-                },
-              ],
-            },
-          );
-
-          configurations.push(
-            {
-              output: {
-                path: path.join(basicOutputPath, "my static"),
-                publicPath: "/static/",
-              },
-              publicPathForRequest: "/static/",
-            },
-            {
-              output: {
-                path: path.join(basicOutputPath, "my%20static"),
-                publicPath: "/static/",
-              },
-              publicPathForRequest: "/static/",
-            },
-            {
-              output: {
-                path: path.join(basicOutputPath, "my %20 static"),
-                publicPath: "/my%20static/",
-              },
-              publicPathForRequest: "/my%20static/",
-            },
-          );
-        }
 
         for (const configuration of configurations) {
           // eslint-disable-next-line no-loop-func
