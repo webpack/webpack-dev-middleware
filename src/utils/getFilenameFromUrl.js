@@ -10,12 +10,14 @@ const getPaths = require("./getPaths");
 const cacheStore = new WeakMap();
 
 /**
+ * @template T
  * @param {Function} fn
- * @param {{ cache?: Map<any, any> }} [cache]
+ * @param {{ cache?: Map<string, { data: T }> } | undefined} cache
+ * @param {(value: T) => T} callback
  * @returns {any}
  */
 // @ts-ignore
-const mem = (fn, { cache = new Map() } = {}) => {
+const mem = (fn, { cache = new Map() } = {}, callback) => {
   /**
    * @param {any} arguments_
    * @return {any}
@@ -28,7 +30,8 @@ const mem = (fn, { cache = new Map() } = {}) => {
       return cacheItem.data;
     }
 
-    const result = fn.apply(this, arguments_);
+    let result = fn.apply(this, arguments_);
+    result = callback(result);
 
     cache.set(key, {
       data: result,
@@ -41,7 +44,15 @@ const mem = (fn, { cache = new Map() } = {}) => {
 
   return memoized;
 };
-const memoizedParse = mem(parse);
+// eslint-disable-next-line no-undefined
+const memoizedParse = mem(parse, undefined, (value) => {
+  if (value.pathname) {
+    // eslint-disable-next-line no-param-reassign
+    value.pathname = decode(value.pathname);
+  }
+
+  return value;
+});
 
 const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
 
@@ -77,7 +88,9 @@ function getFilenameFromUrl(context, url, extra = {}) {
   const { options } = context;
   const paths = getPaths(context);
 
+  /** @type {string | undefined} */
   let foundFilename;
+  /** @type {URL} */
   let urlObject;
 
   try {
@@ -88,7 +101,9 @@ function getFilenameFromUrl(context, url, extra = {}) {
   }
 
   for (const { publicPath, outputPath } of paths) {
+    /** @type {string | undefined} */
     let filename;
+    /** @type {URL} */
     let publicPathObject;
 
     try {
@@ -102,8 +117,8 @@ function getFilenameFromUrl(context, url, extra = {}) {
       continue;
     }
 
-    const pathname = decode(urlObject.pathname);
-    const publicPathPathname = decode(publicPathObject.pathname);
+    const { pathname } = urlObject;
+    const { pathname: publicPathPathname } = publicPathObject;
 
     if (pathname && pathname.startsWith(publicPathPathname)) {
       // Null byte(s)
