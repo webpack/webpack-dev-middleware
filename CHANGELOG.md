@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.3.4](https://github.com/webpack/webpack-dev-middleware/compare/v5.3.3...v5.3.4) (2024-03-20)
+
+
+### Bug Fixes
+
+* **security:** do not allow to read files above ([#1779](https://github.com/webpack/webpack-dev-middleware/issues/1779)) ([189c4ac](https://github.com/webpack/webpack-dev-middleware/commit/189c4ac7d2344ec132a4689e74dc837ec5be0132))
+
 ### [5.3.3](https://github.com/webpack/webpack-dev-middleware/compare/v5.3.2...v5.3.3) (2022-05-18)
 
 
