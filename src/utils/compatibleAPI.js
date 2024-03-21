@@ -267,7 +267,9 @@ async function send(req, res, filename, start, end, goNext, options) {
           start,
           end,
         });
-      byteLength = end - start + 1;
+
+      // Handle files with zero bytes
+      byteLength = end === 0 ? 0 : end - start + 1;
     } else {
       bufferOrStream = /** @type {import("fs").readFileSync} */ (
         options.outputFileSystem.readFileSync
