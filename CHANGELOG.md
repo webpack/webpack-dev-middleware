@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.1.1](https://github.com/webpack/webpack-dev-middleware/compare/v7.1.0...v7.1.1) (2024-03-21)
+
+
+### Bug Fixes
+
+* `ContentLength` incorrectly set for empty files ([#1785](https://github.com/webpack/webpack-dev-middleware/issues/1785)) ([0f3e25e](https://github.com/webpack/webpack-dev-middleware/commit/0f3e25e2b0adbc081ba4c7df70467c6ed7bc3a2a))
+* improve perf ([#1777](https://github.com/webpack/webpack-dev-middleware/issues/1777)) ([5b47c92](https://github.com/webpack/webpack-dev-middleware/commit/5b47c9294ec612e337f87101a4df1ca011b50ace))
+* **types:** make types better ([#1786](https://github.com/webpack/webpack-dev-middleware/issues/1786)) ([e4d183e](https://github.com/webpack/webpack-dev-middleware/commit/e4d183ea6dea1731b69e24d5d5471d876ff6ec3a))
+
 ## [7.1.0](https://github.com/webpack/webpack-dev-middleware/compare/v7.0.0...v7.1.0) (2024-03-19)
 
 
