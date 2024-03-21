@@ -3,16 +3,16 @@ export = getFilenameFromUrl;
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").Context<Request, Response>} context
+ * @param {import("../index.js").FilledContext<Request, Response>} context
  * @param {string} url
  * @param {Extra=} extra
  * @returns {string | undefined}
  */
 declare function getFilenameFromUrl<
   Request extends import("http").IncomingMessage,
-  Response extends import("./getPaths").ServerResponse,
+  Response extends import("../index.js").ServerResponse,
 >(
-  context: import("../index.js").Context<Request, Response>,
+  context: import("../index.js").FilledContext<Request, Response>,
   url: string,
   extra?: Extra | undefined,
 ): string | undefined;

@@ -7,7 +7,7 @@
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").Context<Request, Response>} context
+ * @param {import("../index.js").FilledContext<Request, Response>} context
  */
 function getPaths(context) {
   const { stats, options } = context;

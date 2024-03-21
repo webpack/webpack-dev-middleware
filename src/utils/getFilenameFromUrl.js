@@ -16,7 +16,6 @@ const cacheStore = new WeakMap();
  * @param {(value: T) => T} callback
  * @returns {any}
  */
-// @ts-ignore
 const mem = (fn, { cache = new Map() } = {}, callback) => {
   /**
    * @param {any} arguments_
@@ -79,7 +78,7 @@ function decode(input) {
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").Context<Request, Response>} context
+ * @param {import("../index.js").FilledContext<Request, Response>} context
  * @param {string} url
  * @param {Extra=} extra
  * @returns {string | undefined}

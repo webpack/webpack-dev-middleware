@@ -8,13 +8,13 @@ export = getPaths;
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").Context<Request, Response>} context
+ * @param {import("../index.js").FilledContext<Request, Response>} context
  */
 declare function getPaths<
   Request extends import("http").IncomingMessage,
   Response extends import("../index.js").ServerResponse,
 >(
-  context: import("../index.js").Context<Request, Response>,
+  context: import("../index.js").FilledContext<Request, Response>,
 ): {
   outputPath: string;
   publicPath: string;

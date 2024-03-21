@@ -1,6 +1,7 @@
 /// <reference types="node" />
 export type IncomingMessage = import("../index.js").IncomingMessage;
 export type ServerResponse = import("../index.js").ServerResponse;
+export type ReadStream = import("fs").ReadStream;
 export type ExpectedRequest = {
   get: (name: string) => string | undefined;
 };
@@ -34,6 +35,7 @@ export type SendOptions<
 };
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
+/** @typedef {import("fs").ReadStream} ReadStream */
 /**
  * @typedef {Object} ExpectedRequest
  * @property {(name: string) => string | undefined} get
@@ -57,11 +59,11 @@ export function getHeaderNames<
  * @template {IncomingMessage} Request
  * @param {Request} req
  * @param {string} name
- * @returns {string | undefined}
+ * @returns {string | string[] | undefined}
  */
 export function getHeaderFromRequest<
   Request extends import("http").IncomingMessage,
->(req: Request, name: string): string | undefined;
+>(req: Request, name: string): string | string[] | undefined;
 /**
  * @template {ServerResponse} Response
  * @param {Response} res
