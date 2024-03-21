@@ -42,11 +42,12 @@ const noop = () => {};
  */
 
 /**
- * @typedef {ReturnType<Compiler["watch"]>} MultiWatching
+ * @typedef {ReturnType<MultiCompiler["watch"]>} MultiWatching
  */
 
+// TODO fix me after the next webpack release
 /**
- * @typedef {Compiler["outputFileSystem"] & { createReadStream?: import("fs").createReadStream, statSync?: import("fs").statSync, lstat?: import("fs").lstat, readFileSync?: import("fs").readFileSync }} OutputFileSystem
+ * @typedef {Object & { createReadStream?: import("fs").createReadStream, statSync?: import("fs").statSync, lstat?: import("fs").lstat, readFileSync?: import("fs").readFileSync }} OutputFileSystem
  */
 
 /** @typedef {ReturnType<Compiler["getInfrastructureLogger"]>} Logger */
@@ -82,7 +83,7 @@ const noop = () => {};
  * @property {Callback[]} callbacks
  * @property {Options<RequestInternal, ResponseInternal>} options
  * @property {Compiler | MultiCompiler} compiler
- * @property {Watching | MultiWatching} watching
+ * @property {Watching | MultiWatching | undefined} watching
  * @property {Logger} logger
  * @property {OutputFileSystem} outputFileSystem
  */
@@ -90,7 +91,15 @@ const noop = () => {};
 /**
  * @template {IncomingMessage} RequestInternal
  * @template {ServerResponse} ResponseInternal
- * @typedef {Record<string, string | number> | Array<{ key: string, value: number | string }> | ((req: RequestInternal, res: ResponseInternal, context: Context<RequestInternal, ResponseInternal>) =>  void | undefined | Record<string, string | number>) | undefined} Headers
+ * @typedef {WithoutUndefined<Context<RequestInternal, ResponseInternal>, "watching">} FilledContext
+ */
+
+/** @typedef {Record<string, string | number> | Array<{ key: string, value: number | string }>} NormalizedHeaders */
+
+/**
+ * @template {IncomingMessage} RequestInternal
+ * @template {ServerResponse} ResponseInternal
+ * @typedef {NormalizedHeaders | ((req: RequestInternal, res: ResponseInternal, context: Context<RequestInternal, ResponseInternal>) =>  void | undefined | NormalizedHeaders) | undefined} Headers
  */
 
 /**
@@ -162,6 +171,18 @@ const noop = () => {};
  */
 
 /**
+ * @template T
+ * @template {keyof T} K
+ * @typedef {Omit<T, K> & Partial<T>} WithOptional
+ */
+
+/**
+ * @template T
+ * @template {keyof T} K
+ * @typedef {T & { [P in K]: NonNullable<T[P]> }} WithoutUndefined
+ */
+
+/**
  * @template {IncomingMessage} RequestInternal
  * @template {ServerResponse} ResponseInternal
  * @param {Compiler | MultiCompiler} compiler
@@ -186,7 +207,7 @@ function wdm(compiler, options = {}) {
   }
 
   /**
-   * @type {Context<RequestInternal, ResponseInternal>}
+   * @type {WithOptional<Context<RequestInternal, ResponseInternal>, "watching" | "outputFileSystem">}
    */
   const context = {
     state: false,
@@ -195,13 +216,7 @@ function wdm(compiler, options = {}) {
     callbacks: [],
     options,
     compiler,
-    // @ts-ignore
-    // eslint-disable-next-line no-undefined
-    watching: undefined,
     logger: compiler.getInfrastructureLogger("webpack-dev-middleware"),
-    // @ts-ignore
-    // eslint-disable-next-line no-undefined
-    outputFileSystem: undefined,
   };
 
   setupHooks(context);
@@ -216,11 +231,6 @@ function wdm(compiler, options = {}) {
   if (/** @type {Compiler} */ (context.compiler).watching) {
     context.watching = /** @type {Compiler} */ (context.compiler).watching;
   } else {
-    /**
-     * @type {WatchOptions | WatchOptions[]}
-     */
-    let watchOptions;
-
     /**
      * @param {Error | null | undefined} error
      */
@@ -237,69 +247,47 @@ function wdm(compiler, options = {}) {
     if (
       Array.isArray(/** @type {MultiCompiler} */ (context.compiler).compilers)
     ) {
-      watchOptions =
-        /** @type {MultiCompiler} */
-        (context.compiler).compilers.map(
-          /**
-           * @param {Compiler} childCompiler
-           * @returns {WatchOptions}
-           */
-          (childCompiler) => childCompiler.options.watchOptions || {},
-        );
-
-      context.watching =
-        /** @type {MultiWatching} */
-        (
-          context.compiler.watch(
-            /** @type {WatchOptions}} */
-            (watchOptions),
-            errorHandler,
-          )
-        );
-    } else {
-      watchOptions =
-        /** @type {Compiler} */ (context.compiler).options.watchOptions || {};
-
-      context.watching = /** @type {Watching} */ (
-        context.compiler.watch(watchOptions, errorHandler)
+      const compiler = /** @type {MultiCompiler} */ (context.compiler);
+      const watchOptions = compiler.compilers.map(
+        (childCompiler) => childCompiler.options.watchOptions || {},
       );
+
+      context.watching = compiler.watch(watchOptions, errorHandler);
+    } else {
+      const compiler = /** @type {Compiler} */ (context.compiler);
+      const watchOptions = compiler.options.watchOptions || {};
+
+      context.watching = compiler.watch(watchOptions, errorHandler);
     }
   }
 
+  const filledContext =
+    /** @type {FilledContext<RequestInternal, ResponseInternal>} */
+    (context);
+
   const instance =
     /** @type {API<RequestInternal, ResponseInternal>} */
-    (middleware(context));
+    (middleware(filledContext));
 
   // API
-  /** @type {API<RequestInternal, ResponseInternal>} */
-  (instance).getFilenameFromUrl = (url, extra) =>
-    getFilenameFromUrl(context, url, extra);
+  instance.getFilenameFromUrl = (url, extra) =>
+    getFilenameFromUrl(filledContext, url, extra);
 
-  /** @type {API<RequestInternal, ResponseInternal>} */
-  (instance).waitUntilValid = (callback = noop) => {
-    ready(context, callback);
+  instance.waitUntilValid = (callback = noop) => {
+    ready(filledContext, callback);
   };
 
-  /** @type {API<RequestInternal, ResponseInternal>} */
-  (instance).invalidate = (callback = noop) => {
-    ready(context, callback);
+  instance.invalidate = (callback = noop) => {
+    ready(filledContext, callback);
 
-    /**
-     * @type {NonNullable<Context<RequestInternal, ResponseInternal>["watching"]>}
-     */
-    (context.watching).invalidate();
+    filledContext.watching.invalidate();
   };
 
-  /** @type {API<RequestInternal, ResponseInternal>} */
-  (instance).close = (callback = noop) => {
-    /**
-     * @type {NonNullable<Context<RequestInternal, ResponseInternal>["watching"]>}
-     */
-    (context.watching).close(callback);
+  instance.close = (callback = noop) => {
+    filledContext.watching.close(callback);
   };
 
-  /** @type {API<RequestInternal, ResponseInternal>} */
-  (instance).context = context;
+  instance.context = filledContext;
 
   return instance;
 }

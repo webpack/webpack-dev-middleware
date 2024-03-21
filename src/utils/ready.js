@@ -4,7 +4,7 @@
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").Context<Request, Response>} context
+ * @param {import("../index.js").FilledContext<Request, Response>} context
  * @param {(...args: any[]) => any} callback
  * @param {Request} [req]
  * @returns {void}

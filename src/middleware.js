@@ -16,6 +16,7 @@ const ready = require("./utils/ready");
 /** @typedef {import("./index.js").NextFunction} NextFunction */
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index.js").ServerResponse} ServerResponse */
+/** @typedef {import("./index.js").NormalizedHeaders} NormalizedHeaders */
 
 /**
  * @param {string} type
@@ -32,7 +33,7 @@ const BYTES_RANGE_REGEXP = /^ *bytes/i;
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("./index.js").Context<Request, Response>} context
+ * @param {import("./index.js").FilledContext<Request, Response>} context
  * @return {import("./index.js").Middleware<Request, Response>}
  */
 function wrapper(context) {
@@ -101,8 +102,7 @@ function wrapper(context) {
       let { headers } = context.options;
 
       if (typeof headers === "function") {
-        // @ts-ignore
-        headers = headers(req, res, context);
+        headers = /** @type {NormalizedHeaders} */ (headers(req, res, context));
       }
 
       /**
@@ -114,21 +114,15 @@ function wrapper(context) {
         if (!Array.isArray(headers)) {
           // eslint-disable-next-line guard-for-in
           for (const name in headers) {
-            // @ts-ignore
             allHeaders.push({ key: name, value: headers[name] });
           }
 
           headers = allHeaders;
         }
 
-        headers.forEach(
-          /**
-           * @param {{key: string, value: any}} header
-           */
-          (header) => {
-            setHeaderForResponse(res, header.key, header.value);
-          },
-        );
+        headers.forEach((header) => {
+          setHeaderForResponse(res, header.key, header.value);
+        });
       }
 
       if (!getHeaderFromResponse(res, "Content-Type")) {
@@ -152,7 +146,9 @@ function wrapper(context) {
         setHeaderForResponse(res, "Accept-Ranges", "bytes");
       }
 
-      const rangeHeader = getHeaderFromRequest(req, "range");
+      const rangeHeader =
+        /** @type {string} */
+        (getHeaderFromRequest(req, "range"));
 
       let len = /** @type {import("fs").Stats} */ (extra.stats).size;
       let offset = 0;

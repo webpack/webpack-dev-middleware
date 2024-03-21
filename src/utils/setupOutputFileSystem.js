@@ -7,7 +7,7 @@ const memfs = require("memfs");
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").Context<Request, Response>} context
+ * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context
  */
 function setupOutputFileSystem(context) {
   let outputFileSystem;
@@ -48,6 +48,7 @@ function setupOutputFileSystem(context) {
     (context.compiler).compilers || [context.compiler];
 
   for (const compiler of compilers) {
+    // @ts-ignore
     compiler.outputFileSystem = outputFileSystem;
   }
 

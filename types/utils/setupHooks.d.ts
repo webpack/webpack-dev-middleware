@@ -13,12 +13,17 @@ export = setupHooks;
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").Context<Request, Response>} context
+ * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context
  */
 declare function setupHooks<
   Request extends import("http").IncomingMessage,
   Response extends import("../index.js").ServerResponse,
->(context: import("../index.js").Context<Request, Response>): void;
+>(
+  context: import("../index.js").WithOptional<
+    import("../index.js").Context<Request, Response>,
+    "watching" | "outputFileSystem"
+  >,
+): void;
 declare namespace setupHooks {
   export {
     Configuration,

@@ -4,6 +4,7 @@ const escapeHtml = require("./escapeHtml");
 
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
+/** @typedef {import("fs").ReadStream} ReadStream */
 
 /**
  * @typedef {Object} ExpectedRequest
@@ -37,7 +38,7 @@ function getHeaderNames(res) {
  * @template {IncomingMessage} Request
  * @param {Request} req
  * @param {string} name
- * @returns {string | undefined}
+ * @returns {string | string[] | undefined}
  */
 function getHeaderFromRequest(req, name) {
   // Express API
@@ -48,7 +49,6 @@ function getHeaderFromRequest(req, name) {
   }
 
   // Node.js API
-  // @ts-ignore
   return req.headers[name];
 }
 
@@ -256,6 +256,7 @@ async function send(req, res, filename, start, end, goNext, options) {
   const isFsSupportsStream =
     typeof options.outputFileSystem.createReadStream === "function";
 
+  /** @type {string | Buffer | ReadStream} */
   let bufferOrStream;
   let byteLength;
 
