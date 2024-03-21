@@ -124,6 +124,11 @@ describe.each([
             "unknown",
           );
 
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "empty-file.txt"),
+            "",
+          );
+
           req = request(app);
         });
 
@@ -469,7 +474,7 @@ describe.each([
           );
         });
 
-        it('should return "200" code code for the "GET" request and "Content-Length" to the file with unicode', async () => {
+        it('should return "200" code for the "GET" request and "Content-Length" to the file with unicode', async () => {
           const response = await req.get("/byte-length.html");
 
           expect(response.statusCode).toEqual(200);
@@ -479,6 +484,16 @@ describe.each([
           );
           expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
             false,
+          );
+        });
+
+        it('should return "200" code for the "GET" request and "Content-Length" of "0" when file is empty', async () => {
+          const response = await req.get("/empty-file.txt");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual("0");
+          expect(response.headers["content-type"]).toEqual(
+            "text/plain; charset=utf-8",
           );
         });
 
