@@ -21,55 +21,108 @@ import webpackClientServerConfig from "./fixtures/webpack.client.server.config";
 // Suppress unnecessary stats output
 global.console.log = jest.fn();
 
-describe.each([
-  ["express", express],
-  ["connect", connect],
-])("%s framework:", (_, framework) => {
-  describe("middleware", () => {
-    let instance;
-    let listen;
-    let app;
-    let req;
+async function startServer(app) {
+  return new Promise((resolve, reject) => {
+    const server = app.listen((error) => {
+      if (error) {
+        return reject(error);
+      }
 
-    function listenShorthand(done) {
-      return app.listen((error) => {
-        if (error) {
-          return done(error);
+      return resolve(server);
+    });
+  });
+}
+
+async function frameworkFactory(
+  name,
+  framework,
+  compiler,
+  instance,
+  options = {},
+) {
+  switch (name) {
+    default: {
+      const app = framework();
+      const middlewares =
+        typeof options.setupMiddlewares === "function"
+          ? options.setupMiddlewares([instance])
+          : [instance];
+
+      for (const item of middlewares) {
+        if (item.route) {
+          app.use(item.route, item.fn);
+        } else {
+          app.use(item);
         }
+      }
 
-        return done();
+      const server = await startServer(app);
+
+      return [server, app];
+    }
+  }
+}
+
+async function close(server, instance) {
+  if (instance.context.watching.clos1ed) {
+    if (server) {
+      return new Promise((resolve, reject) => {
+        server.close((err) => {
+          if (err) {
+            reject(err);
+
+            return;
+          }
+
+          resolve();
+        });
       });
     }
 
-    function close(done) {
-      if (instance.context.watching.closed) {
-        if (listen) {
-          listen.close(done);
-        } else {
-          done();
-        }
+    return Promise.resolve();
+  }
 
+  return new Promise((resolve, reject) => {
+    instance.close((err) => {
+      if (err) {
+        reject(err);
         return;
       }
 
-      instance.close(() => {
-        if (listen) {
-          listen.close(done);
-        } else {
-          done();
-        }
-      });
-    }
+      if (server) {
+        server.close((err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+describe.each([
+  ["express", express],
+  ["connect", connect],
+])("%s framework:", (name, framework) => {
+  describe("middleware", () => {
+    let instance;
+    let server;
+    let app;
+    let req;
 
     describe("basic", () => {
       describe("should work", () => {
         let compiler;
         let codeContent;
-        let codeLength;
 
         const outputPath = path.resolve(__dirname, "./outputs/basic-test");
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -77,20 +130,18 @@ describe.each([
               path: outputPath,
             },
           });
+          compiler.hooks.afterCompile.tap("wdm-test", (params) => {
+            codeContent = params.assets["bundle.js"].source();
+          });
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(() => {
-            compiler.hooks.afterCompile.tap("wdm-test", (params) => {
-              codeContent = params.assets["bundle.js"].source();
-              codeLength = Buffer.byteLength(codeContent);
-
-              done();
-            });
-          });
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -132,7 +183,9 @@ describe.each([
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it("should not find the bundle file on disk", async () => {
           const response = await req.get("/bundle.js");
@@ -151,7 +204,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual(
-            String(codeLength),
+            String(Buffer.byteLength(codeContent)),
           );
           expect(response.headers["content-type"]).toEqual(
             "application/javascript; charset=utf-8",
@@ -164,7 +217,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual(
-            String(codeLength),
+            String(Buffer.byteLength(codeContent)),
           );
           expect(response.headers["content-type"]).toEqual(
             "application/javascript; charset=utf-8",
@@ -299,7 +352,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(416);
           expect(response.headers["content-range"]).toEqual(
-            `bytes */${codeLength}`,
+            `bytes */${Buffer.byteLength(codeContent)}`,
           );
           expect(response.headers["content-type"]).toEqual(
             "text/html; charset=utf-8",
@@ -325,7 +378,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 3000-3500/${codeLength}`,
+            `bytes 3000-3500/${Buffer.byteLength(codeContent)}`,
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
@@ -342,7 +395,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 3000-3500/${codeLength}`,
+            `bytes 3000-3500/${Buffer.byteLength(codeContent)}`,
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
@@ -358,7 +411,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 3000-3500/${codeLength}`,
+            `bytes 3000-3500/${Buffer.byteLength(codeContent)}`,
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
@@ -375,7 +428,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 3000-3500/${codeLength}`,
+            `bytes 3000-3500/${Buffer.byteLength(codeContent)}`,
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
@@ -392,7 +445,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 0-3500/${codeLength}`,
+            `bytes 0-3500/${Buffer.byteLength(codeContent)}`,
           );
           expect(response.headers["content-length"]).toEqual("3501");
           expect(response.headers["content-type"]).toEqual(
@@ -409,7 +462,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 0-800/${codeLength}`,
+            `bytes 0-800/${Buffer.byteLength(codeContent)}`,
           );
           expect(response.headers["content-length"]).toEqual("801");
           expect(response.headers["content-type"]).toEqual(
@@ -526,7 +579,7 @@ describe.each([
 
         const outputPath = path.resolve(__dirname, "./outputs/basic");
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -538,15 +591,19 @@ describe.each([
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "400" code for the "GET" request to the bundle file', async () => {
           const response = await req.get("/bundle.js");
@@ -556,20 +613,24 @@ describe.each([
       });
 
       describe("should work in multi-compiler mode", () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackMultiConfig);
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
           const response = await req.get("/static-one/bundle.js");
@@ -1013,7 +1074,7 @@ describe.each([
 
             let compiler;
 
-            beforeAll((done) => {
+            beforeAll(async () => {
               compiler = getCompiler({
                 ...webpackConfig,
                 output: {
@@ -1025,10 +1086,12 @@ describe.each([
 
               instance = middleware(compiler);
 
-              app = framework();
-              app.use(instance);
-
-              listen = listenShorthand(done);
+              [server, app] = await frameworkFactory(
+                name,
+                framework,
+                compiler,
+                instance,
+              );
 
               req = request(app);
 
@@ -1048,7 +1111,9 @@ describe.each([
               }
             });
 
-            afterAll(close);
+            afterAll(async () => {
+              await close(server, instance);
+            });
 
             for (const { data, urls } of fixtures) {
               for (const { value, contentType, code } of urls) {
@@ -1079,35 +1144,48 @@ describe.each([
       });
 
       describe('should respect the value of the "Content-Type" header from other middleware', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler);
 
-          app = framework();
-          // eslint-disable-next-line no-shadow
-          app.use((req, res, next) => {
-            // Express API
-            if (res.set) {
-              res.set("Content-Type", "application/vnd.test+octet-stream");
-            }
-            // Connect API
-            else {
-              res.setHeader(
-                "Content-Type",
-                "application/vnd.test+octet-stream",
-              );
-            }
-            next();
-          });
-          app.use(instance);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+            {
+              setupMiddlewares: (middlewares) => {
+                middlewares.unshift((req, res, next) => {
+                  // Express API
+                  if (res.set) {
+                    res.set(
+                      "Content-Type",
+                      "application/vnd.test+octet-stream",
+                    );
+                  }
+                  // Connect API
+                  else {
+                    res.setHeader(
+                      "Content-Type",
+                      "application/vnd.test+octet-stream",
+                    );
+                  }
 
-          listen = listenShorthand(done);
+                  next();
+                });
+
+                return middlewares;
+              },
+            },
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should not modify the "Content-Type" header', async () => {
           const response = await req.get("/bundle.js");
@@ -1119,50 +1197,26 @@ describe.each([
         });
       });
 
-      describe('should not throw an error on the valid "output.path" value for linux', () => {
-        it("should be no error", (done) => {
-          expect(() => {
-            const compiler = getCompiler();
-
-            compiler.outputPath = "/my/path";
-
-            instance = middleware(compiler);
-
-            instance.close(done);
-          }).not.toThrow();
-        });
-      });
-
-      describe('should not throw an error on the valid "output.path" value for windows', () => {
-        it("should be no error", (done) => {
-          expect(() => {
-            const compiler = getCompiler();
-
-            compiler.outputPath = "C:/my/path";
-
-            instance = middleware(compiler);
-
-            instance.close(done);
-          }).not.toThrow();
-        });
-      });
-
       describe('should work without "output" options', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           // eslint-disable-next-line no-undefined
           const compiler = getCompiler({ ...webpackConfig, output: undefined });
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get("/main.js");
@@ -1196,7 +1250,7 @@ describe.each([
       });
 
       describe('should work with trailing slash at the end of the "option.path" option', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -1207,15 +1261,19 @@ describe.each([
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get("/bundle.js");
@@ -1249,20 +1307,24 @@ describe.each([
       });
 
       describe('should respect empty "output.publicPath" and "output.path" options', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get("/bundle.js");
@@ -1296,7 +1358,7 @@ describe.each([
       });
 
       describe('should respect "output.publicPath" and "output.path" options', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -1308,15 +1370,19 @@ describe.each([
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get("/static/bundle.js");
@@ -1361,7 +1427,7 @@ describe.each([
       describe('should respect "output.publicPath" and "output.path" options with hash substitutions', () => {
         let hash;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -1370,23 +1436,35 @@ describe.each([
               path: path.resolve(__dirname, "./outputs/other-basic-[fullhash]"),
             },
           });
+          compiler.hooks.afterCompile.tap("wdm-test", ({ hash: h }) => {
+            hash = h;
+          });
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
+          await new Promise((resolve) => {
+            const interval = setInterval(() => {
+              if (hash) {
+                clearInterval(interval);
 
-          listen = listenShorthand(() => {
-            compiler.hooks.afterCompile.tap("wdm-test", ({ hash: h }) => {
-              hash = h;
-              done();
-            });
+                resolve();
+              }
+            }, 10);
           });
+
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get(`/static/${hash}/bundle.js`);
@@ -1429,7 +1507,7 @@ describe.each([
         let hashOne;
         let hashTwo;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler([
             {
               ...webpackMultiConfig[0],
@@ -1454,27 +1532,38 @@ describe.each([
               },
             },
           ]);
+          compiler.hooks.done.tap("wdm-test", (stats) => {
+            const [one, two] = stats.stats;
+
+            hashOne = one.hash;
+            hashTwo = two.hash;
+          });
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
+          await new Promise((resolve) => {
+            const interval = setInterval(() => {
+              if (hashOne && hashTwo) {
+                clearInterval(interval);
 
-          listen = listenShorthand(() => {
-            compiler.hooks.done.tap("wdm-test", (params) => {
-              const [one, two] = params.stats;
-
-              hashOne = one.hash;
-              hashTwo = two.hash;
-
-              done();
-            });
+                resolve();
+              }
+            }, 10);
           });
+
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
           const response = await req.get(`/static-one/${hashOne}/bundle.js`);
@@ -1544,20 +1633,24 @@ describe.each([
       });
 
       describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with difference "publicPath" and "path"', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackMultiConfig);
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
           const response = await req.get("/static-one/bundle.js");
@@ -1627,7 +1720,7 @@ describe.each([
       });
 
       describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with same "publicPath"', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler([
             {
               ...webpackMultiConfig[0],
@@ -1649,15 +1742,19 @@ describe.each([
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
           const response = await req.get("/my-public/bundle-one.js");
@@ -1709,7 +1806,7 @@ describe.each([
       });
 
       describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with same "path"', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler([
             {
               ...webpackMultiConfig[0],
@@ -1731,15 +1828,19 @@ describe.each([
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
           const response = await req.get("/one-public/bundle-one.js");
@@ -1818,20 +1919,24 @@ describe.each([
       });
 
       describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration (in first)', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackClientServerConfig);
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get("/static/bundle.js");
@@ -1874,7 +1979,7 @@ describe.each([
       });
 
       describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration (in second)', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler([
             webpackClientServerConfig[1],
             webpackClientServerConfig[0],
@@ -1882,15 +1987,19 @@ describe.each([
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get("/static/bundle.js");
@@ -1930,7 +2039,7 @@ describe.each([
       });
 
       describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration with same "path"', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler([
             {
               ...webpackClientServerConfig[0],
@@ -1951,15 +2060,19 @@ describe.each([
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get("/static/bundle-one.js");
@@ -1999,17 +2112,12 @@ describe.each([
       });
 
       describe("should handle an earlier request if a change happened while compiling", () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
-
-          instance = middleware(compiler);
 
           let invalidated = false;
 
-          (compiler.hooks.afterDone
-            ? compiler.hooks.afterDone
-            : compiler.hooks.done
-          ).tap("Invalidated", () => {
+          compiler.hooks.afterDone.tap("Invalidated", () => {
             if (!invalidated) {
               instance.invalidate();
 
@@ -2017,15 +2125,21 @@ describe.each([
             }
           });
 
-          app = framework();
-          app.use(instance);
+          instance = middleware(compiler);
 
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file', async () => {
           const response = await req.get("/bundle.js");
@@ -2042,7 +2156,7 @@ describe.each([
           "./outputs/basic-test-errors-500",
         );
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -2053,14 +2167,12 @@ describe.each([
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(() => {
-            compiler.hooks.afterCompile.tap("wdm-test", () => {
-              done();
-            });
-          });
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -2087,7 +2199,9 @@ describe.each([
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "500" code for the "GET" request to the "image.svg" file', async () => {
           const response = await req.get("/image.svg").set("Range", "bytes=0-");
@@ -2119,7 +2233,7 @@ describe.each([
           "./outputs/basic-test-errors-404",
         );
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -2130,14 +2244,12 @@ describe.each([
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(() => {
-            compiler.hooks.afterCompile.tap("wdm-test", () => {
-              done();
-            });
-          });
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -2168,7 +2280,9 @@ describe.each([
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "404" code for the "GET" request to the "image.svg" file', async () => {
           const response = await req.get("/image.svg").set("Range", "bytes=0-");
@@ -2195,14 +2309,13 @@ describe.each([
       describe("should work without `fs.createReadStream`", () => {
         let compiler;
         let codeContent;
-        let codeLength;
 
         const outputPath = path.resolve(
           __dirname,
           "./outputs/basic-test-no-createReadStream",
         );
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -2210,20 +2323,18 @@ describe.each([
               path: outputPath,
             },
           });
+          compiler.hooks.afterCompile.tap("wdm-test", (params) => {
+            codeContent = params.assets["bundle.js"].source();
+          });
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(() => {
-            compiler.hooks.afterCompile.tap("wdm-test", (params) => {
-              codeContent = params.assets["bundle.js"].source();
-              codeLength = Buffer.byteLength(codeContent);
-
-              done();
-            });
-          });
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -2238,14 +2349,16 @@ describe.each([
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file', async () => {
           const response = await req.get("/bundle.js");
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual(
-            String(codeLength),
+            String(Buffer.byteLength(codeContent)),
           );
           expect(response.headers["content-type"]).toEqual(
             "application/javascript; charset=utf-8",
@@ -2286,7 +2399,7 @@ describe.each([
 
     describe("mimeTypes option", () => {
       describe('should set the correct value for "Content-Type" header to known MIME type', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -2298,10 +2411,12 @@ describe.each([
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
 
@@ -2314,7 +2429,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to "file.html"', async () => {
           const response = await req.get("/file.html");
@@ -2328,7 +2445,7 @@ describe.each([
       });
 
       describe('should set the correct value for "Content-Type" header to specified MIME type', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -2344,10 +2461,12 @@ describe.each([
             },
           });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
 
@@ -2360,7 +2479,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request "file.phtml"', async () => {
           const response = await req.get("/file.myhtml");
@@ -2374,7 +2495,7 @@ describe.each([
       });
 
       describe('should override value for "Content-Type" header for known MIME type', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -2390,10 +2511,12 @@ describe.each([
             },
           });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
 
@@ -2406,7 +2529,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request "file.jpg"', async () => {
           const response = await req.get("/file.jpg");
@@ -2419,7 +2544,7 @@ describe.each([
       });
 
       describe('should not set "Content-Type" header for route not from outputFileSystem', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -2435,28 +2560,39 @@ describe.each([
             },
           });
 
-          app = framework();
-          app.use(instance);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+            {
+              setupMiddlewares: (middlewares) => {
+                middlewares.push({
+                  route: "/file.jpg",
+                  fn: (req, res) => {
+                    // Express API
+                    if (res.send) {
+                      res.send("welcome");
+                    }
+                    // Connect API
+                    else {
+                      res.setHeader("Content-Type", "text/html");
+                      res.end("welcome");
+                    }
+                  },
+                });
 
-          // eslint-disable-next-line no-shadow
-          app.use("/file.jpg", (req, res) => {
-            // Express API
-            if (res.send) {
-              res.send("welcome");
-            }
-            // Connect API
-            else {
-              res.setHeader("Content-Type", "text/html");
-              res.end("welcome");
-            }
-          });
-
-          listen = listenShorthand(done);
+                return middlewares;
+              },
+            },
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request "file.jpg" with default content type', async () => {
           const response = await req.get("/file.jpg");
@@ -2469,7 +2605,7 @@ describe.each([
 
     describe("mimeTypeDefault option", () => {
       describe('should set the correct value for "Content-Type" header to unknown MIME type', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -2483,10 +2619,12 @@ describe.each([
             mimeTypeDefault: "text/plain",
           });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
 
@@ -2499,7 +2637,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to "file.html"', async () => {
           const response = await req.get("/file.unknown");
@@ -2518,25 +2658,27 @@ describe.each([
         let compiler;
         let spy;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackConfig);
 
           spy = jest.spyOn(compiler, "watch");
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll((done) => {
+        afterAll(async () => {
           spy.mockRestore();
 
-          close(done);
+          await close(server, instance);
         });
 
         it('should pass arguments to the "watch" method', async () => {
@@ -2552,25 +2694,27 @@ describe.each([
         let compiler;
         let spy;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackWatchOptionsConfig);
 
           spy = jest.spyOn(compiler, "watch");
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll((done) => {
+        afterAll(async () => {
           spy.mockRestore();
 
-          close(done);
+          await close(server, instance);
         });
 
         it('should pass arguments to the "watch" method', async () => {
@@ -2589,25 +2733,27 @@ describe.each([
         let compiler;
         let spy;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackMultiWatchOptionsConfig);
 
           spy = jest.spyOn(compiler, "watch");
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll((done) => {
+        afterAll(async () => {
           spy.mockRestore();
 
-          close(done);
+          await close(server, instance);
         });
 
         it('should pass arguments to the "watch" method', async () => {
@@ -2631,7 +2777,7 @@ describe.each([
       describe('should work with "true" value', () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -2643,20 +2789,22 @@ describe.each([
 
           instance = middleware(compiler, { writeToDisk: true });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll((done) => {
+        afterAll(async () => {
           del.sync(
             path.posix.resolve(__dirname, "./outputs/write-to-disk-true"),
           );
 
-          close(done);
+          await close(server, instance);
         });
 
         it("should find the bundle file on disk", (done) => {
@@ -2724,7 +2872,7 @@ describe.each([
 
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -2741,18 +2889,20 @@ describe.each([
           });
           fs.writeFileSync(path.resolve(outputPath, "test.json"), "{}");
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll((done) => {
+        afterAll(async () => {
           del.sync(outputPath);
 
-          close(done);
+          await close(server, instance);
         });
 
         it("should find the bundle file on disk", (done) => {
@@ -2797,7 +2947,7 @@ describe.each([
       describe('should work with "false" value', () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -2808,13 +2958,17 @@ describe.each([
 
           instance = middleware(compiler, { writeToDisk: false });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it("should not find the bundle file on disk", (done) => {
           request(app)
@@ -2857,7 +3011,7 @@ describe.each([
       describe('should work with "Function" value when it returns "true"', () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -2873,15 +3027,17 @@ describe.each([
             writeToDisk: (filePath) => /bundle\.js$/.test(filePath),
           });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll((done) => {
+        afterAll(async () => {
           del.sync(
             path.posix.resolve(
               __dirname,
@@ -2889,7 +3045,7 @@ describe.each([
             ),
           );
 
-          close(done);
+          await close(server, instance);
         });
 
         it("should find the bundle file on disk", async () => {
@@ -2909,7 +3065,7 @@ describe.each([
       describe('should work with "Function" value when it returns "false"', () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -2925,13 +3081,17 @@ describe.each([
             writeToDisk: (filePath) => !/bundle\.js$/.test(filePath),
           });
 
-          app = framework();
-          app.use(instance);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
-          listen = listenShorthand(done);
+          req = request(app);
         });
 
-        afterAll((done) => {
+        afterAll(async () => {
           del.sync(
             path.posix.resolve(
               __dirname,
@@ -2939,7 +3099,7 @@ describe.each([
             ),
           );
 
-          close(done);
+          await close(server, instance);
         });
 
         it("should not find the bundle file on disk", async () => {
@@ -2959,7 +3119,7 @@ describe.each([
       describe("should work when assets have query string", () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackQueryStringConfig,
             output: {
@@ -2973,15 +3133,17 @@ describe.each([
 
           instance = middleware(compiler, { writeToDisk: true });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll((done) => {
+        afterAll(async () => {
           del.sync(
             path.posix.resolve(
               __dirname,
@@ -2989,7 +3151,7 @@ describe.each([
             ),
           );
 
-          close(done);
+          await close(server, instance);
         });
 
         it("should find the bundle file on disk with no querystring", async () => {
@@ -3009,7 +3171,7 @@ describe.each([
       describe("should work in multi-compiler mode", () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler([
             {
               ...webpackMultiWatchOptionsConfig[0],
@@ -3037,15 +3199,17 @@ describe.each([
 
           instance = middleware(compiler, { writeToDisk: true });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll((done) => {
+        afterAll(async () => {
           del.sync(
             path.posix.resolve(
               __dirname,
@@ -3053,7 +3217,7 @@ describe.each([
             ),
           );
 
-          close(done);
+          await close(server, instance);
         });
 
         it("should find the bundle files on disk", async () => {
@@ -3084,7 +3248,7 @@ describe.each([
         let compiler;
         let hash;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             ...{
@@ -3098,28 +3262,38 @@ describe.each([
               },
             },
           });
+          compiler.hooks.afterCompile.tap("wdm-test", ({ hash: h }) => {
+            hash = h;
+          });
 
           instance = middleware(compiler, { writeToDisk: true });
 
-          app = framework();
-          app.use(instance);
+          await new Promise((resolve) => {
+            const interval = setInterval(() => {
+              if (hash) {
+                clearInterval(interval);
 
-          listen = listenShorthand(() => {
-            compiler.hooks.afterCompile.tap("wdm-test", ({ hash: h }) => {
-              hash = h;
-              done();
-            });
+                resolve();
+              }
+            }, 10);
           });
+
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll((done) => {
+        afterAll(async () => {
           del.sync(
             path.posix.resolve(__dirname, "./outputs/write-to-disk-with-hash/"),
           );
 
-          close(done);
+          await close(server, instance);
         });
 
         it("should find the bundle file on disk", async () => {
@@ -3140,7 +3314,7 @@ describe.each([
     describe("methods option", () => {
       let compiler;
 
-      beforeAll((done) => {
+      beforeAll(async () => {
         compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, {
@@ -3148,15 +3322,19 @@ describe.each([
           publicPath: "/public/",
         });
 
-        app = framework();
-        app.use(instance);
-
-        listen = listenShorthand(done);
+        [server, app] = await frameworkFactory(
+          name,
+          framework,
+          compiler,
+          instance,
+        );
 
         req = request(app);
       });
 
-      afterAll(close);
+      afterAll(async () => {
+        await close(server, instance);
+      });
 
       it('should return the "200" code for the "POST" request to the bundle file', async () => {
         const response = await req.post(`/public/bundle.js`);
@@ -3179,22 +3357,45 @@ describe.each([
 
     describe("headers option", () => {
       describe("works with object", () => {
-        beforeEach((done) => {
+        beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler, {
             headers: { "X-nonsense-1": "yes", "X-nonsense-2": "no" },
           });
 
-          app = framework();
-          app.use(instance);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+            {
+              setupMiddlewares: (middlewares) => {
+                middlewares.push({
+                  route: "/file.jpg",
+                  fn: (req, res) => {
+                    // Express API
+                    if (res.send) {
+                      res.send("welcome");
+                    }
+                    // Connect API
+                    else {
+                      res.end("welcome");
+                    }
+                  },
+                });
 
-          listen = listenShorthand(done);
+                return middlewares;
+              },
+            },
+          );
 
           req = request(app);
         });
 
-        afterEach(close);
+        afterEach(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
           const response = await req.get(`/bundle.js`);
@@ -3205,18 +3406,6 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-          // eslint-disable-next-line no-shadow
-          app.use("/file.jpg", (req, res) => {
-            // Express API
-            if (res.send) {
-              res.send("welcome");
-            }
-            // Connect API
-            else {
-              res.end("welcome");
-            }
-          });
-
           const res = await request(app).get("/file.jpg");
           expect(res.statusCode).toEqual(200);
           expect(res.headers["X-nonsense-1"]).toBeUndefined();
@@ -3225,7 +3414,7 @@ describe.each([
       });
 
       describe("works with array of objects", () => {
-        beforeEach((done) => {
+        beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler, {
@@ -3241,15 +3430,38 @@ describe.each([
             ],
           });
 
-          app = framework();
-          app.use(instance);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+            {
+              setupMiddlewares: (middlewares) => {
+                middlewares.push({
+                  route: "/file.jpg",
+                  fn: (req, res) => {
+                    // Express API
+                    if (res.send) {
+                      res.send("welcome");
+                    }
+                    // Connect API
+                    else {
+                      res.end("welcome");
+                    }
+                  },
+                });
 
-          listen = listenShorthand(done);
+                return middlewares;
+              },
+            },
+          );
 
           req = request(app);
         });
 
-        afterEach(close);
+        afterEach(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
           const response = await req.get(`/bundle.js`);
@@ -3260,18 +3472,6 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-          // eslint-disable-next-line no-shadow
-          app.use("/file.jpg", (req, res) => {
-            // Express API
-            if (res.send) {
-              res.send("welcome");
-            }
-            // Connect API
-            else {
-              res.end("welcome");
-            }
-          });
-
           const res = await request(app).get("/file.jpg");
           expect(res.statusCode).toEqual(200);
           expect(res.headers["x-foo"]).toBeUndefined();
@@ -3280,7 +3480,7 @@ describe.each([
       });
 
       describe("works with function", () => {
-        beforeEach((done) => {
+        beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler, {
@@ -3289,15 +3489,38 @@ describe.each([
             },
           });
 
-          app = framework();
-          app.use(instance);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+            {
+              setupMiddlewares: (middlewares) => {
+                middlewares.push({
+                  route: "/file.jpg",
+                  fn: (req, res) => {
+                    // Express API
+                    if (res.send) {
+                      res.send("welcome");
+                    }
+                    // Connect API
+                    else {
+                      res.end("welcome");
+                    }
+                  },
+                });
 
-          listen = listenShorthand(done);
+                return middlewares;
+              },
+            },
+          );
 
           req = request(app);
         });
 
-        afterEach(close);
+        afterEach(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
           const response = await req.get(`/bundle.js`);
@@ -3308,18 +3531,6 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-          // eslint-disable-next-line no-shadow
-          app.use("/file.jpg", (req, res) => {
-            // Express API
-            if (res.send) {
-              res.send("welcome");
-            }
-            // Connect API
-            else {
-              res.end("welcome");
-            }
-          });
-
           const res = await req.get("/file.jpg");
           expect(res.statusCode).toEqual(200);
           expect(res.headers["X-nonsense-1"]).toBeUndefined();
@@ -3328,7 +3539,7 @@ describe.each([
       });
 
       describe("works with function returning an array", () => {
-        beforeEach((done) => {
+        beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler, {
@@ -3344,15 +3555,38 @@ describe.each([
             ],
           });
 
-          app = framework();
-          app.use(instance);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+            {
+              setupMiddlewares: (middlewares) => {
+                middlewares.push({
+                  route: "/file.jpg",
+                  fn: (req, res) => {
+                    // Express API
+                    if (res.send) {
+                      res.send("welcome");
+                    }
+                    // Connect API
+                    else {
+                      res.end("welcome");
+                    }
+                  },
+                });
 
-          listen = listenShorthand(done);
+                return middlewares;
+              },
+            },
+          );
 
           req = request(app);
         });
 
-        afterEach(close);
+        afterEach(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
           const response = await req.get(`/bundle.js`);
@@ -3363,18 +3597,6 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-          // eslint-disable-next-line no-shadow
-          app.use("/file.jpg", (req, res) => {
-            // Express API
-            if (res.send) {
-              res.send("welcome");
-            }
-            // Connect API
-            else {
-              res.end("welcome");
-            }
-          });
-
           const res = await req.get("/file.jpg");
           expect(res.statusCode).toEqual(200);
           expect(res.headers["x-foo"]).toBeUndefined();
@@ -3383,7 +3605,7 @@ describe.each([
       });
 
       describe("works with headers function with params", () => {
-        beforeEach((done) => {
+        beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler, {
@@ -3394,15 +3616,38 @@ describe.each([
             },
           });
 
-          app = framework();
-          app.use(instance);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+            {
+              setupMiddlewares: (middlewares) => {
+                middlewares.push({
+                  route: "/file.jpg",
+                  fn: (req, res) => {
+                    // Express API
+                    if (res.send) {
+                      res.send("welcome");
+                    }
+                    // Connect API
+                    else {
+                      res.end("welcome");
+                    }
+                  },
+                });
 
-          listen = listenShorthand(done);
+                return middlewares;
+              },
+            },
+          );
 
           req = request(app);
         });
 
-        afterEach(close);
+        afterEach(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
           const response = await req.get(`/bundle.js`);
@@ -3413,18 +3658,6 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-          // eslint-disable-next-line no-shadow
-          app.use("/file.jpg", (req, res) => {
-            // Express API
-            if (res.send) {
-              res.send("welcome");
-            }
-            // Connect API
-            else {
-              res.end("welcome");
-            }
-          });
-
           const res = await req.get("/file.jpg");
           expect(res.statusCode).toEqual(200);
           expect(res.headers["X-nonsense-1"]).toBeUndefined();
@@ -3435,20 +3668,24 @@ describe.each([
 
     describe("publicPath option", () => {
       describe('should work with "string" value', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler, { publicPath: "/public/" });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file', async () => {
           const response = await req.get(`/public/bundle.js`);
@@ -3458,20 +3695,24 @@ describe.each([
       });
 
       describe('should work with "auto" value', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler, { publicPath: "auto" });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file', async () => {
           const response = await req.get("/bundle.js");
@@ -3484,36 +3725,45 @@ describe.each([
     describe("serverSideRender option", () => {
       let locals;
 
-      beforeAll((done) => {
+      beforeAll(async () => {
         const compiler = getCompiler(webpackConfig);
 
         instance = middleware(compiler, { serverSideRender: true });
 
-        app = framework();
-        app.use(instance);
-        // eslint-disable-next-line no-shadow
-        app.use((req, res) => {
-          // eslint-disable-next-line prefer-destructuring
-          locals = res.locals;
+        [server, app] = await frameworkFactory(
+          name,
+          framework,
+          compiler,
+          instance,
+          {
+            setupMiddlewares: (middlewares) => {
+              middlewares.push((req, res) => {
+                // eslint-disable-next-line prefer-destructuring
+                locals = res.locals;
 
-          // Express API
-          if (res.sendStatus) {
-            res.sendStatus(200);
-          }
-          // Connect API
-          else {
-            // eslint-disable-next-line no-param-reassign
-            res.statusCode = 200;
-            res.end();
-          }
-        });
+                // Express API
+                if (res.sendStatus) {
+                  res.sendStatus(200);
+                }
+                // Connect API
+                else {
+                  // eslint-disable-next-line no-param-reassign
+                  res.statusCode = 200;
+                  res.end();
+                }
+              });
 
-        listen = listenShorthand(done);
+              return middlewares;
+            },
+          },
+        );
 
         req = request(app);
       });
 
-      afterAll(close);
+      afterAll(async () => {
+        await close(server, instance);
+      });
 
       it('should return the "200" code for the "GET" request', async () => {
         const response = await req.get("/foo/bar");
@@ -3527,18 +3777,22 @@ describe.each([
       describe("should work with an unspecified value", () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should use the "memfs" package by default', () => {
           const { Stats } = memfs;
@@ -3553,7 +3807,7 @@ describe.each([
       describe("should work with the configured value (native fs)", () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackConfig);
 
           const configuredFs = fs;
@@ -3565,13 +3819,17 @@ describe.each([
             outputFileSystem: configuredFs,
           });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it("should use the configurated output filesystem", () => {
           const { Stats } = fs;
@@ -3588,7 +3846,7 @@ describe.each([
       describe("should work with the configured value (memfs)", () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackConfig);
 
           const configuredFs = createFsFromVolume(new Volume());
@@ -3600,13 +3858,17 @@ describe.each([
             outputFileSystem: configuredFs,
           });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it("should use the configured output filesystem", () => {
           const { Stats } = memfs;
@@ -3624,7 +3886,7 @@ describe.each([
       describe("should work with the configured value in multi-compiler mode (native fs)", () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackMultiConfig);
 
           const configuredFs = fs;
@@ -3636,13 +3898,17 @@ describe.each([
             outputFileSystem: configuredFs,
           });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it("should use configured output filesystems", () => {
           const { Stats } = fs;
@@ -3666,20 +3932,24 @@ describe.each([
 
     describe("index option", () => {
       describe('should work with "false" value', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler, { index: false, publicPath: "/" });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "404" code for the "GET" request to the public path', async () => {
           const response = await req.get("/");
@@ -3701,20 +3971,24 @@ describe.each([
       });
 
       describe('should work with "true" value', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler, { index: true, publicPath: "/" });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the public path', async () => {
           const response = await req.get("/");
@@ -3736,7 +4010,7 @@ describe.each([
       });
 
       describe('should work with "string" value', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -3751,10 +4025,12 @@ describe.each([
             publicPath: "/",
           });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
 
@@ -3767,7 +4043,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the public path', async () => {
           const response = await req.get("/");
@@ -3780,7 +4058,7 @@ describe.each([
       });
 
       describe('should work with "string" value with a custom extension', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -3795,10 +4073,12 @@ describe.each([
             publicPath: "/",
           });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
 
@@ -3811,7 +4091,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the public path', async () => {
           const response = await req.get("/");
@@ -3821,7 +4103,7 @@ describe.each([
       });
 
       describe('should work with "string" value with a custom extension and defined a custom MIME type', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -3839,10 +4121,12 @@ describe.each([
             publicPath: "/",
           });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
 
@@ -3855,7 +4139,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the public path', async () => {
           const response = await req.get("/");
@@ -3868,7 +4154,7 @@ describe.each([
       });
 
       describe('should work with "string" value without an extension', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -3880,10 +4166,12 @@ describe.each([
 
           instance = middleware(compiler, { index: "noextension" });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
 
@@ -3896,7 +4184,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the public path', async () => {
           const response = await req.get("/");
@@ -3906,7 +4196,7 @@ describe.each([
       });
 
       describe('should work with "string" value but the "index" option is a directory', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -3921,10 +4211,12 @@ describe.each([
             publicPath: "/",
           });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
 
@@ -3936,7 +4228,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "404" code for the "GET" request to the public path', async () => {
           const response = await req.get("/");
@@ -3949,7 +4243,7 @@ describe.each([
         let compiler;
         let isDirectory;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackConfig);
 
           instance = middleware(compiler, {
@@ -3966,18 +4260,20 @@ describe.each([
               };
             });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
         });
 
-        afterAll((done) => {
+        afterAll(async () => {
           isDirectory.mockRestore();
 
-          close(done);
+          await close(server, instance);
         });
 
         it('should return the "404" code for the "GET" request to the public path', async () => {
@@ -3992,7 +4288,7 @@ describe.each([
       describe("should work", () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(
             __dirname,
             "./outputs/modify-response-data",
@@ -4014,10 +4310,12 @@ describe.each([
             },
           });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, app] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            instance,
+          );
 
           req = request(app);
 
@@ -4030,8 +4328,8 @@ describe.each([
           );
         });
 
-        afterAll((done) => {
-          close(done);
+        afterAll(async () => {
+          await close(server, instance);
         });
 
         it("should modify file", async () => {

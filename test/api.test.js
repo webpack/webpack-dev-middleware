@@ -80,71 +80,66 @@ describe.each([
         });
       });
 
-      if (webpack.version[0] === 5) {
-        describe("should accept compiler in watch mode", () => {
-          beforeEach((done) => {
-            compiler = webpack(
-              { ...webpackConfig, ...{ watch: true } },
-              (error) => {
-                if (error) {
-                  throw error;
-                }
-              },
-            );
-
-            instance = middleware(compiler);
-
-            app = framework();
-            app.use(instance);
-
-            listen = app.listen((error) => {
+      describe("should accept compiler in watch mode", () => {
+        beforeEach((done) => {
+          compiler = webpack(
+            { ...webpackConfig, ...{ watch: true } },
+            (error) => {
               if (error) {
-                return done(error);
+                throw error;
               }
+            },
+          );
 
-              return done();
-            });
-          });
+          instance = middleware(compiler);
 
-          afterEach((done) => {
-            if (instance.context.watching.closed) {
-              if (listen) {
-                listen.close(done);
-              } else {
-                done();
-              }
+          app = framework();
+          app.use(instance);
 
-              return;
+          listen = app.listen((error) => {
+            if (error) {
+              return done(error);
             }
 
-            instance.close(() => {
-              if (listen) {
-                listen.close(done);
-              } else {
-                done();
-              }
-            });
-          });
-
-          it("should work", (done) => {
-            const doneSpy = jest.spyOn(
-              getCompilerHooks(compiler).done[0],
-              "fn",
-            );
-
-            instance.waitUntilValid(() => {
-              instance.close();
-
-              expect(compiler.running).toBe(false);
-              expect(doneSpy).toHaveBeenCalledTimes(1);
-
-              doneSpy.mockRestore();
-
-              done();
-            });
+            return done();
           });
         });
-      }
+
+        afterEach((done) => {
+          if (instance.context.watching.closed) {
+            if (listen) {
+              listen.close(done);
+            } else {
+              done();
+            }
+
+            return;
+          }
+
+          instance.close(() => {
+            if (listen) {
+              listen.close(done);
+            } else {
+              done();
+            }
+          });
+        });
+
+        it("should work", (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], "fn");
+
+          instance.waitUntilValid(() => {
+            instance.close();
+
+            expect(compiler.running).toBe(false);
+            expect(doneSpy).toHaveBeenCalledTimes(1);
+
+            doneSpy.mockRestore();
+
+            done();
+          });
+        });
+      });
     });
 
     describe("waitUntilValid method", () => {
