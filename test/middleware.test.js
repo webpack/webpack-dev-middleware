@@ -21,7 +21,7 @@ import webpackQueryStringConfig from "./fixtures/webpack.querystring.config";
 import webpackClientServerConfig from "./fixtures/webpack.client.server.config";
 
 // Suppress unnecessary stats output
-// global.console.log = jest.fn();
+global.console.log = jest.fn();
 
 async function startServer(app) {
   return new Promise((resolve, reject) => {
@@ -221,6 +221,15 @@ function applyTestMiddleware(name, middlewares) {
         },
       },
     });
+  } else if (name === "koa") {
+    middlewares.push((ctx, next) => {
+      if (ctx.request.url === "/file.jpg") {
+        ctx.set("Content-Type", "text/html");
+        ctx.body = "welcome";
+      }
+
+      next();
+    });
   } else {
     middlewares.push({
       route: "/file.jpg",
@@ -250,7 +259,6 @@ describe.each([
   describe("middleware", () => {
     let instance;
     let server;
-    let app;
     let req;
 
     describe("basic", () => {
@@ -2808,40 +2816,38 @@ describe.each([
         });
 
         it("should find the bundle file on disk", (done) => {
-          request(app)
-            .get("/public/bundle.js")
-            .expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
+          req.get("/public/bundle.js").expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
 
-              const bundlePath = path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-true/bundle.js",
-              );
+            const bundlePath = path.resolve(
+              __dirname,
+              "./outputs/write-to-disk-true/bundle.js",
+            );
 
-              expect(
-                compiler.hooks.assetEmitted.taps.filter(
-                  (hook) => hook.name === "DevMiddleware",
-                ).length,
-              ).toBe(1);
-              expect(fs.existsSync(bundlePath)).toBe(true);
+            expect(
+              compiler.hooks.assetEmitted.taps.filter(
+                (hook) => hook.name === "DevMiddleware",
+              ).length,
+            ).toBe(1);
+            expect(fs.existsSync(bundlePath)).toBe(true);
 
-              instance.invalidate();
+            instance.invalidate();
 
-              return compiler.hooks.done.tap(
-                "DevMiddlewareWriteToDiskTest",
-                () => {
-                  expect(
-                    compiler.hooks.assetEmitted.taps.filter(
-                      (hook) => hook.name === "DevMiddleware",
-                    ).length,
-                  ).toBe(1);
+            return compiler.hooks.done.tap(
+              "DevMiddlewareWriteToDiskTest",
+              () => {
+                expect(
+                  compiler.hooks.assetEmitted.taps.filter(
+                    (hook) => hook.name === "DevMiddleware",
+                  ).length,
+                ).toBe(1);
 
-                  done();
-                },
-              );
-            });
+                done();
+              },
+            );
+          });
         });
 
         it("should not allow to get files above root", async () => {
@@ -2902,41 +2908,39 @@ describe.each([
         });
 
         it("should find the bundle file on disk", (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
+          req.get("/bundle.js").expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
 
-              const bundlePath = path.resolve(outputPath, "bundle.js");
+            const bundlePath = path.resolve(outputPath, "bundle.js");
 
-              expect(fs.existsSync(path.resolve(outputPath, "test.json"))).toBe(
-                false,
-              );
+            expect(fs.existsSync(path.resolve(outputPath, "test.json"))).toBe(
+              false,
+            );
 
-              expect(
-                compiler.hooks.assetEmitted.taps.filter(
-                  (hook) => hook.name === "DevMiddleware",
-                ).length,
-              ).toBe(1);
-              expect(fs.existsSync(bundlePath)).toBe(true);
+            expect(
+              compiler.hooks.assetEmitted.taps.filter(
+                (hook) => hook.name === "DevMiddleware",
+              ).length,
+            ).toBe(1);
+            expect(fs.existsSync(bundlePath)).toBe(true);
 
-              instance.invalidate();
+            instance.invalidate();
 
-              return compiler.hooks.done.tap(
-                "DevMiddlewareWriteToDiskTest",
-                () => {
-                  expect(
-                    compiler.hooks.assetEmitted.taps.filter(
-                      (hook) => hook.name === "DevMiddleware",
-                    ).length,
-                  ).toBe(1);
+            return compiler.hooks.done.tap(
+              "DevMiddlewareWriteToDiskTest",
+              () => {
+                expect(
+                  compiler.hooks.assetEmitted.taps.filter(
+                    (hook) => hook.name === "DevMiddleware",
+                  ).length,
+                ).toBe(1);
 
-                  done();
-                },
-              );
-            });
+                done();
+              },
+            );
+          });
         });
       });
 
@@ -2965,40 +2969,38 @@ describe.each([
         });
 
         it("should not find the bundle file on disk", (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
+          req.get("/bundle.js").expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
 
-              const bundlePath = path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-false/bundle.js",
-              );
+            const bundlePath = path.resolve(
+              __dirname,
+              "./outputs/write-to-disk-false/bundle.js",
+            );
 
-              expect(
-                compiler.hooks.assetEmitted.taps.filter(
-                  (hook) => hook.name === "DevMiddleware",
-                ).length,
-              ).toBe(0);
-              expect(fs.existsSync(bundlePath)).toBe(false);
+            expect(
+              compiler.hooks.assetEmitted.taps.filter(
+                (hook) => hook.name === "DevMiddleware",
+              ).length,
+            ).toBe(0);
+            expect(fs.existsSync(bundlePath)).toBe(false);
 
-              instance.invalidate();
+            instance.invalidate();
 
-              return compiler.hooks.done.tap(
-                "DevMiddlewareWriteToDiskTest",
-                () => {
-                  expect(
-                    compiler.hooks.assetEmitted.taps.filter(
-                      (hook) => hook.name === "DevMiddleware",
-                    ).length,
-                  ).toBe(0);
+            return compiler.hooks.done.tap(
+              "DevMiddlewareWriteToDiskTest",
+              () => {
+                expect(
+                  compiler.hooks.assetEmitted.taps.filter(
+                    (hook) => hook.name === "DevMiddleware",
+                  ).length,
+                ).toBe(0);
 
-                  done();
-                },
-              );
-            });
+                done();
+              },
+            );
+          });
         });
       });
 
@@ -3360,7 +3362,7 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-          const res = await request(app).get("/file.jpg");
+          const res = await req.get("/file.jpg");
           expect(res.statusCode).toEqual(200);
           expect(res.headers["X-nonsense-1"]).toBeUndefined();
           expect(res.headers["X-nonsense-2"]).toBeUndefined();
@@ -3410,7 +3412,7 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-          const res = await request(app).get("/file.jpg");
+          const res = await req.get("/file.jpg");
           expect(res.statusCode).toEqual(200);
           expect(res.headers["x-foo"]).toBeUndefined();
           expect(res.headers["x-bar"]).toBeUndefined();
