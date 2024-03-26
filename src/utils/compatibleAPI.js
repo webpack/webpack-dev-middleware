@@ -17,6 +17,8 @@ const escapeHtml = require("./escapeHtml");
  * @property {(name: string, value: number | string | string[]) => void} set
  * @property {(status: number) => void} status
  * @property {(data: any) => void} send
+ * @property {(data: any) => void} [sendFile]
+ * @property {(data: any) => void} [sendStream]
  */
 
 /**
@@ -352,11 +354,11 @@ async function send(req, res, filename, start, end, goNext, options) {
 
   // Pseudo API
   if (
-    typeof (/** @type {Response & ExpectedResponse} */ (res).sendFine) ===
+    typeof (/** @type {Response & ExpectedResponse} */ (res).sendFile) ===
     "function"
   ) {
     /** @type {Response & ExpectedResponse} */
-    (res).sendFine(bufferOrStream);
+    (res).sendFile(bufferOrStream);
     return;
   }
 
