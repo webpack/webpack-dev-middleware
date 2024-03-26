@@ -76,8 +76,8 @@ export = wdm;
  * @typedef {NormalizedHeaders | ((req: RequestInternal, res: ResponseInternal, context: Context<RequestInternal, ResponseInternal>) =>  void | undefined | NormalizedHeaders) | undefined} Headers
  */
 /**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
+ * @template {IncomingMessage} [RequestInternal = IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal = ServerResponse]
  * @typedef {Object} Options
  * @property {{[key: string]: string}} [mimeTypes]
  * @property {string | undefined} [mimeTypeDefault]
@@ -160,6 +160,7 @@ declare function wdm<
 ): API<RequestInternal, ResponseInternal>;
 declare namespace wdm {
   export {
+    hapiPlugin,
     Schema,
     Compiler,
     MultiCompiler,
@@ -194,6 +195,9 @@ declare namespace wdm {
     API,
     WithOptional,
     WithoutUndefined,
+    HapiPluginBase,
+    HapiPlugin,
+    HapiOptions,
   };
 }
 type Compiler = import("webpack").Compiler;
@@ -203,6 +207,29 @@ type API<
   ResponseInternal extends ServerResponse,
 > = Middleware<RequestInternal, ResponseInternal> &
   AdditionalMethods<RequestInternal, ResponseInternal>;
+/**
+ * @template S
+ * @template O
+ * @typedef {Object} HapiPluginBase
+ * @property {(server: S, options: O) => void | Promise<void>} register
+ */
+/**
+ * @template S
+ * @template O
+ * @typedef {HapiPluginBase<S, O> & { pkg: { name: string } }} HapiPlugin
+ */
+/**
+ * @typedef {Options & { compiler: Compiler | MultiCompiler }} HapiOptions
+ */
+/**
+ * @template HapiServer
+ * @template {HapiOptions} HapiOptionsInternal
+ * @returns {HapiPlugin<HapiServer, HapiOptionsInternal>}
+ */
+declare function hapiPlugin<
+  HapiServer,
+  HapiOptionsInternal extends HapiOptions,
+>(): HapiPlugin<HapiServer, HapiOptionsInternal>;
 type Schema = import("schema-utils/declarations/validate").Schema;
 type Configuration = import("webpack").Configuration;
 type Stats = import("webpack").Stats;
@@ -285,8 +312,9 @@ type Headers<
     ) => void | undefined | NormalizedHeaders)
   | undefined;
 type Options<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse,
+  RequestInternal extends
+    import("http").IncomingMessage = import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse = ServerResponse,
 > = {
   mimeTypes?:
     | {
@@ -335,4 +363,15 @@ type AdditionalMethods<
 type WithOptional<T, K extends keyof T> = Omit<T, K> & Partial<T>;
 type WithoutUndefined<T, K extends keyof T> = T & {
   [P in K]: NonNullable<T[P]>;
+};
+type HapiPluginBase<S, O> = {
+  register: (server: S, options: O) => void | Promise<void>;
+};
+type HapiPlugin<S, O> = HapiPluginBase<S, O> & {
+  pkg: {
+    name: string;
+  };
+};
+type HapiOptions = Options & {
+  compiler: Compiler | MultiCompiler;
 };
