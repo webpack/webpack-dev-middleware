@@ -540,6 +540,83 @@ out completely._
 
 Examples of use with other servers will follow here.
 
+### Connect
+
+```js
+const connect = require("connect");
+const http = require("http");
+const webpack = require("webpack");
+const webpackConfig = require("./webpack.config.js");
+const devMiddleware = require("webpack-dev-middleware");
+
+const compiler = webpack(webpackConfig);
+const devMiddlewareOptions = {
+  /** Your webpack-dev-middleware-options */
+};
+const app = connect();
+
+app.use(devMiddleware(compiler, devMiddlewareOptions));
+
+http.createServer(app).listen(3000);
+```
+
+### Express
+
+```js
+const express = require("express");
+const webpack = require("webpack");
+const webpackConfig = require("./webpack.config.js");
+const devMiddleware = require("webpack-dev-middleware");
+
+const compiler = webpack(webpackConfig);
+const devMiddlewareOptions = {
+  /** Your webpack-dev-middleware-options */
+};
+const app = express();
+
+app.use(devMiddleware(compiler, devMiddlewareOptions));
+
+app.listen(3000, () => console.log("Example app listening on port 3000!"));
+```
+
+### Hapi
+
+```js
+const Hapi = require("@hapi/hapi");
+const webpack = require("webpack");
+const webpackConfig = require("./webpack.config.js");
+const devMiddleware = require("webpack-dev-middleware");
+
+const compiler = webpack(webpackConfig);
+const devMiddlewareOptions = {};
+
+(async () => {
+  const server = Hapi.server({ port: 3000, host: "localhost" });
+
+  await server.register({
+    plugin: devMiddleware.hapiPlugin(),
+    options: {
+      // The `compiler` option is required
+      compiler,
+      ...devMiddlewareOptions,
+    },
+  });
+
+  await server.start();
+
+  console.log("Server running on %s", server.info.uri);
+})();
+
+process.on("unhandledRejection", (err) => {
+  console.log(err);
+  process.exit(1);
+});
+```
+
+### Koa
+
+Soon...
+
 ### Fastify
 
 Fastify interop will require the use of `fastify-express` instead of `middie` for providing middleware support. As the authors of `fastify-express` recommend, this should only be used as a stopgap while full Fastify support is worked on.
@@ -551,11 +628,13 @@ const webpackConfig = require("./webpack.config.js");
 const devMiddleware = require("webpack-dev-middleware");
 
 const compiler = webpack(webpackConfig);
-const { publicPath } = webpackConfig.output;
+const devMiddlewareOptions = {
+  /** Your webpack-dev-middleware-options */
+};
 
 (async () => {
   await fastify.register(require("fastify-express"));
-  await fastify.use(devMiddleware(compiler, { publicPath }));
+  await fastify.use(devMiddleware(compiler, devMiddlewareOptions));
   await fastify.listen(3000);
 })();
 ```

@@ -1,9 +1,9 @@
 import fs from "fs";
 import path from "path";
 
-import express from "express";
 import connect from "connect";
-// import Hapi from "@hapi/hapi";
+import express from "express";
+import Hapi from "@hapi/hapi";
 import request from "supertest";
 import memfs, { createFsFromVolume, Volume } from "memfs";
 import del from "del";
@@ -42,6 +42,37 @@ async function frameworkFactory(
   options = {},
 ) {
   switch (name) {
+    case "hapi": {
+      const server = framework.server();
+      const hapiPlugin = {
+        plugin: middleware.hapiPlugin(),
+        options: {
+          compiler,
+          ...devMiddlewareOptions,
+        },
+      };
+
+      const middlewares =
+        typeof options.setupMiddlewares === "function"
+          ? options.setupMiddlewares([hapiPlugin])
+          : [hapiPlugin];
+
+      await Promise.all(
+        middlewares.map((item) => {
+          // eslint-disable-next-line no-shadow
+          const { plugin, options } = item;
+
+          return server.register({
+            plugin,
+            options,
+          });
+        }),
+      );
+
+      await server.start();
+
+      return [server, server.listener, server.webpackDevMiddleware];
+    }
     default: {
       const app = framework();
       const instance = middleware(compiler, devMiddlewareOptions);
@@ -111,10 +142,56 @@ async function close(server, instance) {
     });
 }
 
+function get404ContentTypeHeader(name) {
+  switch (name) {
+    case "hapi":
+      return "application/json; charset=utf-8";
+    default:
+      return "text/html; charset=utf-8";
+  }
+}
+
+function applyTestMiddleware(name, middlewares) {
+  if (name === "hapi") {
+    middlewares.push({
+      plugin: {
+        name: "myPlugin",
+        version: "1.0.0",
+        register(innerServer) {
+          innerServer.route({
+            method: "GET",
+            path: "/file.jpg",
+            handler() {
+              return "welcome";
+            },
+          });
+        },
+      },
+    });
+  } else {
+    middlewares.push({
+      route: "/file.jpg",
+      fn: (req, res) => {
+        // Express API
+        if (res.send) {
+          res.send("welcome");
+        }
+        // Connect API
+        else {
+          res.setHeader("Content-Type", "text/html");
+          res.end("welcome");
+        }
+      },
+    });
+  }
+
+  return middlewares;
+}
+
 describe.each([
-  ["express", express],
   ["connect", connect],
-  // ["hapi", Hapi],
+  ["express", express],
+  ["hapi", Hapi],
 ])("%s framework:", (name, framework) => {
   describe("middleware", () => {
     let instance;
@@ -573,7 +650,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8",
+            get404ContentTypeHeader(name),
           );
         });
       });
@@ -689,7 +766,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8",
+            get404ContentTypeHeader(name),
           );
         });
 
@@ -698,7 +775,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8",
+            get404ContentTypeHeader(name),
           );
         });
 
@@ -707,7 +784,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8",
+            get404ContentTypeHeader(name),
           );
         });
       });
@@ -734,32 +811,32 @@ describe.each([
               },
               {
                 value: "invalid.js",
-                contentType: "text/html; charset=utf-8",
+                contentType: get404ContentTypeHeader(name),
                 code: 404,
               },
               {
                 value: "complex",
-                contentType: "text/html; charset=utf-8",
+                contentType: get404ContentTypeHeader(name),
                 code: 404,
               },
               {
                 value: "complex/invalid.js",
-                contentType: "text/html; charset=utf-8",
+                contentType: get404ContentTypeHeader(name),
                 code: 404,
               },
               {
                 value: "complex/complex",
-                contentType: "text/html; charset=utf-8",
+                contentType: get404ContentTypeHeader(name),
                 code: 404,
               },
               {
                 value: "complex/complex/invalid.js",
-                contentType: "text/html; charset=utf-8",
+                contentType: get404ContentTypeHeader(name),
                 code: 404,
               },
               {
                 value: "%",
-                contentType: "text/html; charset=utf-8",
+                contentType: get404ContentTypeHeader(name),
                 code: 404,
               },
             ],
@@ -1150,24 +1227,43 @@ describe.each([
             undefined,
             {
               setupMiddlewares: (middlewares) => {
-                middlewares.unshift((req, res, next) => {
-                  // Express API
-                  if (res.set) {
-                    res.set(
-                      "Content-Type",
-                      "application/vnd.test+octet-stream",
-                    );
-                  }
-                  // Connect API
-                  else {
-                    res.setHeader(
-                      "Content-Type",
-                      "application/vnd.test+octet-stream",
-                    );
-                  }
+                if (name === "hapi") {
+                  middlewares.unshift({
+                    plugin: {
+                      name: "myPlugin",
+                      version: "1.0.0",
+                      register(innerServer) {
+                        innerServer.ext("onRequest", (innerRequest, h) => {
+                          innerRequest.raw.res.setHeader(
+                            "Content-Type",
+                            "application/vnd.test+octet-stream",
+                          );
 
-                  next();
-                });
+                          return h.continue;
+                        });
+                      },
+                    },
+                  });
+                } else {
+                  middlewares.unshift((req, res, next) => {
+                    // Express API
+                    if (res.set) {
+                      res.set(
+                        "Content-Type",
+                        "application/vnd.test+octet-stream",
+                      );
+                    }
+                    // Connect API
+                    else {
+                      res.setHeader(
+                        "Content-Type",
+                        "application/vnd.test+octet-stream",
+                      );
+                    }
+
+                    next();
+                  });
+                }
 
                 return middlewares;
               },
@@ -1401,7 +1497,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8",
+            get404ContentTypeHeader(name),
           );
         });
       });
@@ -1585,7 +1681,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8",
+            get404ContentTypeHeader(name),
           );
         });
 
@@ -2504,20 +2600,7 @@ describe.each([
             },
             {
               setupMiddlewares: (middlewares) => {
-                middlewares.push({
-                  route: "/file.jpg",
-                  fn: (req, res) => {
-                    // Express API
-                    if (res.send) {
-                      res.send("welcome");
-                    }
-                    // Connect API
-                    else {
-                      res.setHeader("Content-Type", "text/html");
-                      res.end("welcome");
-                    }
-                  },
-                });
+                applyTestMiddleware(name, middlewares);
 
                 return middlewares;
               },
@@ -3276,19 +3359,7 @@ describe.each([
             },
             {
               setupMiddlewares: (middlewares) => {
-                middlewares.push({
-                  route: "/file.jpg",
-                  fn: (req, res) => {
-                    // Express API
-                    if (res.send) {
-                      res.send("welcome");
-                    }
-                    // Connect API
-                    else {
-                      res.end("welcome");
-                    }
-                  },
-                });
+                applyTestMiddleware(name, middlewares);
 
                 return middlewares;
               },
@@ -3340,19 +3411,7 @@ describe.each([
             },
             {
               setupMiddlewares: (middlewares) => {
-                middlewares.push({
-                  route: "/file.jpg",
-                  fn: (req, res) => {
-                    // Express API
-                    if (res.send) {
-                      res.send("welcome");
-                    }
-                    // Connect API
-                    else {
-                      res.end("welcome");
-                    }
-                  },
-                });
+                applyTestMiddleware(name, middlewares);
 
                 return middlewares;
               },
@@ -3397,19 +3456,7 @@ describe.each([
             },
             {
               setupMiddlewares: (middlewares) => {
-                middlewares.push({
-                  route: "/file.jpg",
-                  fn: (req, res) => {
-                    // Express API
-                    if (res.send) {
-                      res.send("welcome");
-                    }
-                    // Connect API
-                    else {
-                      res.end("welcome");
-                    }
-                  },
-                });
+                applyTestMiddleware(name, middlewares);
 
                 return middlewares;
               },
@@ -3461,19 +3508,7 @@ describe.each([
             },
             {
               setupMiddlewares: (middlewares) => {
-                middlewares.push({
-                  route: "/file.jpg",
-                  fn: (req, res) => {
-                    // Express API
-                    if (res.send) {
-                      res.send("welcome");
-                    }
-                    // Connect API
-                    else {
-                      res.end("welcome");
-                    }
-                  },
-                });
+                applyTestMiddleware(name, middlewares);
 
                 return middlewares;
               },
@@ -3520,19 +3555,7 @@ describe.each([
             },
             {
               setupMiddlewares: (middlewares) => {
-                middlewares.push({
-                  route: "/file.jpg",
-                  fn: (req, res) => {
-                    // Express API
-                    if (res.send) {
-                      res.send("welcome");
-                    }
-                    // Connect API
-                    else {
-                      res.end("welcome");
-                    }
-                  },
-                });
+                applyTestMiddleware(name, middlewares);
 
                 return middlewares;
               },
@@ -3628,21 +3651,42 @@ describe.each([
           { serverSideRender: true },
           {
             setupMiddlewares: (middlewares) => {
-              middlewares.push((req, res) => {
-                // eslint-disable-next-line prefer-destructuring
-                locals = res.locals;
+              if (name === "hapi") {
+                middlewares.push({
+                  plugin: {
+                    name: "myPlugin",
+                    version: "1.0.0",
+                    register(innerServer) {
+                      innerServer.route({
+                        method: "GET",
+                        path: "/foo/bar",
+                        handler(innerReq) {
+                          // eslint-disable-next-line prefer-destructuring
+                          locals = innerReq.raw.res.locals;
 
-                // Express API
-                if (res.sendStatus) {
-                  res.sendStatus(200);
-                }
-                // Connect API
-                else {
-                  // eslint-disable-next-line no-param-reassign
-                  res.statusCode = 200;
-                  res.end();
-                }
-              });
+                          return "welcome";
+                        },
+                      });
+                    },
+                  },
+                });
+              } else {
+                middlewares.push((_req, res) => {
+                  // eslint-disable-next-line prefer-destructuring
+                  locals = res.locals;
+
+                  // Express API
+                  if (res.sendStatus) {
+                    res.sendStatus(200);
+                  }
+                  // Connect API
+                  else {
+                    // eslint-disable-next-line no-param-reassign
+                    res.statusCode = 200;
+                    res.end();
+                  }
+                });
+              }
 
               return middlewares;
             },
@@ -3836,7 +3880,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8",
+            get404ContentTypeHeader(name),
           );
         });
 
