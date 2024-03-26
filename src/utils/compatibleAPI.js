@@ -303,8 +303,19 @@ async function send(req, res, filename, start, end, goNext, options) {
       return;
     }
 
-    /** @type {import("fs").ReadStream} */
-    (bufferOrStream).pipe(res);
+    // Pseudo API
+    if (
+      typeof (/** @type {Response & ExpectedResponse} */ (res).sendStream) ===
+      "function"
+    ) {
+      /** @type {Response & ExpectedResponse} */
+      (res).sendStream(bufferOrStream);
+    }
+    // Node.js API
+    else {
+      /** @type {import("fs").ReadStream} */
+      (bufferOrStream).pipe(res);
+    }
 
     // Cleanup
     const cleanup = () => {
@@ -336,6 +347,16 @@ async function send(req, res, filename, start, end, goNext, options) {
       }
     });
 
+    return;
+  }
+
+  // Pseudo API
+  if (
+    typeof (/** @type {Response & ExpectedResponse} */ (res).sendFine) ===
+    "function"
+  ) {
+    /** @type {Response & ExpectedResponse} */
+    (res).sendFine(bufferOrStream);
     return;
   }
 
