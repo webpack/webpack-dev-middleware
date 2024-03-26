@@ -80,9 +80,10 @@ async function frameworkFactory(
       // eslint-disable-next-line new-cap
       const app = new framework();
       const instance = middleware(compiler, devMiddlewareOptions);
-      const wrapper = (ctx, next) => new Promise((resolve, reject) => {
-          const {req} = ctx;
-          const {res} = ctx;
+      const wrapper = (ctx, next) =>
+        new Promise((resolve, reject) => {
+          const { req } = ctx;
+          const { res } = ctx;
 
           res.locals = ctx.state;
           res.sendStream = (content) => {
@@ -194,6 +195,8 @@ async function close(server, instance) {
 
 function get404ContentTypeHeader(name) {
   switch (name) {
+    case "koa":
+      return "text/plain; charset=utf-8";
     case "hapi":
       return "application/json; charset=utf-8";
     default:
