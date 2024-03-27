@@ -3,6 +3,7 @@ import path from "path";
 
 import connect from "connect";
 import express from "express";
+import fastify from "fastify";
 import koa from "koa";
 import Hapi from "@hapi/hapi";
 import request from "supertest";
@@ -21,11 +22,11 @@ import webpackQueryStringConfig from "./fixtures/webpack.querystring.config";
 import webpackClientServerConfig from "./fixtures/webpack.client.server.config";
 
 // Suppress unnecessary stats output
-global.console.log = jest.fn();
+// global.console.log = jest.fn();
 
 async function startServer(app) {
   return new Promise((resolve, reject) => {
-    const server = app.listen((error) => {
+    const server = app.listen({ port: 3000 }, (error) => {
       if (error) {
         return reject(error);
       }
@@ -102,7 +103,14 @@ async function frameworkFactory(
       return [server, req, koaMiddleware.devMiddleware];
     }
     default: {
+      const isFastify = name === "fastify";
       const app = framework();
+
+      if (isFastify) {
+        // eslint-disable-next-line global-require
+        await app.register(require("@fastify/express"));
+      }
+
       const instance = middleware(compiler, devMiddlewareOptions);
       const middlewares =
         typeof options.setupMiddlewares === "function"
@@ -117,10 +125,14 @@ async function frameworkFactory(
         }
       }
 
-      const server = await startServer(app);
-      const req = request(app);
+      if (isFastify) {
+        await app.ready();
+      }
 
-      return [server, req, instance];
+      const server = await startServer(app);
+      const req = isFastify ? request(app.server) : request(app);
+
+      return [isFastify ? app.server : server, req, instance];
     }
   }
 }
@@ -177,6 +189,8 @@ function get404ContentTypeHeader(name) {
       return "text/plain; charset=utf-8";
     case "hapi":
       return "application/json; charset=utf-8";
+    case "fastify":
+      return "application/json; charset=utf-8";
     default:
       return "text/html; charset=utf-8";
   }
@@ -231,6 +245,7 @@ function applyTestMiddleware(name, middlewares) {
 describe.each([
   ["connect", connect],
   ["express", express],
+  ["fastify", fastify],
   ["koa", koa],
   ["hapi", Hapi],
 ])("%s framework:", (name, framework) => {
@@ -953,12 +968,13 @@ describe.each([
             ],
           },
           {
-            file: "/%foo%/%foo%.js",
+            // fastify uses the `frameworkErrors` option to handle broken URLs
+            file: name === "fastify" ? "/foo/foo.js" : "/%foo%/%foo%.js",
             data: 'console.log("foo");',
             urls: [
               // Filenames can contain characters not allowed in URIs
               {
-                value: "%foo%/%foo%.js",
+                value: name === "fastify" ? "foo/foo.js" : "%foo%/%foo%.js",
                 contentType: "application/javascript; charset=utf-8",
                 code: 200,
               },
