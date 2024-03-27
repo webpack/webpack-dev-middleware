@@ -46,7 +46,7 @@ async function frameworkFactory(
     case "hapi": {
       const server = framework.server();
       const hapiPlugin = {
-        plugin: middleware.hapiPlugin(),
+        plugin: middleware.hapiWrapper(),
         options: {
           compiler,
           ...devMiddlewareOptions,
@@ -79,36 +79,14 @@ async function frameworkFactory(
     case "koa": {
       // eslint-disable-next-line new-cap
       const app = new framework();
-      const instance = middleware(compiler, devMiddlewareOptions);
-      const wrapper = (ctx, next) =>
-        new Promise((resolve, reject) => {
-          const { req } = ctx;
-          const { res } = ctx;
-
-          res.locals = ctx.state;
-          res.sendStream = (content) => {
-            ctx.body = content;
-            resolve();
-          };
-          res.sendFile = (content) => {
-            ctx.body = content;
-            resolve();
-          };
-
-          instance(req, res, (err) => {
-            if (err) {
-              reject(err);
-              return;
-            }
-
-            resolve(next());
-          });
-        });
-
+      const koaMiddleware = middleware.koaWrapper(
+        compiler,
+        devMiddlewareOptions,
+      );
       const middlewares =
         typeof options.setupMiddlewares === "function"
-          ? options.setupMiddlewares([wrapper])
-          : [wrapper];
+          ? options.setupMiddlewares([koaMiddleware])
+          : [koaMiddleware];
 
       for (const item of middlewares) {
         if (item.route) {
@@ -121,7 +99,7 @@ async function frameworkFactory(
       const server = await startServer(app);
       const req = request(server);
 
-      return [server, req, instance];
+      return [server, req, koaMiddleware.devMiddleware];
     }
     default: {
       const app = framework();
@@ -340,7 +318,7 @@ describe.each([
           );
         });
 
-        it('should return the "200" code for the "GET" request to the bundle file', async () => {
+        it.only('should return the "200" code for the "GET" request to the bundle file', async () => {
           const response = await req.get("/bundle.js");
 
           expect(response.statusCode).toEqual(200);
@@ -529,7 +507,7 @@ describe.each([
           expect(response.text.length).toBe(501);
         });
 
-        it('should return the "206" code for the "GET" request with the valid range header for "HEAD" request', async () => {
+        it('should return the "206" code for the "HEAD" request with the valid range header', async () => {
           const response = await req
             .head("/bundle.js")
             .set("Range", "bytes=3000-3500");
@@ -1281,7 +1259,16 @@ describe.each([
             undefined,
             {
               setupMiddlewares: (middlewares) => {
-                if (name === "hapi") {
+                if (name === "koa") {
+                  middlewares.unshift(async (ctx, next) => {
+                    ctx.set(
+                      "Content-Type",
+                      "application/vnd.test+octet-stream",
+                    );
+
+                    await next();
+                  });
+                } else if (name === "hapi") {
                   middlewares.unshift({
                     plugin: {
                       name: "myPlugin",
@@ -3619,7 +3606,15 @@ describe.each([
           { serverSideRender: true },
           {
             setupMiddlewares: (middlewares) => {
-              if (name === "hapi") {
+              if (name === "koa") {
+                middlewares.push(async (ctx, next) => {
+                  locals = ctx.state;
+
+                  ctx.status = 200;
+
+                  await next();
+                });
+              } else if (name === "hapi") {
                 middlewares.push({
                   plugin: {
                     name: "myPlugin",

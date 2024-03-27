@@ -17,8 +17,7 @@ const escapeHtml = require("./escapeHtml");
  * @property {(name: string, value: number | string | string[]) => void} set
  * @property {(status: number) => void} status
  * @property {(data: any) => void} send
- * @property {(data: any) => void} [sendFile]
- * @property {(data: any) => void} [sendStream]
+ * @property {(data: any) => void} [pipeInto]
  */
 
 /**
@@ -27,12 +26,14 @@ const escapeHtml = require("./escapeHtml");
  * @returns {string[]}
  */
 function getHeaderNames(res) {
+  // Pseudo API, TODO?
   if (typeof res.getHeaderNames !== "function") {
     // @ts-ignore
     // eslint-disable-next-line no-underscore-dangle
     return Object.keys(res._headers || {});
   }
 
+  // Node.js API
   return res.getHeaderNames();
 }
 
@@ -130,6 +131,7 @@ function clearHeadersForResponse(res) {
  * @param {number} code
  */
 function setStatusCode(res, code) {
+  // Pseudo API
   if (
     typeof (/** @type {Response & ExpectedResponse} */ (res).status) ===
     "function"
@@ -140,6 +142,7 @@ function setStatusCode(res, code) {
     return;
   }
 
+  // Node.js API
   // eslint-disable-next-line no-param-reassign
   res.statusCode = code;
 }
@@ -298,27 +301,6 @@ async function send(req, res, filename, start, end, goNext, options) {
     typeof (/** @type {import("fs").ReadStream} */ (bufferOrStream).pipe) ===
     "function"
   ) {
-    setHeaderForResponse(res, "Content-Length", byteLength);
-
-    if (req.method === "HEAD") {
-      res.end();
-      return;
-    }
-
-    // Pseudo API
-    if (
-      typeof (/** @type {Response & ExpectedResponse} */ (res).sendStream) ===
-      "function"
-    ) {
-      /** @type {Response & ExpectedResponse} */
-      (res).sendStream(bufferOrStream);
-    }
-    // Node.js API
-    else {
-      /** @type {import("fs").ReadStream} */
-      (bufferOrStream).pipe(res);
-    }
-
     // Cleanup
     const cleanup = () => {
       destroyStream(
@@ -327,10 +309,7 @@ async function send(req, res, filename, start, end, goNext, options) {
       );
     };
 
-    // Response finished, cleanup
-    onFinishedStream(res, cleanup);
-
-    // error handling
+    // Error handling
     /** @type {import("fs").ReadStream} */
     (bufferOrStream).on("error", (error) => {
       // clean up stream early
@@ -349,20 +328,35 @@ async function send(req, res, filename, start, end, goNext, options) {
       }
     });
 
+    setHeaderForResponse(res, "Content-Length", byteLength);
+
+    // Pseudo API and Koa API
+    if (
+      typeof (/** @type {Response & ExpectedResponse} */ (res).pipeInto) ===
+      "function"
+    ) {
+      // Writable stream into Readable stream
+      /** @type {Response & ExpectedResponse} */
+      (res).pipeInto(bufferOrStream);
+    }
+    // Node.js API and Express API and Hapi API
+    else {
+      /** @type {import("fs").ReadStream} */
+      (bufferOrStream).pipe(res);
+    }
+
+    if (req.method === "HEAD") {
+      res.end();
+      return;
+    }
+
+    // Response finished, cleanup
+    onFinishedStream(res, cleanup);
+
     return;
   }
 
-  // Pseudo API
-  if (
-    typeof (/** @type {Response & ExpectedResponse} */ (res).sendFile) ===
-    "function"
-  ) {
-    /** @type {Response & ExpectedResponse} */
-    (res).sendFile(bufferOrStream);
-    return;
-  }
-
-  // Express API
+  // Pseudo API and Express API and Koa API
   if (
     typeof (/** @type {Response & ExpectedResponse} */ (res).send) ===
     "function"
@@ -372,7 +366,7 @@ async function send(req, res, filename, start, end, goNext, options) {
     return;
   }
 
-  // Only Node.js API used
+  // Only Node.js API and Hapi API
   res.setHeader("Content-Length", byteLength);
 
   if (req.method === "HEAD") {

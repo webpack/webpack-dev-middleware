@@ -10,8 +10,7 @@ export type ExpectedResponse = {
   set: (name: string, value: number | string | string[]) => void;
   status: (status: number) => void;
   send: (data: any) => void;
-  sendFile?: ((data: any) => void) | undefined;
-  sendStream?: ((data: any) => void) | undefined;
+  pipeInto?: ((data: any) => void) | undefined;
 };
 /**
  * send error options
@@ -48,8 +47,7 @@ export type SendOptions<
  * @property {(name: string, value: number | string | string[]) => void} set
  * @property {(status: number) => void} status
  * @property {(data: any) => void} send
- * @property {(data: any) => void} [sendFile]
- * @property {(data: any) => void} [sendStream]
+ * @property {(data: any) => void} [pipeInto]
  */
 /**
  * @template {ServerResponse} Response

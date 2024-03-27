@@ -145,22 +145,24 @@ export = wdm;
  * @typedef {T & { [P in K]: NonNullable<T[P]> }} WithoutUndefined
  */
 /**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler
  * @param {Options<RequestInternal, ResponseInternal>} [options]
  * @returns {API<RequestInternal, ResponseInternal>}
  */
 declare function wdm<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse,
+  RequestInternal extends
+    import("http").IncomingMessage = import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse = ServerResponse,
 >(
   compiler: Compiler | MultiCompiler,
   options?: Options<RequestInternal, ResponseInternal> | undefined,
 ): API<RequestInternal, ResponseInternal>;
 declare namespace wdm {
   export {
-    hapiPlugin,
+    hapiWrapper,
+    koaWrapper,
     Schema,
     Compiler,
     MultiCompiler,
@@ -226,10 +228,25 @@ type API<
  * @template {HapiOptions} HapiOptionsInternal
  * @returns {HapiPlugin<HapiServer, HapiOptionsInternal>}
  */
-declare function hapiPlugin<
+declare function hapiWrapper<
   HapiServer,
   HapiOptionsInternal extends HapiOptions,
 >(): HapiPlugin<HapiServer, HapiOptionsInternal>;
+/**
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
+ * @param {Compiler | MultiCompiler} compiler
+ * @param {Options<RequestInternal, ResponseInternal>} [options]
+ * @returns {(ctx: any, next: Function) => Promise<void> | void}
+ */
+declare function koaWrapper<
+  RequestInternal extends
+    import("http").IncomingMessage = import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse = ServerResponse,
+>(
+  compiler: Compiler | MultiCompiler,
+  options?: Options<RequestInternal, ResponseInternal> | undefined,
+): (ctx: any, next: Function) => Promise<void> | void;
 type Schema = import("schema-utils/declarations/validate").Schema;
 type Configuration = import("webpack").Configuration;
 type Stats = import("webpack").Stats;

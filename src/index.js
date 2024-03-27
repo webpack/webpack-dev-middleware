@@ -183,8 +183,8 @@ const noop = () => {};
  */
 
 /**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler
  * @param {Options<RequestInternal, ResponseInternal>} [options]
  * @returns {API<RequestInternal, ResponseInternal>}
@@ -314,7 +314,7 @@ function wdm(compiler, options = {}) {
  * @template {HapiOptions} HapiOptionsInternal
  * @returns {HapiPlugin<HapiServer, HapiOptionsInternal>}
  */
-function hapiPlugin() {
+function hapiWrapper() {
   return {
     pkg: {
       name: "webpack-dev-middleware",
@@ -351,6 +351,76 @@ function hapiPlugin() {
   };
 }
 
-wdm.hapiPlugin = hapiPlugin;
+wdm.hapiWrapper = hapiWrapper;
+
+/**
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
+ * @param {Compiler | MultiCompiler} compiler
+ * @param {Options<RequestInternal, ResponseInternal>} [options]
+ * @returns {(ctx: any, next: Function) => Promise<void> | void}
+ */
+function koaWrapper(compiler, options) {
+  const devMiddleware = wdm(compiler, options);
+
+  /**
+   * @param {any} ctx
+   * @param {Function} next
+   * @returns {Promise<void>}
+   */
+  const wrapper = async function webpackDevMiddleware(ctx, next) {
+    return new Promise((resolve, reject) => {
+      const { req } = ctx;
+      const { res } = ctx;
+
+      res.locals = ctx.state;
+      /**
+       * @param {number} status status code
+       */
+      res.status = (status) => {
+        // eslint-disable-next-line no-param-reassign
+        ctx.status = status;
+      };
+      /**
+       * @param {import("fs").ReadStream} stream readable stream
+       */
+      res.pipeInto = (stream) => {
+        // eslint-disable-next-line no-param-reassign
+        ctx.body = stream;
+        resolve();
+      };
+      /**
+       * @param {string | Buffer} content content
+       */
+      res.send = (content) => {
+        // eslint-disable-next-line no-param-reassign
+        ctx.body = content;
+        resolve();
+      };
+
+      devMiddleware(req, res, (err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        resolve(next());
+      }).catch((err) => {
+        // eslint-disable-next-line no-param-reassign
+        ctx.status = err.statusCode || err.status || 500;
+        // eslint-disable-next-line no-param-reassign
+        ctx.body = {
+          message: err.message,
+        };
+      });
+    });
+  };
+
+  wrapper.devMiddleware = devMiddleware;
+
+  return wrapper;
+}
+
+wdm.koaWrapper = koaWrapper;
 
 module.exports = wdm;
