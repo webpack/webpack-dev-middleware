@@ -648,7 +648,7 @@ const devMiddlewareOptions = {
 };
 
 (async () => {
-  await fastify.register(require("fastify-express"));
+  await fastify.register(require("@fastify/express"));
   await fastify.use(devMiddleware(compiler, devMiddlewareOptions));
   await fastify.listen(3000);
 })();
