@@ -80,67 +80,6 @@ const statuses = {
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {Request} req response
- * @param {Response} res response
- * @param {number} status status
- * @param {Partial<SendErrorOptions<Request, Response>>=} options options
- * @returns {void}
- */
-function sendError(req, res, status, options) {
-  const content = statuses[status] || String(status);
-  let document = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Error</title>
-</head>
-<body>
-<pre>${escapeHtml(content)}</pre>
-</body>
-</html>`;
-
-  // Clear existing headers
-  const headers = res.getHeaderNames();
-
-  for (let i = 0; i < headers.length; i++) {
-    res.removeHeader(headers[i]);
-  }
-
-  if (options && options.headers) {
-    const keys = Object.keys(options.headers);
-
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      const value = options.headers[key];
-
-      if (typeof value !== "undefined") {
-        res.setHeader(key, value);
-      }
-    }
-  }
-
-  // Send basic response
-  setStatusCode(res, status);
-  res.setHeader("Content-Type", "text/html; charset=utf-8");
-  res.setHeader("Content-Security-Policy", "default-src 'none'");
-  res.setHeader("X-Content-Type-Options", "nosniff");
-
-  let byteLength = Buffer.byteLength(document);
-
-  if (options && options.modifyResponseData) {
-    ({ data: document, byteLength } =
-      /** @type {{data: string, byteLength: number }} */
-      (options.modifyResponseData(req, res, document, byteLength)));
-  }
-
-  res.setHeader("Content-Length", byteLength);
-
-  res.end(document);
-}
-
-/**
- * @template {IncomingMessage} Request
- * @template {ServerResponse} Response
  * @param {import("./index.js").FilledContext<Request, Response>} context
  * @return {import("./index.js").Middleware<Request, Response>}
  */
@@ -178,7 +117,65 @@ function wrapper(context) {
       return;
     }
 
+    /**
+     * @param {number} status status
+     * @param {Partial<SendErrorOptions<Request, Response>>=} options options
+     * @returns {void}
+     */
+    function sendError(status, options) {
+      const content = statuses[status] || String(status);
+      let document = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>${escapeHtml(content)}</pre>
+</body>
+</html>`;
+
+      // Clear existing headers
+      const headers = res.getHeaderNames();
+
+      for (let i = 0; i < headers.length; i++) {
+        res.removeHeader(headers[i]);
+      }
+
+      if (options && options.headers) {
+        const keys = Object.keys(options.headers);
+
+        for (let i = 0; i < keys.length; i++) {
+          const key = keys[i];
+          const value = options.headers[key];
+
+          if (typeof value !== "undefined") {
+            res.setHeader(key, value);
+          }
+        }
+      }
+
+      // Send basic response
+      setStatusCode(res, status);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Content-Security-Policy", "default-src 'none'");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+
+      let byteLength = Buffer.byteLength(document);
+
+      if (options && options.modifyResponseData) {
+        ({ data: document, byteLength } =
+          /** @type {{data: string, byteLength: number }} */
+          (options.modifyResponseData(req, res, document, byteLength)));
+      }
+
+      res.setHeader("Content-Length", byteLength);
+
+      res.end(document);
+    }
+
     async function processRequest() {
+      // Pipe and SendFile
       /** @type {import("./utils/getFilenameFromUrl").Extra} */
       const extra = {};
       const filename = getFilenameFromUrl(
@@ -192,7 +189,7 @@ function wrapper(context) {
           context.logger.error(`Malicious path "${filename}".`);
         }
 
-        sendError(req, res, extra.errorCode, {
+        sendError(extra.errorCode, {
           modifyResponseData: context.options.modifyResponseData,
         });
 
@@ -205,6 +202,7 @@ function wrapper(context) {
         return;
       }
 
+      // Send logic
       let { headers } = context.options;
 
       if (typeof headers === "function") {
@@ -267,7 +265,7 @@ function wrapper(context) {
             getValueContentRangeHeader("bytes", len),
           );
 
-          sendError(req, res, 416, {
+          sendError(416, {
             headers: {
               "Content-Range": res.getHeader("Content-Range"),
             },
@@ -305,6 +303,7 @@ function wrapper(context) {
       const start = offset;
       const end = Math.max(offset, offset + len - 1);
 
+      // Stream logic
       const isFsSupportsStream =
         typeof context.outputFileSystem.createReadStream === "function";
 
@@ -345,53 +344,63 @@ function wrapper(context) {
           ));
       }
 
-      if (
-        typeof (
-          /** @type {import("fs").ReadStream} */ (bufferOrStream).pipe
-        ) === "function"
-      ) {
-        // Cleanup
-        const cleanup = () => {
-          destroyStream(
-            /** @type {import("fs").ReadStream} */ (bufferOrStream),
-            true,
-          );
-        };
+      res.setHeader("Content-Length", byteLength);
 
-        // Error handling
-        /** @type {import("fs").ReadStream} */
-        (bufferOrStream).on("error", (error) => {
-          // clean up stream early
-          cleanup();
+      if (req.method === "HEAD") {
+        // For Koa
+        if (res.statusCode === 404) {
+          setStatusCode(res, 200);
+        }
 
-          // Handle Error
-          switch (/** @type {NodeJS.ErrnoException} */ (error).code) {
-            case "ENAMETOOLONG":
-            case "ENOENT":
-            case "ENOTDIR":
-              sendError(req, res, 404, {
-                modifyResponseData: context.options.modifyResponseData,
-              });
-              break;
-            default:
-              sendError(req, res, 500, {
-                modifyResponseData: context.options.modifyResponseData,
-              });
-              break;
-          }
-        });
-
-        res.setHeader("Content-Length", byteLength);
-
-        pipe(req, res, /** @type {ReadStream} */ (bufferOrStream));
-
-        // Response finished, cleanup
-        onFinishedStream(res, cleanup);
-
+        res.end();
         return;
       }
 
-      send(req, res, /** @type {Buffer} */ (bufferOrStream), byteLength);
+      const isPipeSupports =
+        typeof (
+          /** @type {import("fs").ReadStream} */ (bufferOrStream).pipe
+        ) === "function";
+
+      if (!isPipeSupports) {
+        send(res, /** @type {Buffer} */ (bufferOrStream));
+        return;
+      }
+
+      // Cleanup
+      const cleanup = () => {
+        destroyStream(
+          /** @type {import("fs").ReadStream} */ (bufferOrStream),
+          true,
+        );
+      };
+
+      // Error handling
+      /** @type {import("fs").ReadStream} */
+      (bufferOrStream).on("error", (error) => {
+        // clean up stream early
+        cleanup();
+
+        // Handle Error
+        switch (/** @type {NodeJS.ErrnoException} */ (error).code) {
+          case "ENAMETOOLONG":
+          case "ENOENT":
+          case "ENOTDIR":
+            sendError(404, {
+              modifyResponseData: context.options.modifyResponseData,
+            });
+            break;
+          default:
+            sendError(500, {
+              modifyResponseData: context.options.modifyResponseData,
+            });
+            break;
+        }
+      });
+
+      pipe(res, /** @type {ReadStream} */ (bufferOrStream));
+
+      // Response finished, cleanup
+      onFinishedStream(res, cleanup);
     }
 
     ready(context, processRequest, req);

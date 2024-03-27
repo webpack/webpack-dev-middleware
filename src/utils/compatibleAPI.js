@@ -27,13 +27,11 @@ function setStatusCode(res, code) {
 }
 
 /**
- * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {Request} req
  * @param {Response & ExpectedResponse} res
  * @param {import("fs").ReadStream} bufferOrStream
  */
-function pipe(req, res, bufferOrStream) {
+function pipe(res, bufferOrStream) {
   // Pseudo API and Koa API
   if (
     typeof (/** @type {Response & ExpectedResponse} */ (res).pipeInto) ===
@@ -41,45 +39,27 @@ function pipe(req, res, bufferOrStream) {
   ) {
     // Writable stream into Readable stream
     res.pipeInto(bufferOrStream);
-  }
-  // Node.js API and Express API and Hapi API
-  else {
-    bufferOrStream.pipe(res);
+    return;
   }
 
-  if (req.method === "HEAD") {
-    res.end();
-  }
+  // Node.js API and Express API and Hapi API
+  bufferOrStream.pipe(res);
 }
 
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {Request} req
  * @param {Response & ExpectedResponse} res
  * @param {string | Buffer} bufferOrStream
- * @param {number} byteLength
  */
-function send(req, res, bufferOrStream, byteLength) {
+function send(res, bufferOrStream) {
   // Pseudo API and Express API and Koa API
   if (typeof res.send === "function") {
     res.send(bufferOrStream);
-
     return;
   }
 
-  // Only Node.js API and Hapi API
-  res.setHeader("Content-Length", byteLength);
-
-  if (req.method === "HEAD") {
-    res.end();
-  } else {
-    res.end(bufferOrStream);
-  }
+  res.end(bufferOrStream);
 }
 
-module.exports = {
-  setStatusCode,
-  send,
-  pipe,
-};
+module.exports = { setStatusCode, send, pipe };
