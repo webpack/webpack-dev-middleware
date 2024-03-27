@@ -13,117 +13,10 @@ const escapeHtml = require("./escapeHtml");
 
 /**
  * @typedef {Object} ExpectedResponse
- * @property {(name: string) => string | string[] | undefined} get
- * @property {(name: string, value: number | string | string[]) => void} set
- * @property {(status: number) => void} status
- * @property {(data: any) => void} send
+ * @property {(status: number) => void} [status]
+ * @property {(data: any) => void} [send]
  * @property {(data: any) => void} [pipeInto]
  */
-
-/**
- * @template {ServerResponse} Response
- * @param {Response} res
- * @returns {string[]}
- */
-function getHeaderNames(res) {
-  // Pseudo API, TODO?
-  if (typeof res.getHeaderNames !== "function") {
-    // @ts-ignore
-    // eslint-disable-next-line no-underscore-dangle
-    return Object.keys(res._headers || {});
-  }
-
-  // Node.js API
-  return res.getHeaderNames();
-}
-
-/**
- * @template {IncomingMessage} Request
- * @param {Request} req
- * @param {string} name
- * @returns {string | string[] | undefined}
- */
-function getHeaderFromRequest(req, name) {
-  // Express API
-  if (
-    typeof (/** @type {Request & ExpectedRequest} */ (req).get) === "function"
-  ) {
-    return /** @type {Request & ExpectedRequest} */ (req).get(name);
-  }
-
-  // Node.js API
-  return req.headers[name];
-}
-
-/**
- * @template {ServerResponse} Response
- * @param {Response} res
- * @param {string} name
- * @returns {number | string | string[] | undefined}
- */
-function getHeaderFromResponse(res, name) {
-  // Express API
-  if (
-    typeof (/** @type {Response & ExpectedResponse} */ (res).get) === "function"
-  ) {
-    return /** @type {Response & ExpectedResponse} */ (res).get(name);
-  }
-
-  // Node.js API
-  return res.getHeader(name);
-}
-
-/**
- * @template {ServerResponse} Response
- * @param {Response} res
- * @param {string} name
- * @param {number | string | string[]} value
- * @returns {void}
- */
-function setHeaderForResponse(res, name, value) {
-  // Express API
-  if (
-    typeof (/** @type {Response & ExpectedResponse} */ (res).set) === "function"
-  ) {
-    /** @type {Response & ExpectedResponse} */
-    (res).set(name, typeof value === "number" ? String(value) : value);
-
-    return;
-  }
-
-  // Node.js API
-  res.setHeader(name, value);
-}
-
-/**
- * @template {ServerResponse} Response
- * @param {Response} res
- * @param {Record<string, number | string | string[] | undefined>} headers
- */
-function setHeadersForResponse(res, headers) {
-  const keys = Object.keys(headers);
-
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    const value = headers[key];
-
-    if (typeof value !== "undefined") {
-      setHeaderForResponse(res, key, value);
-    }
-  }
-}
-
-/**
- * @template {ServerResponse} Response
- * @param {Response} res
- */
-function clearHeadersForResponse(res) {
-  const headers = getHeaderNames(res);
-
-  for (let i = 0; i < headers.length; i++) {
-    res.removeHeader(headers[i]);
-  }
-}
 
 /**
  * @template {ServerResponse} Response
@@ -212,17 +105,30 @@ function sendError(req, res, status, options) {
 </html>`;
 
   // Clear existing headers
-  clearHeadersForResponse(res);
+  const headers = res.getHeaderNames();
+
+  for (let i = 0; i < headers.length; i++) {
+    res.removeHeader(headers[i]);
+  }
 
   if (options && options.headers) {
-    setHeadersForResponse(res, options.headers);
+    const keys = Object.keys(options.headers);
+
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const value = options.headers[key];
+
+      if (typeof value !== "undefined") {
+        res.setHeader(key, value);
+      }
+    }
   }
 
   // Send basic response
   setStatusCode(res, status);
-  setHeaderForResponse(res, "Content-Type", "text/html; charset=utf-8");
-  setHeaderForResponse(res, "Content-Security-Policy", "default-src 'none'");
-  setHeaderForResponse(res, "X-Content-Type-Options", "nosniff");
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Content-Security-Policy", "default-src 'none'");
+  res.setHeader("X-Content-Type-Options", "nosniff");
 
   let byteLength = Buffer.byteLength(document);
 
@@ -232,7 +138,7 @@ function sendError(req, res, status, options) {
       (options.modifyResponseData(req, res, document, byteLength)));
   }
 
-  setHeaderForResponse(res, "Content-Length", byteLength);
+  res.setHeader("Content-Length", byteLength);
 
   res.end(document);
 }
@@ -328,7 +234,7 @@ async function send(req, res, filename, start, end, goNext, options) {
       }
     });
 
-    setHeaderForResponse(res, "Content-Length", byteLength);
+    res.setHeader("Content-Length", byteLength);
 
     // Pseudo API and Koa API
     if (
@@ -377,10 +283,6 @@ async function send(req, res, filename, start, end, goNext, options) {
 }
 
 module.exports = {
-  getHeaderNames,
-  getHeaderFromRequest,
-  getHeaderFromResponse,
-  setHeaderForResponse,
   setStatusCode,
   send,
   sendError,
