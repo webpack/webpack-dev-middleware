@@ -3,14 +3,7 @@ const path = require("path");
 const mime = require("mime-types");
 
 const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
-const {
-  getHeaderFromRequest,
-  getHeaderFromResponse,
-  setHeaderForResponse,
-  setStatusCode,
-  send,
-  sendError,
-} = require("./utils/compatibleAPI");
+const { setStatusCode, send, sendError } = require("./utils/compatibleAPI");
 const ready = require("./utils/ready");
 
 /** @typedef {import("./index.js").NextFunction} NextFunction */
@@ -44,14 +37,6 @@ function wrapper(context) {
     // eslint-disable-next-line no-param-reassign
     res.locals = res.locals || {};
 
-    if (req.method && !acceptedMethods.includes(req.method)) {
-      await goNext();
-
-      return;
-    }
-
-    ready(context, processRequest, req);
-
     async function goNext() {
       if (!context.options.serverSideRender) {
         return next();
@@ -70,6 +55,12 @@ function wrapper(context) {
           req,
         );
       });
+    }
+
+    if (req.method && !acceptedMethods.includes(req.method)) {
+      await goNext();
+
+      return;
     }
 
     async function processRequest() {
@@ -121,34 +112,28 @@ function wrapper(context) {
         }
 
         headers.forEach((header) => {
-          setHeaderForResponse(res, header.key, header.value);
+          res.setHeader(header.key, header.value);
         });
       }
 
-      if (!getHeaderFromResponse(res, "Content-Type")) {
+      if (!res.getHeader("Content-Type")) {
         // content-type name(like application/javascript; charset=utf-8) or false
         const contentType = mime.contentType(path.extname(filename));
 
         // Only set content-type header if media type is known
         // https://tools.ietf.org/html/rfc7231#section-3.1.1.5
         if (contentType) {
-          setHeaderForResponse(res, "Content-Type", contentType);
+          res.setHeader("Content-Type", contentType);
         } else if (context.options.mimeTypeDefault) {
-          setHeaderForResponse(
-            res,
-            "Content-Type",
-            context.options.mimeTypeDefault,
-          );
+          res.setHeader("Content-Type", context.options.mimeTypeDefault);
         }
       }
 
-      if (!getHeaderFromResponse(res, "Accept-Ranges")) {
-        setHeaderForResponse(res, "Accept-Ranges", "bytes");
+      if (!res.getHeader("Accept-Ranges")) {
+        res.setHeader("Accept-Ranges", "bytes");
       }
 
-      const rangeHeader =
-        /** @type {string} */
-        (getHeaderFromRequest(req, "range"));
+      const rangeHeader = /** @type {string} */ (req.headers.range);
 
       let len = /** @type {import("fs").Stats} */ (extra.stats).size;
       let offset = 0;
@@ -162,8 +147,7 @@ function wrapper(context) {
         if (parsedRanges === -1) {
           context.logger.error("Unsatisfiable range for 'Range' header.");
 
-          setHeaderForResponse(
-            res,
+          res.setHeader(
             "Content-Range",
             getValueContentRangeHeader("bytes", len),
           );
@@ -189,8 +173,7 @@ function wrapper(context) {
         if (parsedRanges !== -2 && parsedRanges.length === 1) {
           // Content-Range
           setStatusCode(res, 206);
-          setHeaderForResponse(
-            res,
+          res.setHeader(
             "Content-Range",
             getValueContentRangeHeader(
               "bytes",
@@ -212,6 +195,8 @@ function wrapper(context) {
         outputFileSystem: context.outputFileSystem,
       });
     }
+
+    ready(context, processRequest, req);
   };
 }
 

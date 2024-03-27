@@ -6,10 +6,8 @@ export type ExpectedRequest = {
   get: (name: string) => string | undefined;
 };
 export type ExpectedResponse = {
-  get: (name: string) => string | string[] | undefined;
-  set: (name: string, value: number | string | string[]) => void;
-  status: (status: number) => void;
-  send: (data: any) => void;
+  status?: ((status: number) => void) | undefined;
+  send?: ((data: any) => void) | undefined;
   pipeInto?: ((data: any) => void) | undefined;
 };
 /**
@@ -43,48 +41,10 @@ export type SendOptions<
  */
 /**
  * @typedef {Object} ExpectedResponse
- * @property {(name: string) => string | string[] | undefined} get
- * @property {(name: string, value: number | string | string[]) => void} set
- * @property {(status: number) => void} status
- * @property {(data: any) => void} send
+ * @property {(status: number) => void} [status]
+ * @property {(data: any) => void} [send]
  * @property {(data: any) => void} [pipeInto]
  */
-/**
- * @template {ServerResponse} Response
- * @param {Response} res
- * @returns {string[]}
- */
-export function getHeaderNames<
-  Response extends import("../index.js").ServerResponse,
->(res: Response): string[];
-/**
- * @template {IncomingMessage} Request
- * @param {Request} req
- * @param {string} name
- * @returns {string | string[] | undefined}
- */
-export function getHeaderFromRequest<
-  Request extends import("http").IncomingMessage,
->(req: Request, name: string): string | string[] | undefined;
-/**
- * @template {ServerResponse} Response
- * @param {Response} res
- * @param {string} name
- * @returns {number | string | string[] | undefined}
- */
-export function getHeaderFromResponse<
-  Response extends import("../index.js").ServerResponse,
->(res: Response, name: string): number | string | string[] | undefined;
-/**
- * @template {ServerResponse} Response
- * @param {Response} res
- * @param {string} name
- * @param {number | string | string[]} value
- * @returns {void}
- */
-export function setHeaderForResponse<
-  Response extends import("../index.js").ServerResponse,
->(res: Response, name: string, value: number | string | string[]): void;
 /**
  * @template {ServerResponse} Response
  * @param {Response} res
