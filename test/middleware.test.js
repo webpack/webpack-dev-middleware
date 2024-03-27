@@ -318,7 +318,7 @@ describe.each([
           );
         });
 
-        it.only('should return the "200" code for the "GET" request to the bundle file', async () => {
+        it('should return the "200" code for the "GET" request to the bundle file', async () => {
           const response = await req.get("/bundle.js");
 
           expect(response.statusCode).toEqual(200);
