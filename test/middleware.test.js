@@ -22,7 +22,7 @@ import webpackQueryStringConfig from "./fixtures/webpack.querystring.config";
 import webpackClientServerConfig from "./fixtures/webpack.client.server.config";
 
 // Suppress unnecessary stats output
-// global.console.log = jest.fn();
+global.console.log = jest.fn();
 
 async function startServer(app) {
   return new Promise((resolve, reject) => {
