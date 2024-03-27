@@ -579,6 +579,25 @@ app.use(devMiddleware(compiler, devMiddlewareOptions));
 app.listen(3000, () => console.log("Example app listening on port 3000!"));
 ```
 
+### Koa
+
+```js
+const Koa = require("koa");
+const webpack = require("webpack");
+const webpackConfig = require("./test/fixtures/webpack.simple.config");
+const middleware = require("./dist");
+
+const compiler = webpack(webpackConfig);
+const devMiddlewareOptions = {
+  /** Your webpack-dev-middleware-options */
+};
+const app = new Koa();
+
+app.use(middleware.koaWrapper(compiler, devMiddlewareOptions));
+
+app.listen(3000);
+```
+
 ### Hapi
 
 ```js
@@ -612,10 +631,6 @@ process.on("unhandledRejection", (err) => {
   process.exit(1);
 });
 ```
-
-### Koa
-
-Soon...
 
 ### Fastify
 

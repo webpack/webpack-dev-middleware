@@ -3,6 +3,7 @@ import path from "path";
 
 import connect from "connect";
 import express from "express";
+import koa from "koa";
 import Hapi from "@hapi/hapi";
 import request from "supertest";
 import memfs, { createFsFromVolume, Volume } from "memfs";
@@ -45,7 +46,7 @@ async function frameworkFactory(
     case "hapi": {
       const server = framework.server();
       const hapiPlugin = {
-        plugin: middleware.hapiPlugin(),
+        plugin: middleware.hapiWrapper(),
         options: {
           compiler,
           ...devMiddlewareOptions,
@@ -71,7 +72,34 @@ async function frameworkFactory(
 
       await server.start();
 
-      return [server, server.listener, server.webpackDevMiddleware];
+      const req = request(server.listener);
+
+      return [server, req, server.webpackDevMiddleware];
+    }
+    case "koa": {
+      // eslint-disable-next-line new-cap
+      const app = new framework();
+      const koaMiddleware = middleware.koaWrapper(
+        compiler,
+        devMiddlewareOptions,
+      );
+      const middlewares =
+        typeof options.setupMiddlewares === "function"
+          ? options.setupMiddlewares([koaMiddleware])
+          : [koaMiddleware];
+
+      for (const item of middlewares) {
+        if (item.route) {
+          app.use(item.route, item.fn);
+        } else {
+          app.use(item);
+        }
+      }
+
+      const server = await startServer(app);
+      const req = request(server);
+
+      return [server, req, koaMiddleware.devMiddleware];
     }
     default: {
       const app = framework();
@@ -90,8 +118,9 @@ async function frameworkFactory(
       }
 
       const server = await startServer(app);
+      const req = request(app);
 
-      return [server, app, instance];
+      return [server, req, instance];
     }
   }
 }
@@ -144,6 +173,8 @@ async function close(server, instance) {
 
 function get404ContentTypeHeader(name) {
   switch (name) {
+    case "koa":
+      return "text/plain; charset=utf-8";
     case "hapi":
       return "application/json; charset=utf-8";
     default:
@@ -168,6 +199,15 @@ function applyTestMiddleware(name, middlewares) {
         },
       },
     });
+  } else if (name === "koa") {
+    middlewares.push((ctx, next) => {
+      if (ctx.request.url === "/file.jpg") {
+        ctx.set("Content-Type", "text/html");
+        ctx.body = "welcome";
+      }
+
+      next();
+    });
   } else {
     middlewares.push({
       route: "/file.jpg",
@@ -191,12 +231,12 @@ function applyTestMiddleware(name, middlewares) {
 describe.each([
   ["connect", connect],
   ["express", express],
+  ["koa", koa],
   ["hapi", Hapi],
 ])("%s framework:", (name, framework) => {
   describe("middleware", () => {
     let instance;
     let server;
-    let app;
     let req;
 
     describe("basic", () => {
@@ -218,7 +258,7 @@ describe.each([
             codeContent = params.assets["bundle.js"].source();
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -260,8 +300,6 @@ describe.each([
             path.resolve(outputPath, "empty-file.txt"),
             "",
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -469,7 +507,7 @@ describe.each([
           expect(response.text.length).toBe(501);
         });
 
-        it('should return the "206" code for the "GET" request with the valid range header for "HEAD" request', async () => {
+        it('should return the "206" code for the "HEAD" request with the valid range header', async () => {
           const response = await req
             .head("/bundle.js")
             .set("Range", "bytes=3000-3500");
@@ -670,13 +708,11 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -694,13 +730,11 @@ describe.each([
         beforeAll(async () => {
           const compiler = getCompiler(webpackMultiConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -1159,13 +1193,11 @@ describe.each([
                 },
               });
 
-              [server, app, instance] = await frameworkFactory(
+              [server, req, instance] = await frameworkFactory(
                 name,
                 framework,
                 compiler,
               );
-
-              req = request(app);
 
               const {
                 context: {
@@ -1219,7 +1251,7 @@ describe.each([
         beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -1227,7 +1259,16 @@ describe.each([
             undefined,
             {
               setupMiddlewares: (middlewares) => {
-                if (name === "hapi") {
+                if (name === "koa") {
+                  middlewares.unshift(async (ctx, next) => {
+                    ctx.set(
+                      "Content-Type",
+                      "application/vnd.test+octet-stream",
+                    );
+
+                    await next();
+                  });
+                } else if (name === "hapi") {
                   middlewares.unshift({
                     plugin: {
                       name: "myPlugin",
@@ -1269,8 +1310,6 @@ describe.each([
               },
             },
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -1292,13 +1331,11 @@ describe.each([
           // eslint-disable-next-line no-undefined
           const compiler = getCompiler({ ...webpackConfig, output: undefined });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -1346,13 +1383,11 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -1394,13 +1429,11 @@ describe.each([
         beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -1449,13 +1482,11 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -1518,7 +1549,7 @@ describe.each([
             hash = h;
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -1533,8 +1564,6 @@ describe.each([
               }
             }, 10);
           });
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -1614,7 +1643,7 @@ describe.each([
             hashTwo = two.hash;
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -1629,8 +1658,6 @@ describe.each([
               }
             }, 10);
           });
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -1708,13 +1735,11 @@ describe.each([
         beforeAll(async () => {
           const compiler = getCompiler(webpackMultiConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -1809,13 +1834,11 @@ describe.each([
             },
           ]);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -1892,13 +1915,11 @@ describe.each([
             },
           ]);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -1985,13 +2006,11 @@ describe.each([
         beforeAll(async () => {
           const compiler = getCompiler(webpackClientServerConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -2045,13 +2064,11 @@ describe.each([
             webpackClientServerConfig[0],
           ]);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -2115,13 +2132,11 @@ describe.each([
             },
           ]);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -2179,13 +2194,11 @@ describe.each([
             }
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -2216,7 +2229,7 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -2243,8 +2256,6 @@ describe.each([
 
               return brokenStream;
             };
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -2290,7 +2301,7 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -2321,8 +2332,6 @@ describe.each([
 
               return brokenStream;
             };
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -2372,7 +2381,7 @@ describe.each([
             codeContent = params.assets["bundle.js"].source();
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -2387,8 +2396,6 @@ describe.each([
           );
 
           instance.context.outputFileSystem.createReadStream = null;
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -2451,13 +2458,11 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -2494,7 +2499,7 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -2504,8 +2509,6 @@ describe.each([
               },
             },
           );
-
-          req = request(app);
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -2542,7 +2545,7 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -2552,8 +2555,6 @@ describe.each([
               },
             },
           );
-
-          req = request(app);
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -2589,7 +2590,7 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -2606,8 +2607,6 @@ describe.each([
               },
             },
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -2635,7 +2634,7 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -2643,8 +2642,6 @@ describe.each([
               mimeTypeDefault: "text/plain",
             },
           );
-
-          req = request(app);
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -2680,13 +2677,11 @@ describe.each([
           compiler = getCompiler(webpackConfig);
           spy = jest.spyOn(compiler, "watch");
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -2713,13 +2708,11 @@ describe.each([
 
           spy = jest.spyOn(compiler, "watch");
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -2749,13 +2742,11 @@ describe.each([
 
           spy = jest.spyOn(compiler, "watch");
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -2795,14 +2786,12 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
             { writeToDisk: true },
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -2814,40 +2803,38 @@ describe.each([
         });
 
         it("should find the bundle file on disk", (done) => {
-          request(app)
-            .get("/public/bundle.js")
-            .expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
+          req.get("/public/bundle.js").expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
 
-              const bundlePath = path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-true/bundle.js",
-              );
+            const bundlePath = path.resolve(
+              __dirname,
+              "./outputs/write-to-disk-true/bundle.js",
+            );
 
-              expect(
-                compiler.hooks.assetEmitted.taps.filter(
-                  (hook) => hook.name === "DevMiddleware",
-                ).length,
-              ).toBe(1);
-              expect(fs.existsSync(bundlePath)).toBe(true);
+            expect(
+              compiler.hooks.assetEmitted.taps.filter(
+                (hook) => hook.name === "DevMiddleware",
+              ).length,
+            ).toBe(1);
+            expect(fs.existsSync(bundlePath)).toBe(true);
 
-              instance.invalidate();
+            instance.invalidate();
 
-              return compiler.hooks.done.tap(
-                "DevMiddlewareWriteToDiskTest",
-                () => {
-                  expect(
-                    compiler.hooks.assetEmitted.taps.filter(
-                      (hook) => hook.name === "DevMiddleware",
-                    ).length,
-                  ).toBe(1);
+            return compiler.hooks.done.tap(
+              "DevMiddlewareWriteToDiskTest",
+              () => {
+                expect(
+                  compiler.hooks.assetEmitted.taps.filter(
+                    (hook) => hook.name === "DevMiddleware",
+                  ).length,
+                ).toBe(1);
 
-                  done();
-                },
-              );
-            });
+                done();
+              },
+            );
+          });
         });
 
         it("should not allow to get files above root", async () => {
@@ -2888,7 +2875,7 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -2899,8 +2886,6 @@ describe.each([
             recursive: true,
           });
           fs.writeFileSync(path.resolve(outputPath, "test.json"), "{}");
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -2910,41 +2895,39 @@ describe.each([
         });
 
         it("should find the bundle file on disk", (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
+          req.get("/bundle.js").expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
 
-              const bundlePath = path.resolve(outputPath, "bundle.js");
+            const bundlePath = path.resolve(outputPath, "bundle.js");
 
-              expect(fs.existsSync(path.resolve(outputPath, "test.json"))).toBe(
-                false,
-              );
+            expect(fs.existsSync(path.resolve(outputPath, "test.json"))).toBe(
+              false,
+            );
 
-              expect(
-                compiler.hooks.assetEmitted.taps.filter(
-                  (hook) => hook.name === "DevMiddleware",
-                ).length,
-              ).toBe(1);
-              expect(fs.existsSync(bundlePath)).toBe(true);
+            expect(
+              compiler.hooks.assetEmitted.taps.filter(
+                (hook) => hook.name === "DevMiddleware",
+              ).length,
+            ).toBe(1);
+            expect(fs.existsSync(bundlePath)).toBe(true);
 
-              instance.invalidate();
+            instance.invalidate();
 
-              return compiler.hooks.done.tap(
-                "DevMiddlewareWriteToDiskTest",
-                () => {
-                  expect(
-                    compiler.hooks.assetEmitted.taps.filter(
-                      (hook) => hook.name === "DevMiddleware",
-                    ).length,
-                  ).toBe(1);
+            return compiler.hooks.done.tap(
+              "DevMiddlewareWriteToDiskTest",
+              () => {
+                expect(
+                  compiler.hooks.assetEmitted.taps.filter(
+                    (hook) => hook.name === "DevMiddleware",
+                  ).length,
+                ).toBe(1);
 
-                  done();
-                },
-              );
-            });
+                done();
+              },
+            );
+          });
         });
       });
 
@@ -2960,7 +2943,7 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -2973,40 +2956,38 @@ describe.each([
         });
 
         it("should not find the bundle file on disk", (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
+          req.get("/bundle.js").expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
 
-              const bundlePath = path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-false/bundle.js",
-              );
+            const bundlePath = path.resolve(
+              __dirname,
+              "./outputs/write-to-disk-false/bundle.js",
+            );
 
-              expect(
-                compiler.hooks.assetEmitted.taps.filter(
-                  (hook) => hook.name === "DevMiddleware",
-                ).length,
-              ).toBe(0);
-              expect(fs.existsSync(bundlePath)).toBe(false);
+            expect(
+              compiler.hooks.assetEmitted.taps.filter(
+                (hook) => hook.name === "DevMiddleware",
+              ).length,
+            ).toBe(0);
+            expect(fs.existsSync(bundlePath)).toBe(false);
 
-              instance.invalidate();
+            instance.invalidate();
 
-              return compiler.hooks.done.tap(
-                "DevMiddlewareWriteToDiskTest",
-                () => {
-                  expect(
-                    compiler.hooks.assetEmitted.taps.filter(
-                      (hook) => hook.name === "DevMiddleware",
-                    ).length,
-                  ).toBe(0);
+            return compiler.hooks.done.tap(
+              "DevMiddlewareWriteToDiskTest",
+              () => {
+                expect(
+                  compiler.hooks.assetEmitted.taps.filter(
+                    (hook) => hook.name === "DevMiddleware",
+                  ).length,
+                ).toBe(0);
 
-                  done();
-                },
-              );
-            });
+                done();
+              },
+            );
+          });
         });
       });
 
@@ -3025,7 +3006,7 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -3033,8 +3014,6 @@ describe.each([
               writeToDisk: (filePath) => /bundle\.js$/.test(filePath),
             },
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -3077,7 +3056,7 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -3085,8 +3064,6 @@ describe.each([
               writeToDisk: (filePath) => !/bundle\.js$/.test(filePath),
             },
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -3129,14 +3106,12 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
             { writeToDisk: true },
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -3193,14 +3168,12 @@ describe.each([
             },
           ]);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
             { writeToDisk: true },
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -3260,7 +3233,7 @@ describe.each([
             hash = h;
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -3276,8 +3249,6 @@ describe.each([
               }
             }, 10);
           });
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -3309,7 +3280,7 @@ describe.each([
       beforeAll(async () => {
         compiler = getCompiler(webpackConfig);
 
-        [server, app, instance] = await frameworkFactory(
+        [server, req, instance] = await frameworkFactory(
           name,
           framework,
           compiler,
@@ -3318,8 +3289,6 @@ describe.each([
             publicPath: "/public/",
           },
         );
-
-        req = request(app);
       });
 
       afterAll(async () => {
@@ -3350,7 +3319,7 @@ describe.each([
         beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -3365,8 +3334,6 @@ describe.each([
               },
             },
           );
-
-          req = request(app);
         });
 
         afterEach(async () => {
@@ -3382,7 +3349,7 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-          const res = await request(app).get("/file.jpg");
+          const res = await req.get("/file.jpg");
           expect(res.statusCode).toEqual(200);
           expect(res.headers["X-nonsense-1"]).toBeUndefined();
           expect(res.headers["X-nonsense-2"]).toBeUndefined();
@@ -3393,7 +3360,7 @@ describe.each([
         beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -3417,8 +3384,6 @@ describe.each([
               },
             },
           );
-
-          req = request(app);
         });
 
         afterEach(async () => {
@@ -3434,7 +3399,7 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-          const res = await request(app).get("/file.jpg");
+          const res = await req.get("/file.jpg");
           expect(res.statusCode).toEqual(200);
           expect(res.headers["x-foo"]).toBeUndefined();
           expect(res.headers["x-bar"]).toBeUndefined();
@@ -3445,7 +3410,7 @@ describe.each([
         beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -3462,8 +3427,6 @@ describe.each([
               },
             },
           );
-
-          req = request(app);
         });
 
         afterEach(async () => {
@@ -3490,7 +3453,7 @@ describe.each([
         beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -3514,8 +3477,6 @@ describe.each([
               },
             },
           );
-
-          req = request(app);
         });
 
         afterEach(async () => {
@@ -3542,7 +3503,7 @@ describe.each([
         beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -3561,8 +3522,6 @@ describe.each([
               },
             },
           );
-
-          req = request(app);
         });
 
         afterEach(async () => {
@@ -3591,14 +3550,12 @@ describe.each([
         beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
             { publicPath: "/public/" },
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -3616,14 +3573,12 @@ describe.each([
         beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
             { publicPath: "auto" },
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -3644,14 +3599,22 @@ describe.each([
       beforeAll(async () => {
         const compiler = getCompiler(webpackConfig);
 
-        [server, app, instance] = await frameworkFactory(
+        [server, req, instance] = await frameworkFactory(
           name,
           framework,
           compiler,
           { serverSideRender: true },
           {
             setupMiddlewares: (middlewares) => {
-              if (name === "hapi") {
+              if (name === "koa") {
+                middlewares.push(async (ctx, next) => {
+                  locals = ctx.state;
+
+                  ctx.status = 200;
+
+                  await next();
+                });
+              } else if (name === "hapi") {
                 middlewares.push({
                   plugin: {
                     name: "myPlugin",
@@ -3692,8 +3655,6 @@ describe.each([
             },
           },
         );
-
-        req = request(app);
       });
 
       afterAll(async () => {
@@ -3715,7 +3676,7 @@ describe.each([
         beforeAll(async () => {
           compiler = getCompiler(webpackConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -3747,7 +3708,7 @@ describe.each([
           configuredFs.join = path.join.bind(path);
           configuredFs.mkdirp = () => {};
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -3784,7 +3745,7 @@ describe.each([
           configuredFs.join = path.join.bind(path);
           configuredFs.mkdirp = () => {};
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -3822,7 +3783,7 @@ describe.each([
           configuredFs.join = path.join.bind(path);
           configuredFs.mkdirp = () => {};
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -3861,14 +3822,12 @@ describe.each([
         beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
             { index: false, publicPath: "/" },
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -3898,14 +3857,12 @@ describe.each([
         beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
             { index: true, publicPath: "/" },
           );
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -3942,7 +3899,7 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -3951,8 +3908,6 @@ describe.each([
               publicPath: "/",
             },
           );
-
-          req = request(app);
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -3988,7 +3943,7 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -3997,8 +3952,6 @@ describe.each([
               publicPath: "/",
             },
           );
-
-          req = request(app);
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -4031,7 +3984,7 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -4043,8 +3996,6 @@ describe.each([
               publicPath: "/",
             },
           );
-
-          req = request(app);
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -4080,14 +4031,12 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
             { index: "noextension" },
           );
-
-          req = request(app);
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -4120,7 +4069,7 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -4129,8 +4078,6 @@ describe.each([
               publicPath: "/",
             },
           );
-
-          req = request(app);
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -4158,7 +4105,7 @@ describe.each([
         beforeAll(async () => {
           compiler = getCompiler(webpackConfig);
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -4176,8 +4123,6 @@ describe.each([
                 isDirectory: () => false,
               };
             });
-
-          req = request(app);
         });
 
         afterAll(async () => {
@@ -4212,7 +4157,7 @@ describe.each([
             },
           });
 
-          [server, app, instance] = await frameworkFactory(
+          [server, req, instance] = await frameworkFactory(
             name,
             framework,
             compiler,
@@ -4224,8 +4169,6 @@ describe.each([
               },
             },
           );
-
-          req = request(app);
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
