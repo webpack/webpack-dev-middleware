@@ -2,14 +2,20 @@ const path = require("path");
 
 const mime = require("mime-types");
 
+const onFinishedStream = require("on-finished");
+
 const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
-const { setStatusCode, send, sendError } = require("./utils/compatibleAPI");
+const { setStatusCode, send, pipe } = require("./utils/compatibleAPI");
 const ready = require("./utils/ready");
+const escapeHtml = require("./utils/escapeHtml");
 
 /** @typedef {import("./index.js").NextFunction} NextFunction */
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index.js").ServerResponse} ServerResponse */
 /** @typedef {import("./index.js").NormalizedHeaders} NormalizedHeaders */
+/** @typedef {import("fs").ReadStream} ReadStream */
+
+const BYTES_RANGE_REGEXP = /^ *bytes/i;
 
 /**
  * @param {string} type
@@ -21,7 +27,116 @@ function getValueContentRangeHeader(type, size, range) {
   return `${type} ${range ? `${range.start}-${range.end}` : "*"}/${size}`;
 }
 
-const BYTES_RANGE_REGEXP = /^ *bytes/i;
+/**
+ * @param {import("fs").ReadStream} stream stream
+ * @param {boolean} suppress do need suppress?
+ * @returns {void}
+ */
+function destroyStream(stream, suppress) {
+  if (typeof stream.destroy === "function") {
+    stream.destroy();
+  }
+
+  if (typeof stream.close === "function") {
+    // Node.js core bug workaround
+    stream.on(
+      "open",
+      /**
+       * @this {import("fs").ReadStream}
+       */
+      function onOpenClose() {
+        // @ts-ignore
+        if (typeof this.fd === "number") {
+          // actually close down the fd
+          this.close();
+        }
+      },
+    );
+  }
+
+  if (typeof stream.addListener === "function" && suppress) {
+    stream.removeAllListeners("error");
+    stream.addListener("error", () => {});
+  }
+}
+
+/** @type {Record<number, string>} */
+const statuses = {
+  400: "Bad Request",
+  403: "Forbidden",
+  404: "Not Found",
+  416: "Range Not Satisfiable",
+  500: "Internal Server Error",
+};
+
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @typedef {Object} SendErrorOptions send error options
+ * @property {Record<string, number | string | string[] | undefined>=} headers headers
+ * @property {import("./index").ModifyResponseData<Request, Response>=} modifyResponseData modify response data callback
+ */
+
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {Request} req response
+ * @param {Response} res response
+ * @param {number} status status
+ * @param {Partial<SendErrorOptions<Request, Response>>=} options options
+ * @returns {void}
+ */
+function sendError(req, res, status, options) {
+  const content = statuses[status] || String(status);
+  let document = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>${escapeHtml(content)}</pre>
+</body>
+</html>`;
+
+  // Clear existing headers
+  const headers = res.getHeaderNames();
+
+  for (let i = 0; i < headers.length; i++) {
+    res.removeHeader(headers[i]);
+  }
+
+  if (options && options.headers) {
+    const keys = Object.keys(options.headers);
+
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const value = options.headers[key];
+
+      if (typeof value !== "undefined") {
+        res.setHeader(key, value);
+      }
+    }
+  }
+
+  // Send basic response
+  setStatusCode(res, status);
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Content-Security-Policy", "default-src 'none'");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+
+  let byteLength = Buffer.byteLength(document);
+
+  if (options && options.modifyResponseData) {
+    ({ data: document, byteLength } =
+      /** @type {{data: string, byteLength: number }} */
+      (options.modifyResponseData(req, res, document, byteLength)));
+  }
+
+  res.setHeader("Content-Length", byteLength);
+
+  res.end(document);
+}
 
 /**
  * @template {IncomingMessage} Request
@@ -190,10 +305,93 @@ function wrapper(context) {
       const start = offset;
       const end = Math.max(offset, offset + len - 1);
 
-      send(req, res, filename, start, end, goNext, {
-        modifyResponseData: context.options.modifyResponseData,
-        outputFileSystem: context.outputFileSystem,
-      });
+      const isFsSupportsStream =
+        typeof context.outputFileSystem.createReadStream === "function";
+
+      /** @type {string | Buffer | ReadStream} */
+      let bufferOrStream;
+      let byteLength;
+
+      try {
+        if (isFsSupportsStream) {
+          bufferOrStream =
+            /** @type {import("fs").createReadStream} */
+            (context.outputFileSystem.createReadStream)(filename, {
+              start,
+              end,
+            });
+
+          // Handle files with zero bytes
+          byteLength = end === 0 ? 0 : end - start + 1;
+        } else {
+          bufferOrStream = /** @type {import("fs").readFileSync} */ (
+            context.outputFileSystem.readFileSync
+          )(filename);
+          ({ byteLength } = bufferOrStream);
+        }
+      } catch (_ignoreError) {
+        await goNext();
+
+        return;
+      }
+
+      if (context.options.modifyResponseData) {
+        ({ data: bufferOrStream, byteLength } =
+          context.options.modifyResponseData(
+            req,
+            res,
+            bufferOrStream,
+            byteLength,
+          ));
+      }
+
+      if (
+        typeof (
+          /** @type {import("fs").ReadStream} */ (bufferOrStream).pipe
+        ) === "function"
+      ) {
+        // Cleanup
+        const cleanup = () => {
+          destroyStream(
+            /** @type {import("fs").ReadStream} */ (bufferOrStream),
+            true,
+          );
+        };
+
+        // Error handling
+        /** @type {import("fs").ReadStream} */
+        (bufferOrStream).on("error", (error) => {
+          // clean up stream early
+          cleanup();
+
+          // Handle Error
+          switch (/** @type {NodeJS.ErrnoException} */ (error).code) {
+            case "ENAMETOOLONG":
+            case "ENOENT":
+            case "ENOTDIR":
+              sendError(req, res, 404, {
+                modifyResponseData: context.options.modifyResponseData,
+              });
+              break;
+            default:
+              sendError(req, res, 500, {
+                modifyResponseData: context.options.modifyResponseData,
+              });
+              break;
+          }
+        });
+
+        res.setHeader("Content-Length", byteLength);
+
+        pipe(req, res, /** @type {ReadStream} */ (bufferOrStream));
+
+        // Response finished, cleanup
+        onFinishedStream(res, cleanup);
+
+        return;
+      }
+
+      send(req, res, /** @type {Buffer} */ (bufferOrStream), byteLength);
     }
 
     ready(context, processRequest, req);
