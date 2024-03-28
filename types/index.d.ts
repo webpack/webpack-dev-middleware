@@ -90,6 +90,7 @@ export = wdm;
  * @property {OutputFileSystem} [outputFileSystem]
  * @property {boolean | string} [index]
  * @property {ModifyResponseData<RequestInternal, ResponseInternal>} [modifyResponseData]
+ * @property {"weak" | "strong"} [etag]
  */
 /**
  * @template {IncomingMessage} RequestInternal
@@ -350,6 +351,7 @@ type Options<
   modifyResponseData?:
     | ModifyResponseData<RequestInternal, ResponseInternal>
     | undefined;
+  etag?: "strong" | "weak" | undefined;
 };
 type Middleware<
   RequestInternal extends import("http").IncomingMessage,

@@ -1,5 +1,21 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`validation should throw an error on the "etag" option with "0" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.etag should be one of these:
+   "weak" | "strong"
+   -> Enable or disable etag generation.
+   -> Read more at https://github.com/webpack/webpack-dev-middleware#etag"
+`;
+
+exports[`validation should throw an error on the "etag" option with "foo" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.etag should be one of these:
+   "weak" | "strong"
+   -> Enable or disable etag generation.
+   -> Read more at https://github.com/webpack/webpack-dev-middleware#etag"
+`;
+
 exports[`validation should throw an error on the "headers" option with "[]" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.headers should be a non-empty array."

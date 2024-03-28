@@ -117,6 +117,7 @@ const noop = () => {};
  * @property {OutputFileSystem} [outputFileSystem]
  * @property {boolean | string} [index]
  * @property {ModifyResponseData<RequestInternal, ResponseInternal>} [modifyResponseData]
+ * @property {"weak" | "strong"} [etag]
  */
 
 /**

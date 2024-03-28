@@ -8,6 +8,8 @@ const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
 const { setStatusCode, send, pipe } = require("./utils/compatibleAPI");
 const ready = require("./utils/ready");
 const escapeHtml = require("./utils/escapeHtml");
+const etag = require("./utils/etag");
+const parseTokenList = require("./utils/parseTokenList");
 
 /** @typedef {import("./index.js").NextFunction} NextFunction */
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
@@ -26,6 +28,21 @@ const BYTES_RANGE_REGEXP = /^ *bytes/i;
 function getValueContentRangeHeader(type, size, range) {
   return `${type} ${range ? `${range.start}-${range.end}` : "*"}/${size}`;
 }
+
+/**
+ * Parse an HTTP Date into a number.
+ *
+ * @param {string} date
+ * @private
+ */
+function parseHttpDate(date) {
+  const timestamp = date && Date.parse(date);
+
+  // istanbul ignore next: guard against date.js Date.parse patching
+  return typeof timestamp === "number" ? timestamp : NaN;
+}
+
+const CACHE_CONTROL_NO_CACHE_REGEXP = /(?:^|,)\s*?no-cache\s*?(?:,|$)/;
 
 /**
  * @param {import("fs").ReadStream} stream stream
@@ -172,6 +189,115 @@ function wrapper(context) {
       res.setHeader("Content-Length", byteLength);
 
       res.end(document);
+    }
+
+    function isConditionalGET() {
+      return (
+        req.headers["if-match"] ||
+        req.headers["if-unmodified-since"] ||
+        req.headers["if-none-match"] ||
+        req.headers["if-modified-since"]
+      );
+    }
+
+    function isPreconditionFailure() {
+      const match = req.headers["if-match"];
+
+      if (match) {
+        // eslint-disable-next-line no-shadow
+        const etag = res.getHeader("ETag");
+
+        return (
+          !etag ||
+          (match !== "*" &&
+            parseTokenList(match).every(
+              // eslint-disable-next-line no-shadow
+              (match) =>
+                match !== etag &&
+                match !== `W/${etag}` &&
+                `W/${match}` !== etag,
+            ))
+        );
+      }
+
+      return false;
+    }
+
+    /**
+     * @returns {boolean} is cachable
+     */
+    function isCachable() {
+      return (
+        (res.statusCode >= 200 && res.statusCode < 300) ||
+        res.statusCode === 304
+      );
+    }
+
+    /**
+     * @param {import("http").OutgoingHttpHeaders} resHeaders
+     * @returns {boolean}
+     */
+    function isFresh(resHeaders) {
+      // Always return stale when Cache-Control: no-cache to support end-to-end reload requests
+      // https://tools.ietf.org/html/rfc2616#section-14.9.4
+      const cacheControl = req.headers["cache-control"];
+
+      if (cacheControl && CACHE_CONTROL_NO_CACHE_REGEXP.test(cacheControl)) {
+        return false;
+      }
+
+      // if-none-match
+      const noneMatch = req.headers["if-none-match"];
+
+      if (noneMatch && noneMatch !== "*") {
+        if (!resHeaders.etag) {
+          return false;
+        }
+
+        const matches = parseTokenList(noneMatch);
+
+        let etagStale = true;
+
+        for (let i = 0; i < matches.length; i++) {
+          const match = matches[i];
+
+          if (
+            match === resHeaders.etag ||
+            match === `W/${resHeaders.etag}` ||
+            `W/${match}` === resHeaders.etag
+          ) {
+            etagStale = false;
+            break;
+          }
+        }
+
+        if (etagStale) {
+          return false;
+        }
+      }
+
+      // A recipient MUST ignore If-Modified-Since if the request contains an If-None-Match header field;
+      // the condition in If-None-Match is considered to be a more accurate replacement for the condition in If-Modified-Since,
+      // and the two are only combined for the sake of interoperating with older intermediaries that might not implement If-None-Match.
+      if (noneMatch) {
+        return true;
+      }
+
+      // if-modified-since
+      const modifiedSince = req.headers["if-modified-since"];
+
+      if (modifiedSince) {
+        const lastModified = resHeaders["last-modified"];
+        const modifiedStale =
+          !lastModified ||
+          !(parseHttpDate(lastModified) <= parseHttpDate(modifiedSince));
+
+        if (modifiedStale) {
+          return false;
+        }
+      }
+
+      return true;
     }
 
     async function processRequest() {
@@ -334,6 +460,56 @@ function wrapper(context) {
         return;
       }
 
+      if (context.options.etag && !res.getHeader("ETag")) {
+        const value =
+          context.options.etag === "weak"
+            ? /** @type {import("fs").Stats} */ (extra.stats)
+            : bufferOrStream;
+
+        const val = await etag(value);
+
+        if (val.buffer) {
+          bufferOrStream = val.buffer;
+        }
+
+        res.setHeader("ETag", val.hash);
+      }
+
+      // Conditional GET support
+      if (isConditionalGET()) {
+        if (isPreconditionFailure()) {
+          sendError(412, {
+            modifyResponseData: context.options.modifyResponseData,
+          });
+
+          return;
+        }
+
+        // For Koa
+        if (res.statusCode === 404) {
+          setStatusCode(res, 200);
+        }
+
+        if (
+          isCachable() &&
+          isFresh({
+            etag: /** @type {string} */ (res.getHeader("ETag")),
+          })
+        ) {
+          setStatusCode(res, 304);
+
+          // Remove content header fields
+          res.removeHeader("Content-Encoding");
+          res.removeHeader("Content-Language");
+          res.removeHeader("Content-Length");
+          res.removeHeader("Content-Range");
+          res.removeHeader("Content-Type");
+          res.end();
+
+          return;
+        }
+      }
+
       if (context.options.modifyResponseData) {
         ({ data: bufferOrStream, byteLength } =
           context.options.modifyResponseData(
@@ -360,6 +536,8 @@ function wrapper(context) {
         typeof (
           /** @type {import("fs").ReadStream} */ (bufferOrStream).pipe
         ) === "function";
+
+      console.log(isPipeSupports);
 
       if (!isPipeSupports) {
         send(res, /** @type {Buffer} */ (bufferOrStream));
