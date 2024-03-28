@@ -510,6 +510,16 @@ function wrapper(context) {
         }
       }
 
+      if (context.options.modifyResponseData) {
+        ({ data: bufferOrStream, byteLength } =
+          context.options.modifyResponseData(
+            req,
+            res,
+            bufferOrStream,
+            byteLength,
+          ));
+      }
+
       res.setHeader("Content-Length", byteLength);
 
       if (req.method === "HEAD") {
@@ -522,20 +532,12 @@ function wrapper(context) {
         return;
       }
 
-      if (context.options.modifyResponseData) {
-        ({ data: bufferOrStream, byteLength } =
-          context.options.modifyResponseData(
-            req,
-            res,
-            bufferOrStream,
-            byteLength,
-          ));
-      }
-
       const isPipeSupports =
         typeof (
           /** @type {import("fs").ReadStream} */ (bufferOrStream).pipe
         ) === "function";
+
+      console.log(isPipeSupports);
 
       if (!isPipeSupports) {
         send(res, /** @type {Buffer} */ (bufferOrStream));
