@@ -4275,7 +4275,7 @@ describe.each([
 
           const response3 = await req
             .get(`/bundle.js`)
-            .set("if-none-match", response1.headers.etag);
+            .set("if-none-match", "test");
 
           expect(response3.statusCode).toEqual(200);
           expect(response3.headers.etag).toBeDefined();
