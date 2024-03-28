@@ -4252,6 +4252,10 @@ describe.each([
           expect(response2.statusCode).toEqual(304);
           expect(response2.headers.etag).toBeDefined();
           expect(response2.headers.etag.startsWith("W/")).toBe(true);
+
+          const response3 = await req.get(`/bundle.js`).set("if-match", "test");
+
+          expect(response3.statusCode).toEqual(412);
         });
 
         it('should return the "304" code for the "GET" request to the bundle file with etag "if-none-match" header', async () => {
@@ -4268,6 +4272,14 @@ describe.each([
           expect(response2.statusCode).toEqual(304);
           expect(response2.headers.etag).toBeDefined();
           expect(response2.headers.etag.startsWith("W/")).toBe(true);
+
+          const response3 = await req
+            .get(`/bundle.js`)
+            .set("if-none-match", response1.headers.etag);
+
+          expect(response3.statusCode).toEqual(200);
+          expect(response3.headers.etag).toBeDefined();
+          expect(response3.headers.etag.startsWith("W/")).toBe(true);
         });
 
         it('should return the "412" code for the "GET" request to the bundle file with etag and wrong "if-match" header', async () => {
