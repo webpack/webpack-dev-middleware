@@ -19,7 +19,9 @@
     "mycustom",
     "commitlint",
     "nosniff",
-    "deoptimize"
+    "deoptimize",
+    "etag",
+    "cachable"
   ],
   "ignorePaths": [
     "CHANGELOG.md",

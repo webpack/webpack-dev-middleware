@@ -129,6 +129,11 @@
       "description": "Allows to set up a callback to change the response data.",
       "link": "https://github.com/webpack/webpack-dev-middleware#modifyresponsedata",
       "instanceof": "Function"
+    },
+    "etag": {
+      "description": "Enable or disable etag generation.",
+      "link": "https://github.com/webpack/webpack-dev-middleware#etag",
+      "enum": ["weak", "strong"]
     }
   },
   "additionalProperties": false

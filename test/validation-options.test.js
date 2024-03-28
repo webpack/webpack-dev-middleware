@@ -67,6 +67,10 @@ describe("validation", () => {
       ],
       failure: [true],
     },
+    etag: {
+      success: ["weak", "strong"],
+      failure: ["foo", 0],
+    },
   };
 
   function stringifyValue(value) {

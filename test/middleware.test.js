@@ -4210,5 +4210,155 @@ describe.each([
         });
       });
     });
+
+    describe("etag", () => {
+      describe("should work and generate weak etag", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              etag: "weak",
+            },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and set weak etag', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers.etag).toBeDefined();
+          expect(response.headers.etag.startsWith("W/")).toBe(true);
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file with etag and "if-match" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-match", response1.headers.etag);
+
+          expect(response2.statusCode).toEqual(304);
+          expect(response2.headers.etag).toBeDefined();
+          expect(response2.headers.etag.startsWith("W/")).toBe(true);
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file with etag "if-none-match" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-none-match", response1.headers.etag);
+
+          expect(response2.statusCode).toEqual(304);
+          expect(response2.headers.etag).toBeDefined();
+          expect(response2.headers.etag.startsWith("W/")).toBe(true);
+        });
+
+        it('should return the "412" code for the "GET" request to the bundle file with etag and wrong "if-match" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
+
+          const response2 = await req.get(`/bundle.js`).set("if-match", "test");
+
+          expect(response2.statusCode).toEqual(412);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file with etag and "if-match" and "cache-control: no-cache" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-match", response1.headers.etag)
+            .set("Cache-Control", "no-cache");
+
+          expect(response2.statusCode).toEqual(200);
+          expect(response2.headers.etag).toBeDefined();
+          expect(response2.headers.etag.startsWith("W/")).toBe(true);
+        });
+      });
+
+      describe("should work and generate strong etag", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              etag: "strong",
+            },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and set weak etag', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers.etag).toBe(
+            /* cspell:disable-next-line */
+            '"18c7-l/LCspQS5fbbf1kkLGOsK9FTpbg"',
+          );
+        });
+      });
+
+      describe("should work and generate strong etag without createReadStream", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              etag: "strong",
+            },
+          );
+
+          instance.context.outputFileSystem.createReadStream = null;
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and set weak etag', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers.etag).toBe(
+            /* cspell:disable-next-line */
+            '"18c7-l/LCspQS5fbbf1kkLGOsK9FTpbg"',
+          );
+        });
+      });
+    });
   });
 });
