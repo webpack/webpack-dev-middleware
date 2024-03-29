@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.1.3](https://github.com/webpack/webpack-dev-middleware/compare/v6.1.2...v6.1.3) (2024-03-29)
+
+
+### Bug Fixes
+
+* security problem ([#1799](https://github.com/webpack/webpack-dev-middleware/issues/1799)) ([5a4d9e8](https://github.com/webpack/webpack-dev-middleware/commit/5a4d9e8d6ab587b4137fdec885c36b79b10b29f7))
+
 ### [6.1.2](https://github.com/webpack/webpack-dev-middleware/compare/v6.1.1...v6.1.2) (2024-03-20)
 
 
