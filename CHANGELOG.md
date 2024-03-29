@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.2.0](https://github.com/webpack/webpack-dev-middleware/compare/v7.1.1...v7.2.0) (2024-03-29)
+
+
+### Features
+
+* hapi support ([b3f9126](https://github.com/webpack/webpack-dev-middleware/commit/b3f9126cfb659c95c0cd77d97eed168c7941c8a8))
+* koa support ([#1792](https://github.com/webpack/webpack-dev-middleware/issues/1792)) ([458c17c](https://github.com/webpack/webpack-dev-middleware/commit/458c17c372a2a1a5a33f8923998dba88d2644135))
+* support `ETag` header generation ([#1797](https://github.com/webpack/webpack-dev-middleware/issues/1797)) ([b759181](https://github.com/webpack/webpack-dev-middleware/commit/b75918163284495dae5a2f995c2d93805fccfbd7))
+* support `Last-Modified` header generation ([#1798](https://github.com/webpack/webpack-dev-middleware/issues/1798)) ([18e5683](https://github.com/webpack/webpack-dev-middleware/commit/18e56833327084c22c1ee6bdad123095a68d144a))
+
 ### [7.1.1](https://github.com/webpack/webpack-dev-middleware/compare/v7.1.0...v7.1.1) (2024-03-21)
 
 
