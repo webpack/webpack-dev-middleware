@@ -624,7 +624,7 @@ function wrapper(context) {
 
           res.setHeader(
             "Content-Range",
-            getValueContentRangeHeader("bytes", len),
+            getValueContentRangeHeader("bytes", size),
           );
 
           sendError(416, {
@@ -652,15 +652,12 @@ function wrapper(context) {
             "Content-Range",
             getValueContentRangeHeader(
               "bytes",
-              len,
+              size,
               /** @type {import("range-parser").Ranges} */ (parsedRanges)[0],
             ),
           );
 
-          // When strong Etag generation was enabled, we calculate it there
-          if (typeof offset === "undefined") {
-            [offset, len] = getOffsetAndLenFromRange(parsedRanges[0]);
-          }
+          [offset, len] = getOffsetAndLenFromRange(parsedRanges[0]);
         }
       }
 
