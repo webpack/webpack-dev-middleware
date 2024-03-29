@@ -10,6 +10,8 @@ import request from "supertest";
 import memfs, { createFsFromVolume, Volume } from "memfs";
 import del from "del";
 
+import { Stats } from "webpack";
+
 import middleware from "../src";
 
 import getCompiler from "./helpers/getCompiler";
@@ -20,6 +22,8 @@ import webpackWatchOptionsConfig from "./fixtures/webpack.watch-options.config";
 import webpackMultiWatchOptionsConfig from "./fixtures/webpack.array.watch-options.config";
 import webpackQueryStringConfig from "./fixtures/webpack.querystring.config";
 import webpackClientServerConfig from "./fixtures/webpack.client.server.config";
+import getCompilerHooks from "./helpers/getCompilerHooks";
+import webpackPublicPathConfig from "./fixtures/webpack.public-path.config";
 
 // Suppress unnecessary stats output
 global.console.log = jest.fn();
@@ -260,6 +264,509 @@ describe.each([
     let instance;
     let server;
     let req;
+
+    describe("API", () => {
+      let compiler;
+
+      describe("constructor", () => {
+        describe("should accept compiler", () => {
+          beforeEach(async () => {
+            compiler = getCompiler(webpackConfig);
+
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+            );
+          });
+
+          afterEach(async () => {
+            await close(server, instance);
+          });
+
+          it("should work", (done) => {
+            const doneSpy = jest.spyOn(
+              getCompilerHooks(compiler).done[0],
+              "fn",
+            );
+
+            instance.waitUntilValid(() => {
+              instance.close();
+
+              expect(compiler.running).toBe(false);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+
+              doneSpy.mockRestore();
+
+              done();
+            });
+          });
+        });
+
+        describe("should accept compiler in watch mode", () => {
+          beforeEach(async () => {
+            compiler = getCompiler({ ...webpackConfig, ...{ watch: true } });
+
+            instance = middleware(compiler);
+
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+            );
+          });
+
+          afterEach(async () => {
+            await close(server, instance);
+          });
+
+          it("should work", (done) => {
+            const doneSpy = jest.spyOn(
+              getCompilerHooks(compiler).done[0],
+              "fn",
+            );
+
+            instance.waitUntilValid(() => {
+              instance.close();
+
+              expect(compiler.running).toBe(false);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+
+              doneSpy.mockRestore();
+
+              done();
+            });
+          });
+        });
+      });
+
+      describe("waitUntilValid method", () => {
+        beforeEach(async () => {
+          compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it("should work without callback", (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], "fn");
+
+          instance.waitUntilValid();
+
+          const intervalId = setInterval(() => {
+            if (instance.context.state) {
+              expect(compiler.running).toBe(true);
+              expect(instance.context.state).toBe(true);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+              expect(doneSpy.mock.calls[0][0]).toBeInstanceOf(Stats);
+
+              doneSpy.mockRestore();
+
+              clearInterval(intervalId);
+
+              done();
+            }
+          });
+        });
+
+        it("should work with callback", (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], "fn");
+          let callbackCounter = 0;
+
+          instance.waitUntilValid(() => {
+            callbackCounter += 1;
+          });
+
+          const intervalId = setInterval(() => {
+            if (instance.context.state) {
+              expect(compiler.running).toBe(true);
+              expect(instance.context.state).toBe(true);
+              expect(callbackCounter).toBe(1);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+
+              doneSpy.mockRestore();
+
+              clearInterval(intervalId);
+
+              done();
+            }
+          });
+        });
+
+        it("should run callback immediately when state already valid", (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], "fn");
+          let callbackCounter = 0;
+          let validToCheck = false;
+
+          instance.waitUntilValid(() => {
+            callbackCounter += 1;
+
+            instance.waitUntilValid(() => {
+              validToCheck = true;
+              callbackCounter += 1;
+            });
+          });
+
+          const intervalId = setInterval(() => {
+            if (instance.context.state && validToCheck) {
+              expect(compiler.running).toBe(true);
+              expect(instance.context.state).toBe(true);
+              expect(callbackCounter).toBe(2);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+
+              doneSpy.mockRestore();
+
+              clearInterval(intervalId);
+
+              done();
+            }
+          });
+        });
+      });
+
+      describe("invalidate method", () => {
+        beforeEach(async () => {
+          compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it("should work without callback", (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], "fn");
+
+          instance.invalidate();
+
+          const intervalId = setInterval(() => {
+            if (instance.context.state) {
+              expect(compiler.running).toBe(true);
+              expect(instance.context.state).toBe(true);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+
+              doneSpy.mockRestore();
+
+              clearInterval(intervalId);
+
+              done();
+            }
+          });
+        });
+
+        it("should work with callback", (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], "fn");
+          let callbackCounter = 0;
+
+          instance.invalidate(() => {
+            callbackCounter += 1;
+          });
+
+          const intervalId = setInterval(() => {
+            if (instance.context.state) {
+              expect(compiler.running).toBe(true);
+              expect(instance.context.state).toBe(true);
+              expect(callbackCounter).toBe(1);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+
+              doneSpy.mockRestore();
+
+              clearInterval(intervalId);
+
+              done();
+            }
+          });
+        });
+      });
+
+      describe("getFilenameFromUrl method", () => {
+        describe("should work", () => {
+          beforeEach(async () => {
+            compiler = getCompiler(webpackConfig);
+
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+            );
+          });
+
+          afterEach(async () => {
+            await close(server, instance);
+          });
+
+          it("should work", (done) => {
+            instance.waitUntilValid(() => {
+              expect(instance.getFilenameFromUrl("/bundle.js")).toBe(
+                path.join(webpackConfig.output.path, "/bundle.js"),
+              );
+              expect(instance.getFilenameFromUrl("/")).toBe(
+                path.join(webpackConfig.output.path, "/index.html"),
+              );
+              expect(instance.getFilenameFromUrl("/index.html")).toBe(
+                path.join(webpackConfig.output.path, "/index.html"),
+              );
+              expect(instance.getFilenameFromUrl("/svg.svg")).toBe(
+                path.join(webpackConfig.output.path, "/svg.svg"),
+              );
+              expect(
+                instance.getFilenameFromUrl("/unknown.unknown"),
+              ).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl("/unknown/unknown.unknown"),
+              ).toBeUndefined();
+
+              done();
+            });
+          });
+        });
+
+        describe('should work when the "index" option disabled', () => {
+          beforeEach(async () => {
+            compiler = getCompiler(webpackConfig);
+
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+              {
+                index: false,
+              },
+            );
+          });
+
+          afterEach(async () => {
+            await close(server, instance);
+          });
+
+          it("should work", (done) => {
+            instance.waitUntilValid(() => {
+              expect(instance.getFilenameFromUrl("/bundle.js")).toBe(
+                path.join(webpackConfig.output.path, "/bundle.js"),
+              );
+              // eslint-disable-next-line no-undefined
+              expect(instance.getFilenameFromUrl("/")).toBe(undefined);
+              expect(instance.getFilenameFromUrl("/index.html")).toBe(
+                path.join(webpackConfig.output.path, "/index.html"),
+              );
+              expect(instance.getFilenameFromUrl("/svg.svg")).toBe(
+                path.join(webpackConfig.output.path, "/svg.svg"),
+              );
+              expect(
+                instance.getFilenameFromUrl("/unknown.unknown"),
+              ).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl("/unknown/unknown.unknown"),
+              ).toBeUndefined();
+
+              done();
+            });
+          });
+        });
+
+        describe('should work with the "publicPath"', () => {
+          beforeEach(async () => {
+            compiler = getCompiler(webpackPublicPathConfig);
+
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+            );
+          });
+
+          afterEach(async () => {
+            await close(server, instance);
+          });
+
+          it("should work", (done) => {
+            instance.waitUntilValid(() => {
+              expect(
+                instance.getFilenameFromUrl("/public/path/bundle.js"),
+              ).toBe(
+                path.join(webpackPublicPathConfig.output.path, "/bundle.js"),
+              );
+              expect(instance.getFilenameFromUrl("/public/path/")).toBe(
+                path.join(webpackPublicPathConfig.output.path, "/index.html"),
+              );
+              expect(
+                instance.getFilenameFromUrl("/public/path/index.html"),
+              ).toBe(
+                path.join(webpackPublicPathConfig.output.path, "/index.html"),
+              );
+              expect(instance.getFilenameFromUrl("/public/path/svg.svg")).toBe(
+                path.join(webpackPublicPathConfig.output.path, "/svg.svg"),
+              );
+
+              expect(instance.getFilenameFromUrl("/")).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl("/unknown.unknown"),
+              ).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl("/unknown/unknown.unknown"),
+              ).toBeUndefined();
+
+              done();
+            });
+          });
+        });
+
+        describe("should work in multi compiler mode", () => {
+          beforeEach(async () => {
+            compiler = getCompiler(webpackMultiConfig);
+
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+            );
+          });
+
+          afterEach(async () => {
+            await close(server, instance);
+          });
+
+          it("should work", (done) => {
+            instance.waitUntilValid(() => {
+              expect(instance.getFilenameFromUrl("/static-one/bundle.js")).toBe(
+                path.join(webpackMultiConfig[0].output.path, "/bundle.js"),
+              );
+              expect(instance.getFilenameFromUrl("/static-one/")).toBe(
+                path.join(webpackMultiConfig[0].output.path, "/index.html"),
+              );
+              expect(
+                instance.getFilenameFromUrl("/static-one/index.html"),
+              ).toBe(
+                path.join(webpackMultiConfig[0].output.path, "/index.html"),
+              );
+              expect(instance.getFilenameFromUrl("/static-one/svg.svg")).toBe(
+                path.join(webpackMultiConfig[0].output.path, "/svg.svg"),
+              );
+              expect(
+                instance.getFilenameFromUrl("/static-one/unknown.unknown"),
+              ).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl(
+                  "/static-one/unknown/unknown.unknown",
+                ),
+              ).toBeUndefined();
+
+              expect(instance.getFilenameFromUrl("/static-two/bundle.js")).toBe(
+                path.join(webpackMultiConfig[1].output.path, "/bundle.js"),
+              );
+              expect(
+                instance.getFilenameFromUrl("/static-two/unknown.unknown"),
+              ).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl(
+                  "/static-two/unknown/unknown.unknown",
+                ),
+              ).toBeUndefined();
+
+              expect(instance.getFilenameFromUrl("/")).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl("/static-one/unknown.unknown"),
+              ).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl(
+                  "/static-one/unknown/unknown.unknown",
+                ),
+              ).toBeUndefined();
+
+              done();
+            });
+          });
+        });
+      });
+
+      describe("close method", () => {
+        beforeEach(async () => {
+          compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it("should work without callback", (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], "fn");
+
+          instance.waitUntilValid(() => {
+            instance.close();
+
+            expect(compiler.running).toBe(false);
+            expect(doneSpy).toHaveBeenCalledTimes(1);
+
+            doneSpy.mockRestore();
+
+            done();
+          });
+        });
+
+        it("should work with callback", (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], "fn");
+
+          instance.waitUntilValid(() => {
+            instance.close(() => {
+              expect(compiler.running).toBe(false);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+
+              doneSpy.mockRestore();
+
+              done();
+            });
+          });
+        });
+      });
+
+      describe("context property", () => {
+        beforeEach(async () => {
+          compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it("should contain public properties", (done) => {
+          expect(instance.context.state).toBeDefined();
+          expect(instance.context.options).toBeDefined();
+          expect(instance.context.compiler).toBeDefined();
+          expect(instance.context.watching).toBeDefined();
+          expect(instance.context.outputFileSystem).toBeDefined();
+
+          // the compilation needs to finish, as it will still be running
+          // after the test is done if not finished, potentially impacting other tests
+          compiler.hooks.done.tap("wdm-test", () => {
+            done();
+          });
+        });
+      });
+    });
 
     describe("basic", () => {
       describe("should work", () => {
