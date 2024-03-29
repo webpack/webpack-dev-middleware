@@ -45,3 +45,19 @@ export function pipe<Response extends import("../index.js").ServerResponse>(
   res: Response & ExpectedResponse,
   bufferOrStream: import("fs").ReadStream,
 ): void;
+/**
+ * @param {string} filename
+ * @param {import("../index").OutputFileSystem} outputFileSystem
+ * @param {number} start
+ * @param {number} end
+ * @returns {{ bufferOrStream: (Buffer | import("fs").ReadStream), byteLength: number }}
+ */
+export function createReadStreamOrReadFileSync(
+  filename: string,
+  outputFileSystem: import("../index").OutputFileSystem,
+  start: number,
+  end: number,
+): {
+  bufferOrStream: Buffer | import("fs").ReadStream;
+  byteLength: number;
+};

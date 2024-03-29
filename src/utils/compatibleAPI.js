@@ -62,4 +62,46 @@ function send(res, bufferOrStream) {
   res.end(bufferOrStream);
 }
 
-module.exports = { setStatusCode, send, pipe };
+/**
+ * @param {string} filename
+ * @param {import("../index").OutputFileSystem} outputFileSystem
+ * @param {number} start
+ * @param {number} end
+ * @returns {{ bufferOrStream: (Buffer | import("fs").ReadStream), byteLength: number }}
+ */
+function createReadStreamOrReadFileSync(
+  filename,
+  outputFileSystem,
+  start,
+  end,
+) {
+  /** @type {string | Buffer | import("fs").ReadStream} */
+  let bufferOrStream;
+  /** @type {number} */
+  let byteLength;
+
+  // Stream logic
+  const isFsSupportsStream =
+    typeof outputFileSystem.createReadStream === "function";
+
+  if (isFsSupportsStream) {
+    bufferOrStream =
+      /** @type {import("fs").createReadStream} */
+      (outputFileSystem.createReadStream)(filename, {
+        start,
+        end,
+      });
+
+    // Handle files with zero bytes
+    byteLength = end === 0 ? 0 : end - start + 1;
+  } else {
+    bufferOrStream =
+      /** @type {import("fs").readFileSync} */
+      (outputFileSystem.readFileSync)(filename);
+    ({ byteLength } = bufferOrStream);
+  }
+
+  return { bufferOrStream, byteLength };
+}
+
+module.exports = { setStatusCode, send, pipe, createReadStreamOrReadFileSync };

@@ -3,48 +3,13 @@ const { parse } = require("url");
 const querystring = require("querystring");
 
 const getPaths = require("./getPaths");
+const memorize = require("./memorize");
 
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
 
-const cacheStore = new WeakMap();
-
-/**
- * @template T
- * @param {Function} fn
- * @param {{ cache?: Map<string, { data: T }> } | undefined} cache
- * @param {(value: T) => T} callback
- * @returns {any}
- */
-const mem = (fn, { cache = new Map() } = {}, callback) => {
-  /**
-   * @param {any} arguments_
-   * @return {any}
-   */
-  const memoized = (...arguments_) => {
-    const [key] = arguments_;
-    const cacheItem = cache.get(key);
-
-    if (cacheItem) {
-      return cacheItem.data;
-    }
-
-    let result = fn.apply(this, arguments_);
-    result = callback(result);
-
-    cache.set(key, {
-      data: result,
-    });
-
-    return result;
-  };
-
-  cacheStore.set(memoized, cache);
-
-  return memoized;
-};
 // eslint-disable-next-line no-undefined
-const memoizedParse = mem(parse, undefined, (value) => {
+const memoizedParse = memorize(parse, undefined, (value) => {
   if (value.pathname) {
     // eslint-disable-next-line no-param-reassign
     value.pathname = decode(value.pathname);

@@ -59,7 +59,7 @@ const noop = () => {};
 
 /**
  * @typedef {Object} ResponseData
- * @property {string | Buffer | ReadStream} data
+ * @property {Buffer | ReadStream} data
  * @property {number} byteLength
  */
 
@@ -69,7 +69,7 @@ const noop = () => {};
  * @callback ModifyResponseData
  * @param {RequestInternal} req
  * @param {ResponseInternal} res
- * @param {string | Buffer | ReadStream} data
+ * @param {Buffer | ReadStream} data
  * @param {number} byteLength
  * @return {ResponseData}
  */
