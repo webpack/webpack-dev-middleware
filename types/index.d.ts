@@ -42,8 +42,8 @@ export = wdm;
  * @property {number} byteLength
  */
 /**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @callback ModifyResponseData
  * @param {RequestInternal} req
  * @param {ResponseInternal} res
@@ -52,8 +52,8 @@ export = wdm;
  * @return {ResponseData}
  */
 /**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @typedef {Object} Context
  * @property {boolean} state
  * @property {Stats | MultiStats | undefined} stats
@@ -65,14 +65,14 @@ export = wdm;
  * @property {OutputFileSystem} outputFileSystem
  */
 /**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @typedef {WithoutUndefined<Context<RequestInternal, ResponseInternal>, "watching">} FilledContext
  */
 /** @typedef {Record<string, string | number> | Array<{ key: string, value: number | string }>} NormalizedHeaders */
 /**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @typedef {NormalizedHeaders | ((req: RequestInternal, res: ResponseInternal, context: Context<RequestInternal, ResponseInternal>) =>  void | undefined | NormalizedHeaders) | undefined} Headers
  */
 /**
@@ -94,8 +94,8 @@ export = wdm;
  * @property {boolean} [lastModified]
  */
 /**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @callback Middleware
  * @param {RequestInternal} req
  * @param {ResponseInternal} res
@@ -132,8 +132,8 @@ export = wdm;
  * @property {Context<RequestInternal, ResponseInternal>} context
  */
 /**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @typedef {Middleware<RequestInternal, ResponseInternal> & AdditionalMethods<RequestInternal, ResponseInternal>} API
  */
 /**
@@ -207,8 +207,9 @@ declare namespace wdm {
 type Compiler = import("webpack").Compiler;
 type MultiCompiler = import("webpack").MultiCompiler;
 type API<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse,
+  RequestInternal extends
+    import("http").IncomingMessage = import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse = ServerResponse,
 > = Middleware<RequestInternal, ResponseInternal> &
   AdditionalMethods<RequestInternal, ResponseInternal>;
 /**
@@ -288,8 +289,9 @@ type ResponseData = {
   byteLength: number;
 };
 type ModifyResponseData<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse,
+  RequestInternal extends
+    import("http").IncomingMessage = import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse = ServerResponse,
 > = (
   req: RequestInternal,
   res: ResponseInternal,
@@ -297,8 +299,9 @@ type ModifyResponseData<
   byteLength: number,
 ) => ResponseData;
 type Context<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse,
+  RequestInternal extends
+    import("http").IncomingMessage = import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse = ServerResponse,
 > = {
   state: boolean;
   stats: Stats | MultiStats | undefined;
@@ -310,8 +313,9 @@ type Context<
   outputFileSystem: OutputFileSystem;
 };
 type FilledContext<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse,
+  RequestInternal extends
+    import("http").IncomingMessage = import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse = ServerResponse,
 > = WithoutUndefined<Context<RequestInternal, ResponseInternal>, "watching">;
 type NormalizedHeaders =
   | Record<string, string | number>
@@ -320,8 +324,9 @@ type NormalizedHeaders =
       value: number | string;
     }>;
 type Headers<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse,
+  RequestInternal extends
+    import("http").IncomingMessage = import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse = ServerResponse,
 > =
   | NormalizedHeaders
   | ((
@@ -356,8 +361,9 @@ type Options<
   lastModified?: boolean | undefined;
 };
 type Middleware<
-  RequestInternal extends import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse,
+  RequestInternal extends
+    import("http").IncomingMessage = import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse = ServerResponse,
 > = (
   req: RequestInternal,
   res: ResponseInternal,
