@@ -4372,5 +4372,190 @@ describe.each([
         });
       });
     });
+
+    describe("lastModified", () => {
+      describe("should work and generate Last-Modified header", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              lastModified: true,
+            },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        function parseHttpDate(date) {
+          const timestamp = date && Date.parse(date);
+
+          // istanbul ignore next: guard against date.js Date.parse patching
+          return typeof timestamp === "number" ? timestamp : NaN;
+        }
+
+        it('should return the "200" code for the "GET" request to the bundle file and set "Last-Modified"', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["last-modified"]).toBeDefined();
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file with "Last-Modified" and "if-unmodified-since" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-unmodified-since", response1.headers["last-modified"]);
+
+          expect(response2.statusCode).toEqual(304);
+          expect(response2.headers["last-modified"]).toBeDefined();
+
+          const response3 = await req
+            .get(`/bundle.js`)
+            .set("if-unmodified-since", "Fri, 29 Mar 2020 10:25:50 GMT");
+
+          expect(response3.statusCode).toEqual(412);
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file with "Last-Modified" and "if-modified-since" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-modified-since", response1.headers["last-modified"]);
+
+          expect(response2.statusCode).toEqual(304);
+          expect(response2.headers["last-modified"]).toBeDefined();
+
+          const response3 = await req
+            .get(`/bundle.js`)
+            .set(
+              "if-modified-since",
+              new Date(
+                parseHttpDate(response1.headers["last-modified"]) - 1000,
+              ).toUTCString(),
+            );
+
+          expect(response3.statusCode).toEqual(200);
+          expect(response3.headers["last-modified"]).toBeDefined();
+        });
+
+        it('should return the "412" code for the "GET" request to the bundle file with etag and "if-unmodified-since" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set(
+              "if-unmodified-since",
+              new Date(
+                parseHttpDate(response1.headers["last-modified"]) - 1000,
+              ).toUTCString(),
+            );
+
+          expect(response2.statusCode).toEqual(412);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file with etag and "if-match" and "cache-control: no-cache" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-unmodified-since", response1.headers["last-modified"])
+            .set("Cache-Control", "no-cache");
+
+          expect(response2.statusCode).toEqual(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+        });
+      });
+
+      describe('should work and prefer "if-match" and "if-none-match"', () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              etag: "weak",
+              lastModified: true,
+            },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        function parseHttpDate(date) {
+          const timestamp = date && Date.parse(date);
+
+          // istanbul ignore next: guard against date.js Date.parse patching
+          return typeof timestamp === "number" ? timestamp : NaN;
+        }
+
+        it('should return the "304" code for the "GET" request to the bundle file and prefer "if-match" over "if-unmodified-since"', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+          expect(response1.headers.etag).toBeDefined();
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-match", response1.headers.etag)
+            .set(
+              "if-unmodified-since",
+              new Date(
+                parseHttpDate(response1.headers["last-modified"]) - 1000,
+              ).toUTCString(),
+            );
+
+          expect(response2.statusCode).toEqual(304);
+          expect(response2.headers["last-modified"]).toBeDefined();
+          expect(response2.headers.etag).toBeDefined();
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file and prefer "if-none-match" over "if-modified-since"', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+          expect(response1.headers.etag).toBeDefined();
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-none-match", response1.headers.etag)
+            .set(
+              "if-modified-since",
+              new Date(
+                parseHttpDate(response1.headers["last-modified"]) - 1000,
+              ).toUTCString(),
+            );
+
+          expect(response2.statusCode).toEqual(304);
+          expect(response2.headers["last-modified"]).toBeDefined();
+          expect(response2.headers.etag).toBeDefined();
+        });
+      });
+    });
   });
 });

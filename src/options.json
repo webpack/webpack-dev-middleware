@@ -134,6 +134,11 @@
       "description": "Enable or disable etag generation.",
       "link": "https://github.com/webpack/webpack-dev-middleware#etag",
       "enum": ["weak", "strong"]
+    },
+    "lastModified": {
+      "description": "Enable or disable `Last-Modified` header. Uses the file system's last modified value.",
+      "link": "https://github.com/webpack/webpack-dev-middleware#lastmodified",
+      "type": "boolean"
     }
   },
   "additionalProperties": false

@@ -91,6 +91,7 @@ export = wdm;
  * @property {boolean | string} [index]
  * @property {ModifyResponseData<RequestInternal, ResponseInternal>} [modifyResponseData]
  * @property {"weak" | "strong"} [etag]
+ * @property {boolean} [lastModified]
  */
 /**
  * @template {IncomingMessage} RequestInternal
@@ -352,6 +353,7 @@ type Options<
     | ModifyResponseData<RequestInternal, ResponseInternal>
     | undefined;
   etag?: "strong" | "weak" | undefined;
+  lastModified?: boolean | undefined;
 };
 type Middleware<
   RequestInternal extends import("http").IncomingMessage,

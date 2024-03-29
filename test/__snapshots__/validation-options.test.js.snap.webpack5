@@ -77,6 +77,20 @@ exports[`validation should throw an error on the "index" option with "0" value 1
     * options.index should be a non-empty string."
 `;
 
+exports[`validation should throw an error on the "lastModified" option with "0" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.lastModified should be a boolean.
+   -> Enable or disable \`Last-Modified\` header. Uses the file system's last modified value.
+   -> Read more at https://github.com/webpack/webpack-dev-middleware#lastmodified"
+`;
+
+exports[`validation should throw an error on the "lastModified" option with "foo" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.lastModified should be a boolean.
+   -> Enable or disable \`Last-Modified\` header. Uses the file system's last modified value.
+   -> Read more at https://github.com/webpack/webpack-dev-middleware#lastmodified"
+`;
+
 exports[`validation should throw an error on the "methods" option with "{}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.methods should be an array:

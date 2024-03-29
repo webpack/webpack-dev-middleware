@@ -7,8 +7,6 @@ const onFinishedStream = require("on-finished");
 const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
 const { setStatusCode, send, pipe } = require("./utils/compatibleAPI");
 const ready = require("./utils/ready");
-const escapeHtml = require("./utils/escapeHtml");
-const etag = require("./utils/etag");
 const parseTokenList = require("./utils/parseTokenList");
 
 /** @typedef {import("./index.js").NextFunction} NextFunction */
@@ -33,7 +31,7 @@ function getValueContentRangeHeader(type, size, range) {
  * Parse an HTTP Date into a number.
  *
  * @param {string} date
- * @private
+ * @returns {number}
  */
 function parseHttpDate(date) {
   const timestamp = date && Date.parse(date);
@@ -140,6 +138,8 @@ function wrapper(context) {
      * @returns {void}
      */
     function sendError(status, options) {
+      // eslint-disable-next-line global-require
+      const escapeHtml = require("./utils/escapeHtml");
       const content = statuses[status] || String(status);
       let document = `<!DOCTYPE html>
 <html lang="en">
@@ -201,23 +201,44 @@ function wrapper(context) {
     }
 
     function isPreconditionFailure() {
-      const match = req.headers["if-match"];
+      // if-match
+      const ifMatch = req.headers["if-match"];
 
-      if (match) {
-        // eslint-disable-next-line no-shadow
+      // A recipient MUST ignore If-Unmodified-Since if the request contains
+      // an If-Match header field; the condition in If-Match is considered to
+      // be a more accurate replacement for the condition in
+      // If-Unmodified-Since, and the two are only combined for the sake of
+      // interoperating with older intermediaries that might not implement If-Match.
+      if (ifMatch) {
         const etag = res.getHeader("ETag");
 
         return (
           !etag ||
-          (match !== "*" &&
-            parseTokenList(match).every(
-              // eslint-disable-next-line no-shadow
+          (ifMatch !== "*" &&
+            parseTokenList(ifMatch).every(
               (match) =>
                 match !== etag &&
                 match !== `W/${etag}` &&
                 `W/${match}` !== etag,
             ))
         );
+      }
+
+      // if-unmodified-since
+      const ifUnmodifiedSince = req.headers["if-unmodified-since"];
+
+      if (ifUnmodifiedSince) {
+        const unmodifiedSince = parseHttpDate(ifUnmodifiedSince);
+
+        // A recipient MUST ignore the If-Unmodified-Since header field if the
+        // received field-value is not a valid HTTP-date.
+        if (!isNaN(unmodifiedSince)) {
+          const lastModified = parseHttpDate(
+            /** @type {string} */ (res.getHeader("Last-Modified")),
+          );
+
+          return isNaN(lastModified) || lastModified > unmodifiedSince;
+        }
       }
 
       return false;
@@ -288,9 +309,17 @@ function wrapper(context) {
 
       if (modifiedSince) {
         const lastModified = resHeaders["last-modified"];
+        const parsedHttpDate = parseHttpDate(modifiedSince);
+
+        //  A recipient MUST ignore the If-Modified-Since header field if the
+        //  received field-value is not a valid HTTP-date, or if the request
+        //  method is neither GET nor HEAD.
+        if (isNaN(parsedHttpDate)) {
+          return true;
+        }
+
         const modifiedStale =
-          !lastModified ||
-          !(parseHttpDate(lastModified) <= parseHttpDate(modifiedSince));
+          !lastModified || !(parseHttpDate(lastModified) <= parsedHttpDate);
 
         if (modifiedStale) {
           return false;
@@ -298,6 +327,38 @@ function wrapper(context) {
       }
 
       return true;
+    }
+
+    function isRangeFresh() {
+      const ifRange =
+        /** @type {string | undefined} */
+        (req.headers["if-range"]);
+
+      if (!ifRange) {
+        return true;
+      }
+
+      // if-range as etag
+      if (ifRange.indexOf('"') !== -1) {
+        const etag = /** @type {string | undefined} */ (res.getHeader("ETag"));
+
+        if (!etag) {
+          return true;
+        }
+
+        return Boolean(etag && ifRange.indexOf(etag) !== -1);
+      }
+
+      // if-range as modified date
+      const lastModified =
+        /** @type {string | undefined} */
+        (res.getHeader("Last-Modified"));
+
+      if (!lastModified) {
+        return true;
+      }
+
+      return parseHttpDate(lastModified) <= parseHttpDate(ifRange);
     }
 
     async function processRequest() {
@@ -372,16 +433,25 @@ function wrapper(context) {
         res.setHeader("Accept-Ranges", "bytes");
       }
 
-      const rangeHeader = /** @type {string} */ (req.headers.range);
-
       let len = /** @type {import("fs").Stats} */ (extra.stats).size;
       let offset = 0;
 
+      const rangeHeader = /** @type {string} */ (req.headers.range);
+
       if (rangeHeader && BYTES_RANGE_REGEXP.test(rangeHeader)) {
-        // eslint-disable-next-line global-require
-        const parsedRanges = require("range-parser")(len, rangeHeader, {
-          combine: true,
-        });
+        let parsedRanges =
+          /** @type {import("range-parser").Ranges | import("range-parser").Result | []} */
+          (
+            // eslint-disable-next-line global-require
+            require("range-parser")(len, rangeHeader, {
+              combine: true,
+            })
+          );
+
+        // If-Range support
+        if (!isRangeFresh()) {
+          parsedRanges = [];
+        }
 
         if (parsedRanges === -1) {
           context.logger.error("Unsatisfiable range for 'Range' header.");
@@ -460,13 +530,22 @@ function wrapper(context) {
         return;
       }
 
+      if (context.options.lastModified && !res.getHeader("Last-Modified")) {
+        const modified =
+          /** @type {import("fs").Stats} */
+          (extra.stats).mtime.toUTCString();
+
+        res.setHeader("Last-Modified", modified);
+      }
+
       if (context.options.etag && !res.getHeader("ETag")) {
         const value =
           context.options.etag === "weak"
             ? /** @type {import("fs").Stats} */ (extra.stats)
             : bufferOrStream;
 
-        const val = await etag(value);
+        // eslint-disable-next-line global-require
+        const val = await require("./utils/etag")(value);
 
         if (val.buffer) {
           bufferOrStream = val.buffer;
@@ -493,7 +572,10 @@ function wrapper(context) {
         if (
           isCachable() &&
           isFresh({
-            etag: /** @type {string} */ (res.getHeader("ETag")),
+            etag: /** @type {string | undefined} */ (res.getHeader("ETag")),
+            "last-modified":
+              /** @type {string | undefined} */
+              (res.getHeader("Last-Modified")),
           })
         ) {
           setStatusCode(res, 304);
@@ -536,8 +618,6 @@ function wrapper(context) {
         typeof (
           /** @type {import("fs").ReadStream} */ (bufferOrStream).pipe
         ) === "function";
-
-      console.log(isPipeSupports);
 
       if (!isPipeSupports) {
         send(res, /** @type {Buffer} */ (bufferOrStream));

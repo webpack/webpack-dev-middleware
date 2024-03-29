@@ -179,6 +179,13 @@ Default: `undefined`
 
 Enable or disable etag generation. Boolean value use
 
+### lastModified
+
+Type: `Boolean`
+Default: `undefined`
+
+Enable or disable `Last-Modified` header. Uses the file system's last modified value.
+
 ### publicPath
 
 Type: `String`
