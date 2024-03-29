@@ -38,7 +38,7 @@ export = wdm;
  */
 /**
  * @typedef {Object} ResponseData
- * @property {string | Buffer | ReadStream} data
+ * @property {Buffer | ReadStream} data
  * @property {number} byteLength
  */
 /**
@@ -47,7 +47,7 @@ export = wdm;
  * @callback ModifyResponseData
  * @param {RequestInternal} req
  * @param {ResponseInternal} res
- * @param {string | Buffer | ReadStream} data
+ * @param {Buffer | ReadStream} data
  * @param {number} byteLength
  * @return {ResponseData}
  */
@@ -284,7 +284,7 @@ type Callback = (
   stats?: import("webpack").Stats | import("webpack").MultiStats | undefined,
 ) => any;
 type ResponseData = {
-  data: string | Buffer | ReadStream;
+  data: Buffer | ReadStream;
   byteLength: number;
 };
 type ModifyResponseData<
@@ -293,7 +293,7 @@ type ModifyResponseData<
 > = (
   req: RequestInternal,
   res: ResponseInternal,
-  data: string | Buffer | ReadStream,
+  data: Buffer | ReadStream,
   byteLength: number,
 ) => ResponseData;
 type Context<

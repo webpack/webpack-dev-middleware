@@ -5,9 +5,15 @@ const mime = require("mime-types");
 const onFinishedStream = require("on-finished");
 
 const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
-const { setStatusCode, send, pipe } = require("./utils/compatibleAPI");
+const {
+  setStatusCode,
+  send,
+  pipe,
+  createReadStreamOrReadFileSync,
+} = require("./utils/compatibleAPI");
 const ready = require("./utils/ready");
 const parseTokenList = require("./utils/parseTokenList");
+const memorize = require("./utils/memorize");
 
 /** @typedef {import("./index.js").NextFunction} NextFunction */
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
@@ -84,6 +90,21 @@ const statuses = {
   500: "Internal Server Error",
 };
 
+const parseRangeHeaders = memorize(
+  /**
+   * @param {string} value
+   * @returns {import("range-parser").Result | import("range-parser").Ranges}
+   */
+  (value) => {
+    const [len, rangeHeader] = value.split("|");
+
+    // eslint-disable-next-line global-require
+    return require("range-parser")(Number(len), rangeHeader, {
+      combine: true,
+    });
+  },
+);
+
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
@@ -141,7 +162,8 @@ function wrapper(context) {
       // eslint-disable-next-line global-require
       const escapeHtml = require("./utils/escapeHtml");
       const content = statuses[status] || String(status);
-      let document = `<!DOCTYPE html>
+      let document = Buffer.from(
+        `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -150,7 +172,9 @@ function wrapper(context) {
 <body>
 <pre>${escapeHtml(content)}</pre>
 </body>
-</html>`;
+</html>`,
+        "utf-8",
+      );
 
       // Clear existing headers
       const headers = res.getHeaderNames();
@@ -182,7 +206,7 @@ function wrapper(context) {
 
       if (options && options.modifyResponseData) {
         ({ data: document, byteLength } =
-          /** @type {{data: string, byteLength: number }} */
+          /** @type {{ data: Buffer, byteLength: number }} */
           (options.modifyResponseData(req, res, document, byteLength)));
       }
 
@@ -267,9 +291,16 @@ function wrapper(context) {
         return false;
       }
 
-      // if-none-match
+      // fields
       const noneMatch = req.headers["if-none-match"];
+      const modifiedSince = req.headers["if-modified-since"];
 
+      // unconditional request
+      if (!noneMatch && !modifiedSince) {
+        return false;
+      }
+
+      // if-none-match
       if (noneMatch && noneMatch !== "*") {
         if (!resHeaders.etag) {
           return false;
@@ -305,21 +336,15 @@ function wrapper(context) {
       }
 
       // if-modified-since
-      const modifiedSince = req.headers["if-modified-since"];
-
       if (modifiedSince) {
         const lastModified = resHeaders["last-modified"];
-        const parsedHttpDate = parseHttpDate(modifiedSince);
 
         //  A recipient MUST ignore the If-Modified-Since header field if the
         //  received field-value is not a valid HTTP-date, or if the request
         //  method is neither GET nor HEAD.
-        if (isNaN(parsedHttpDate)) {
-          return true;
-        }
-
         const modifiedStale =
-          !lastModified || !(parseHttpDate(lastModified) <= parsedHttpDate);
+          !lastModified ||
+          !(parseHttpDate(lastModified) <= parseHttpDate(modifiedSince));
 
         if (modifiedStale) {
           return false;
@@ -361,6 +386,43 @@ function wrapper(context) {
       return parseHttpDate(lastModified) <= parseHttpDate(ifRange);
     }
 
+    /**
+     * @returns {string | undefined}
+     */
+    function getRangeHeader() {
+      const rage = req.headers.range;
+
+      if (rage && BYTES_RANGE_REGEXP.test(rage)) {
+        return rage;
+      }
+
+      // eslint-disable-next-line no-undefined
+      return undefined;
+    }
+
+    /**
+     * @param {import("range-parser").Range} range
+     * @returns {[number, number]}
+     */
+    function getOffsetAndLenFromRange(range) {
+      const offset = range.start;
+      const len = range.end - range.start + 1;
+
+      return [offset, len];
+    }
+
+    /**
+     * @param {number} offset
+     * @param {number} len
+     * @returns {[number, number]}
+     */
+    function calcStartAndEnd(offset, len) {
+      const start = offset;
+      const end = Math.max(offset, offset + len - 1);
+
+      return [start, end];
+    }
+
     async function processRequest() {
       // Pipe and SendFile
       /** @type {import("./utils/getFilenameFromUrl").Extra} */
@@ -388,6 +450,11 @@ function wrapper(context) {
 
         return;
       }
+
+      const { size } = /** @type {import("fs").Stats} */ (extra.stats);
+
+      let len = size;
+      let offset = 0;
 
       // Send logic
       let { headers } = context.options;
@@ -433,20 +500,119 @@ function wrapper(context) {
         res.setHeader("Accept-Ranges", "bytes");
       }
 
-      let len = /** @type {import("fs").Stats} */ (extra.stats).size;
-      let offset = 0;
+      if (context.options.lastModified && !res.getHeader("Last-Modified")) {
+        const modified =
+          /** @type {import("fs").Stats} */
+          (extra.stats).mtime.toUTCString();
 
-      const rangeHeader = /** @type {string} */ (req.headers.range);
+        res.setHeader("Last-Modified", modified);
+      }
 
-      if (rangeHeader && BYTES_RANGE_REGEXP.test(rangeHeader)) {
+      /** @type {number} */
+      let start;
+      /** @type {number} */
+      let end;
+
+      /** @type {undefined | Buffer | ReadStream} */
+      let bufferOrStream;
+      /** @type {number} */
+      let byteLength;
+
+      const rangeHeader = getRangeHeader();
+
+      if (context.options.etag && !res.getHeader("ETag")) {
+        /** @type {import("fs").Stats | Buffer | ReadStream | undefined} */
+        let value;
+
+        if (context.options.etag === "weak") {
+          value = /** @type {import("fs").Stats} */ (extra.stats);
+        } else {
+          if (rangeHeader) {
+            const parsedRanges =
+              /** @type {import("range-parser").Ranges | import("range-parser").Result} */
+              (parseRangeHeaders(`${size}|${rangeHeader}`));
+
+            if (
+              parsedRanges !== -2 &&
+              parsedRanges !== -1 &&
+              parsedRanges.length === 1
+            ) {
+              [offset, len] = getOffsetAndLenFromRange(parsedRanges[0]);
+            }
+          }
+
+          [start, end] = calcStartAndEnd(offset, len);
+
+          try {
+            const result = createReadStreamOrReadFileSync(
+              filename,
+              context.outputFileSystem,
+              start,
+              end,
+            );
+
+            value = result.bufferOrStream;
+            ({ bufferOrStream, byteLength } = result);
+          } catch (_err) {
+            // Ignore here
+          }
+        }
+
+        if (value) {
+          // eslint-disable-next-line global-require
+          const result = await require("./utils/etag")(value);
+
+          // Because we already read stream, we can cache buffer to avoid extra read from fs
+          if (result.buffer) {
+            bufferOrStream = result.buffer;
+          }
+
+          res.setHeader("ETag", result.hash);
+        }
+      }
+
+      // Conditional GET support
+      if (isConditionalGET()) {
+        if (isPreconditionFailure()) {
+          sendError(412, {
+            modifyResponseData: context.options.modifyResponseData,
+          });
+
+          return;
+        }
+
+        // For Koa
+        if (res.statusCode === 404) {
+          setStatusCode(res, 200);
+        }
+
+        if (
+          isCachable() &&
+          isFresh({
+            etag: /** @type {string | undefined} */ (res.getHeader("ETag")),
+            "last-modified":
+              /** @type {string | undefined} */
+              (res.getHeader("Last-Modified")),
+          })
+        ) {
+          setStatusCode(res, 304);
+
+          // Remove content header fields
+          res.removeHeader("Content-Encoding");
+          res.removeHeader("Content-Language");
+          res.removeHeader("Content-Length");
+          res.removeHeader("Content-Range");
+          res.removeHeader("Content-Type");
+          res.end();
+
+          return;
+        }
+      }
+
+      if (rangeHeader) {
         let parsedRanges =
           /** @type {import("range-parser").Ranges | import("range-parser").Result | []} */
-          (
-            // eslint-disable-next-line global-require
-            require("range-parser")(len, rangeHeader, {
-              combine: true,
-            })
-          );
+          (parseRangeHeaders(`${size}|${rangeHeader}`));
 
         // If-Range support
         if (!isRangeFresh()) {
@@ -491,102 +657,26 @@ function wrapper(context) {
             ),
           );
 
-          offset += parsedRanges[0].start;
-          len = parsedRanges[0].end - parsedRanges[0].start + 1;
+          // When strong Etag generation was enabled, we calculate it there
+          if (typeof offset === "undefined") {
+            [offset, len] = getOffsetAndLenFromRange(parsedRanges[0]);
+          }
         }
       }
 
-      const start = offset;
-      const end = Math.max(offset, offset + len - 1);
+      // When strong Etag generation is enabled we already read file, so we can skip extra fs call
+      if (!bufferOrStream) {
+        [start, end] = calcStartAndEnd(offset, len);
 
-      // Stream logic
-      const isFsSupportsStream =
-        typeof context.outputFileSystem.createReadStream === "function";
-
-      /** @type {string | Buffer | ReadStream} */
-      let bufferOrStream;
-      let byteLength;
-
-      try {
-        if (isFsSupportsStream) {
-          bufferOrStream =
-            /** @type {import("fs").createReadStream} */
-            (context.outputFileSystem.createReadStream)(filename, {
-              start,
-              end,
-            });
-
-          // Handle files with zero bytes
-          byteLength = end === 0 ? 0 : end - start + 1;
-        } else {
-          bufferOrStream = /** @type {import("fs").readFileSync} */ (
-            context.outputFileSystem.readFileSync
-          )(filename);
-          ({ byteLength } = bufferOrStream);
-        }
-      } catch (_ignoreError) {
-        await goNext();
-
-        return;
-      }
-
-      if (context.options.lastModified && !res.getHeader("Last-Modified")) {
-        const modified =
-          /** @type {import("fs").Stats} */
-          (extra.stats).mtime.toUTCString();
-
-        res.setHeader("Last-Modified", modified);
-      }
-
-      if (context.options.etag && !res.getHeader("ETag")) {
-        const value =
-          context.options.etag === "weak"
-            ? /** @type {import("fs").Stats} */ (extra.stats)
-            : bufferOrStream;
-
-        // eslint-disable-next-line global-require
-        const val = await require("./utils/etag")(value);
-
-        if (val.buffer) {
-          bufferOrStream = val.buffer;
-        }
-
-        res.setHeader("ETag", val.hash);
-      }
-
-      // Conditional GET support
-      if (isConditionalGET()) {
-        if (isPreconditionFailure()) {
-          sendError(412, {
-            modifyResponseData: context.options.modifyResponseData,
-          });
-
-          return;
-        }
-
-        // For Koa
-        if (res.statusCode === 404) {
-          setStatusCode(res, 200);
-        }
-
-        if (
-          isCachable() &&
-          isFresh({
-            etag: /** @type {string | undefined} */ (res.getHeader("ETag")),
-            "last-modified":
-              /** @type {string | undefined} */
-              (res.getHeader("Last-Modified")),
-          })
-        ) {
-          setStatusCode(res, 304);
-
-          // Remove content header fields
-          res.removeHeader("Content-Encoding");
-          res.removeHeader("Content-Language");
-          res.removeHeader("Content-Length");
-          res.removeHeader("Content-Range");
-          res.removeHeader("Content-Type");
-          res.end();
+        try {
+          ({ bufferOrStream, byteLength } = createReadStreamOrReadFileSync(
+            filename,
+            context.outputFileSystem,
+            start,
+            end,
+          ));
+        } catch (_ignoreError) {
+          await goNext();
 
           return;
         }
@@ -598,10 +688,12 @@ function wrapper(context) {
             req,
             res,
             bufferOrStream,
+            // @ts-ignore
             byteLength,
           ));
       }
 
+      // @ts-ignore
       res.setHeader("Content-Length", byteLength);
 
       if (req.method === "HEAD") {

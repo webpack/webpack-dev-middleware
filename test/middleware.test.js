@@ -242,6 +242,13 @@ function applyTestMiddleware(name, middlewares) {
   return middlewares;
 }
 
+function parseHttpDate(date) {
+  const timestamp = date && Date.parse(date);
+
+  // istanbul ignore next: guard against date.js Date.parse patching
+  return typeof timestamp === "number" ? timestamp : NaN;
+}
+
 describe.each([
   ["connect", connect],
   ["express", express],
@@ -4238,40 +4245,6 @@ describe.each([
           expect(response.headers.etag.startsWith("W/")).toBe(true);
         });
 
-        it('should return the "304" code for the "GET" request to the bundle file with etag and "if-match" header', async () => {
-          const response1 = await req.get(`/bundle.js`);
-
-          expect(response1.statusCode).toEqual(200);
-          expect(response1.headers.etag).toBeDefined();
-          expect(response1.headers.etag.startsWith("W/")).toBe(true);
-
-          const response2 = await req
-            .get(`/bundle.js`)
-            .set("if-match", response1.headers.etag);
-
-          expect(response2.statusCode).toEqual(304);
-          expect(response2.headers.etag).toBeDefined();
-          expect(response2.headers.etag.startsWith("W/")).toBe(true);
-
-          const response3 = await req
-            .get(`/bundle.js`)
-            .set("if-match", `${response1.headers.etag}, foo`);
-
-          expect(response3.statusCode).toEqual(304);
-          expect(response3.headers.etag).toBeDefined();
-          expect(response3.headers.etag.startsWith("W/")).toBe(true);
-
-          const response4 = await req.get(`/bundle.js`).set("if-match", "*");
-
-          expect(response4.statusCode).toEqual(304);
-          expect(response4.headers.etag).toBeDefined();
-          expect(response4.headers.etag.startsWith("W/")).toBe(true);
-
-          const response5 = await req.get(`/bundle.js`).set("if-match", "test");
-
-          expect(response5.statusCode).toEqual(412);
-        });
-
         it('should return the "304" code for the "GET" request to the bundle file with etag and "if-none-match" header', async () => {
           const response1 = await req.get(`/bundle.js`);
 
@@ -4312,6 +4285,40 @@ describe.each([
           expect(response5.headers.etag.startsWith("W/")).toBe(true);
         });
 
+        it('should return the "200" code for the "GET" request to the bundle file with etag and "if-match" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-match", response1.headers.etag);
+
+          expect(response2.statusCode).toEqual(200);
+          expect(response2.headers.etag).toBeDefined();
+          expect(response2.headers.etag.startsWith("W/")).toBe(true);
+
+          const response3 = await req
+            .get(`/bundle.js`)
+            .set("if-match", `${response1.headers.etag}, foo`);
+
+          expect(response3.statusCode).toEqual(200);
+          expect(response3.headers.etag).toBeDefined();
+          expect(response3.headers.etag.startsWith("W/")).toBe(true);
+
+          const response4 = await req.get(`/bundle.js`).set("if-match", "*");
+
+          expect(response4.statusCode).toEqual(200);
+          expect(response4.headers.etag).toBeDefined();
+          expect(response4.headers.etag.startsWith("W/")).toBe(true);
+
+          const response5 = await req.get(`/bundle.js`).set("if-match", "test");
+
+          expect(response5.statusCode).toEqual(412);
+        });
+
         it('should return the "412" code for the "GET" request to the bundle file with etag and wrong "if-match" header', async () => {
           const response1 = await req.get(`/bundle.js`);
 
@@ -4339,6 +4346,20 @@ describe.each([
           expect(response2.statusCode).toEqual(200);
           expect(response2.headers.etag).toBeDefined();
           expect(response2.headers.etag.startsWith("W/")).toBe(true);
+        });
+
+        it('should return the "206" code for the "GET" request with the valid range header and "if-range" header', async () => {
+          const response = await req
+            .get("/bundle.js")
+            .set("if-range", '"test"')
+            .set("Range", "bytes=3000-3500");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8",
+          );
+          expect(response.headers.etag).toBeDefined();
+          expect(response.headers.etag.startsWith("W/")).toBe(true);
         });
       });
 
@@ -4388,6 +4409,27 @@ describe.each([
             '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"',
           );
         });
+
+        it('should return the "200" code for the "GET" request with the valid range header and wrong "If-Range" header', async () => {
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", "bytes=3000-3500");
+
+          expect(response.statusCode).toEqual(206);
+          expect(response.headers["content-length"]).toEqual("501");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8",
+          );
+          expect(response.text.length).toBe(501);
+          expect(response.headers.etag).toBeDefined();
+
+          const response1 = await req
+            .get("/bundle.js")
+            .set("If-Range", '"test')
+            .set("Range", "bytes=3000-3500");
+
+          expect(response1.statusCode).toEqual(200);
+        });
       });
 
       describe("should work and generate strong etag without createReadStream", () => {
@@ -4420,6 +4462,31 @@ describe.each([
           );
         });
       });
+
+      describe("should work and without etag generation and `if-none-match` header", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and `if-none-match` header without etag', async () => {
+          const response = await req
+            .get(`/bundle.js`)
+            .set("if-none-match", "etag");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers.etag).toBeUndefined();
+        });
+      });
     });
 
     describe("lastModified", () => {
@@ -4441,38 +4508,11 @@ describe.each([
           await close(server, instance);
         });
 
-        function parseHttpDate(date) {
-          const timestamp = date && Date.parse(date);
-
-          // istanbul ignore next: guard against date.js Date.parse patching
-          return typeof timestamp === "number" ? timestamp : NaN;
-        }
-
         it('should return the "200" code for the "GET" request to the bundle file and set "Last-Modified"', async () => {
           const response = await req.get(`/bundle.js`);
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["last-modified"]).toBeDefined();
-        });
-
-        it('should return the "304" code for the "GET" request to the bundle file with "Last-Modified" and "if-unmodified-since" header', async () => {
-          const response1 = await req.get(`/bundle.js`);
-
-          expect(response1.statusCode).toEqual(200);
-          expect(response1.headers["last-modified"]).toBeDefined();
-
-          const response2 = await req
-            .get(`/bundle.js`)
-            .set("if-unmodified-since", response1.headers["last-modified"]);
-
-          expect(response2.statusCode).toEqual(304);
-          expect(response2.headers["last-modified"]).toBeDefined();
-
-          const response3 = await req
-            .get(`/bundle.js`)
-            .set("if-unmodified-since", "Fri, 29 Mar 2020 10:25:50 GMT");
-
-          expect(response3.statusCode).toEqual(412);
         });
 
         it('should return the "304" code for the "GET" request to the bundle file with "Last-Modified" and "if-modified-since" header', async () => {
@@ -4499,6 +4539,26 @@ describe.each([
 
           expect(response3.statusCode).toEqual(200);
           expect(response3.headers["last-modified"]).toBeDefined();
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file with "Last-Modified" and "if-unmodified-since" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-unmodified-since", response1.headers["last-modified"]);
+
+          expect(response2.statusCode).toEqual(200);
+          expect(response2.headers["last-modified"]).toBeDefined();
+
+          const response3 = await req
+            .get(`/bundle.js`)
+            .set("if-unmodified-since", "Fri, 29 Mar 2020 10:25:50 GMT");
+
+          expect(response3.statusCode).toEqual(412);
         });
 
         it('should return the "412" code for the "GET" request to the bundle file with etag and "if-unmodified-since" header', async () => {
@@ -4533,6 +4593,19 @@ describe.each([
           expect(response2.statusCode).toEqual(200);
           expect(response1.headers["last-modified"]).toBeDefined();
         });
+
+        it('should return the "200" code for the "GET" request with the valid range header and old "if-range" header', async () => {
+          const response = await req
+            .get("/bundle.js")
+            .set("if-range", new Date(1000).toUTCString())
+            .set("Range", "bytes=3000-3500");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8",
+          );
+          expect(response.headers["last-modified"]).toBeDefined();
+        });
       });
 
       describe('should work and prefer "if-match" and "if-none-match"', () => {
@@ -4554,13 +4627,6 @@ describe.each([
           await close(server, instance);
         });
 
-        function parseHttpDate(date) {
-          const timestamp = date && Date.parse(date);
-
-          // istanbul ignore next: guard against date.js Date.parse patching
-          return typeof timestamp === "number" ? timestamp : NaN;
-        }
-
         it('should return the "304" code for the "GET" request to the bundle file and prefer "if-match" over "if-unmodified-since"', async () => {
           const response1 = await req.get(`/bundle.js`);
 
@@ -4578,7 +4644,7 @@ describe.each([
               ).toUTCString(),
             );
 
-          expect(response2.statusCode).toEqual(304);
+          expect(response2.statusCode).toEqual(200);
           expect(response2.headers["last-modified"]).toBeDefined();
           expect(response2.headers.etag).toBeDefined();
         });
