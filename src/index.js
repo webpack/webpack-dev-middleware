@@ -64,8 +64,8 @@ const noop = () => {};
  */
 
 /**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @callback ModifyResponseData
  * @param {RequestInternal} req
  * @param {ResponseInternal} res
@@ -75,8 +75,8 @@ const noop = () => {};
  */
 
 /**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @typedef {Object} Context
  * @property {boolean} state
  * @property {Stats | MultiStats | undefined} stats
@@ -89,16 +89,16 @@ const noop = () => {};
  */
 
 /**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @typedef {WithoutUndefined<Context<RequestInternal, ResponseInternal>, "watching">} FilledContext
  */
 
 /** @typedef {Record<string, string | number> | Array<{ key: string, value: number | string }>} NormalizedHeaders */
 
 /**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @typedef {NormalizedHeaders | ((req: RequestInternal, res: ResponseInternal, context: Context<RequestInternal, ResponseInternal>) =>  void | undefined | NormalizedHeaders) | undefined} Headers
  */
 
@@ -122,8 +122,8 @@ const noop = () => {};
  */
 
 /**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @callback Middleware
  * @param {RequestInternal} req
  * @param {ResponseInternal} res
@@ -167,8 +167,8 @@ const noop = () => {};
  */
 
 /**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @typedef {Middleware<RequestInternal, ResponseInternal> & AdditionalMethods<RequestInternal, ResponseInternal>} API
  */
 
@@ -366,7 +366,7 @@ function koaWrapper(compiler, options) {
   const devMiddleware = wdm(compiler, options);
 
   /**
-   * @param {any} ctx
+   * @param {{ req: RequestInternal, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedResponse, status: number, body: Buffer | import("fs").ReadStream | { message: string }, state: Object }} ctx
    * @param {Function} next
    * @returns {Promise<void>}
    */
@@ -392,7 +392,7 @@ function koaWrapper(compiler, options) {
         resolve();
       };
       /**
-       * @param {string | Buffer} content content
+       * @param {Buffer} content content
        */
       res.send = (content) => {
         // eslint-disable-next-line no-param-reassign

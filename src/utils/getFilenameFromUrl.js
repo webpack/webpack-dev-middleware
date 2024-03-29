@@ -40,6 +40,7 @@ function decode(input) {
 }
 
 // TODO refactor me in the next major release, this function should return `{ filename, stats, error }`
+// TODO fix redirect logic when `/` at the end, like https://github.com/pillarjs/send/blob/master/index.js#L586
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response

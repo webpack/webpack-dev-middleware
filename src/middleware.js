@@ -524,6 +524,7 @@ function wrapper(context) {
         /** @type {import("fs").Stats | Buffer | ReadStream | undefined} */
         let value;
 
+        // TODO cache etag generation?
         if (context.options.etag === "weak") {
           value = /** @type {import("fs").Stats} */ (extra.stats);
         } else {
