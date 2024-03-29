@@ -71,6 +71,10 @@ describe("validation", () => {
       success: ["weak", "strong"],
       failure: ["foo", 0],
     },
+    lastModified: {
+      success: [true, false],
+      failure: ["foo", 0],
+    },
   };
 
   function stringifyValue(value) {

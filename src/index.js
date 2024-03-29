@@ -118,6 +118,7 @@ const noop = () => {};
  * @property {boolean | string} [index]
  * @property {ModifyResponseData<RequestInternal, ResponseInternal>} [modifyResponseData]
  * @property {"weak" | "strong"} [etag]
+ * @property {boolean} [lastModified]
  */
 
 /**
