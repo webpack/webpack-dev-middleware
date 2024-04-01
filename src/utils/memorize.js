@@ -14,7 +14,6 @@ function memorize(fn, { cache = new Map() } = {}, callback) {
    */
   const memoized = (...arguments_) => {
     const [key] = arguments_;
-    console.log("CACHE", key);
     const cacheItem = cache.get(key);
 
     if (cacheItem) {
