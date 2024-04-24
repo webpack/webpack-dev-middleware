@@ -575,6 +575,31 @@ app.use(devMiddleware(compiler, devMiddlewareOptions));
 http.createServer(app).listen(3000);
 ```
 
+### Router
+
+```js
+const http = require("http");
+const Router = require("router");
+const finalhandler = require("finalhandler");
+const webpack = require("webpack");
+const webpackConfig = require("./webpack.config.js");
+const devMiddleware = require("webpack-dev-middleware");
+
+const compiler = webpack(webpackConfig);
+const devMiddlewareOptions = {
+  /** Your webpack-dev-middleware-options */
+};
+const router = Router();
+
+router.use(devMiddleware(compiler, devMiddlewareOptions));
+
+var server = http.createServer((req, res) => {
+  router(req, res, finalhandler(req, res));
+});
+
+server.listen(3000);
+```
+
 ### Express
 
 ```js
