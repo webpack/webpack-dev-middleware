@@ -3,6 +3,8 @@ import path from "path";
 
 import connect from "connect";
 import express from "express";
+import router from "router";
+import finalhandler from "finalhandler";
 import fastify from "fastify";
 import koa from "koa";
 import Hapi from "@hapi/hapi";
@@ -28,15 +30,30 @@ import webpackPublicPathConfig from "./fixtures/webpack.public-path.config";
 // Suppress unnecessary stats output
 global.console.log = jest.fn();
 
-async function startServer(app) {
+async function startServer(name, app) {
   return new Promise((resolve, reject) => {
-    const server = app.listen({ port: 3000 }, (error) => {
-      if (error) {
-        return reject(error);
-      }
+    if (name === "router") {
+      // eslint-disable-next-line global-require
+      const server = require("http").createServer((req, res) => {
+        app(req, res, finalhandler(req, res));
+      });
 
-      return resolve(server);
-    });
+      server.listen({ port: 3000 }, (error) => {
+        if (error) {
+          return reject(error);
+        }
+
+        return resolve(server);
+      });
+    } else {
+      const server = app.listen({ port: 3000 }, (error) => {
+        if (error) {
+          return reject(error);
+        }
+
+        return resolve(server);
+      });
+    }
   });
 }
 
@@ -101,13 +118,14 @@ async function frameworkFactory(
         }
       }
 
-      const server = await startServer(app);
+      const server = await startServer(name, app);
       const req = request(server);
 
       return [server, req, koaMiddleware.devMiddleware];
     }
     default: {
       const isFastify = name === "fastify";
+      const isRouter = name === "router";
       const app = framework();
 
       if (isFastify) {
@@ -133,8 +151,12 @@ async function frameworkFactory(
         await app.ready();
       }
 
-      const server = await startServer(app);
-      const req = isFastify ? request(app.server) : request(app);
+      const server = await startServer(name, app);
+      const req = isFastify
+        ? request(app.server)
+        : isRouter
+          ? request(server)
+          : request(app);
 
       return [isFastify ? app.server : server, req, instance];
     }
@@ -256,6 +278,7 @@ function parseHttpDate(date) {
 describe.each([
   ["connect", connect],
   ["express", express],
+  ["router", router],
   ["fastify", fastify],
   ["koa", koa],
   ["hapi", Hapi],

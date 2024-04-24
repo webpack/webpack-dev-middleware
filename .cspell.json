@@ -21,7 +21,8 @@
     "nosniff",
     "deoptimize",
     "etag",
-    "cachable"
+    "cachable",
+    "finalhandler"
   ],
   "ignorePaths": [
     "CHANGELOG.md",
