@@ -1,4 +1,3 @@
-/// <reference types="node" />
 export = getPaths;
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("webpack").Stats} Stats */
@@ -11,8 +10,8 @@ export = getPaths;
  * @param {import("../index.js").FilledContext<Request, Response>} context
  */
 declare function getPaths<
-  Request extends import("http").IncomingMessage,
-  Response extends import("../index.js").ServerResponse,
+  Request extends IncomingMessage,
+  Response extends ServerResponse,
 >(
   context: import("../index.js").FilledContext<Request, Response>,
 ): {

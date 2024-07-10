@@ -1,4 +1,3 @@
-/// <reference types="node" />
 export = wrapper;
 /**
  * @template {IncomingMessage} Request
@@ -14,8 +13,8 @@ export = wrapper;
  * @return {import("./index.js").Middleware<Request, Response>}
  */
 declare function wrapper<
-  Request extends import("http").IncomingMessage,
-  Response extends import("./index.js").ServerResponse,
+  Request extends IncomingMessage,
+  Response extends ServerResponse,
 >(
   context: import("./index.js").FilledContext<Request, Response>,
 ): import("./index.js").Middleware<Request, Response>;
@@ -33,8 +32,8 @@ declare namespace wrapper {
  * send error options
  */
 type SendErrorOptions<
-  Request extends import("http").IncomingMessage,
-  Response extends import("./index.js").ServerResponse,
+  Request extends IncomingMessage,
+  Response extends ServerResponse,
 > = {
   /**
    * headers

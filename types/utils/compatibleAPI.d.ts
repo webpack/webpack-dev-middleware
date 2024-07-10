@@ -1,4 +1,3 @@
-/// <reference types="node" />
 export type IncomingMessage = import("../index.js").IncomingMessage;
 export type ServerResponse = import("../index.js").ServerResponse;
 export type ExpectedResponse = {
@@ -20,11 +19,7 @@ export type ExpectedResponse = {
  * @param {number} code
  */
 export function setStatusCode<
-  Response extends import("http").ServerResponse<
-    import("http").IncomingMessage
-  > &
-    import("../index.js").ExtendedServerResponse &
-    ExpectedResponse,
+  Response extends ServerResponse & ExpectedResponse,
 >(res: Response, code: number): void;
 /**
  * @template {IncomingMessage} Request
@@ -33,15 +28,15 @@ export function setStatusCode<
  * @param {string | Buffer} bufferOrStream
  */
 export function send<
-  Request extends import("http").IncomingMessage,
-  Response extends import("../index.js").ServerResponse,
+  Request extends IncomingMessage,
+  Response extends ServerResponse,
 >(res: Response & ExpectedResponse, bufferOrStream: string | Buffer): void;
 /**
  * @template {ServerResponse} Response
  * @param {Response & ExpectedResponse} res
  * @param {import("fs").ReadStream} bufferOrStream
  */
-export function pipe<Response extends import("../index.js").ServerResponse>(
+export function pipe<Response extends ServerResponse>(
   res: Response & ExpectedResponse,
   bufferOrStream: import("fs").ReadStream,
 ): void;

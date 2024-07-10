@@ -1,4 +1,3 @@
-/// <reference types="node" />
 export = setupWriteToDisk;
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
@@ -11,8 +10,8 @@ export = setupWriteToDisk;
  * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context
  */
 declare function setupWriteToDisk<
-  Request extends import("http").IncomingMessage,
-  Response extends import("../index.js").ServerResponse,
+  Request extends IncomingMessage,
+  Response extends ServerResponse,
 >(
   context: import("../index.js").WithOptional<
     import("../index.js").Context<Request, Response>,

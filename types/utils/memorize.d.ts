@@ -12,14 +12,12 @@ declare function memorize<T>(
     cache,
   }?:
     | {
-        cache?:
-          | Map<
-              string,
-              {
-                data: T;
-              }
-            >
-          | undefined;
+        cache?: Map<
+          string,
+          {
+            data: T;
+          }
+        >;
       }
     | undefined,
   callback?: ((value: T) => T) | undefined,
