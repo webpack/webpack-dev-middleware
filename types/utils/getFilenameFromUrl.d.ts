@@ -1,4 +1,3 @@
-/// <reference types="node" />
 export = getFilenameFromUrl;
 /**
  * @template {IncomingMessage} Request
@@ -9,8 +8,8 @@ export = getFilenameFromUrl;
  * @returns {string | undefined}
  */
 declare function getFilenameFromUrl<
-  Request extends import("http").IncomingMessage,
-  Response extends import("../index.js").ServerResponse,
+  Request extends IncomingMessage,
+  Response extends ServerResponse,
 >(
   context: import("../index.js").FilledContext<Request, Response>,
   url: string,

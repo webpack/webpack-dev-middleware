@@ -12,5 +12,5 @@ declare function etag(entity: Buffer | ReadStream | Stats): Promise<{
 declare namespace etag {
   export { Stats, ReadStream };
 }
-type ReadStream = import("fs").ReadStream;
 type Stats = import("fs").Stats;
+type ReadStream = import("fs").ReadStream;

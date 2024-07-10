@@ -1,4 +1,3 @@
-/// <reference types="node" />
 export = setupOutputFileSystem;
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
@@ -9,8 +8,8 @@ export = setupOutputFileSystem;
  * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context
  */
 declare function setupOutputFileSystem<
-  Request extends import("http").IncomingMessage,
-  Response extends import("../index.js").ServerResponse,
+  Request extends IncomingMessage,
+  Response extends ServerResponse,
 >(
   context: import("../index.js").WithOptional<
     import("../index.js").Context<Request, Response>,

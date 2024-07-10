@@ -1,4 +1,3 @@
-/// <reference types="node" />
 export = ready;
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
@@ -11,8 +10,8 @@ export = ready;
  * @returns {void}
  */
 declare function ready<
-  Request extends import("http").IncomingMessage,
-  Response extends import("../index.js").ServerResponse,
+  Request extends IncomingMessage,
+  Response extends ServerResponse,
 >(
   context: import("../index.js").FilledContext<Request, Response>,
   callback: (...args: any[]) => any,

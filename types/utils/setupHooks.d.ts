@@ -1,4 +1,3 @@
-/// <reference types="node" />
 export = setupHooks;
 /** @typedef {import("webpack").Configuration} Configuration */
 /** @typedef {import("webpack").Compiler} Compiler */
@@ -16,8 +15,8 @@ export = setupHooks;
  * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context
  */
 declare function setupHooks<
-  Request extends import("http").IncomingMessage,
-  Response extends import("../index.js").ServerResponse,
+  Request extends IncomingMessage,
+  Response extends ServerResponse,
 >(
   context: import("../index.js").WithOptional<
     import("../index.js").Context<Request, Response>,

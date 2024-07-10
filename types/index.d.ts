@@ -1,5 +1,3 @@
-/// <reference types="node" />
-/// <reference types="node" />
 export = wdm;
 /** @typedef {import("schema-utils/declarations/validate").Schema} Schema */
 /** @typedef {import("webpack").Compiler} Compiler */
@@ -154,8 +152,7 @@ export = wdm;
  * @returns {API<RequestInternal, ResponseInternal>}
  */
 declare function wdm<
-  RequestInternal extends
-    import("http").IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 >(
   compiler: Compiler | MultiCompiler,
@@ -204,14 +201,6 @@ declare namespace wdm {
     HapiOptions,
   };
 }
-type Compiler = import("webpack").Compiler;
-type MultiCompiler = import("webpack").MultiCompiler;
-type API<
-  RequestInternal extends
-    import("http").IncomingMessage = import("http").IncomingMessage,
-  ResponseInternal extends ServerResponse = ServerResponse,
-> = Middleware<RequestInternal, ResponseInternal> &
-  AdditionalMethods<RequestInternal, ResponseInternal>;
 /**
  * @template S
  * @template O
@@ -243,14 +232,15 @@ declare function hapiWrapper<
  * @returns {(ctx: any, next: Function) => Promise<void> | void}
  */
 declare function koaWrapper<
-  RequestInternal extends
-    import("http").IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 >(
   compiler: Compiler | MultiCompiler,
   options?: Options<RequestInternal, ResponseInternal> | undefined,
 ): (ctx: any, next: Function) => Promise<void> | void;
 type Schema = import("schema-utils/declarations/validate").Schema;
+type Compiler = import("webpack").Compiler;
+type MultiCompiler = import("webpack").MultiCompiler;
 type Configuration = import("webpack").Configuration;
 type Stats = import("webpack").Stats;
 type MultiStats = import("webpack").MultiStats;
@@ -258,13 +248,9 @@ type ReadStream = import("fs").ReadStream;
 type ExtendedServerResponse = {
   locals?:
     | {
-        webpack?:
-          | {
-              devMiddleware?:
-                | Context<import("http").IncomingMessage, ServerResponse>
-                | undefined;
-            }
-          | undefined;
+        webpack?: {
+          devMiddleware?: Context<IncomingMessage, ServerResponse>;
+        };
       }
     | undefined;
 };
@@ -289,8 +275,7 @@ type ResponseData = {
   byteLength: number;
 };
 type ModifyResponseData<
-  RequestInternal extends
-    import("http").IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 > = (
   req: RequestInternal,
@@ -299,8 +284,7 @@ type ModifyResponseData<
   byteLength: number,
 ) => ResponseData;
 type Context<
-  RequestInternal extends
-    import("http").IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 > = {
   state: boolean;
@@ -313,8 +297,7 @@ type Context<
   outputFileSystem: OutputFileSystem;
 };
 type FilledContext<
-  RequestInternal extends
-    import("http").IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 > = WithoutUndefined<Context<RequestInternal, ResponseInternal>, "watching">;
 type NormalizedHeaders =
@@ -324,8 +307,7 @@ type NormalizedHeaders =
       value: number | string;
     }>;
 type Headers<
-  RequestInternal extends
-    import("http").IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 > =
   | NormalizedHeaders
@@ -336,8 +318,7 @@ type Headers<
     ) => void | undefined | NormalizedHeaders)
   | undefined;
 type Options<
-  RequestInternal extends
-    import("http").IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 > = {
   mimeTypes?:
@@ -361,8 +342,7 @@ type Options<
   lastModified?: boolean | undefined;
 };
 type Middleware<
-  RequestInternal extends
-    import("http").IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 > = (
   req: RequestInternal,
@@ -378,7 +358,7 @@ type WaitUntilValid = (callback: Callback) => any;
 type Invalidate = (callback: Callback) => any;
 type Close = (callback: (err: Error | null | undefined) => void) => any;
 type AdditionalMethods<
-  RequestInternal extends import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage,
   ResponseInternal extends ServerResponse,
 > = {
   getFilenameFromUrl: GetFilenameFromUrl;
@@ -387,6 +367,11 @@ type AdditionalMethods<
   close: Close;
   context: Context<RequestInternal, ResponseInternal>;
 };
+type API<
+  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse = ServerResponse,
+> = Middleware<RequestInternal, ResponseInternal> &
+  AdditionalMethods<RequestInternal, ResponseInternal>;
 type WithOptional<T, K extends keyof T> = Omit<T, K> & Partial<T>;
 type WithoutUndefined<T, K extends keyof T> = T & {
   [P in K]: NonNullable<T[P]>;
