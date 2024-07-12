@@ -1,45 +1,155 @@
 export type IncomingMessage = import("../index.js").IncomingMessage;
 export type ServerResponse = import("../index.js").ServerResponse;
-export type ExpectedResponse = {
-  status?: ((status: number) => void) | undefined;
-  send?: ((data: any) => void) | undefined;
-  pipeInto?: ((data: any) => void) | undefined;
+export type ExpectedIncomingMessage = {
+  getHeader?: ((name: string) => string | string[] | undefined) | undefined;
+  getMethod?: (() => string | undefined) | undefined;
+  getURL?: (() => string | undefined) | undefined;
 };
-/** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
-/** @typedef {import("../index.js").ServerResponse} ServerResponse */
+export type ExpectedServerResponse = {
+  setStatusCode?: ((status: number) => void) | undefined;
+  getStatusCode?: (() => number) | undefined;
+  getHeader?:
+    | ((name: string) => string | string[] | undefined | number)
+    | undefined;
+  setHeader?:
+    | ((
+        name: string,
+        value: number | string | Readonly<string[]>,
+      ) => ExpectedServerResponse)
+    | undefined;
+  removeHeader?: ((name: string) => void) | undefined;
+  send?: ((data: string | Buffer) => void) | undefined;
+  finish?: (() => void) | undefined;
+  getResponseHeaders?: (() => string[]) | undefined;
+  stream?: ((data: any) => void) | undefined;
+  getOutgoing?: (() => any) | undefined;
+};
 /**
- * @typedef {Object} ExpectedResponse
- * @property {(status: number) => void} [status]
- * @property {(data: any) => void} [send]
- * @property {(data: any) => void} [pipeInto]
- */
-/**
- * @template {ServerResponse & ExpectedResponse} Response
+ * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res
  * @param {number} code
  */
 export function setStatusCode<
-  Response extends ServerResponse & ExpectedResponse,
+  Response extends ServerResponse & ExpectedServerResponse,
 >(res: Response, code: number): void;
 /**
- * @template {IncomingMessage} Request
- * @template {ServerResponse} Response
- * @param {Response & ExpectedResponse} res
- * @param {string | Buffer} bufferOrStream
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
+ * @returns {number}
  */
-export function send<
-  Request extends IncomingMessage,
-  Response extends ServerResponse,
->(res: Response & ExpectedResponse, bufferOrStream: string | Buffer): void;
+export function getStatusCode<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response): number;
+/** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
+/** @typedef {import("../index.js").ServerResponse} ServerResponse */
 /**
- * @template {ServerResponse} Response
- * @param {Response & ExpectedResponse} res
+ * @typedef {Object} ExpectedIncomingMessage
+ * @property {(name: string) => string | string[] | undefined} [getHeader]
+ * @property {() => string | undefined} [getMethod]
+ * @property {() => string | undefined} [getURL]
+ */
+/**
+ * @typedef {Object} ExpectedServerResponse
+ * @property {(status: number) => void} [setStatusCode]
+ * @property {() => number} [getStatusCode]
+ * @property {(name: string) => string | string[] | undefined | number} [getHeader]
+ * @property {(name: string, value: number | string | Readonly<string[]>) => ExpectedServerResponse} [setHeader]
+ * @property {(name: string) => void} [removeHeader]
+ * @property {(data: string | Buffer) => void} [send]
+ * @property {() => void} [finish]
+ * @property {() => string[]} [getResponseHeaders]
+ * @property {(data: any) => void} [stream]
+ * @property {() => any} [getOutgoing]
+ */
+/**
+ * @template {IncomingMessage & ExpectedIncomingMessage} Request
+ * @param {Request} req
+ * @param {string} name
+ * @returns {string | string[] | undefined}
+ */
+export function getRequestHeader<
+  Request extends IncomingMessage & ExpectedIncomingMessage,
+>(req: Request, name: string): string | string[] | undefined;
+/**
+ * @template {IncomingMessage & ExpectedIncomingMessage} Request
+ * @param {Request} req
+ * @returns {string | undefined}
+ */
+export function getRequestMethod<
+  Request extends IncomingMessage & ExpectedIncomingMessage,
+>(req: Request): string | undefined;
+/**
+ * @template {IncomingMessage & ExpectedIncomingMessage} Request
+ * @param {Request} req
+ * @returns {string | undefined}
+ */
+export function getRequestURL<
+  Request extends IncomingMessage & ExpectedIncomingMessage,
+>(req: Request): string | undefined;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
+ * @param {string} name
+ * @returns {string | string[] | undefined | number}
+ */
+export function getResponseHeader<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response, name: string): string | string[] | undefined | number;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
+ * @param {string} name
+ * @param {number | string | Readonly<string[]>} value
+ * @returns {Response}
+ */
+export function setResponseHeader<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(
+  res: Response,
+  name: string,
+  value: number | string | Readonly<string[]>,
+): Response;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
+ * @param {string} name
+ */
+export function removeResponseHeader<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response, name: string): void;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
+ * @returns {string[]}
+ */
+export function getResponseHeaders<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response): string[];
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
  * @param {import("fs").ReadStream} bufferOrStream
  */
-export function pipe<Response extends ServerResponse>(
-  res: Response & ExpectedResponse,
+export function pipe<Response extends ServerResponse & ExpectedServerResponse>(
+  res: Response,
   bufferOrStream: import("fs").ReadStream,
 ): void;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
+ * @param {string | Buffer} bufferOrString
+ */
+export function send<Response extends ServerResponse & ExpectedServerResponse>(
+  res: Response,
+  bufferOrString: string | Buffer,
+): void;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
+ */
+export function finish<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response): void;
 /**
  * @param {string} filename
  * @param {import("../index").OutputFileSystem} outputFileSystem
@@ -56,3 +166,11 @@ export function createReadStreamOrReadFileSync(
   bufferOrStream: Buffer | import("fs").ReadStream;
   byteLength: number;
 };
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
+ * @returns {Response} res
+ */
+export function getOutgoing<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response): Response;

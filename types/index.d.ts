@@ -162,6 +162,7 @@ declare namespace wdm {
   export {
     hapiWrapper,
     koaWrapper,
+    honoWrapper,
     Schema,
     Compiler,
     MultiCompiler,
@@ -232,6 +233,20 @@ declare function hapiWrapper<
  * @returns {(ctx: any, next: Function) => Promise<void> | void}
  */
 declare function koaWrapper<
+  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse = ServerResponse,
+>(
+  compiler: Compiler | MultiCompiler,
+  options?: Options<RequestInternal, ResponseInternal> | undefined,
+): (ctx: any, next: Function) => Promise<void> | void;
+/**
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
+ * @param {Compiler | MultiCompiler} compiler
+ * @param {Options<RequestInternal, ResponseInternal>} [options]
+ * @returns {(ctx: any, next: Function) => Promise<void> | void}
+ */
+declare function honoWrapper<
   RequestInternal extends IncomingMessage = import("http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 >(

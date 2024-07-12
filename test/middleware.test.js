@@ -8,6 +8,8 @@ import finalhandler from "finalhandler";
 import fastify from "fastify";
 import koa from "koa";
 import Hapi from "@hapi/hapi";
+import { Hono } from "hono";
+import { serve } from "@hono/node-server";
 import request from "supertest";
 import memfs, { createFsFromVolume, Volume } from "memfs";
 import del from "del";
@@ -28,7 +30,7 @@ import getCompilerHooks from "./helpers/getCompilerHooks";
 import webpackPublicPathConfig from "./fixtures/webpack.public-path.config";
 
 // Suppress unnecessary stats output
-global.console.log = jest.fn();
+// global.console.log = jest.fn();
 
 async function startServer(name, app) {
   return new Promise((resolve, reject) => {
@@ -122,6 +124,27 @@ async function frameworkFactory(
       const req = request(server);
 
       return [server, req, koaMiddleware.devMiddleware];
+    }
+    case "hono": {
+      // eslint-disable-next-line new-cap
+      const app = new framework();
+      const server = serve(app);
+      const req = request(server);
+      const instance = middleware.honoWrapper(compiler, devMiddlewareOptions);
+      const middlewares =
+        typeof options.setupMiddlewares === "function"
+          ? options.setupMiddlewares([instance])
+          : [instance];
+
+      for (const item of middlewares) {
+        if (item.route) {
+          app.use(item.route, item.fn);
+        } else {
+          app.use(item);
+        }
+      }
+
+      return [server, req, instance.devMiddleware];
     }
     default: {
       const isFastify = name === "fastify";
@@ -217,6 +240,8 @@ function get404ContentTypeHeader(name) {
       return "application/json; charset=utf-8";
     case "fastify":
       return "application/json; charset=utf-8";
+    case "hono":
+      return "text/plain; charset=UTF-8";
     default:
       return "text/html; charset=utf-8";
   }
@@ -282,6 +307,7 @@ describe.each([
   ["fastify", fastify],
   ["koa", koa],
   ["hapi", Hapi],
+  // ["hono", Hono]
 ])("%s framework:", (name, framework) => {
   describe("middleware", () => {
     let instance;
