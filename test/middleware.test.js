@@ -30,7 +30,7 @@ import getCompilerHooks from "./helpers/getCompilerHooks";
 import webpackPublicPathConfig from "./fixtures/webpack.public-path.config";
 
 // Suppress unnecessary stats output
-// global.console.log = jest.fn();
+global.console.log = jest.fn();
 
 async function startServer(name, app) {
   return new Promise((resolve, reject) => {
