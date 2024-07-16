@@ -624,8 +624,8 @@ app.listen(3000, () => console.log("Example app listening on port 3000!"));
 ```js
 const Koa = require("koa");
 const webpack = require("webpack");
-const webpackConfig = require("./test/fixtures/webpack.simple.config");
-const middleware = require("./dist");
+const webpackConfig = require("./webpack.simple.config");
+const middleware = require("webpack-dev-middleware");
 
 const compiler = webpack(webpackConfig);
 const devMiddlewareOptions = {
@@ -692,6 +692,27 @@ const devMiddlewareOptions = {
   await fastify.use(devMiddleware(compiler, devMiddlewareOptions));
   await fastify.listen(3000);
 })();
+```
+
+### Hono
+
+```js
+import webpack from "webpack";
+import { serve } from "@hono/node-server";
+import { Hono } from "hono";
+import devMiddleware from "webpack-dev-middleware";
+import webpackConfig from "./webpack.config.js";
+
+const compiler = webpack(webpackConfig);
+const devMiddlewareOptions = {
+  /** Your webpack-dev-middleware-options */
+};
+
+const app = new Hono();
+
+app.use(devMiddleware.honoWrapper(compiler, devMiddlewareOptions));
+
+serve(app);
 ```
 
 ## Contributing
