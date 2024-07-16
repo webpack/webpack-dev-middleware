@@ -47,6 +47,8 @@ async function startServer(name, app) {
 
         return resolve(server);
       });
+    } else if (name === "hono") {
+      const server = serve(app, () => resolve(server));
     } else {
       const server = app.listen({ port: 3000 }, (error) => {
         if (error) {
@@ -128,7 +130,7 @@ async function frameworkFactory(
     case "hono": {
       // eslint-disable-next-line new-cap
       const app = new framework();
-      const server = serve(app);
+      const server = await startServer(name, app);
       const req = request(server);
       const instance = middleware.honoWrapper(compiler, devMiddlewareOptions);
       const middlewares =
@@ -307,7 +309,7 @@ describe.each([
   ["fastify", fastify],
   ["koa", koa],
   ["hapi", Hapi],
-  // ["hono", Hono]
+  ["hono", Hono],
 ])("%s framework:", (name, framework) => {
   describe("middleware", () => {
     let instance;
@@ -1863,6 +1865,15 @@ describe.each([
                         });
                       },
                     },
+                  });
+                } else if (name === "hono") {
+                  middlewares.unshift(async (c, next) => {
+                    c.res.headers.append(
+                      "Content-Type",
+                      "application/vnd.test+octet-stream",
+                    );
+
+                    await next();
                   });
                 } else {
                   middlewares.unshift((req, res, next) => {
