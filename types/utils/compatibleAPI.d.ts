@@ -179,6 +179,13 @@ export function getOutgoing<
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res
+ */
+export function initState<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response): void;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
  * @param {string} name
  * @param {any} value
  */
