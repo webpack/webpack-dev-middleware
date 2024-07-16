@@ -376,12 +376,20 @@ function koaWrapper(compiler, options) {
 
     res.locals = ctx.state;
 
+    let { status } = ctx;
+
     /**
-     * @param {number} status status code
+     * @returns {number} code
      */
-    res.setStatusCode = (status) => {
+    res.getStatusCode = () => status;
+
+    /**
+     * @param {number} statusCode status code
+     */
+    res.setStatusCode = (statusCode) => {
+      status = statusCode;
       // eslint-disable-next-line no-param-reassign
-      ctx.status = status;
+      ctx.status = statusCode;
     };
 
     try {
@@ -409,6 +417,11 @@ function koaWrapper(compiler, options) {
           };
 
           res.finish = () => {
+            if (status === 404) {
+              // eslint-disable-next-line no-param-reassign
+              ctx.status = 200;
+            }
+
             res.end();
             resolve();
           };

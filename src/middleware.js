@@ -283,7 +283,12 @@ function wrapper(context) {
      */
     function isCachable() {
       const statusCode = getStatusCode(res);
-      return (statusCode >= 200 && statusCode < 300) || statusCode === 304;
+      return (
+        (statusCode >= 200 && statusCode < 300) ||
+        statusCode === 304 ||
+        // For Koa and Hono, because by default status code is 404, but we already found a file
+        statusCode === 404
+      );
     }
 
     /**
@@ -608,12 +613,6 @@ function wrapper(context) {
           return;
         }
 
-        // For Koa
-        // TODO fix me
-        if (getStatusCode(res) === 404) {
-          setStatusCode(res, 200);
-        }
-
         if (
           isCachable() &&
           isFresh({
@@ -725,12 +724,6 @@ function wrapper(context) {
       setResponseHeader(res, "Content-Length", byteLength);
 
       if (method === "HEAD") {
-        // For Koa
-        // TODO fix me
-        if (getStatusCode(res) === 404) {
-          setStatusCode(res, 200);
-        }
-
         finish(res);
         return;
       }

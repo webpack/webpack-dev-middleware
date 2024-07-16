@@ -3909,7 +3909,7 @@ describe.each([
         expect(response.statusCode).toEqual(404);
       });
 
-      it('should return the "200" code for the "HEAD" request to the bundle file', async () => {
+      it('should return the "404" code for the "HEAD" request to the bundle file', async () => {
         const response = await req.head(`/public/bundle.js`);
 
         expect(response.statusCode).toEqual(404);
