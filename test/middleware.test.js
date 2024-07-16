@@ -276,6 +276,7 @@ function applyTestMiddleware(name, middlewares) {
       await next();
     });
   } else if (name === "hono") {
+    // eslint-disable-next-line consistent-return
     middlewares.push(async (c, next) => {
       if (c.req.url.endsWith("/file.jpg")) {
         c.header("Content-Type", "text/html");

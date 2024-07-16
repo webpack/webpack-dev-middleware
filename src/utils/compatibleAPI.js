@@ -251,6 +251,20 @@ function getOutgoing(res) {
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res
+ */
+function initState(res) {
+  if (typeof res.setState === "function") {
+    return;
+  }
+
+  // fixes #282. credit @cexoso. in certain edge situations res.locals is undefined.
+  // eslint-disable-next-line no-param-reassign
+  res.locals = res.locals || {};
+}
+
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
  * @param {string} name
  * @param {any} value
  */
@@ -281,5 +295,6 @@ module.exports = {
   finish,
   createReadStreamOrReadFileSync,
   getOutgoing,
+  initState,
   setState,
 };

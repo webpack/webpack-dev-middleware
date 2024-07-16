@@ -20,6 +20,7 @@ const {
   pipe,
   createReadStreamOrReadFileSync,
   getOutgoing,
+  initState,
   setState,
 } = require("./utils/compatibleAPI");
 const ready = require("./utils/ready");
@@ -134,10 +135,7 @@ function wrapper(context) {
   return async function middleware(req, res, next) {
     const acceptedMethods = context.options.methods || ["GET", "HEAD"];
 
-    // fixes #282. credit @cexoso. in certain edge situations res.locals is undefined.
-    // eslint-disable-next-line no-param-reassign
-    // TODO fix me
-    res.locals = res.locals || {};
+    initState(res);
 
     async function goNext() {
       if (!context.options.serverSideRender) {
