@@ -23,6 +23,7 @@ export type ExpectedServerResponse = {
   getResponseHeaders?: (() => string[]) | undefined;
   stream?: ((data: any) => void) | undefined;
   getOutgoing?: (() => any) | undefined;
+  setState?: ((name: string, value: any) => void) | undefined;
 };
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
@@ -60,6 +61,7 @@ export function getStatusCode<
  * @property {() => string[]} [getResponseHeaders]
  * @property {(data: any) => void} [stream]
  * @property {() => any} [getOutgoing]
+ * @property {(name: string, value: any) => void} [setState]
  */
 /**
  * @template {IncomingMessage & ExpectedIncomingMessage} Request
@@ -174,3 +176,12 @@ export function createReadStreamOrReadFileSync(
 export function getOutgoing<
   Response extends ServerResponse & ExpectedServerResponse,
 >(res: Response): Response;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
+ * @param {string} name
+ * @param {any} value
+ */
+export function setState<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response, name: string, value: any): void;

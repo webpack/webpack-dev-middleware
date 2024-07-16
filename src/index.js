@@ -370,7 +370,7 @@ function koaWrapper(compiler, options) {
    * @param {Function} next
    * @returns {Promise<void>}
    */
-  // eslint-disable-next-line consistent-return
+
   const wrapper = async function webpackDevMiddleware(ctx, next) {
     const { req, res } = ctx;
 
@@ -385,38 +385,44 @@ function koaWrapper(compiler, options) {
     };
 
     try {
-      return new Promise((resolve, reject) => {
+      await new Promise(
         /**
-         * @param {import("fs").ReadStream} stream readable stream
+         * @param {(value: void) => void} resolve
+         * @param {(reason?: any) => void} reject
          */
-        res.stream = (stream) => {
-          // eslint-disable-next-line no-param-reassign
-          ctx.body = stream;
-          resolve();
-        };
-        /**
-         * @param {string | Buffer} content content
-         */
-        res.send = (content) => {
-          // eslint-disable-next-line no-param-reassign
-          ctx.body = content;
-          resolve();
-        };
+        (resolve, reject) => {
+          /**
+           * @param {import("fs").ReadStream} stream readable stream
+           */
+          res.stream = (stream) => {
+            // eslint-disable-next-line no-param-reassign
+            ctx.body = stream;
+            resolve();
+          };
+          /**
+           * @param {string | Buffer} content content
+           */
+          res.send = (content) => {
+            // eslint-disable-next-line no-param-reassign
+            ctx.body = content;
+            resolve();
+          };
 
-        res.finish = () => {
-          res.end();
-          resolve();
-        };
+          res.finish = () => {
+            res.end();
+            resolve();
+          };
 
-        devMiddleware(req, res, (err) => {
-          if (err) {
-            reject(err);
-            return;
-          }
+          devMiddleware(req, res, (err) => {
+            if (err) {
+              reject(err);
+              return;
+            }
 
-          resolve();
-        });
-      });
+            resolve();
+          });
+        },
+      );
     } catch (err) {
       // eslint-disable-next-line no-param-reassign
       ctx.status =
@@ -450,7 +456,7 @@ function honoWrapper(compiler, options) {
   const devMiddleware = wdm(compiler, options);
 
   /**
-   * @param {{ env: any, body: any, json: any, status: any, req: RequestInternal & import("./utils/compatibleAPI").ExpectedIncomingMessage & { header: (name: string) => string }, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse & { headers: any, status: any } }} c
+   * @param {{ env: any, body: any, json: any, status: any, set:any, req: RequestInternal & import("./utils/compatibleAPI").ExpectedIncomingMessage & { header: (name: string) => string }, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse & { headers: any, status: any } }} c
    * @param {Function} next
    * @returns {Promise<void>}
    */
@@ -473,15 +479,18 @@ function honoWrapper(compiler, options) {
      */
     req.getURL = () => c.req.url;
 
+    let { status } = c.res;
+
     /**
      * @returns {number} code
      */
-    res.getStatusCode = () => c.res.status;
+    res.getStatusCode = () => status;
 
     /**
      * @param {number} code
      */
     res.setStatusCode = (code) => {
+      status = code;
       c.status(code);
     };
 
@@ -495,6 +504,7 @@ function honoWrapper(compiler, options) {
      * @param {string | number | Readonly<string[]>} value
      */
     res.setHeader = (name, value) => {
+      // TODO use `c.header`
       c.res.headers.append(name, value);
       return c.res;
     };
@@ -511,7 +521,18 @@ function honoWrapper(compiler, options) {
      */
     res.getHeaderNames = () => Array.from(c.res.headers.keys());
 
+    /**
+     * @returns {ServerResponse}
+     */
     res.getOutgoing = () => c.env.outgoing;
+
+    /**
+     * @param {string} name
+     * @param {any} value
+     */
+    res.setState = (name, value) => {
+      c.set(name, value);
+    };
 
     let body;
 
@@ -526,8 +547,7 @@ function honoWrapper(compiler, options) {
            * @param {import("fs").ReadStream} stream readable stream
            */
           res.stream = (stream) => {
-            body = c.body(stream, 200);
-
+            body = c.body(stream);
             resolve();
           };
 

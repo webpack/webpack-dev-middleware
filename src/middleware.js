@@ -20,6 +20,7 @@ const {
   pipe,
   createReadStreamOrReadFileSync,
   getOutgoing,
+  setState,
 } = require("./utils/compatibleAPI");
 const ready = require("./utils/ready");
 const parseTokenList = require("./utils/parseTokenList");
@@ -135,6 +136,7 @@ function wrapper(context) {
 
     // fixes #282. credit @cexoso. in certain edge situations res.locals is undefined.
     // eslint-disable-next-line no-param-reassign
+    // TODO fix me
     res.locals = res.locals || {};
 
     async function goNext() {
@@ -146,10 +148,7 @@ function wrapper(context) {
         ready(
           context,
           () => {
-            /** @type {any} */
-            // eslint-disable-next-line no-param-reassign
-            (res.locals).webpack = { devMiddleware: context };
-
+            setState(res, "webpack", { devMiddleware: context });
             resolve(next());
           },
           req,
@@ -612,6 +611,7 @@ function wrapper(context) {
         }
 
         // For Koa
+        // TODO fix me
         if (getStatusCode(res) === 404) {
           setStatusCode(res, 200);
         }
@@ -728,6 +728,7 @@ function wrapper(context) {
 
       if (method === "HEAD") {
         // For Koa
+        // TODO fix me
         if (getStatusCode(res) === 404) {
           setStatusCode(res, 200);
         }

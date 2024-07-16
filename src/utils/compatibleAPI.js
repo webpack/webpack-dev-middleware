@@ -20,6 +20,7 @@
  * @property {() => string[]} [getResponseHeaders]
  * @property {(data: any) => void} [stream]
  * @property {() => any} [getOutgoing]
+ * @property {(name: string, value: any) => void} [setState]
  */
 
 /**
@@ -247,6 +248,24 @@ function getOutgoing(res) {
   return res;
 }
 
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
+ * @param {string} name
+ * @param {any} value
+ */
+function setState(res, name, value) {
+  if (typeof res.setState === "function") {
+    res.setState(name, value);
+
+    return;
+  }
+
+  /** @type {any} */
+  // eslint-disable-next-line no-param-reassign
+  (res.locals)[name] = value;
+}
+
 module.exports = {
   setStatusCode,
   getStatusCode,
@@ -262,4 +281,5 @@ module.exports = {
   finish,
   createReadStreamOrReadFileSync,
   getOutgoing,
+  setState,
 };
