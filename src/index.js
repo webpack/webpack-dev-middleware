@@ -554,7 +554,7 @@ function honoWrapper(compiler, options) {
     /**
      * @returns {string[]}
      */
-    res.getHeaderNames = () => Array.from(c.res.headers.keys());
+    res.getResponseHeaders = () => Array.from(c.res.headers.keys());
 
     /**
      * @returns {ServerResponse}
