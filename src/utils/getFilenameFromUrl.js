@@ -113,9 +113,7 @@ function getFilenameFromUrl(context, url, extra = {}) {
 
       try {
         // eslint-disable-next-line no-param-reassign
-        extra.stats =
-          /** @type {import("fs").statSync} */
-          (context.outputFileSystem.statSync)(filename);
+        extra.stats = context.outputFileSystem.statSync(filename);
       } catch (_ignoreError) {
         // eslint-disable-next-line no-continue
         continue;
@@ -139,9 +137,7 @@ function getFilenameFromUrl(context, url, extra = {}) {
 
         try {
           // eslint-disable-next-line no-param-reassign
-          extra.stats =
-            /** @type {import("fs").statSync} */
-            (context.outputFileSystem.statSync)(filename);
+          extra.stats = context.outputFileSystem.statSync(filename);
         } catch (__ignoreError) {
           // eslint-disable-next-line no-continue
           continue;

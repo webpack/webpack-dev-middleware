@@ -27,7 +27,7 @@ export = wdm;
  * @typedef {ReturnType<MultiCompiler["watch"]>} MultiWatching
  */
 /**
- * @typedef {Object & { createReadStream?: import("fs").createReadStream, statSync?: import("fs").statSync, lstat?: import("fs").lstat, readFileSync?: import("fs").readFileSync }} OutputFileSystem
+ * @typedef {import("webpack").OutputFileSystem & { createReadStream?: import("fs").createReadStream, statSync: import("fs").statSync, readFileSync: import("fs").readFileSync }} OutputFileSystem
  */
 /** @typedef {ReturnType<Compiler["getInfrastructureLogger"]>} Logger */
 /**
@@ -275,11 +275,10 @@ type NextFunction = (err?: any) => void;
 type WatchOptions = NonNullable<Configuration["watchOptions"]>;
 type Watching = Compiler["watching"];
 type MultiWatching = ReturnType<MultiCompiler["watch"]>;
-type OutputFileSystem = Object & {
+type OutputFileSystem = import("webpack").OutputFileSystem & {
   createReadStream?: typeof import("fs").createReadStream;
-  statSync?: import("fs").StatSyncFn;
-  lstat?: typeof import("fs").lstat;
-  readFileSync?: typeof import("fs").readFileSync;
+  statSync: import("fs").StatSyncFn;
+  readFileSync: typeof import("fs").readFileSync;
 };
 type Logger = ReturnType<Compiler["getInfrastructureLogger"]>;
 type Callback = (
