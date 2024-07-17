@@ -22,7 +22,8 @@
     "deoptimize",
     "etag",
     "cachable",
-    "finalhandler"
+    "finalhandler",
+    "hono"
   ],
   "ignorePaths": [
     "CHANGELOG.md",

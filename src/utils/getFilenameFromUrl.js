@@ -138,6 +138,7 @@ function getFilenameFromUrl(context, url, extra = {}) {
         filename = path.join(filename, indexValue);
 
         try {
+          // eslint-disable-next-line no-param-reassign
           extra.stats =
             /** @type {import("fs").statSync} */
             (context.outputFileSystem.statSync)(filename);

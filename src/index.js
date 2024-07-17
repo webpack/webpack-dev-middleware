@@ -249,15 +249,15 @@ function wdm(compiler, options = {}) {
     if (
       Array.isArray(/** @type {MultiCompiler} */ (context.compiler).compilers)
     ) {
-      const compiler = /** @type {MultiCompiler} */ (context.compiler);
-      const watchOptions = compiler.compilers.map(
+      const c = /** @type {MultiCompiler} */ (context.compiler);
+      const watchOptions = c.compilers.map(
         (childCompiler) => childCompiler.options.watchOptions || {},
       );
 
       context.watching = compiler.watch(watchOptions, errorHandler);
     } else {
-      const compiler = /** @type {Compiler} */ (context.compiler);
-      const watchOptions = compiler.options.watchOptions || {};
+      const c = /** @type {Compiler} */ (context.compiler);
+      const watchOptions = c.options.watchOptions || {};
 
       context.watching = compiler.watch(watchOptions, errorHandler);
     }
@@ -335,13 +335,35 @@ function hapiWrapper() {
       // @ts-ignore
       server.ext("onRequest", (request, h) =>
         new Promise((resolve, reject) => {
+          let isFinished = false;
+
+          /**
+           * @param {string | Buffer} [data]
+           */
+          // eslint-disable-next-line no-param-reassign
+          request.raw.res.send = (data) => {
+            isFinished = true;
+            request.raw.res.end(data);
+          };
+
+          /**
+           * @param {string | Buffer} [data]
+           */
+          // eslint-disable-next-line no-param-reassign
+          request.raw.res.finish = (data) => {
+            isFinished = true;
+            request.raw.res.end(data);
+          };
+
           devMiddleware(request.raw.req, request.raw.res, (error) => {
             if (error) {
               reject(error);
               return;
             }
 
-            resolve(request);
+            if (!isFinished) {
+              resolve(request);
+            }
           });
         })
           .then(() => h.continue)
@@ -366,56 +388,88 @@ function koaWrapper(compiler, options) {
   const devMiddleware = wdm(compiler, options);
 
   /**
-   * @param {{ req: RequestInternal, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedResponse, status: number, body: Buffer | import("fs").ReadStream | { message: string }, state: Object }} ctx
+   * @param {{ req: RequestInternal, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse, status: number, body: string | Buffer | import("fs").ReadStream | { message: string }, state: Object }} ctx
    * @param {Function} next
    * @returns {Promise<void>}
    */
+
   const wrapper = async function webpackDevMiddleware(ctx, next) {
-    return new Promise((resolve, reject) => {
-      const { req } = ctx;
-      const { res } = ctx;
+    const { req, res } = ctx;
 
-      res.locals = ctx.state;
-      /**
-       * @param {number} status status code
-       */
-      res.status = (status) => {
-        // eslint-disable-next-line no-param-reassign
-        ctx.status = status;
-      };
-      /**
-       * @param {import("fs").ReadStream} stream readable stream
-       */
-      res.pipeInto = (stream) => {
-        // eslint-disable-next-line no-param-reassign
-        ctx.body = stream;
-        resolve();
-      };
-      /**
-       * @param {Buffer} content content
-       */
-      res.send = (content) => {
-        // eslint-disable-next-line no-param-reassign
-        ctx.body = content;
-        resolve();
-      };
+    res.locals = ctx.state;
 
-      devMiddleware(req, res, (err) => {
-        if (err) {
-          reject(err);
-          return;
-        }
+    let { status } = ctx;
 
-        resolve(next());
-      }).catch((err) => {
-        // eslint-disable-next-line no-param-reassign
-        ctx.status = err.statusCode || err.status || 500;
-        // eslint-disable-next-line no-param-reassign
-        ctx.body = {
-          message: err.message,
-        };
-      });
-    });
+    /**
+     * @returns {number} code
+     */
+    res.getStatusCode = () => status;
+
+    /**
+     * @param {number} statusCode status code
+     */
+    res.setStatusCode = (statusCode) => {
+      status = statusCode;
+      // eslint-disable-next-line no-param-reassign
+      ctx.status = statusCode;
+    };
+
+    res.getReadyReadableStreamState = () => "open";
+
+    try {
+      await new Promise(
+        /**
+         * @param {(value: void) => void} resolve
+         * @param {(reason?: any) => void} reject
+         */
+        (resolve, reject) => {
+          /**
+           * @param {import("fs").ReadStream} stream readable stream
+           */
+          res.stream = (stream) => {
+            // eslint-disable-next-line no-param-reassign
+            ctx.body = stream;
+          };
+          /**
+           * @param {string | Buffer} data data
+           */
+          res.send = (data) => {
+            // eslint-disable-next-line no-param-reassign
+            ctx.body = data;
+          };
+
+          /**
+           * @param {string | Buffer} [data] data
+           */
+          res.finish = (data) => {
+            // eslint-disable-next-line no-param-reassign
+            ctx.status = status;
+            res.end(data);
+          };
+
+          devMiddleware(req, res, (err) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+
+            resolve();
+          });
+        },
+      );
+    } catch (err) {
+      // eslint-disable-next-line no-param-reassign
+      ctx.status =
+        /** @type {Error & { statusCode: number }} */ (err).statusCode ||
+        /** @type {Error & { status: number }} */ (err).status ||
+        500;
+      // eslint-disable-next-line no-param-reassign
+      ctx.body = {
+        message: /** @type {Error} */ (err).message,
+      };
+    }
+
+    await next();
   };
 
   wrapper.devMiddleware = devMiddleware;
@@ -424,5 +478,154 @@ function koaWrapper(compiler, options) {
 }
 
 wdm.koaWrapper = koaWrapper;
+
+/**
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
+ * @param {Compiler | MultiCompiler} compiler
+ * @param {Options<RequestInternal, ResponseInternal>} [options]
+ * @returns {(ctx: any, next: Function) => Promise<void> | void}
+ */
+function honoWrapper(compiler, options) {
+  const devMiddleware = wdm(compiler, options);
+
+  /**
+   * @param {{ env: any, body: any, json: any, status: any, set:any, req: RequestInternal & import("./utils/compatibleAPI").ExpectedIncomingMessage & { header: (name: string) => string }, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse & { headers: any, status: any } }} c
+   * @param {Function} next
+   * @returns {Promise<void>}
+   */
+  // eslint-disable-next-line consistent-return
+  const wrapper = async function webpackDevMiddleware(c, next) {
+    const { req, res } = c;
+
+    c.set("webpack", { devMiddleware: devMiddleware.context });
+
+    /**
+     * @returns {string | undefined}
+     */
+    req.getMethod = () => c.req.method;
+
+    /**
+     * @param {string} name
+     * @returns {string | string[] | undefined}
+     */
+    req.getHeader = (name) => c.req.header(name);
+
+    /**
+     * @returns {string | undefined}
+     */
+    req.getURL = () => c.req.url;
+
+    let { status } = c.res;
+
+    /**
+     * @returns {number} code
+     */
+    res.getStatusCode = () => status;
+
+    /**
+     * @param {number} code
+     */
+    res.setStatusCode = (code) => {
+      status = code;
+    };
+
+    /**
+     * @param {string} name header name
+     */
+    res.getHeader = (name) => c.res.headers.get(name);
+
+    /**
+     * @param {string} name
+     * @param {string | number | Readonly<string[]>} value
+     */
+    res.setHeader = (name, value) => {
+      c.res.headers.append(name, value);
+      return c.res;
+    };
+
+    /**
+     * @param {string} name
+     */
+    res.removeHeader = (name) => {
+      c.res.headers.delete(name);
+    };
+
+    /**
+     * @returns {string[]}
+     */
+    res.getResponseHeaders = () => Array.from(c.res.headers.keys());
+
+    /**
+     * @returns {ServerResponse}
+     */
+    res.getOutgoing = () => c.env.outgoing;
+
+    res.setState = () => {
+      // Do nothing, because we set it before
+    };
+
+    res.getReadyReadableStreamState = () => "readable";
+
+    let body;
+
+    try {
+      await new Promise(
+        /**
+         * @param {(value: void) => void} resolve
+         * @param {(reason?: any) => void} reject
+         */
+        (resolve, reject) => {
+          /**
+           * @param {import("fs").ReadStream} stream readable stream
+           */
+          res.stream = (stream) => {
+            body = stream;
+            // responseHandler(stream);
+          };
+
+          /**
+           * @param {string | Buffer} data data
+           */
+          res.send = (data) => {
+            body = data;
+          };
+
+          /**
+           * @param {string | Buffer} [data] data
+           */
+          res.finish = (data) => {
+            body = typeof data !== "undefined" ? data : null;
+          };
+
+          devMiddleware(req, res, (err) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+
+            resolve();
+          });
+        },
+      );
+    } catch (err) {
+      c.status(500);
+
+      return c.json({ message: /** @type {Error} */ (err).message });
+    }
+
+    if (typeof body !== "undefined") {
+      return c.body(body, status);
+    }
+
+    await next();
+  };
+
+  wrapper.devMiddleware = devMiddleware;
+
+  return wrapper;
+}
+
+wdm.honoWrapper = honoWrapper;
 
 module.exports = wdm;

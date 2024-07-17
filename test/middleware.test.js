@@ -8,6 +8,8 @@ import finalhandler from "finalhandler";
 import fastify from "fastify";
 import koa from "koa";
 import Hapi from "@hapi/hapi";
+import { Hono } from "hono";
+import { serve } from "@hono/node-server";
 import request from "supertest";
 import memfs, { createFsFromVolume, Volume } from "memfs";
 import del from "del";
@@ -45,6 +47,8 @@ async function startServer(name, app) {
 
         return resolve(server);
       });
+    } else if (name === "hono") {
+      const server = serve(app, () => resolve(server));
     } else {
       const server = app.listen({ port: 3000 }, (error) => {
         if (error) {
@@ -122,6 +126,27 @@ async function frameworkFactory(
       const req = request(server);
 
       return [server, req, koaMiddleware.devMiddleware];
+    }
+    case "hono": {
+      // eslint-disable-next-line new-cap
+      const app = new framework();
+      const server = await startServer(name, app);
+      const req = request(server);
+      const instance = middleware.honoWrapper(compiler, devMiddlewareOptions);
+      const middlewares =
+        typeof options.setupMiddlewares === "function"
+          ? options.setupMiddlewares([instance])
+          : [instance];
+
+      for (const item of middlewares) {
+        if (item.route) {
+          app.use(item.route, item.fn);
+        } else {
+          app.use(item);
+        }
+      }
+
+      return [server, req, instance.devMiddleware];
     }
     default: {
       const isFastify = name === "fastify";
@@ -217,6 +242,8 @@ function get404ContentTypeHeader(name) {
       return "application/json; charset=utf-8";
     case "fastify":
       return "application/json; charset=utf-8";
+    case "hono":
+      return "text/plain; charset=UTF-8";
     default:
       return "text/html; charset=utf-8";
   }
@@ -240,13 +267,26 @@ function applyTestMiddleware(name, middlewares) {
       },
     });
   } else if (name === "koa") {
-    middlewares.push((ctx, next) => {
+    middlewares.push(async (ctx, next) => {
       if (ctx.request.url === "/file.jpg") {
         ctx.set("Content-Type", "text/html");
+        // eslint-disable-next-line no-param-reassign
         ctx.body = "welcome";
       }
 
-      next();
+      await next();
+    });
+  } else if (name === "hono") {
+    // eslint-disable-next-line consistent-return
+    middlewares.push(async (c, next) => {
+      if (c.req.url.endsWith("/file.jpg")) {
+        c.header("Content-Type", "text/html");
+        c.status(200);
+
+        return c.body("welcome");
+      }
+
+      await next();
     });
   } else {
     middlewares.push({
@@ -282,6 +322,7 @@ describe.each([
   ["fastify", fastify],
   ["koa", koa],
   ["hapi", Hapi],
+  ["hono", Hono],
 ])("%s framework:", (name, framework) => {
   describe("middleware", () => {
     let instance;
@@ -1814,12 +1855,12 @@ describe.each([
               setupMiddlewares: (middlewares) => {
                 if (name === "koa") {
                   middlewares.unshift(async (ctx, next) => {
+                    await next();
+
                     ctx.set(
                       "Content-Type",
                       "application/vnd.test+octet-stream",
                     );
-
-                    await next();
                   });
                 } else if (name === "hapi") {
                   middlewares.unshift({
@@ -1838,7 +1879,17 @@ describe.each([
                       },
                     },
                   });
+                } else if (name === "hono") {
+                  middlewares.unshift(async (c, next) => {
+                    await next();
+
+                    c.header(
+                      "Content-Type",
+                      "application/vnd.test+octet-stream",
+                    );
+                  });
                 } else {
+                  // eslint-disable-next-line no-shadow
                   middlewares.unshift((req, res, next) => {
                     // Express API
                     if (res.set) {
@@ -2816,7 +2867,7 @@ describe.each([
         });
 
         it('should return the "500" code for the "GET" request to the "image.svg" file', async () => {
-          const response = await req.get("/image.svg").set("Range", "bytes=0-");
+          const response = await req.get("/image.svg");
 
           expect(response.statusCode).toEqual(500);
           expect(response.headers["content-type"]).toEqual(
@@ -2892,7 +2943,7 @@ describe.each([
         });
 
         it('should return the "404" code for the "GET" request to the "image.svg" file', async () => {
-          const response = await req.get("/image.svg").set("Range", "bytes=0-");
+          const response = await req.get("/image.svg");
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
@@ -2995,6 +3046,138 @@ describe.each([
           );
           expect(response.headers["content-type"]).toEqual("image/svg+xml");
           expect(response.body).toEqual({});
+        });
+      });
+
+      describe("should handle custom fs errors and response 500 code without `fs.createReadStream`", () => {
+        let compiler;
+
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-test-errors-500",
+        );
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "image.svg"),
+            "svg image",
+          );
+
+          instance.context.outputFileSystem.readFileSync =
+            function readFileSync() {
+              throw new Error("test");
+            };
+          instance.context.outputFileSystem.createReadStream = null;
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "500" code for the "GET" request to the "image.svg" file', async () => {
+          const response = await req.get("/image.svg");
+
+          expect(response.statusCode).toEqual(500);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toEqual(
+            "<!DOCTYPE html>\n" +
+              '<html lang="en">\n' +
+              "<head>\n" +
+              '<meta charset="utf-8">\n' +
+              "<title>Error</title>\n" +
+              "</head>\n" +
+              "<body>\n" +
+              "<pre>Internal Server Error</pre>\n" +
+              "</body>\n" +
+              "</html>",
+          );
+        });
+      });
+
+      describe("should handle known fs errors and response 404 code", () => {
+        let compiler;
+
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-test-errors-404",
+        );
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "image.svg"),
+            "svg image",
+          );
+
+          instance.context.outputFileSystem.readFileSync =
+            function readFileSync() {
+              const error = new Error("test");
+
+              error.code = "ENAMETOOLONG";
+
+              throw error;
+            };
+          instance.context.outputFileSystem.createReadStream = null;
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "404" code for the "GET" request to the "image.svg" file', async () => {
+          const response = await req.get("/image.svg");
+
+          expect(response.statusCode).toEqual(404);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toEqual(
+            "<!DOCTYPE html>\n" +
+              '<html lang="en">\n' +
+              "<head>\n" +
+              '<meta charset="utf-8">\n' +
+              "<title>Error</title>\n" +
+              "</head>\n" +
+              "<body>\n" +
+              "<pre>Not Found</pre>\n" +
+              "</body>\n" +
+              "</html>",
+          );
         });
       });
     });
@@ -3860,7 +4043,7 @@ describe.each([
         expect(response.statusCode).toEqual(404);
       });
 
-      it('should return the "200" code for the "HEAD" request to the bundle file', async () => {
+      it('should return the "404" code for the "HEAD" request to the bundle file', async () => {
         const response = await req.head(`/public/bundle.js`);
 
         expect(response.statusCode).toEqual(404);
@@ -4091,6 +4274,7 @@ describe.each([
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
           const res = await req.get("/file.jpg");
+
           expect(res.statusCode).toEqual(200);
           expect(res.headers["X-nonsense-1"]).toBeUndefined();
           expect(res.headers["X-nonsense-2"]).toBeUndefined();
@@ -4166,6 +4350,12 @@ describe.each([
                   ctx.status = 200;
 
                   await next();
+                });
+              } else if (name === "hono") {
+                middlewares.push((c) => {
+                  locals = { webpack: c.get("webpack") };
+
+                  return c.body("welcome", 200);
                 });
               } else if (name === "hapi") {
                 middlewares.push({

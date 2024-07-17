@@ -7,9 +7,22 @@ const onFinishedStream = require("on-finished");
 const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
 const {
   setStatusCode,
+  getStatusCode,
+  getRequestHeader,
+  getRequestMethod,
+  getRequestURL,
+  getResponseHeader,
+  setResponseHeader,
+  removeResponseHeader,
+  getResponseHeaders,
   send,
+  finish,
   pipe,
   createReadStreamOrReadFileSync,
+  getOutgoing,
+  initState,
+  setState,
+  getReadyReadableStreamState,
 } = require("./utils/compatibleAPI");
 const ready = require("./utils/ready");
 const parseTokenList = require("./utils/parseTokenList");
@@ -123,9 +136,7 @@ function wrapper(context) {
   return async function middleware(req, res, next) {
     const acceptedMethods = context.options.methods || ["GET", "HEAD"];
 
-    // fixes #282. credit @cexoso. in certain edge situations res.locals is undefined.
-    // eslint-disable-next-line no-param-reassign
-    res.locals = res.locals || {};
+    initState(res);
 
     async function goNext() {
       if (!context.options.serverSideRender) {
@@ -136,10 +147,7 @@ function wrapper(context) {
         ready(
           context,
           () => {
-            /** @type {any} */
-            // eslint-disable-next-line no-param-reassign
-            (res.locals).webpack = { devMiddleware: context };
-
+            setState(res, "webpack", { devMiddleware: context });
             resolve(next());
           },
           req,
@@ -147,9 +155,10 @@ function wrapper(context) {
       });
     }
 
-    if (req.method && !acceptedMethods.includes(req.method)) {
-      await goNext();
+    const method = getRequestMethod(req);
 
+    if (method && !acceptedMethods.includes(method)) {
+      await goNext();
       return;
     }
 
@@ -177,10 +186,10 @@ function wrapper(context) {
       );
 
       // Clear existing headers
-      const headers = res.getHeaderNames();
+      const headers = getResponseHeaders(res);
 
       for (let i = 0; i < headers.length; i++) {
-        res.removeHeader(headers[i]);
+        removeResponseHeader(res, headers[i]);
       }
 
       if (options && options.headers) {
@@ -191,16 +200,16 @@ function wrapper(context) {
           const value = options.headers[key];
 
           if (typeof value !== "undefined") {
-            res.setHeader(key, value);
+            setResponseHeader(res, key, value);
           }
         }
       }
 
       // Send basic response
       setStatusCode(res, status);
-      res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.setHeader("Content-Security-Policy", "default-src 'none'");
-      res.setHeader("X-Content-Type-Options", "nosniff");
+      setResponseHeader(res, "Content-Type", "text/html; charset=utf-8");
+      setResponseHeader(res, "Content-Security-Policy", "default-src 'none'");
+      setResponseHeader(res, "X-Content-Type-Options", "nosniff");
 
       let byteLength = Buffer.byteLength(document);
 
@@ -210,23 +219,43 @@ function wrapper(context) {
           (options.modifyResponseData(req, res, document, byteLength)));
       }
 
-      res.setHeader("Content-Length", byteLength);
+      setResponseHeader(res, "Content-Length", byteLength);
 
-      res.end(document);
+      finish(res, document);
+    }
+
+    /**
+     * @param {NodeJS.ErrnoException} error
+     */
+    function errorHandler(error) {
+      switch (error.code) {
+        case "ENAMETOOLONG":
+        case "ENOENT":
+        case "ENOTDIR":
+          sendError(404, {
+            modifyResponseData: context.options.modifyResponseData,
+          });
+          break;
+        default:
+          sendError(500, {
+            modifyResponseData: context.options.modifyResponseData,
+          });
+          break;
+      }
     }
 
     function isConditionalGET() {
       return (
-        req.headers["if-match"] ||
-        req.headers["if-unmodified-since"] ||
-        req.headers["if-none-match"] ||
-        req.headers["if-modified-since"]
+        getRequestHeader(req, "if-match") ||
+        getRequestHeader(req, "if-unmodified-since") ||
+        getRequestHeader(req, "if-none-match") ||
+        getRequestHeader(req, "if-modified-since")
       );
     }
 
     function isPreconditionFailure() {
       // if-match
-      const ifMatch = req.headers["if-match"];
+      const ifMatch = /** @type {string} */ (getRequestHeader(req, "if-match"));
 
       // A recipient MUST ignore If-Unmodified-Since if the request contains
       // an If-Match header field; the condition in If-Match is considered to
@@ -234,7 +263,7 @@ function wrapper(context) {
       // If-Unmodified-Since, and the two are only combined for the sake of
       // interoperating with older intermediaries that might not implement If-Match.
       if (ifMatch) {
-        const etag = res.getHeader("ETag");
+        const etag = getResponseHeader(res, "ETag");
 
         return (
           !etag ||
@@ -249,7 +278,9 @@ function wrapper(context) {
       }
 
       // if-unmodified-since
-      const ifUnmodifiedSince = req.headers["if-unmodified-since"];
+      const ifUnmodifiedSince =
+        /** @type {string} */
+        (getRequestHeader(req, "if-unmodified-since"));
 
       if (ifUnmodifiedSince) {
         const unmodifiedSince = parseHttpDate(ifUnmodifiedSince);
@@ -258,7 +289,7 @@ function wrapper(context) {
         // received field-value is not a valid HTTP-date.
         if (!isNaN(unmodifiedSince)) {
           const lastModified = parseHttpDate(
-            /** @type {string} */ (res.getHeader("Last-Modified")),
+            /** @type {string} */ (getResponseHeader(res, "Last-Modified")),
           );
 
           return isNaN(lastModified) || lastModified > unmodifiedSince;
@@ -272,9 +303,12 @@ function wrapper(context) {
      * @returns {boolean} is cachable
      */
     function isCachable() {
+      const statusCode = getStatusCode(res);
       return (
-        (res.statusCode >= 200 && res.statusCode < 300) ||
-        res.statusCode === 304
+        (statusCode >= 200 && statusCode < 300) ||
+        statusCode === 304 ||
+        // For Koa and Hono, because by default status code is 404, but we already found a file
+        statusCode === 404
       );
     }
 
@@ -285,15 +319,21 @@ function wrapper(context) {
     function isFresh(resHeaders) {
       // Always return stale when Cache-Control: no-cache to support end-to-end reload requests
       // https://tools.ietf.org/html/rfc2616#section-14.9.4
-      const cacheControl = req.headers["cache-control"];
+      const cacheControl =
+        /** @type {string} */
+        (getRequestHeader(req, "cache-control"));
 
       if (cacheControl && CACHE_CONTROL_NO_CACHE_REGEXP.test(cacheControl)) {
         return false;
       }
 
       // fields
-      const noneMatch = req.headers["if-none-match"];
-      const modifiedSince = req.headers["if-modified-since"];
+      const noneMatch =
+        /** @type {string} */
+        (getRequestHeader(req, "if-none-match"));
+      const modifiedSince =
+        /** @type {string} */
+        (getRequestHeader(req, "if-modified-since"));
 
       // unconditional request
       if (!noneMatch && !modifiedSince) {
@@ -357,7 +397,7 @@ function wrapper(context) {
     function isRangeFresh() {
       const ifRange =
         /** @type {string | undefined} */
-        (req.headers["if-range"]);
+        (getRequestHeader(req, "if-range"));
 
       if (!ifRange) {
         return true;
@@ -365,7 +405,9 @@ function wrapper(context) {
 
       // if-range as etag
       if (ifRange.indexOf('"') !== -1) {
-        const etag = /** @type {string | undefined} */ (res.getHeader("ETag"));
+        const etag =
+          /** @type {string | undefined} */
+          (getResponseHeader(res, "ETag"));
 
         if (!etag) {
           return true;
@@ -377,7 +419,7 @@ function wrapper(context) {
       // if-range as modified date
       const lastModified =
         /** @type {string | undefined} */
-        (res.getHeader("Last-Modified"));
+        (getResponseHeader(res, "Last-Modified"));
 
       if (!lastModified) {
         return true;
@@ -390,10 +432,10 @@ function wrapper(context) {
      * @returns {string | undefined}
      */
     function getRangeHeader() {
-      const rage = req.headers.range;
+      const range = /** @type {string} */ (getRequestHeader(req, "range"));
 
-      if (rage && BYTES_RANGE_REGEXP.test(rage)) {
-        return rage;
+      if (range && BYTES_RANGE_REGEXP.test(range)) {
+        return range;
       }
 
       // eslint-disable-next-line no-undefined
@@ -429,7 +471,7 @@ function wrapper(context) {
       const extra = {};
       const filename = getFilenameFromUrl(
         context,
-        /** @type {string} */ (req.url),
+        /** @type {string} */ (getRequestURL(req)),
         extra,
       );
 
@@ -441,13 +483,12 @@ function wrapper(context) {
         sendError(extra.errorCode, {
           modifyResponseData: context.options.modifyResponseData,
         });
-
+        await goNext();
         return;
       }
 
       if (!filename) {
         await goNext();
-
         return;
       }
 
@@ -479,33 +520,44 @@ function wrapper(context) {
         }
 
         headers.forEach((header) => {
-          res.setHeader(header.key, header.value);
+          setResponseHeader(res, header.key, header.value);
         });
       }
 
-      if (!res.getHeader("Content-Type")) {
+      if (
+        !getResponseHeader(res, "Content-Type") ||
+        getStatusCode(res) === 404
+      ) {
+        removeResponseHeader(res, "Content-Type");
         // content-type name(like application/javascript; charset=utf-8) or false
         const contentType = mime.contentType(path.extname(filename));
 
         // Only set content-type header if media type is known
         // https://tools.ietf.org/html/rfc7231#section-3.1.1.5
         if (contentType) {
-          res.setHeader("Content-Type", contentType);
+          setResponseHeader(res, "Content-Type", contentType);
         } else if (context.options.mimeTypeDefault) {
-          res.setHeader("Content-Type", context.options.mimeTypeDefault);
+          setResponseHeader(
+            res,
+            "Content-Type",
+            context.options.mimeTypeDefault,
+          );
         }
       }
 
-      if (!res.getHeader("Accept-Ranges")) {
-        res.setHeader("Accept-Ranges", "bytes");
+      if (!getResponseHeader(res, "Accept-Ranges")) {
+        setResponseHeader(res, "Accept-Ranges", "bytes");
       }
 
-      if (context.options.lastModified && !res.getHeader("Last-Modified")) {
+      if (
+        context.options.lastModified &&
+        !getResponseHeader(res, "Last-Modified")
+      ) {
         const modified =
           /** @type {import("fs").Stats} */
           (extra.stats).mtime.toUTCString();
 
-        res.setHeader("Last-Modified", modified);
+        setResponseHeader(res, "Last-Modified", modified);
       }
 
       /** @type {number} */
@@ -520,7 +572,7 @@ function wrapper(context) {
 
       const rangeHeader = getRangeHeader();
 
-      if (context.options.etag && !res.getHeader("ETag")) {
+      if (context.options.etag && !getResponseHeader(res, "ETag")) {
         /** @type {import("fs").Stats | Buffer | ReadStream | undefined} */
         let value;
 
@@ -554,8 +606,10 @@ function wrapper(context) {
 
             value = result.bufferOrStream;
             ({ bufferOrStream, byteLength } = result);
-          } catch (_err) {
-            // Ignore here
+          } catch (error) {
+            errorHandler(/** @type {NodeJS.ErrnoException} */ (error));
+            await goNext();
+            return;
           }
         }
 
@@ -568,7 +622,7 @@ function wrapper(context) {
             bufferOrStream = result.buffer;
           }
 
-          res.setHeader("ETag", result.hash);
+          setResponseHeader(res, "ETag", result.hash);
         }
       }
 
@@ -578,37 +632,37 @@ function wrapper(context) {
           sendError(412, {
             modifyResponseData: context.options.modifyResponseData,
           });
-
+          await goNext();
           return;
-        }
-
-        // For Koa
-        if (res.statusCode === 404) {
-          setStatusCode(res, 200);
         }
 
         if (
           isCachable() &&
           isFresh({
-            etag: /** @type {string | undefined} */ (res.getHeader("ETag")),
+            etag: /** @type {string | undefined} */ (
+              getResponseHeader(res, "ETag")
+            ),
             "last-modified":
               /** @type {string | undefined} */
-              (res.getHeader("Last-Modified")),
+              (getResponseHeader(res, "Last-Modified")),
           })
         ) {
           setStatusCode(res, 304);
 
           // Remove content header fields
-          res.removeHeader("Content-Encoding");
-          res.removeHeader("Content-Language");
-          res.removeHeader("Content-Length");
-          res.removeHeader("Content-Range");
-          res.removeHeader("Content-Type");
-          res.end();
+          removeResponseHeader(res, "Content-Encoding");
+          removeResponseHeader(res, "Content-Language");
+          removeResponseHeader(res, "Content-Length");
+          removeResponseHeader(res, "Content-Range");
+          removeResponseHeader(res, "Content-Type");
 
+          finish(res);
+          await goNext();
           return;
         }
       }
+
+      let isPartialContent = false;
 
       if (rangeHeader) {
         let parsedRanges =
@@ -623,18 +677,19 @@ function wrapper(context) {
         if (parsedRanges === -1) {
           context.logger.error("Unsatisfiable range for 'Range' header.");
 
-          res.setHeader(
+          setResponseHeader(
+            res,
             "Content-Range",
             getValueContentRangeHeader("bytes", size),
           );
 
           sendError(416, {
             headers: {
-              "Content-Range": res.getHeader("Content-Range"),
+              "Content-Range": getResponseHeader(res, "Content-Range"),
             },
             modifyResponseData: context.options.modifyResponseData,
           });
-
+          await goNext();
           return;
         } else if (parsedRanges === -2) {
           context.logger.error(
@@ -649,7 +704,8 @@ function wrapper(context) {
         if (parsedRanges !== -2 && parsedRanges.length === 1) {
           // Content-Range
           setStatusCode(res, 206);
-          res.setHeader(
+          setResponseHeader(
+            res,
             "Content-Range",
             getValueContentRangeHeader(
               "bytes",
@@ -657,6 +713,8 @@ function wrapper(context) {
               /** @type {import("range-parser").Ranges} */ (parsedRanges)[0],
             ),
           );
+
+          isPartialContent = true;
 
           [offset, len] = getOffsetAndLenFromRange(parsedRanges[0]);
         }
@@ -673,9 +731,9 @@ function wrapper(context) {
             start,
             end,
           ));
-        } catch (_ignoreError) {
+        } catch (error) {
+          errorHandler(/** @type {NodeJS.ErrnoException} */ (error));
           await goNext();
-
           return;
         }
       }
@@ -692,16 +750,20 @@ function wrapper(context) {
       }
 
       // @ts-ignore
-      res.setHeader("Content-Length", byteLength);
+      setResponseHeader(res, "Content-Length", byteLength);
 
-      if (req.method === "HEAD") {
-        // For Koa
-        if (res.statusCode === 404) {
+      if (method === "HEAD") {
+        if (!isPartialContent) {
           setStatusCode(res, 200);
         }
 
-        res.end();
+        finish(res);
+        await goNext();
         return;
+      }
+
+      if (!isPartialContent) {
+        setStatusCode(res, 200);
       }
 
       const isPipeSupports =
@@ -711,6 +773,7 @@ function wrapper(context) {
 
       if (!isPipeSupports) {
         send(res, /** @type {Buffer} */ (bufferOrStream));
+        await goNext();
         return;
       }
 
@@ -724,31 +787,25 @@ function wrapper(context) {
 
       // Error handling
       /** @type {import("fs").ReadStream} */
-      (bufferOrStream).on("error", (error) => {
-        // clean up stream early
-        cleanup();
-
-        // Handle Error
-        switch (/** @type {NodeJS.ErrnoException} */ (error).code) {
-          case "ENAMETOOLONG":
-          case "ENOENT":
-          case "ENOTDIR":
-            sendError(404, {
-              modifyResponseData: context.options.modifyResponseData,
-            });
-            break;
-          default:
-            sendError(500, {
-              modifyResponseData: context.options.modifyResponseData,
-            });
-            break;
-        }
-      });
+      (bufferOrStream)
+        .on("error", (error) => {
+          // clean up stream early
+          cleanup();
+          errorHandler(error);
+          goNext();
+        })
+        .on(getReadyReadableStreamState(res), () => {
+          goNext();
+        });
 
       pipe(res, /** @type {ReadStream} */ (bufferOrStream));
 
-      // Response finished, cleanup
-      onFinishedStream(res, cleanup);
+      const outgoing = getOutgoing(res);
+
+      if (outgoing) {
+        // Response finished, cleanup
+        onFinishedStream(outgoing, cleanup);
+      }
     }
 
     ready(context, processRequest, req);
