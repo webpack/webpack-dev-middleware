@@ -420,11 +420,8 @@ function koaWrapper(compiler, options) {
            * @param {string | Buffer} [data] data
            */
           res.finish = (data) => {
-            if (status === 404) {
-              // eslint-disable-next-line no-param-reassign
-              ctx.status = 200;
-            }
-
+            // eslint-disable-next-line no-param-reassign
+            ctx.status = status;
             res.end(data);
             resolve();
           };

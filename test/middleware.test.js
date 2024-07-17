@@ -2865,7 +2865,7 @@ describe.each([
         });
 
         it('should return the "500" code for the "GET" request to the "image.svg" file', async () => {
-          const response = await req.get("/image.svg").set("Range", "bytes=0-");
+          const response = await req.get("/image.svg");
 
           expect(response.statusCode).toEqual(500);
           expect(response.headers["content-type"]).toEqual(
@@ -2941,7 +2941,7 @@ describe.each([
         });
 
         it('should return the "404" code for the "GET" request to the "image.svg" file', async () => {
-          const response = await req.get("/image.svg").set("Range", "bytes=0-");
+          const response = await req.get("/image.svg");
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(

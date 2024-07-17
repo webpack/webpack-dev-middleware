@@ -725,6 +725,10 @@ function wrapper(context) {
       setResponseHeader(res, "Content-Length", byteLength);
 
       if (method === "HEAD") {
+        if (getStatusCode(res) !== 206) {
+          setStatusCode(res, 200);
+        }
+
         finish(res);
         return;
       }
