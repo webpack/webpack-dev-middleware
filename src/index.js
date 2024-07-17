@@ -333,22 +333,40 @@ function hapiWrapper() {
       // @ts-ignore
       server.decorate("server", "webpackDevMiddleware", devMiddleware);
       // @ts-ignore
-      server.ext("onRequest", (request, h) =>
-        new Promise((resolve, reject) => {
+      server.ext("onRequest", (request, h) => new Promise((resolve, reject) => {
+          let isFinished = false;
+
+          /**
+           * @param {string | Buffer} [data]
+           */
+          request.raw.res.send = (data) => {
+            isFinished = true;
+            request.raw.res.end(data);
+          };
+
+          /**
+           * @param {string | Buffer} [data]
+           */
+          request.raw.res.finish = (data) => {
+            isFinished = true;
+            request.raw.res.end(data);
+          };
+
           devMiddleware(request.raw.req, request.raw.res, (error) => {
             if (error) {
               reject(error);
               return;
             }
 
-            resolve(request);
+            if (!isFinished) {
+              resolve(request);
+            }
           });
         })
           .then(() => h.continue)
           .catch((error) => {
             throw error;
-          }),
-      );
+          }));
     },
   };
 }
@@ -392,6 +410,8 @@ function koaWrapper(compiler, options) {
       ctx.status = statusCode;
     };
 
+    res.getReadyReadableStreamState = () => "open";
+
     try {
       await new Promise(
         /**
@@ -405,7 +425,6 @@ function koaWrapper(compiler, options) {
           res.stream = (stream) => {
             // eslint-disable-next-line no-param-reassign
             ctx.body = stream;
-            resolve();
           };
           /**
            * @param {string | Buffer} data data
@@ -413,7 +432,6 @@ function koaWrapper(compiler, options) {
           res.send = (data) => {
             // eslint-disable-next-line no-param-reassign
             ctx.body = data;
-            resolve();
           };
 
           /**
@@ -423,7 +441,6 @@ function koaWrapper(compiler, options) {
             // eslint-disable-next-line no-param-reassign
             ctx.status = status;
             res.end(data);
-            resolve();
           };
 
           devMiddleware(req, res, (err) => {
@@ -546,6 +563,8 @@ function honoWrapper(compiler, options) {
       // Do nothing, because we set it before
     };
 
+    res.getReadyReadableStreamState = () => "readable";
+
     /**
      * @param {string | Buffer | ReadStream} [data]
      */
@@ -577,7 +596,6 @@ function honoWrapper(compiler, options) {
            */
           res.stream = (stream) => {
             responseHandler(stream);
-            resolve();
           };
 
           /**
@@ -585,7 +603,6 @@ function honoWrapper(compiler, options) {
            */
           res.send = (data) => {
             responseHandler(data);
-            resolve();
           };
 
           /**
@@ -593,7 +610,6 @@ function honoWrapper(compiler, options) {
            */
           res.finish = (data) => {
             responseHandler(data);
-            resolve();
           };
 
           devMiddleware(req, res, (err) => {

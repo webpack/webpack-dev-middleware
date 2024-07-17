@@ -21,6 +21,7 @@
  * @property {(data: any) => void} [stream]
  * @property {() => any} [getOutgoing]
  * @property {(name: string, value: any) => void} [setState]
+ * @property {() => "ready" | "open" | "readable"} [getReadyReadableStreamState]
  */
 
 /**
@@ -281,6 +282,20 @@ function setState(res, name, value) {
   (res.locals)[name] = value;
 }
 
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
+ * @returns {"ready" | "open" | "readable"}
+ */
+function getReadyReadableStreamState(res) {
+  // Pseudo API and Express API and Koa API
+  if (typeof res.getReadyReadableStreamState === "function") {
+    return res.getReadyReadableStreamState();
+  }
+
+  return "ready";
+}
+
 module.exports = {
   setStatusCode,
   getStatusCode,
@@ -298,4 +313,5 @@ module.exports = {
   getOutgoing,
   initState,
   setState,
+  getReadyReadableStreamState,
 };

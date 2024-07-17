@@ -24,6 +24,9 @@ export type ExpectedServerResponse = {
   stream?: ((data: any) => void) | undefined;
   getOutgoing?: (() => any) | undefined;
   setState?: ((name: string, value: any) => void) | undefined;
+  getReadyReadableStreamState?:
+    | (() => "ready" | "open" | "readable")
+    | undefined;
 };
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
@@ -62,6 +65,7 @@ export function getStatusCode<
  * @property {(data: any) => void} [stream]
  * @property {() => any} [getOutgoing]
  * @property {(name: string, value: any) => void} [setState]
+ * @property {() => "ready" | "open" | "readable"} [getReadyReadableStreamState]
  */
 /**
  * @template {IncomingMessage & ExpectedIncomingMessage} Request
@@ -193,3 +197,11 @@ export function initState<
 export function setState<
   Response extends ServerResponse & ExpectedServerResponse,
 >(res: Response, name: string, value: any): void;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
+ * @returns {"ready" | "open" | "readable"}
+ */
+export function getReadyReadableStreamState<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response): "ready" | "open" | "readable";

@@ -22,6 +22,7 @@ const {
   getOutgoing,
   initState,
   setState,
+  getReadyReadableStreamState,
 } = require("./utils/compatibleAPI");
 const ready = require("./utils/ready");
 const parseTokenList = require("./utils/parseTokenList");
@@ -482,7 +483,7 @@ function wrapper(context) {
         sendError(extra.errorCode, {
           modifyResponseData: context.options.modifyResponseData,
         });
-
+        await goNext();
         return;
       }
 
@@ -631,7 +632,7 @@ function wrapper(context) {
           sendError(412, {
             modifyResponseData: context.options.modifyResponseData,
           });
-
+          await goNext();
           return;
         }
 
@@ -656,7 +657,7 @@ function wrapper(context) {
           removeResponseHeader(res, "Content-Type");
 
           finish(res);
-
+          await goNext();
           return;
         }
       }
@@ -688,7 +689,7 @@ function wrapper(context) {
             },
             modifyResponseData: context.options.modifyResponseData,
           });
-
+          await goNext();
           return;
         } else if (parsedRanges === -2) {
           context.logger.error(
@@ -757,6 +758,7 @@ function wrapper(context) {
         }
 
         finish(res);
+        await goNext();
         return;
       }
 
@@ -771,6 +773,7 @@ function wrapper(context) {
 
       if (!isPipeSupports) {
         send(res, /** @type {Buffer} */ (bufferOrStream));
+        await goNext();
         return;
       }
 
@@ -784,11 +787,16 @@ function wrapper(context) {
 
       // Error handling
       /** @type {import("fs").ReadStream} */
-      (bufferOrStream).on("error", (error) => {
-        // clean up stream early
-        cleanup();
-        errorHandler(error);
-      });
+      (bufferOrStream)
+        .on("error", (error) => {
+          // clean up stream early
+          cleanup();
+          errorHandler(error);
+          goNext();
+        })
+        .on(getReadyReadableStreamState(res), () => {
+          goNext();
+        });
 
       pipe(res, /** @type {ReadStream} */ (bufferOrStream));
 
