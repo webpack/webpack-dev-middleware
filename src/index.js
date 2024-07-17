@@ -408,21 +408,24 @@ function koaWrapper(compiler, options) {
             resolve();
           };
           /**
-           * @param {string | Buffer} content content
+           * @param {string | Buffer} data data
            */
-          res.send = (content) => {
+          res.send = (data) => {
             // eslint-disable-next-line no-param-reassign
-            ctx.body = content;
+            ctx.body = data;
             resolve();
           };
 
-          res.finish = () => {
+          /**
+           * @param {string | Buffer} [data] data
+           */
+          res.finish = (data) => {
             if (status === 404) {
               // eslint-disable-next-line no-param-reassign
               ctx.status = 200;
             }
 
-            res.end();
+            res.end(data);
             resolve();
           };
 
@@ -565,15 +568,18 @@ function honoWrapper(compiler, options) {
           };
 
           /**
-           * @param {string | Buffer} bufferOrString readable stream
+           * @param {string | Buffer} data data
            */
-          res.send = (bufferOrString) => {
-            body = c.body(bufferOrString);
+          res.send = (data) => {
+            body = c.body(data);
             resolve();
           };
 
-          res.finish = () => {
-            body = c.body(null);
+          /**
+           * @param {string | Buffer} [data] data
+           */
+          res.finish = (data) => {
+            body = data ? c.body(data) : c.body(null);
             resolve();
           };
 

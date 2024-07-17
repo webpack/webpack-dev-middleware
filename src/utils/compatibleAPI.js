@@ -16,7 +16,7 @@
  * @property {(name: string, value: number | string | Readonly<string[]>) => ExpectedServerResponse} [setHeader]
  * @property {(name: string) => void} [removeHeader]
  * @property {(data: string | Buffer) => void} [send]
- * @property {() => void} [finish]
+ * @property {(data?: string | Buffer) => void} [finish]
  * @property {() => string[]} [getResponseHeaders]
  * @property {(data: any) => void} [stream]
  * @property {() => any} [getOutgoing]
@@ -180,16 +180,17 @@ function send(res, bufferOrString) {
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res
+ * @param {string | Buffer} [data]
  */
-function finish(res) {
+function finish(res, data) {
   // Pseudo API and Express API and Koa API
   if (typeof res.finish === "function") {
-    res.finish();
+    res.finish(data);
     return;
   }
 
   // Pseudo API and Express API and Koa API
-  res.end();
+  res.end(data);
 }
 
 /**

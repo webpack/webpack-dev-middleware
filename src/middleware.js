@@ -220,7 +220,7 @@ function wrapper(context) {
 
       setResponseHeader(res, "Content-Length", byteLength);
 
-      send(res, document);
+      finish(res, document);
     }
 
     function isConditionalGET() {
@@ -632,6 +632,7 @@ function wrapper(context) {
           removeResponseHeader(res, "Content-Length");
           removeResponseHeader(res, "Content-Range");
           removeResponseHeader(res, "Content-Type");
+
           finish(res);
 
           return;

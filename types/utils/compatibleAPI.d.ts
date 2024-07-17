@@ -19,7 +19,7 @@ export type ExpectedServerResponse = {
     | undefined;
   removeHeader?: ((name: string) => void) | undefined;
   send?: ((data: string | Buffer) => void) | undefined;
-  finish?: (() => void) | undefined;
+  finish?: ((data?: string | Buffer) => void) | undefined;
   getResponseHeaders?: (() => string[]) | undefined;
   stream?: ((data: any) => void) | undefined;
   getOutgoing?: (() => any) | undefined;
@@ -57,7 +57,7 @@ export function getStatusCode<
  * @property {(name: string, value: number | string | Readonly<string[]>) => ExpectedServerResponse} [setHeader]
  * @property {(name: string) => void} [removeHeader]
  * @property {(data: string | Buffer) => void} [send]
- * @property {() => void} [finish]
+ * @property {(data?: string | Buffer) => void} [finish]
  * @property {() => string[]} [getResponseHeaders]
  * @property {(data: any) => void} [stream]
  * @property {() => any} [getOutgoing]
@@ -148,10 +148,11 @@ export function send<Response extends ServerResponse & ExpectedServerResponse>(
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res
+ * @param {string | Buffer} [data]
  */
 export function finish<
   Response extends ServerResponse & ExpectedServerResponse,
->(res: Response): void;
+>(res: Response, data?: string | Buffer | undefined): void;
 /**
  * @param {string} filename
  * @param {import("../index").OutputFileSystem} outputFileSystem

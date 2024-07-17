@@ -2814,7 +2814,7 @@ describe.each([
         });
       });
 
-      describe.skip("should handle custom fs errors and response 500 code", () => {
+      describe("should handle custom fs errors and response 500 code", () => {
         let compiler;
 
         const outputPath = path.resolve(
@@ -2886,7 +2886,7 @@ describe.each([
         });
       });
 
-      describe.skip("should handle known fs errors and response 404 code", () => {
+      describe("should handle known fs errors and response 404 code", () => {
         let compiler;
 
         const outputPath = path.resolve(
