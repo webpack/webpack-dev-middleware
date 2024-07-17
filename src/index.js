@@ -45,9 +45,8 @@ const noop = () => {};
  * @typedef {ReturnType<MultiCompiler["watch"]>} MultiWatching
  */
 
-// TODO fix me after the next webpack release
 /**
- * @typedef {Object & { createReadStream?: import("fs").createReadStream, statSync?: import("fs").statSync, lstat?: import("fs").lstat, readFileSync?: import("fs").readFileSync }} OutputFileSystem
+ * @typedef {import("webpack").OutputFileSystem & { createReadStream?: import("fs").createReadStream, statSync: import("fs").statSync, readFileSync: import("fs").readFileSync }} OutputFileSystem
  */
 
 /** @typedef {ReturnType<Compiler["getInfrastructureLogger"]>} Logger */

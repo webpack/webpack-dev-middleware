@@ -1,5 +1,6 @@
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
+/** @typedef {import("../index").OutputFileSystem} OutputFileSystem */
 
 /**
  * @typedef {Object} ExpectedIncomingMessage
@@ -196,7 +197,7 @@ function finish(res, data) {
 
 /**
  * @param {string} filename
- * @param {import("../index").OutputFileSystem} outputFileSystem
+ * @param {OutputFileSystem} outputFileSystem
  * @param {number} start
  * @param {number} end
  * @returns {{ bufferOrStream: (Buffer | import("fs").ReadStream), byteLength: number }}
@@ -227,9 +228,7 @@ function createReadStreamOrReadFileSync(
     // Handle files with zero bytes
     byteLength = end === 0 ? 0 : end - start + 1;
   } else {
-    bufferOrStream =
-      /** @type {import("fs").readFileSync} */
-      (outputFileSystem.readFileSync)(filename);
+    bufferOrStream = outputFileSystem.readFileSync(filename);
     ({ byteLength } = bufferOrStream);
   }
 

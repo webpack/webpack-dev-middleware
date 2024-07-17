@@ -1,5 +1,6 @@
 export type IncomingMessage = import("../index.js").IncomingMessage;
 export type ServerResponse = import("../index.js").ServerResponse;
+export type OutputFileSystem = import("../index").OutputFileSystem;
 export type ExpectedIncomingMessage = {
   getHeader?: ((name: string) => string | string[] | undefined) | undefined;
   getMethod?: (() => string | undefined) | undefined;
@@ -46,6 +47,7 @@ export function getStatusCode<
 >(res: Response): number;
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
+/** @typedef {import("../index").OutputFileSystem} OutputFileSystem */
 /**
  * @typedef {Object} ExpectedIncomingMessage
  * @property {(name: string) => string | string[] | undefined} [getHeader]
@@ -159,14 +161,14 @@ export function finish<
 >(res: Response, data?: string | Buffer | undefined): void;
 /**
  * @param {string} filename
- * @param {import("../index").OutputFileSystem} outputFileSystem
+ * @param {OutputFileSystem} outputFileSystem
  * @param {number} start
  * @param {number} end
  * @returns {{ bufferOrStream: (Buffer | import("fs").ReadStream), byteLength: number }}
  */
 export function createReadStreamOrReadFileSync(
   filename: string,
-  outputFileSystem: import("../index").OutputFileSystem,
+  outputFileSystem: OutputFileSystem,
   start: number,
   end: number,
 ): {
