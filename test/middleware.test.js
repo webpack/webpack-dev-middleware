@@ -270,6 +270,7 @@ function applyTestMiddleware(name, middlewares) {
     middlewares.push(async (ctx, next) => {
       if (ctx.request.url === "/file.jpg") {
         ctx.set("Content-Type", "text/html");
+        // eslint-disable-next-line no-param-reassign
         ctx.body = "welcome";
       }
 
@@ -1888,6 +1889,7 @@ describe.each([
                     );
                   });
                 } else {
+                  // eslint-disable-next-line no-shadow
                   middlewares.unshift((req, res, next) => {
                     // Express API
                     if (res.set) {

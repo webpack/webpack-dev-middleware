@@ -249,15 +249,15 @@ function wdm(compiler, options = {}) {
     if (
       Array.isArray(/** @type {MultiCompiler} */ (context.compiler).compilers)
     ) {
-      const compiler = /** @type {MultiCompiler} */ (context.compiler);
-      const watchOptions = compiler.compilers.map(
+      const c = /** @type {MultiCompiler} */ (context.compiler);
+      const watchOptions = c.compilers.map(
         (childCompiler) => childCompiler.options.watchOptions || {},
       );
 
       context.watching = compiler.watch(watchOptions, errorHandler);
     } else {
-      const compiler = /** @type {Compiler} */ (context.compiler);
-      const watchOptions = compiler.options.watchOptions || {};
+      const c = /** @type {Compiler} */ (context.compiler);
+      const watchOptions = c.options.watchOptions || {};
 
       context.watching = compiler.watch(watchOptions, errorHandler);
     }
@@ -333,12 +333,14 @@ function hapiWrapper() {
       // @ts-ignore
       server.decorate("server", "webpackDevMiddleware", devMiddleware);
       // @ts-ignore
-      server.ext("onRequest", (request, h) => new Promise((resolve, reject) => {
+      server.ext("onRequest", (request, h) =>
+        new Promise((resolve, reject) => {
           let isFinished = false;
 
           /**
            * @param {string | Buffer} [data]
            */
+          // eslint-disable-next-line no-param-reassign
           request.raw.res.send = (data) => {
             isFinished = true;
             request.raw.res.end(data);
@@ -347,6 +349,7 @@ function hapiWrapper() {
           /**
            * @param {string | Buffer} [data]
            */
+          // eslint-disable-next-line no-param-reassign
           request.raw.res.finish = (data) => {
             isFinished = true;
             request.raw.res.end(data);
@@ -366,7 +369,8 @@ function hapiWrapper() {
           .then(() => h.continue)
           .catch((error) => {
             throw error;
-          }));
+          }),
+      );
     },
   };
 }
@@ -492,11 +496,9 @@ function honoWrapper(compiler, options) {
    */
   // eslint-disable-next-line consistent-return
   const wrapper = async function webpackDevMiddleware(c, next) {
-    c.set("webpack", { devMiddleware: devMiddleware.context });
-
-    await next();
-
     const { req, res } = c;
+
+    c.set("webpack", { devMiddleware: devMiddleware.context });
 
     /**
      * @returns {string | undefined}
@@ -565,24 +567,7 @@ function honoWrapper(compiler, options) {
 
     res.getReadyReadableStreamState = () => "readable";
 
-    /**
-     * @param {string | Buffer | ReadStream} [data]
-     */
-    const responseHandler = (data) => {
-      const headers = { ...c.res.headers };
-      const contentType = c.res.headers.get("Content-Type");
-
-      if (contentType) {
-        headers["Content-Type"] = contentType;
-      }
-
-      // eslint-disable-next-line no-param-reassign
-      c.res = c.body(
-        typeof data !== "undefined" ? data : null,
-        status,
-        headers,
-      );
-    };
+    let body;
 
     try {
       await new Promise(
@@ -595,21 +580,22 @@ function honoWrapper(compiler, options) {
            * @param {import("fs").ReadStream} stream readable stream
            */
           res.stream = (stream) => {
-            responseHandler(stream);
+            body = stream;
+            // responseHandler(stream);
           };
 
           /**
            * @param {string | Buffer} data data
            */
           res.send = (data) => {
-            responseHandler(data);
+            body = data;
           };
 
           /**
            * @param {string | Buffer} [data] data
            */
           res.finish = (data) => {
-            responseHandler(data);
+            body = typeof data !== "undefined" ? data : null;
           };
 
           devMiddleware(req, res, (err) => {
@@ -627,6 +613,12 @@ function honoWrapper(compiler, options) {
 
       return c.json({ message: /** @type {Error} */ (err).message });
     }
+
+    if (typeof body !== "undefined") {
+      return c.body(body, status);
+    }
+
+    await next();
   };
 
   wrapper.devMiddleware = devMiddleware;
