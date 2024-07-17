@@ -639,6 +639,8 @@ function wrapper(context) {
         }
       }
 
+      let isPartialContent = false;
+
       if (rangeHeader) {
         let parsedRanges =
           /** @type {import("range-parser").Ranges | import("range-parser").Result | []} */
@@ -689,6 +691,8 @@ function wrapper(context) {
             ),
           );
 
+          isPartialContent = true;
+
           [offset, len] = getOffsetAndLenFromRange(parsedRanges[0]);
         }
       }
@@ -725,12 +729,16 @@ function wrapper(context) {
       setResponseHeader(res, "Content-Length", byteLength);
 
       if (method === "HEAD") {
-        if (getStatusCode(res) !== 206) {
+        if (!isPartialContent) {
           setStatusCode(res, 200);
         }
 
         finish(res);
         return;
+      }
+
+      if (!isPartialContent) {
+        setStatusCode(res, 200);
       }
 
       const isPipeSupports =

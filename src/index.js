@@ -473,7 +473,12 @@ function honoWrapper(compiler, options) {
    * @param {Function} next
    * @returns {Promise<void>}
    */
+  // eslint-disable-next-line consistent-return
   const wrapper = async function webpackDevMiddleware(c, next) {
+    c.set("webpack", { devMiddleware: devMiddleware.context });
+
+    await next();
+
     const { req, res } = c;
 
     /**
@@ -504,7 +509,6 @@ function honoWrapper(compiler, options) {
      */
     res.setStatusCode = (code) => {
       status = code;
-      c.status(code);
     };
 
     /**
@@ -517,7 +521,6 @@ function honoWrapper(compiler, options) {
      * @param {string | number | Readonly<string[]>} value
      */
     res.setHeader = (name, value) => {
-      // TODO use `c.header`
       c.res.headers.append(name, value);
       return c.res;
     };
@@ -539,15 +542,28 @@ function honoWrapper(compiler, options) {
      */
     res.getOutgoing = () => c.env.outgoing;
 
-    /**
-     * @param {string} name
-     * @param {any} value
-     */
-    res.setState = (name, value) => {
-      c.set(name, value);
+    res.setState = () => {
+      // Do nothing, because we set it before
     };
 
-    let body;
+    /**
+     * @param {string | Buffer | ReadStream} [data]
+     */
+    const responseHandler = (data) => {
+      const headers = { ...c.res.headers };
+      const contentType = c.res.headers.get("Content-Type");
+
+      if (contentType) {
+        headers["Content-Type"] = contentType;
+      }
+
+      // eslint-disable-next-line no-param-reassign
+      c.res = c.body(
+        typeof data !== "undefined" ? data : null,
+        status,
+        headers,
+      );
+    };
 
     try {
       await new Promise(
@@ -560,7 +576,7 @@ function honoWrapper(compiler, options) {
            * @param {import("fs").ReadStream} stream readable stream
            */
           res.stream = (stream) => {
-            body = c.body(stream);
+            responseHandler(stream);
             resolve();
           };
 
@@ -568,7 +584,7 @@ function honoWrapper(compiler, options) {
            * @param {string | Buffer} data data
            */
           res.send = (data) => {
-            body = c.body(data);
+            responseHandler(data);
             resolve();
           };
 
@@ -576,7 +592,7 @@ function honoWrapper(compiler, options) {
            * @param {string | Buffer} [data] data
            */
           res.finish = (data) => {
-            body = data ? c.body(data) : c.body(null);
+            responseHandler(data);
             resolve();
           };
 
@@ -595,12 +611,6 @@ function honoWrapper(compiler, options) {
 
       return c.json({ message: /** @type {Error} */ (err).message });
     }
-
-    if (typeof body === "undefined") {
-      await next();
-    }
-
-    return body;
   };
 
   wrapper.devMiddleware = devMiddleware;
