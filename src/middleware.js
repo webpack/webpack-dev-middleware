@@ -223,6 +223,26 @@ function wrapper(context) {
       finish(res, document);
     }
 
+    /**
+     * @param {NodeJS.ErrnoException} error
+     */
+    function errorHandler(error) {
+      switch (error.code) {
+        case "ENAMETOOLONG":
+        case "ENOENT":
+        case "ENOTDIR":
+          sendError(404, {
+            modifyResponseData: context.options.modifyResponseData,
+          });
+          break;
+        default:
+          sendError(500, {
+            modifyResponseData: context.options.modifyResponseData,
+          });
+          break;
+      }
+    }
+
     function isConditionalGET() {
       return (
         getRequestHeader(req, "if-match") ||
@@ -585,8 +605,10 @@ function wrapper(context) {
 
             value = result.bufferOrStream;
             ({ bufferOrStream, byteLength } = result);
-          } catch (_err) {
-            // Ignore here
+          } catch (error) {
+            errorHandler(/** @type {NodeJS.ErrnoException} */ (error));
+            await goNext();
+            return;
           }
         }
 
@@ -708,7 +730,8 @@ function wrapper(context) {
             start,
             end,
           ));
-        } catch (_ignoreError) {
+        } catch (error) {
+          errorHandler(/** @type {NodeJS.ErrnoException} */ (error));
           await goNext();
           return;
         }
@@ -764,22 +787,7 @@ function wrapper(context) {
       (bufferOrStream).on("error", (error) => {
         // clean up stream early
         cleanup();
-
-        // Handle Error
-        switch (/** @type {NodeJS.ErrnoException} */ (error).code) {
-          case "ENAMETOOLONG":
-          case "ENOENT":
-          case "ENOTDIR":
-            sendError(404, {
-              modifyResponseData: context.options.modifyResponseData,
-            });
-            break;
-          default:
-            sendError(500, {
-              modifyResponseData: context.options.modifyResponseData,
-            });
-            break;
-        }
+        errorHandler(error);
       });
 
       pipe(res, /** @type {ReadStream} */ (bufferOrStream));

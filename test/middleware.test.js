@@ -3046,6 +3046,138 @@ describe.each([
           expect(response.body).toEqual({});
         });
       });
+
+      describe("should handle custom fs errors and response 500 code without `fs.createReadStream`", () => {
+        let compiler;
+
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-test-errors-500",
+        );
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "image.svg"),
+            "svg image",
+          );
+
+          instance.context.outputFileSystem.readFileSync =
+            function readFileSync() {
+              throw new Error("test");
+            };
+          instance.context.outputFileSystem.createReadStream = null;
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "500" code for the "GET" request to the "image.svg" file', async () => {
+          const response = await req.get("/image.svg");
+
+          expect(response.statusCode).toEqual(500);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toEqual(
+            "<!DOCTYPE html>\n" +
+              '<html lang="en">\n' +
+              "<head>\n" +
+              '<meta charset="utf-8">\n' +
+              "<title>Error</title>\n" +
+              "</head>\n" +
+              "<body>\n" +
+              "<pre>Internal Server Error</pre>\n" +
+              "</body>\n" +
+              "</html>",
+          );
+        });
+      });
+
+      describe("should handle known fs errors and response 404 code", () => {
+        let compiler;
+
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-test-errors-404",
+        );
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "image.svg"),
+            "svg image",
+          );
+
+          instance.context.outputFileSystem.readFileSync =
+            function readFileSync() {
+              const error = new Error("test");
+
+              error.code = "ENAMETOOLONG";
+
+              throw error;
+            };
+          instance.context.outputFileSystem.createReadStream = null;
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "404" code for the "GET" request to the "image.svg" file', async () => {
+          const response = await req.get("/image.svg");
+
+          expect(response.statusCode).toEqual(404);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toEqual(
+            "<!DOCTYPE html>\n" +
+              '<html lang="en">\n' +
+              "<head>\n" +
+              '<meta charset="utf-8">\n' +
+              "<title>Error</title>\n" +
+              "</head>\n" +
+              "<body>\n" +
+              "<pre>Not Found</pre>\n" +
+              "</body>\n" +
+              "</html>",
+          );
+        });
+      });
     });
 
     describe("mimeTypes option", () => {
