@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.3.0](https://github.com/webpack/webpack-dev-middleware/compare/v7.2.1...v7.3.0) (2024-07-18)
+
+
+### Features
+
+* support hono ([#1890](https://github.com/webpack/webpack-dev-middleware/issues/1890)) ([0f9f398](https://github.com/webpack/webpack-dev-middleware/commit/0f9f3983b6e342e39032a585a64a4c638f8bfbfd))
+
 ### [7.2.1](https://github.com/webpack/webpack-dev-middleware/compare/v7.2.0...v7.2.1) (2024-04-02)
 
 
