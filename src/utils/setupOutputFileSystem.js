@@ -33,7 +33,7 @@ function setupOutputFileSystem(context) {
         (context.compiler).compilers.filter(
           (item) =>
             Object.prototype.hasOwnProperty.call(item.options, "devServer") &&
-            item.options.devServer,
+            item.options.devServer !== false,
         );
 
       ({ outputFileSystem } =
@@ -50,7 +50,7 @@ function setupOutputFileSystem(context) {
     (context.compiler).compilers || [context.compiler];
 
   for (const compiler of compilers) {
-    if (!compiler.options.devServer) {
+    if (compiler.options.devServer === false) {
       // eslint-disable-next-line no-continue
       continue;
     }

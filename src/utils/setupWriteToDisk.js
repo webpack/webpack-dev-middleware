@@ -21,7 +21,7 @@ function setupWriteToDisk(context) {
     (context.compiler).compilers || [context.compiler];
 
   for (const compiler of compilers) {
-    if (!compiler.options.devServer) {
+    if (compiler.options.devServer === false) {
       // eslint-disable-next-line no-continue
       continue;
     }

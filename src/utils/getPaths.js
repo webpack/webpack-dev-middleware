@@ -20,7 +20,7 @@ function getPaths(context) {
   const publicPaths = [];
 
   for (const { compilation } of childStats) {
-    if (!compilation.options.devServer) {
+    if (compilation.options.devServer === false) {
       // eslint-disable-next-line no-continue
       continue;
     }
