@@ -66,13 +66,6 @@ function stderrToSnapshot(stderr) {
 const runner = path.resolve(__dirname, "./helpers/runner.js");
 
 describe("logging", () => {
-  beforeEach(async () => {
-    await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
-      recursive: true,
-      force: true,
-    });
-  });
-
   it("should logging on successfully build", (done) => {
     let proc;
 
