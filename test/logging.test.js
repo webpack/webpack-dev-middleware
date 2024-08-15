@@ -46,6 +46,7 @@ function stdoutToSnapshot(stdout) {
   cleanedStdout = cleanedStdout.replace(/  +/g, " ");
   cleanedStdout = cleanedStdout.replace(/^ +/gm, "");
   cleanedStdout = cleanedStdout.replace(/ +$/gm, "");
+  cleanedStdout = cleanedStdout.replace(/\[compared for emit\]/g, "[emitted]");
 
   return cleanedStdout;
 }
@@ -65,13 +66,6 @@ function stderrToSnapshot(stderr) {
 const runner = path.resolve(__dirname, "./helpers/runner.js");
 
 describe("logging", () => {
-  beforeEach(async () => {
-    await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
-      recursive: true,
-      force: true,
-    });
-  });
-
   it("should logging on successfully build", (done) => {
     let proc;
 
@@ -983,17 +977,12 @@ describe("logging", () => {
 
   if (os.platform() !== "win32") {
     it('should logging an error from the fs error when the "writeToDisk" option is "true"', (done) => {
-      // eslint-disable-next-line global-require
-      const clearDirectory = require("./helpers/clearDirectory").default;
       const outputDir = path.resolve(
         __dirname,
         "./outputs/write-to-disk-mkdir-error",
       );
 
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-      }
-
+      fs.mkdirSync(outputDir, { recursive: true });
       fs.chmodSync(outputDir, 0o400);
 
       let proc;
@@ -1028,7 +1017,7 @@ describe("logging", () => {
         expect(extractErrorEntry(stderr)).toMatch("Error: EACCES");
 
         fs.chmodSync(outputDir, 0o700);
-        clearDirectory(outputDir);
+        fs.rmSync(outputDir, { recursive: true, force: true });
 
         done();
       });

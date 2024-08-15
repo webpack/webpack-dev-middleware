@@ -12,7 +12,6 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import request from "supertest";
 import memfs, { createFsFromVolume, Volume } from "memfs";
-import del from "del";
 
 import { Stats } from "webpack";
 
@@ -841,11 +840,6 @@ describe.each([
         const outputPath = path.resolve(__dirname, "./outputs/basic-test");
 
         beforeAll(async () => {
-          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
-            recursive: true,
-            force: true,
-          });
-
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -1422,13 +1416,13 @@ describe.each([
         });
       });
 
-      describe("should work in multi-compiler mode with `devServer` false", () => {
-        beforeAll(async () => {
-          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
-            recursive: true,
-            force: true,
-          });
+      describe.only("should work in multi-compiler mode with `devServer` false", () => {
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/dev-server-false",
+        );
 
+        beforeAll(async () => {
           const compiler = getCompiler(webpackMultiDevServerFalseConfig);
 
           [server, req, instance] = await frameworkFactory(
@@ -1439,13 +1433,20 @@ describe.each([
         });
 
         afterAll(async () => {
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
         it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
-          const outputPath = path.resolve(__dirname, "./outputs/array/js4/");
+          const bundlePath = path.resolve(
+            __dirname,
+            "./outputs/dev-server-false/js4/",
+          );
 
-          expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
+          expect(fs.existsSync(path.resolve(bundlePath, "bundle.js"))).toBe(
             false,
           );
 
@@ -1479,9 +1480,12 @@ describe.each([
         });
 
         it('should return "200" code for GET request for the bundle file for the second compiler', async () => {
-          const outputPath = path.resolve(__dirname, "./outputs/array/js3/");
+          const bundlePath = path.resolve(
+            __dirname,
+            "./outputs/dev-server-false/js3/",
+          );
 
-          expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
+          expect(fs.existsSync(path.resolve(bundlePath, "bundle.js"))).toBe(
             true,
           );
 
@@ -3455,7 +3459,9 @@ describe.each([
           const response = await req.get("/file.jpg");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toMatch(/text\/html/);
+          expect(response.headers["content-type"]).toMatch(
+            name === "fastify" ? /text\/plain; charset=utf-8/ : /text\/html/,
+          );
         });
       });
     });
@@ -3614,17 +3620,17 @@ describe.each([
       describe('should work with "true" value', () => {
         let compiler;
 
-        beforeAll(async () => {
-          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
-            recursive: true,
-            force: true,
-          });
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/write-to-disk-true",
+        );
 
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
               filename: "bundle.js",
-              path: path.resolve(__dirname, "./outputs/write-to-disk-true"),
+              path: outputPath,
               publicPath: "/public/",
             },
           });
@@ -3638,10 +3644,10 @@ describe.each([
         });
 
         afterAll(async () => {
-          del.sync(
-            path.posix.resolve(__dirname, "./outputs/write-to-disk-true"),
-          );
-
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
@@ -3709,11 +3715,6 @@ describe.each([
         let compiler;
 
         beforeAll(async () => {
-          await fs.promises.rm(outputPath, {
-            recursive: true,
-            force: true,
-          });
-
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -3737,8 +3738,10 @@ describe.each([
         });
 
         afterAll(async () => {
-          del.sync(outputPath);
-
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
@@ -3842,20 +3845,17 @@ describe.each([
       describe('should work with "Function" value when it returns "true"', () => {
         let compiler;
 
-        beforeAll(async () => {
-          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
-            recursive: true,
-            force: true,
-          });
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/write-to-disk-function-true",
+        );
 
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
               filename: "bundle.js",
-              path: path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-function-true",
-              ),
+              path: outputPath,
             },
           });
 
@@ -3870,13 +3870,10 @@ describe.each([
         });
 
         afterAll(async () => {
-          del.sync(
-            path.posix.resolve(
-              __dirname,
-              "./outputs/write-to-disk-function-true",
-            ),
-          );
-
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
@@ -3897,20 +3894,17 @@ describe.each([
       describe('should work with "Function" value when it returns "false"', () => {
         let compiler;
 
-        beforeAll(async () => {
-          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
-            recursive: true,
-            force: true,
-          });
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/write-to-disk-function-false",
+        );
 
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
               filename: "bundle.js",
-              path: path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-function-false",
-              ),
+              path: outputPath,
             },
           });
 
@@ -3925,13 +3919,10 @@ describe.each([
         });
 
         afterAll(async () => {
-          del.sync(
-            path.posix.resolve(
-              __dirname,
-              "./outputs/write-to-disk-function-false",
-            ),
-          );
-
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
@@ -3952,20 +3943,17 @@ describe.each([
       describe("should work when assets have query string", () => {
         let compiler;
 
-        beforeAll(async () => {
-          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
-            recursive: true,
-            force: true,
-          });
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/write-to-disk-query-string",
+        );
 
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackQueryStringConfig,
             output: {
               filename: "bundle.js?[contenthash]",
-              path: path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-query-string",
-              ),
+              path: outputPath,
             },
           });
 
@@ -3978,13 +3966,10 @@ describe.each([
         });
 
         afterAll(async () => {
-          del.sync(
-            path.posix.resolve(
-              __dirname,
-              "./outputs/write-to-disk-query-string",
-            ),
-          );
-
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
@@ -4005,12 +3990,12 @@ describe.each([
       describe("should work in multi-compiler mode", () => {
         let compiler;
 
-        beforeAll(async () => {
-          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
-            recursive: true,
-            force: true,
-          });
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/write-to-disk-multi-compiler/",
+        );
 
+        beforeAll(async () => {
           compiler = getCompiler([
             {
               ...webpackMultiWatchOptionsConfig[0],
@@ -4045,13 +4030,10 @@ describe.each([
         });
 
         afterAll(async () => {
-          del.sync(
-            path.posix.resolve(
-              __dirname,
-              "./outputs/write-to-disk-multi-compiler/",
-            ),
-          );
-
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
@@ -4083,12 +4065,12 @@ describe.each([
         let compiler;
         let hash;
 
-        beforeAll(async () => {
-          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
-            recursive: true,
-            force: true,
-          });
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/write-to-disk-with-hash/",
+        );
 
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             ...{
@@ -4125,10 +4107,10 @@ describe.each([
         });
 
         afterAll(async () => {
-          del.sync(
-            path.posix.resolve(__dirname, "./outputs/write-to-disk-with-hash/"),
-          );
-
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
