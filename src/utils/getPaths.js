@@ -20,6 +20,11 @@ function getPaths(context) {
   const publicPaths = [];
 
   for (const { compilation } of childStats) {
+    if (compilation.options.devServer === false) {
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
     // The `output.path` is always present and always absolute
     const outputPath = compilation.getPath(
       compilation.outputOptions.path || "",

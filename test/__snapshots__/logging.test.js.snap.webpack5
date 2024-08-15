@@ -47,8 +47,6 @@ success (webpack x.x.x) compiled successfully in x ms"
 
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stderr 1`] = `""`;
 
-exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stderr 2`] = `""`;
-
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stdout 1`] = `
 "asset bundle.js x KiB [emitted] (name: main)
 ./broken.js x bytes [built] [code generated] [1 error]
@@ -79,7 +77,9 @@ cacheable modules x bytes
 webpack x.x.x compiled successfully in x ms"
 `;
 
-exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #3: stdout 2`] = `
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #4: stderr 1`] = `""`;
+
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #4: stdout 1`] = `
 "asset bundle.js x KiB [emitted] (name: main)
 ./broken.js x bytes [built] [code generated] [1 error]
 
@@ -101,6 +101,24 @@ webpack x.x.x compiled with 1 warning in x ms
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)"
+`;
+
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #5: stderr 1`] = `""`;
+
+exports[`logging should logging in multi-compiler and respect the "stats" option from configuration #5: stdout 1`] = `
+"asset bundle.js x KiB [emitted] (name: main)
+./bar.js x bytes [built] [code generated]
+webpack x.x.x compiled successfully in x ms
+
+asset bundle.js x KiB [emitted] (name: main)
+asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
+asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
+runtime modules x bytes x modules
+cacheable modules x bytes
+./foo.js x bytes [built] [code generated]
+./svg.svg x bytes [built] [code generated]
+./index.html x bytes [built] [code generated]
+webpack x.x.x compiled successfully in x ms"
 `;
 
 exports[`logging should logging in multi-compiler and respect the "stats" option from configuration: stderr 1`] = `""`;

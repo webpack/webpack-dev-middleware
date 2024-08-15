@@ -28,6 +28,7 @@ import webpackQueryStringConfig from "./fixtures/webpack.querystring.config";
 import webpackClientServerConfig from "./fixtures/webpack.client.server.config";
 import getCompilerHooks from "./helpers/getCompilerHooks";
 import webpackPublicPathConfig from "./fixtures/webpack.public-path.config";
+import webpackMultiDevServerFalseConfig from "./fixtures/webpack.array.dev-server-false";
 
 // Suppress unnecessary stats output
 global.console.log = jest.fn();
@@ -840,6 +841,11 @@ describe.each([
         const outputPath = path.resolve(__dirname, "./outputs/basic-test");
 
         beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -1408,6 +1414,102 @@ describe.each([
 
         it('should return "404" code for GET request to the non-public path', async () => {
           const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(404);
+          expect(response.headers["content-type"]).toEqual(
+            get404ContentTypeHeader(name),
+          );
+        });
+      });
+
+      describe("should work in multi-compiler mode with `devServer` false", () => {
+        beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
+          const compiler = getCompiler(webpackMultiDevServerFalseConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
+          const outputPath = path.resolve(__dirname, "./outputs/array/js4/");
+
+          expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
+            false,
+          );
+
+          const response = await req.get("/static-one/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
+        });
+
+        it('should return "404" code for GET request to a non existing file for the first compiler', async () => {
+          const response = await req.get("/static-one/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
+        });
+
+        it('should return "200" code for GET request to the "public" path for the first compiler', async () => {
+          const response = await req.get("/static-one/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+        });
+
+        it('should return "200" code for GET request to the "index" option for the first compiler', async () => {
+          const response = await req.get("/static-one/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+        });
+
+        it('should return "200" code for GET request for the bundle file for the second compiler', async () => {
+          const outputPath = path.resolve(__dirname, "./outputs/array/js3/");
+
+          expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
+            true,
+          );
+
+          const response = await req.get("/static-two/bundle.js");
+
+          expect(response.statusCode).toEqual(404);
+        });
+
+        it('should return "404" code for GET request to a non existing file for the second compiler', async () => {
+          const response = await req.get("/static-two/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
+        });
+
+        it('should return "404" code for GET request to the "public" path for the second compiler', async () => {
+          const response = await req.get("/static-two/");
+
+          expect(response.statusCode).toEqual(404);
+        });
+
+        it('should return "404" code for GET request to the "index" option for the second compiler', async () => {
+          const response = await req.get("/static-two/index.html");
+
+          expect(response.statusCode).toEqual(404);
+        });
+
+        it('should return "404" code for GET request to the non-public path', async () => {
+          const response = await req.get("/static-three/");
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
@@ -3513,6 +3615,11 @@ describe.each([
         let compiler;
 
         beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -3602,6 +3709,11 @@ describe.each([
         let compiler;
 
         beforeAll(async () => {
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -3731,6 +3843,11 @@ describe.each([
         let compiler;
 
         beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -3781,6 +3898,11 @@ describe.each([
         let compiler;
 
         beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -3831,6 +3953,11 @@ describe.each([
         let compiler;
 
         beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler({
             ...webpackQueryStringConfig,
             output: {
@@ -3879,6 +4006,11 @@ describe.each([
         let compiler;
 
         beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler([
             {
               ...webpackMultiWatchOptionsConfig[0],
@@ -3952,6 +4084,11 @@ describe.each([
         let hash;
 
         beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler({
             ...webpackConfig,
             ...{

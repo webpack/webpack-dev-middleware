@@ -144,14 +144,9 @@ function setupHooks(context) {
       context.callbacks = [];
 
       // Execute callback that are delayed
-      callbacks.forEach(
-        /**
-         * @param {(...args: any[]) => Stats | MultiStats} callback
-         */
-        (callback) => {
-          callback(stats);
-        },
-      );
+      for (const callback of callbacks) {
+        callback(stats);
+      }
     });
   }
 

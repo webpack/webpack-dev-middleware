@@ -17,7 +17,7 @@ describe("setupOutputFileSystem", () => {
 
   it("should create default fs if not provided", () => {
     const context = {
-      compiler: {},
+      compiler: { options: {} },
       options: {},
     };
 
@@ -32,7 +32,7 @@ describe("setupOutputFileSystem", () => {
   it("should set fs for multi compiler", () => {
     const context = {
       compiler: {
-        compilers: [{}, {}],
+        compilers: [{ options: {} }, { options: {} }],
       },
       options: {},
     };
@@ -46,7 +46,7 @@ describe("setupOutputFileSystem", () => {
 
   it("should use provided fs with correct methods", () => {
     const context = {
-      compiler: {},
+      compiler: { options: {} },
       options: {
         outputFileSystem: {
           join: () => {},
