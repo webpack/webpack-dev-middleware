@@ -854,7 +854,7 @@ describe("logging", () => {
     });
   });
 
-  it('should logging in multi-compiler and respect the "stats" option from configuration #3', (done) => {
+  it('should logging in multi-compiler and respect the "stats" option from configuration #4', (done) => {
     let proc;
 
     try {
@@ -862,6 +862,50 @@ describe("logging", () => {
         stdio: "pipe",
         env: {
           WEBPACK_CONFIG: "webpack.array.one-error-one-warning-one-object",
+          FORCE_COLOR: true,
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = "";
+    let stderr = "";
+
+    proc.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+
+      if (/compiled-for-tests/gi.test(stdout)) {
+        proc.stdin.write("|exit|");
+      }
+    });
+
+    proc.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
+    });
+
+    proc.on("exit", () => {
+      expect(stdout).toContain("\u001b[1m");
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
+
+      done();
+    });
+  });
+
+  it('should logging in multi-compiler and respect the "stats" option from configuration #5', (done) => {
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: "pipe",
+        env: {
+          WEBPACK_CONFIG: "webpack.array.dev-server-false",
           FORCE_COLOR: true,
         },
       });
