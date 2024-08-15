@@ -60,20 +60,22 @@ See [below](#other-servers) for an example of use with fastify.
 
 ## Options
 
-|                      Name                       |             Type              |                    Default                    | Description                                                                                                          |
-| :---------------------------------------------: | :---------------------------: | :-------------------------------------------: | :------------------------------------------------------------------------------------------------------------------- |
-|            **[`methods`](#methods)**            |            `Array`            |              `[ 'GET', 'HEAD' ]`              | Allows to pass the list of HTTP request methods accepted by the middleware                                           |
-|            **[`headers`](#headers)**            |   `Array\|Object\|Function`   |                  `undefined`                  | Allows to pass custom HTTP headers on each request.                                                                  |
-|              **[`index`](#index)**              |       `Boolean\|String`       |                 `index.html`                  | If `false` (but not `undefined`), the server will not respond to requests to the root URL.                           |
-|          **[`mimeTypes`](#mimetypes)**          |           `Object`            |                  `undefined`                  | Allows to register custom mime types or extension mappings.                                                          |
-|    **[`mimeTypeDefault`](#mimetypedefault)**    |           `String`            |                  `undefined`                  | Allows to register a default mime type when we can't determine the content type.                                     |
-|               **[`etag`](#tag)**                | `boolean\| "weak"\| "strong"` |                  `undefined`                  | Enable or disable etag generation.                                                                                   |
-|         **[`publicPath`](#publicpath)**         |           `String`            |  `output.publicPath` (from a configuration)   | The public path that the middleware is bound to.                                                                     |
-|              **[`stats`](#stats)**              |   `Boolean\|String\|Object`   |        `stats` (from a configuration)         | Stats options object or preset name.                                                                                 |
-|   **[`serverSideRender`](#serversiderender)**   |           `Boolean`           |                  `undefined`                  | Instructs the module to enable or disable the server-side rendering mode.                                            |
-|        **[`writeToDisk`](#writetodisk)**        |      `Boolean\|Function`      |                    `false`                    | Instructs the module to write files to the configured location on disk as specified in your `webpack` configuration. |
-|   **[`outputFileSystem`](#outputfilesystem)**   |           `Object`            | [`memfs`](https://github.com/streamich/memfs) | Set the default file system which will be used by webpack as primary destination of generated files.                 |
-| **[`modifyResponseData`](#modifyresponsedata)** |          `Function`           |                  `undefined`                  | Allows to set up a callback to change the response data.                                                             |
+|                      Name                       |               Type                |                    Default                    | Description                                                                                                          |
+| :---------------------------------------------: | :-------------------------------: | :-------------------------------------------: | :------------------------------------------------------------------------------------------------------------------- |
+|            **[`methods`](#methods)**            |              `Array`              |              `[ 'GET', 'HEAD' ]`              | Allows to pass the list of HTTP request methods accepted by the middleware                                           |
+|            **[`headers`](#headers)**            |     `Array\|Object\|Function`     |                  `undefined`                  | Allows to pass custom HTTP headers on each request.                                                                  |
+|              **[`index`](#index)**              |         `boolean\|string`         |                 `index.html`                  | If `false` (but not `undefined`), the server will not respond to requests to the root URL.                           |
+|          **[`mimeTypes`](#mimetypes)**          |             `Object`              |                  `undefined`                  | Allows to register custom mime types or extension mappings.                                                          |
+|    **[`mimeTypeDefault`](#mimetypedefault)**    |             `string`              |                  `undefined`                  | Allows to register a default mime type when we can't determine the content type.                                     |
+|               **[`etag`](#tag)**                |   `boolean\| "weak"\| "strong"`   |                  `undefined`                  | Enable or disable etag generation.                                                                                   |
+|       **[`lastModified`](#lastmodified)**       |             `boolean`             |                  `undefined`                  | Enable or disable `Last-Modified` header. Uses the file system's last modified value.                                |
+|       **[`cacheControl`](#cachecontrol)**       | `boolean\|number\|string\|Object` |                  `undefined`                  | Enable or disable `Last-Modified` header. Uses the file system's last modified value.                                |
+|         **[`publicPath`](#publicpath)**         |             `string`              |                  `undefined`                  | The public path that the middleware is bound to.                                                                     |
+|              **[`stats`](#stats)**              |     `boolean\|string\|Object`     |        `stats` (from a configuration)         | Stats options object or preset name.                                                                                 |
+|   **[`serverSideRender`](#serversiderender)**   |             `boolean`             |                  `undefined`                  | Instructs the module to enable or disable the server-side rendering mode.                                            |
+|        **[`writeToDisk`](#writetodisk)**        |        `boolean\|Function`        |                    `false`                    | Instructs the module to write files to the configured location on disk as specified in your `webpack` configuration. |
+|   **[`outputFileSystem`](#outputfilesystem)**   |             `Object`              | [`memfs`](https://github.com/streamich/memfs) | Set the default file system which will be used by webpack as primary destination of generated files.                 |
+| **[`modifyResponseData`](#modifyresponsedata)** |            `Function`             |                  `undefined`                  | Allows to set up a callback to change the response data.                                                             |
 
 The middleware accepts an `options` Object. The following is a property reference for the Object.
 
@@ -185,6 +187,20 @@ Type: `Boolean`
 Default: `undefined`
 
 Enable or disable `Last-Modified` header. Uses the file system's last modified value.
+
+### cacheControl
+
+Type: `Boolean | Number | String | { maxAge?: number, immutable?: boolean }`
+Default: `undefined`
+
+Depending on the setting, the following headers will be generated:
+
+- `Boolean` - `Cache-Control: public, max-age=31536000000`
+- `Number` - `Cache-Control: public, max-age=YOUR_NUMBER`
+- `String` - `Cache-Control: YOUR_STRING`
+- `{ maxAge?: number, immutable?: boolean }` - `Cache-Control: public, max-age=YOUR_MAX_AGE_or_31536000000`, also `, immutable` can be added if you set the `immutable` option to `true`
+
+Enable or disable setting `Cache-Control` response header.
 
 ### publicPath
 
