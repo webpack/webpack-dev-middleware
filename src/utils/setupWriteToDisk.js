@@ -21,6 +21,11 @@ function setupWriteToDisk(context) {
     (context.compiler).compilers || [context.compiler];
 
   for (const compiler of compilers) {
+    if (!compiler.options.devServer) {
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
     compiler.hooks.emit.tap("DevMiddleware", () => {
       // @ts-ignore
       if (compiler.hasWebpackDevMiddlewareAssetEmittedCallback) {

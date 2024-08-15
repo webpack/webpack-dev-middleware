@@ -30,8 +30,10 @@ function setupOutputFileSystem(context) {
       // TODO we need to support webpack-dev-server as a plugin or revisit it
       const compiler =
         /** @type {MultiCompiler} */
-        (context.compiler).compilers.filter((item) =>
-          Object.prototype.hasOwnProperty.call(item.options, "devServer"),
+        (context.compiler).compilers.filter(
+          (item) =>
+            Object.prototype.hasOwnProperty.call(item.options, "devServer") &&
+            item.options.devServer,
         );
 
       ({ outputFileSystem } =
@@ -48,6 +50,11 @@ function setupOutputFileSystem(context) {
     (context.compiler).compilers || [context.compiler];
 
   for (const compiler of compilers) {
+    if (!compiler.options.devServer) {
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
     // @ts-ignore
     compiler.outputFileSystem = outputFileSystem;
   }
