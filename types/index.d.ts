@@ -90,7 +90,8 @@ export = wdm;
  * @property {ModifyResponseData<RequestInternal, ResponseInternal>} [modifyResponseData]
  * @property {"weak" | "strong"} [etag]
  * @property {boolean} [lastModified]
- * @property {boolean | number | string | { maxAge: number, immutable: boolean }} [cacheControl]
+ * @property {boolean | number | string | { maxAge?: number, immutable?: boolean }} [cacheControl]
+ * @property {boolean} [cacheImmutable]
  */
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
@@ -360,10 +361,11 @@ type Options<
     | number
     | boolean
     | {
-        maxAge: number;
-        immutable: boolean;
+        maxAge?: number;
+        immutable?: boolean;
       }
     | undefined;
+  cacheImmutable?: boolean | undefined;
 };
 type Middleware<
   RequestInternal extends IncomingMessage = import("http").IncomingMessage,

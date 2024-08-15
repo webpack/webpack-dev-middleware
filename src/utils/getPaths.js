@@ -35,7 +35,11 @@ function getPaths(context) {
         ? compilation.getPath(compilation.outputOptions.publicPath)
         : "";
 
-    publicPaths.push({ outputPath, publicPath });
+    publicPaths.push({
+      outputPath,
+      publicPath,
+      assetsInfo: compilation.assetsInfo,
+    });
   }
 
   return publicPaths;

@@ -551,39 +551,43 @@ function wrapper(context) {
         setResponseHeader(res, "Accept-Ranges", "bytes");
       }
 
-      if (
-        context.options.cacheControl &&
-        !getResponseHeader(res, "Cache-Control")
-      ) {
-        const { cacheControl } = context.options;
+      if (!getResponseHeader(res, "Cache-Control")) {
+        // TODO enable the `cacheImmutable` by default for the next major release
+        const cacheControl =
+          context.options.cacheImmutable && extra.immutable
+            ? { immutable: true }
+            : context.options.cacheControl;
 
-        let cacheControlValue;
+        if (cacheControl) {
+          let cacheControlValue;
 
-        if (typeof cacheControl === "boolean") {
-          cacheControlValue = "public, max-age=31536000";
-        } else if (typeof cacheControl === "number") {
-          const maxAge = Math.floor(
-            Math.min(Math.max(0, cacheControl), MAX_MAX_AGE) / 1000,
-          );
+          if (typeof cacheControl === "boolean") {
+            cacheControlValue = "public, max-age=31536000";
+          } else if (typeof cacheControl === "number") {
+            const maxAge = Math.floor(
+              Math.min(Math.max(0, cacheControl), MAX_MAX_AGE) / 1000,
+            );
 
-          cacheControlValue = `public, max-age=${maxAge}`;
-        } else if (typeof cacheControl === "string") {
-          cacheControlValue = cacheControl;
-        } else {
-          const maxAge = cacheControl.maxAge
-            ? Math.floor(
-                Math.min(Math.max(0, cacheControl.maxAge), MAX_MAX_AGE) / 1000,
-              )
-            : MAX_MAX_AGE;
+            cacheControlValue = `public, max-age=${maxAge}`;
+          } else if (typeof cacheControl === "string") {
+            cacheControlValue = cacheControl;
+          } else {
+            const maxAge = cacheControl.maxAge
+              ? Math.floor(
+                  Math.min(Math.max(0, cacheControl.maxAge), MAX_MAX_AGE) /
+                    1000,
+                )
+              : MAX_MAX_AGE / 1000;
 
-          cacheControlValue = `public, max-age=${maxAge}`;
+            cacheControlValue = `public, max-age=${maxAge}`;
 
-          if (cacheControl.immutable) {
-            cacheControlValue += ", immutable";
+            if (cacheControl.immutable) {
+              cacheControlValue += ", immutable";
+            }
           }
-        }
 
-        setResponseHeader(res, "Cache-Control", cacheControlValue);
+          setResponseHeader(res, "Cache-Control", cacheControlValue);
+        }
       }
 
       if (
@@ -604,7 +608,7 @@ function wrapper(context) {
 
       /** @type {undefined | Buffer | ReadStream} */
       let bufferOrStream;
-      /** @type {number} */
+      /** @type {number | undefined} */
       let byteLength;
 
       const rangeHeader = getRangeHeader();
@@ -781,13 +785,17 @@ function wrapper(context) {
             req,
             res,
             bufferOrStream,
-            // @ts-ignore
-            byteLength,
+            /** @type {number} */
+            (byteLength),
           ));
       }
 
-      // @ts-ignore
-      setResponseHeader(res, "Content-Length", byteLength);
+      setResponseHeader(
+        res,
+        "Content-Length",
+        /** @type {number} */
+        (byteLength),
+      );
 
       if (method === "HEAD") {
         if (!isPartialContent) {

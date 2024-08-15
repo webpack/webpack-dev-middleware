@@ -118,7 +118,8 @@ const noop = () => {};
  * @property {ModifyResponseData<RequestInternal, ResponseInternal>} [modifyResponseData]
  * @property {"weak" | "strong"} [etag]
  * @property {boolean} [lastModified]
- * @property {boolean | number | string | { maxAge: number, immutable: boolean }} [cacheControl]
+ * @property {boolean | number | string | { maxAge?: number, immutable?: boolean }} [cacheControl]
+ * @property {boolean} [cacheImmutable]
  */
 
 /**

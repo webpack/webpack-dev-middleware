@@ -21,6 +21,7 @@ declare namespace getFilenameFromUrl {
 type Extra = {
   stats?: import("fs").Stats | undefined;
   errorCode?: number | undefined;
+  immutable?: boolean | undefined;
 };
 type IncomingMessage = import("../index.js").IncomingMessage;
 type ServerResponse = import("../index.js").ServerResponse;
