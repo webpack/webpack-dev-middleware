@@ -1485,6 +1485,12 @@ describe.each([
             "./outputs/dev-server-false/js3/",
           );
 
+          // eslint-disable-next-line no-console
+          console.warn(fs.readdirSync(path.resolve(__dirname, "./outputs/")));
+          // eslint-disable-next-line no-console
+          console.warn(fs.readdirSync(outputPath));
+          // eslint-disable-next-line no-console
+          console.warn(fs.readdirSync(bundlePath));
           expect(fs.existsSync(path.resolve(bundlePath, "bundle.js"))).toBe(
             true,
           );
