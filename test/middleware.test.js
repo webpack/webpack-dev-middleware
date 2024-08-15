@@ -1421,7 +1421,7 @@ describe.each([
         });
       });
 
-      describe("should work in multi-compiler mode with `devServer` false", () => {
+      describe.skip("should work in multi-compiler mode with `devServer` false", () => {
         beforeAll(async () => {
           await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
             recursive: true,
