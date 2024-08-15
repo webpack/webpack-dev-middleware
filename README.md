@@ -69,7 +69,8 @@ See [below](#other-servers) for an example of use with fastify.
 |    **[`mimeTypeDefault`](#mimetypedefault)**    |             `string`              |                  `undefined`                  | Allows to register a default mime type when we can't determine the content type.                                     |
 |               **[`etag`](#tag)**                |   `boolean\| "weak"\| "strong"`   |                  `undefined`                  | Enable or disable etag generation.                                                                                   |
 |       **[`lastModified`](#lastmodified)**       |             `boolean`             |                  `undefined`                  | Enable or disable `Last-Modified` header. Uses the file system's last modified value.                                |
-|       **[`cacheControl`](#cachecontrol)**       | `boolean\|number\|string\|Object` |                  `undefined`                  | Enable or disable `Last-Modified` header. Uses the file system's last modified value.                                |
+|       **[`cacheControl`](#cachecontrol)**       | `boolean\|number\|string\|Object` |                  `undefined`                  | Enable or disable setting `Cache-Control` response header.                                                           |
+|     **[`cacheImmutable`](#cacheimmutable)**     |            `boolean\`             |                  `undefined`                  | Enable or disable setting `Cache-Control: public, max-age=31536000, immutable` response header for immutable assets. |
 |         **[`publicPath`](#publicpath)**         |             `string`              |                  `undefined`                  | The public path that the middleware is bound to.                                                                     |
 |              **[`stats`](#stats)**              |     `boolean\|string\|Object`     |        `stats` (from a configuration)         | Stats options object or preset name.                                                                                 |
 |   **[`serverSideRender`](#serversiderender)**   |             `boolean`             |                  `undefined`                  | Instructs the module to enable or disable the server-side rendering mode.                                            |
@@ -201,6 +202,15 @@ Depending on the setting, the following headers will be generated:
 - `{ maxAge?: number, immutable?: boolean }` - `Cache-Control: public, max-age=YOUR_MAX_AGE_or_31536000000`, also `, immutable` can be added if you set the `immutable` option to `true`
 
 Enable or disable setting `Cache-Control` response header.
+
+### cacheImmutable
+
+Type: `Boolean`
+Default: `undefined`
+
+Enable or disable setting `Cache-Control: public, max-age=31536000, immutable` response header for immutable assets (i.e. asset with a hash like `image.a4c12bde.jpg`).
+Immutable assets are assets that have their hash in the file name therefore they can be cached, because if you change their contents the file name will be changed.
+Take preference over the `cacheControl` option if the asset was defined as immutable.
 
 ### publicPath
 

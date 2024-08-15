@@ -24,6 +24,7 @@ const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
  * @typedef {Object} Extra
  * @property {import("fs").Stats=} stats
  * @property {number=} errorCode
+ * @property {boolean=} immutable
  */
 
 /**
@@ -65,7 +66,7 @@ function getFilenameFromUrl(context, url, extra = {}) {
     return;
   }
 
-  for (const { publicPath, outputPath } of paths) {
+  for (const { publicPath, outputPath, assetsInfo } of paths) {
     /** @type {string | undefined} */
     let filename;
     /** @type {URL} */
@@ -121,6 +122,12 @@ function getFilenameFromUrl(context, url, extra = {}) {
 
       if (extra.stats.isFile()) {
         foundFilename = filename;
+
+        const assetInfo = assetsInfo.get(
+          pathname.slice(publicPathObject.pathname.length),
+        );
+
+        extra.immutable = assetInfo ? assetInfo.immutable : false;
 
         break;
       } else if (

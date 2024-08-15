@@ -17,6 +17,7 @@ declare function getPaths<
 ): {
   outputPath: string;
   publicPath: string;
+  assetsInfo: Map<string, import("webpack").AssetInfo>;
 }[];
 declare namespace getPaths {
   export { Compiler, Stats, MultiStats, IncomingMessage, ServerResponse };

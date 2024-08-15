@@ -1,5 +1,25 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`validation should throw an error on the "cacheControl" option with "{"unknown":true,"maxAge":10000}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.cacheControl has an unknown property 'unknown'. These properties are valid:
+   object { maxAge?, immutable? }"
+`;
+
+exports[`validation should throw an error on the "cacheImmutable" option with "0" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.cacheImmutable should be a boolean.
+   -> Enable or disable setting \`Cache-Control: public, max-age=31536000, immutable\` response header for immutable assets (i.e. asset with a hash in file name like \`image.a4c12bde.jpg\`).
+   -> Read more at https://github.com/webpack/webpack-dev-middleware#cacheimmutable"
+`;
+
+exports[`validation should throw an error on the "cacheImmutable" option with "foo" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.cacheImmutable should be a boolean.
+   -> Enable or disable setting \`Cache-Control: public, max-age=31536000, immutable\` response header for immutable assets (i.e. asset with a hash in file name like \`image.a4c12bde.jpg\`).
+   -> Read more at https://github.com/webpack/webpack-dev-middleware#cacheimmutable"
+`;
+
 exports[`validation should throw an error on the "etag" option with "0" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.etag should be one of these:

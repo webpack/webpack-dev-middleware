@@ -75,6 +75,20 @@ describe("validation", () => {
       success: [true, false],
       failure: ["foo", 0],
     },
+    cacheControl: {
+      success: [
+        true,
+        false,
+        10000,
+        "max-age=100",
+        { immutable: true, maxAge: 10000 },
+      ],
+      failure: [{ unknown: true, maxAge: 10000 }],
+    },
+    cacheImmutable: {
+      success: [true, false],
+      failure: ["foo", 0],
+    },
   };
 
   function stringifyValue(value) {

@@ -28,6 +28,7 @@ import webpackClientServerConfig from "./fixtures/webpack.client.server.config";
 import getCompilerHooks from "./helpers/getCompilerHooks";
 import webpackPublicPathConfig from "./fixtures/webpack.public-path.config";
 import webpackMultiDevServerFalseConfig from "./fixtures/webpack.array.dev-server-false";
+import webpackConfigImmutable from "./fixtures/webpack.immutable.config";
 
 // Suppress unnecessary stats output
 global.console.log = jest.fn();
@@ -5512,7 +5513,7 @@ describe.each([
       });
     });
 
-    describe.only("cacheControl", () => {
+    describe("cacheControl", () => {
       describe("should work and don't generate `Cache-Control` header by default", () => {
         beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
@@ -5671,7 +5672,7 @@ describe.each([
           expect(response.statusCode).toEqual(200);
           expect(response.headers["cache-control"]).toBeDefined();
           expect(response.headers["cache-control"]).toBe(
-            "public, max-age=31536000000, immutable",
+            "public, max-age=31536000, immutable",
           );
         });
       });
@@ -5702,6 +5703,152 @@ describe.each([
           expect(response.statusCode).toEqual(200);
           expect(response.headers["cache-control"]).toBeDefined();
           expect(response.headers["cache-control"]).toBe("public, max-age=100");
+        });
+      });
+
+      describe("should work and generate `Cache-Control` header when it is an object without max-age and immutable", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              cacheControl: {},
+            },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000",
+          );
+        });
+      });
+    });
+
+    describe("cacheImmutable", () => {
+      describe("should work and generate `Cache-Control` header for immutable assets with publicPath", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfigImmutable);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheImmutable: true },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+          const response = await req.get(`/static/main.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeUndefined();
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header', async () => {
+          const response = await req.get(`/static/6076fc274f403ebb2d09.svg`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000, immutable",
+          );
+        });
+      });
+
+      describe("should work and generate `Cache-Control` header for immutable assets without publicPath", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler({
+            ...webpackConfigImmutable,
+            output: {
+              path: path.resolve(__dirname, "./outputs/basic"),
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheImmutable: true },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+          const response = await req.get(`/main.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeUndefined();
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and `Cache-Control` header', async () => {
+          const response = await req.get(`/6076fc274f403ebb2d09.svg`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000, immutable",
+          );
+        });
+      });
+
+      describe("should work and generate `Cache-Control` header for immutable assets and take preference over the `cacheControl` option", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler({
+            ...webpackConfigImmutable,
+            output: {
+              path: path.resolve(__dirname, "./outputs/basic"),
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheImmutable: true, cacheControl: 1000000 },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header', async () => {
+          const response = await req.get(`/main.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=1000",
+          );
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header', async () => {
+          const response = await req.get(`/6076fc274f403ebb2d09.svg`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000, immutable",
+          );
         });
       });
     });
