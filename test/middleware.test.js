@@ -12,7 +12,6 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import request from "supertest";
 import memfs, { createFsFromVolume, Volume } from "memfs";
-import del from "del";
 
 import { Stats } from "webpack";
 
@@ -3638,10 +3637,6 @@ describe.each([
         });
 
         afterAll(async () => {
-          del.sync(
-            path.posix.resolve(__dirname, "./outputs/write-to-disk-true"),
-          );
-
           await close(server, instance);
         });
 
@@ -3737,8 +3732,6 @@ describe.each([
         });
 
         afterAll(async () => {
-          del.sync(outputPath);
-
           await close(server, instance);
         });
 
@@ -3870,13 +3863,6 @@ describe.each([
         });
 
         afterAll(async () => {
-          del.sync(
-            path.posix.resolve(
-              __dirname,
-              "./outputs/write-to-disk-function-true",
-            ),
-          );
-
           await close(server, instance);
         });
 
@@ -3925,13 +3911,6 @@ describe.each([
         });
 
         afterAll(async () => {
-          del.sync(
-            path.posix.resolve(
-              __dirname,
-              "./outputs/write-to-disk-function-false",
-            ),
-          );
-
           await close(server, instance);
         });
 
@@ -3978,13 +3957,6 @@ describe.each([
         });
 
         afterAll(async () => {
-          del.sync(
-            path.posix.resolve(
-              __dirname,
-              "./outputs/write-to-disk-query-string",
-            ),
-          );
-
           await close(server, instance);
         });
 
@@ -4045,13 +4017,6 @@ describe.each([
         });
 
         afterAll(async () => {
-          del.sync(
-            path.posix.resolve(
-              __dirname,
-              "./outputs/write-to-disk-multi-compiler/",
-            ),
-          );
-
           await close(server, instance);
         });
 
@@ -4125,10 +4090,6 @@ describe.each([
         });
 
         afterAll(async () => {
-          del.sync(
-            path.posix.resolve(__dirname, "./outputs/write-to-disk-with-hash/"),
-          );
-
           await close(server, instance);
         });
 
