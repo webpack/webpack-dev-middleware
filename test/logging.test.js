@@ -46,6 +46,7 @@ function stdoutToSnapshot(stdout) {
   cleanedStdout = cleanedStdout.replace(/  +/g, " ");
   cleanedStdout = cleanedStdout.replace(/^ +/gm, "");
   cleanedStdout = cleanedStdout.replace(/ +$/gm, "");
+  cleanedStdout = cleanedStdout.replace(/\[compared for emit\]/g, "[emitted]");
 
   return cleanedStdout;
 }
