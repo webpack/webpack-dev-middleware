@@ -519,9 +519,9 @@ function wrapper(context) {
           headers = allHeaders;
         }
 
-        headers.forEach((header) => {
-          setResponseHeader(res, header.key, header.value);
-        });
+        for (const { key, value } of headers) {
+          setResponseHeader(res, key, value);
+        }
       }
 
       if (
