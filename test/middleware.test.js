@@ -3454,7 +3454,9 @@ describe.each([
           const response = await req.get("/file.jpg");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toMatch(/text\/html/);
+          expect(response.headers["content-type"]).toMatch(
+            name === "fastify" ? /text\/plain; charset=utf-8/ : /text\/html/,
+          );
         });
       });
     });
