@@ -1438,6 +1438,10 @@ describe.each([
         });
 
         afterAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
@@ -3639,6 +3643,10 @@ describe.each([
         });
 
         afterAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
@@ -3706,7 +3714,7 @@ describe.each([
         let compiler;
 
         beforeAll(async () => {
-          await fs.promises.rm(outputPath, {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
             recursive: true,
             force: true,
           });
@@ -3734,6 +3742,10 @@ describe.each([
         });
 
         afterAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
@@ -3865,6 +3877,10 @@ describe.each([
         });
 
         afterAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
@@ -3913,6 +3929,10 @@ describe.each([
         });
 
         afterAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
@@ -3959,6 +3979,10 @@ describe.each([
         });
 
         afterAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
@@ -4019,6 +4043,10 @@ describe.each([
         });
 
         afterAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
@@ -4092,6 +4120,10 @@ describe.each([
         });
 
         afterAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
           await close(server, instance);
         });
 
