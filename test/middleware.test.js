@@ -841,6 +841,11 @@ describe.each([
         const outputPath = path.resolve(__dirname, "./outputs/basic-test");
 
         beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -1419,6 +1424,11 @@ describe.each([
 
       describe("should work in multi-compiler mode with `devServer` false", () => {
         beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
           const compiler = getCompiler(webpackMultiDevServerFalseConfig);
 
           [server, req, instance] = await frameworkFactory(
@@ -3605,6 +3615,11 @@ describe.each([
         let compiler;
 
         beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -3694,6 +3709,11 @@ describe.each([
         let compiler;
 
         beforeAll(async () => {
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -3823,6 +3843,11 @@ describe.each([
         let compiler;
 
         beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -3873,6 +3898,11 @@ describe.each([
         let compiler;
 
         beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -3923,6 +3953,11 @@ describe.each([
         let compiler;
 
         beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler({
             ...webpackQueryStringConfig,
             output: {
@@ -3971,6 +4006,11 @@ describe.each([
         let compiler;
 
         beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler([
             {
               ...webpackMultiWatchOptionsConfig[0],
@@ -4044,6 +4084,11 @@ describe.each([
         let hash;
 
         beforeAll(async () => {
+          await fs.promises.rm(path.resolve(__dirname, "./outputs/"), {
+            recursive: true,
+            force: true,
+          });
+
           compiler = getCompiler({
             ...webpackConfig,
             ...{
