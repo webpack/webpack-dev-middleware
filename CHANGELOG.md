@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.4.0](https://github.com/webpack/webpack-dev-middleware/compare/v7.3.0...v7.4.0) (2024-08-15)
+
+
+### Features
+
+* added the cacheImmutable option to cache immutable assets (assets with a hash in file name like `image.e12ab567.jpg`) ([5ed629d](https://github.com/webpack/webpack-dev-middleware/commit/5ed629da0d432fefdd3b5191985ce93c3aab2624))
+* allow to configure the `Cache-Control` header ([#1923](https://github.com/webpack/webpack-dev-middleware/issues/1923)) ([f7529c3](https://github.com/webpack/webpack-dev-middleware/commit/f7529c3188efa1885593993d912155ef2188fda5))
+
+
+### Bug Fixes
+
+* support `devServer: false` ([b443f4d](https://github.com/webpack/webpack-dev-middleware/commit/b443f4df9f38502b73707073a6e2a21e1a9c684a))
+
 ## [7.3.0](https://github.com/webpack/webpack-dev-middleware/compare/v7.2.1...v7.3.0) (2024-07-18)
 
 
