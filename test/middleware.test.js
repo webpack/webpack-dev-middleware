@@ -1417,7 +1417,7 @@ describe.each([
         });
       });
 
-      describe.only("should work in multi-compiler mode with `devServer` false", () => {
+      describe("should work in multi-compiler mode with `devServer` false", () => {
         const outputPath = path.resolve(
           __dirname,
           "./outputs/dev-server-false",
