@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.4.1](https://github.com/webpack/webpack-dev-middleware/compare/v7.4.0...v7.4.1) (2024-08-20)
+
+
+### Bug Fixes
+
+* `assetsInfo` may be undefined (rspack) ([#1927](https://github.com/webpack/webpack-dev-middleware/issues/1927)) ([21f1797](https://github.com/webpack/webpack-dev-middleware/commit/21f1797ee8aecdae7a2bfb0f8b06ce88e987dfb8))
+
 ## [7.4.0](https://github.com/webpack/webpack-dev-middleware/compare/v7.3.0...v7.4.0) (2024-08-15)
 
 
