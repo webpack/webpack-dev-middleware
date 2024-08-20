@@ -123,11 +123,14 @@ function getFilenameFromUrl(context, url, extra = {}) {
       if (extra.stats.isFile()) {
         foundFilename = filename;
 
-        const assetInfo = assetsInfo.get(
-          pathname.slice(publicPathObject.pathname.length),
-        );
+        // Rspack does not yet support `assetsInfo`, so we need to check if `assetsInfo` exists here
+        if (assetsInfo) {
+          const assetInfo = assetsInfo.get(
+            pathname.slice(publicPathObject.pathname.length),
+          );
 
-        extra.immutable = assetInfo ? assetInfo.immutable : false;
+          extra.immutable = assetInfo ? assetInfo.immutable : false;
+        }
 
         break;
       } else if (
