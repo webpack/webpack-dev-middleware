@@ -123,6 +123,7 @@ function getFilenameFromUrl(context, url, extra = {}) {
       if (extra.stats.isFile()) {
         foundFilename = filename;
 
+        // Rspack does not yet support `assetsInfo`, so we need to check if `assetsInfo` exists here
         if (assetsInfo) {
           const assetInfo = assetsInfo.get(
             pathname.slice(publicPathObject.pathname.length),
