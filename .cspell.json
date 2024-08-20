@@ -23,7 +23,8 @@
     "etag",
     "cachable",
     "finalhandler",
-    "hono"
+    "hono",
+    "rspack"
   ],
   "ignorePaths": [
     "CHANGELOG.md",
