@@ -123,11 +123,13 @@ function getFilenameFromUrl(context, url, extra = {}) {
       if (extra.stats.isFile()) {
         foundFilename = filename;
 
-        const assetInfo = assetsInfo.get(
-          pathname.slice(publicPathObject.pathname.length),
-        );
+        if (assetsInfo) {
+          const assetInfo = assetsInfo.get(
+            pathname.slice(publicPathObject.pathname.length),
+          );
 
-        extra.immutable = assetInfo ? assetInfo.immutable : false;
+          extra.immutable = assetInfo ? assetInfo.immutable : false;
+        }
 
         break;
       } else if (
