@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.4.2](https://github.com/webpack/webpack-dev-middleware/compare/v7.4.1...v7.4.2) (2024-08-21)
+
+
+### Bug Fixes
+
+* no crash when headers are already sent ([#1929](https://github.com/webpack/webpack-dev-middleware/issues/1929)) ([c20f1d9](https://github.com/webpack/webpack-dev-middleware/commit/c20f1d98dff9b51931fae44a44fbc53387768673))
+
 ### [7.4.1](https://github.com/webpack/webpack-dev-middleware/compare/v7.4.0...v7.4.1) (2024-08-20)
 
 
