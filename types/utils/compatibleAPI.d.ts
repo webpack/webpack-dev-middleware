@@ -22,6 +22,7 @@ export type ExpectedServerResponse = {
   send?: ((data: string | Buffer) => void) | undefined;
   finish?: ((data?: string | Buffer) => void) | undefined;
   getResponseHeaders?: (() => string[]) | undefined;
+  getHeadersSent?: (() => boolean) | undefined;
   stream?: ((data: any) => void) | undefined;
   getOutgoing?: (() => any) | undefined;
   setState?: ((name: string, value: any) => void) | undefined;
@@ -64,6 +65,7 @@ export function getStatusCode<
  * @property {(data: string | Buffer) => void} [send]
  * @property {(data?: string | Buffer) => void} [finish]
  * @property {() => string[]} [getResponseHeaders]
+ * @property {() => boolean} [getHeadersSent]
  * @property {(data: any) => void} [stream]
  * @property {() => any} [getOutgoing]
  * @property {(name: string, value: any) => void} [setState]
@@ -133,6 +135,14 @@ export function removeResponseHeader<
 export function getResponseHeaders<
   Response extends ServerResponse & ExpectedServerResponse,
 >(res: Response): string[];
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
+ * @returns {boolean}
+ */
+export function getHeadersSent<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response): boolean;
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res

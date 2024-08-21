@@ -15,6 +15,7 @@ const {
   setResponseHeader,
   removeResponseHeader,
   getResponseHeaders,
+  getHeadersSent,
   send,
   finish,
   pipe,
@@ -494,56 +495,44 @@ function wrapper(context) {
         return;
       }
 
+      if (getHeadersSent(res)) {
+        await goNext();
+        return;
+      }
+
       const { size } = /** @type {import("fs").Stats} */ (extra.stats);
 
       let len = size;
       let offset = 0;
 
       // Send logic
-      let { headers } = context.options;
+      if (context.options.headers) {
+        let { headers } = context.options;
 
-      if (typeof headers === "function") {
-        headers = /** @type {NormalizedHeaders} */ (headers(req, res, context));
-      }
+        if (typeof headers === "function") {
+          headers = /** @type {NormalizedHeaders} */ (
+            headers(req, res, context)
+          );
+        }
 
-      /**
-       * @type {{key: string, value: string | number}[]}
-       */
-      const allHeaders = [];
+        /**
+         * @type {{key: string, value: string | number}[]}
+         */
+        const allHeaders = [];
 
-      if (typeof headers !== "undefined") {
-        if (!Array.isArray(headers)) {
-          // eslint-disable-next-line guard-for-in
-          for (const name in headers) {
-            allHeaders.push({ key: name, value: headers[name] });
+        if (typeof headers !== "undefined") {
+          if (!Array.isArray(headers)) {
+            // eslint-disable-next-line guard-for-in
+            for (const name in headers) {
+              allHeaders.push({ key: name, value: headers[name] });
+            }
+
+            headers = allHeaders;
           }
 
-          headers = allHeaders;
-        }
-
-        for (const { key, value } of headers) {
-          setResponseHeader(res, key, value);
-        }
-      }
-
-      if (
-        !getResponseHeader(res, "Content-Type") ||
-        getStatusCode(res) === 404
-      ) {
-        removeResponseHeader(res, "Content-Type");
-        // content-type name(like application/javascript; charset=utf-8) or false
-        const contentType = mime.contentType(path.extname(filename));
-
-        // Only set content-type header if media type is known
-        // https://tools.ietf.org/html/rfc7231#section-3.1.1.5
-        if (contentType) {
-          setResponseHeader(res, "Content-Type", contentType);
-        } else if (context.options.mimeTypeDefault) {
-          setResponseHeader(
-            res,
-            "Content-Type",
-            context.options.mimeTypeDefault,
-          );
+          for (const { key, value } of headers) {
+            setResponseHeader(res, key, value);
+          }
         }
       }
 
@@ -664,6 +653,27 @@ function wrapper(context) {
           }
 
           setResponseHeader(res, "ETag", result.hash);
+        }
+      }
+
+      if (
+        !getResponseHeader(res, "Content-Type") ||
+        getStatusCode(res) === 404
+      ) {
+        removeResponseHeader(res, "Content-Type");
+        // content-type name(like application/javascript; charset=utf-8) or false
+        const contentType = mime.contentType(path.extname(filename));
+
+        // Only set content-type header if media type is known
+        // https://tools.ietf.org/html/rfc7231#section-3.1.1.5
+        if (contentType) {
+          setResponseHeader(res, "Content-Type", contentType);
+        } else if (context.options.mimeTypeDefault) {
+          setResponseHeader(
+            res,
+            "Content-Type",
+            context.options.mimeTypeDefault,
+          );
         }
       }
 

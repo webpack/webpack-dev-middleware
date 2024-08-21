@@ -3287,6 +3287,97 @@ describe.each([
           );
         });
       });
+
+      describe("should work when headers are already sent", () => {
+        let compiler;
+
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-test-errors-headers-sent",
+        );
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {},
+            {
+              setupMiddlewares: (middlewares) => {
+                if (name === "hapi") {
+                  // There's no such thing as "the next route handler" in hapi. One request is matched to one or no route handlers.
+                } else if (name === "koa") {
+                  middlewares.push(async (ctx, next) => {
+                    // eslint-disable-next-line no-param-reassign
+                    ctx.url = "/index.html";
+
+                    await next();
+                  });
+                  middlewares.push(middleware.koaWrapper(compiler, {}));
+                } else if (name === "hono") {
+                  middlewares.unshift(async (c, next) => {
+                    await next();
+
+                    return new Response("Hello Node.js!");
+                  });
+                  middlewares.push(middleware.honoWrapper(compiler, {}));
+                } else {
+                  middlewares.push({
+                    route: "/",
+                    fn: (req, res, next) => {
+                      // eslint-disable-next-line no-param-reassign
+                      req.url = "/index.html";
+                      next();
+                    },
+                  });
+                  middlewares.push(middleware(compiler, {}));
+                }
+
+                return middlewares;
+              },
+            },
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "index.html"),
+            "HTML",
+          );
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+        });
+
+        it('should return the "200" code for the "HEAD" request to the bundle file', async () => {
+          const response = await req.head("/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toBeUndefined();
+        });
+      });
     });
 
     describe("mimeTypes option", () => {
@@ -4467,6 +4558,7 @@ describe.each([
                 middlewares.push(async (ctx, next) => {
                   locals = ctx.state;
 
+                  // eslint-disable-next-line no-param-reassign
                   ctx.status = 200;
 
                   await next();
