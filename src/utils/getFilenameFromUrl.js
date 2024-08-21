@@ -129,6 +129,7 @@ function getFilenameFromUrl(context, url, extra = {}) {
             pathname.slice(publicPathObject.pathname.length),
           );
 
+          // eslint-disable-next-line no-param-reassign
           extra.immutable = assetInfo ? assetInfo.immutable : false;
         }
 

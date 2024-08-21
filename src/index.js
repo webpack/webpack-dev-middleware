@@ -305,7 +305,7 @@ function wdm(compiler, options = {}) {
 /**
  * @template S
  * @template O
- * @typedef {HapiPluginBase<S, O> & { pkg: { name: string } }} HapiPlugin
+ * @typedef {HapiPluginBase<S, O> & { pkg: { name: string }, multiple: boolean }} HapiPlugin
  */
 
 /**
@@ -322,6 +322,8 @@ function hapiWrapper() {
     pkg: {
       name: "webpack-dev-middleware",
     },
+    // Allow to have multiple middleware
+    multiple: true,
     register(server, options) {
       const { compiler, ...rest } = options;
 
@@ -332,7 +334,11 @@ function hapiWrapper() {
       const devMiddleware = wdm(compiler, rest);
 
       // @ts-ignore
-      server.decorate("server", "webpackDevMiddleware", devMiddleware);
+      if (!server.decorations.server.includes("webpackDevMiddleware")) {
+        // @ts-ignore
+        server.decorate("server", "webpackDevMiddleware", devMiddleware);
+      }
+
       // @ts-ignore
       server.ext("onRequest", (request, h) =>
         new Promise((resolve, reject) => {
@@ -567,6 +573,8 @@ function honoWrapper(compiler, options) {
     };
 
     res.getReadyReadableStreamState = () => "readable";
+
+    res.getHeadersSent = () => c.env.outgoing.headersSent;
 
     let body;
 

@@ -213,7 +213,7 @@ declare namespace wdm {
 /**
  * @template S
  * @template O
- * @typedef {HapiPluginBase<S, O> & { pkg: { name: string } }} HapiPlugin
+ * @typedef {HapiPluginBase<S, O> & { pkg: { name: string }, multiple: boolean }} HapiPlugin
  */
 /**
  * @typedef {Options & { compiler: Compiler | MultiCompiler }} HapiOptions
@@ -409,6 +409,7 @@ type HapiPlugin<S, O> = HapiPluginBase<S, O> & {
   pkg: {
     name: string;
   };
+  multiple: boolean;
 };
 type HapiOptions = Options & {
   compiler: Compiler | MultiCompiler;

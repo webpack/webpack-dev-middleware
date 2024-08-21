@@ -19,6 +19,7 @@
  * @property {(data: string | Buffer) => void} [send]
  * @property {(data?: string | Buffer) => void} [finish]
  * @property {() => string[]} [getResponseHeaders]
+ * @property {() => boolean} [getHeadersSent]
  * @property {(data: any) => void} [stream]
  * @property {() => any} [getOutgoing]
  * @property {(name: string, value: any) => void} [setState]
@@ -145,6 +146,20 @@ function getResponseHeaders(res) {
   }
 
   return res.getHeaderNames();
+}
+
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res
+ * @returns {boolean}
+ */
+function getHeadersSent(res) {
+  // Pseudo API
+  if (typeof res.getHeadersSent === "function") {
+    return res.getHeadersSent();
+  }
+
+  return res.headersSent;
 }
 
 /**
@@ -305,6 +320,7 @@ module.exports = {
   setResponseHeader,
   removeResponseHeader,
   getResponseHeaders,
+  getHeadersSent,
   pipe,
   send,
   finish,
