@@ -5328,7 +5328,7 @@ describe.each([
           expect(response.statusCode).toEqual(200);
           expect(response.headers.etag).toBe(
             /* cspell:disable-next-line */
-            '"18c7-l/LCspQS5fbbf1kkLGOsK9FTpbg"',
+            '"1904-nDiSRnwlfx0nYluhHe2GnxHXgzc"',
           );
         });
 
@@ -5390,7 +5390,7 @@ describe.each([
           expect(response.statusCode).toEqual(200);
           expect(response.headers.etag).toBe(
             /* cspell:disable-next-line */
-            '"18c7-l/LCspQS5fbbf1kkLGOsK9FTpbg"',
+            '"1904-nDiSRnwlfx0nYluhHe2GnxHXgzc"',
           );
         });
       });
