@@ -1240,7 +1240,7 @@ describe.each([
           );
         });
 
-        it.only('should return "200" code for the "GET" request and "Content-Length" to the file with unicode', async () => {
+        it('should return "200" code for the "GET" request and "Content-Length" to the file with unicode', async () => {
           const response = await req.get("/byte-length.html");
 
           expect(response.statusCode).toEqual(200);
