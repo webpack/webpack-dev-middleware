@@ -1240,10 +1240,11 @@ describe.each([
           );
         });
 
-        it('should return "200" code for the "GET" request and "Content-Length" to the file with unicode', async () => {
+        it.only('should return "200" code for the "GET" request and "Content-Length" to the file with unicode', async () => {
           const response = await req.get("/byte-length.html");
 
           expect(response.statusCode).toEqual(200);
+          expect(response.text).toBe("\u00bd + \u00bc = \u00be");
           expect(response.headers["content-length"]).toEqual("12");
           expect(response.headers["content-type"]).toEqual(
             "text/html; charset=utf-8",
