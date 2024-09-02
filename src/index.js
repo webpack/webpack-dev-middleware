@@ -522,10 +522,10 @@ function honoWrapper(compiler, options) {
      * @returns {string | undefined}
      */
     req.getURL = () => {
-      // use c.set,because c.req.url read only!
-      const reqUrl = c.get('c_req_url');
-      return reqUrl ? reqUrl : c.req.url;
-    }
+      // @ts-ignore
+      const url = c.get("c.req.url");
+      return url || c.req.url;
+    };
 
     let { status } = c.res;
 
