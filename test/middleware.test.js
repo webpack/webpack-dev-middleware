@@ -1,11 +1,19 @@
 import fs from "fs";
 import path from "path";
 
-import express from "express";
 import connect from "connect";
+import express from "express";
+import router from "router";
+import finalhandler from "finalhandler";
+import fastify from "fastify";
+import koa from "koa";
+import Hapi from "@hapi/hapi";
+import { Hono } from "hono";
+import { serve } from "@hono/node-server";
 import request from "supertest";
 import memfs, { createFsFromVolume, Volume } from "memfs";
-import del from "del";
+
+import { Stats } from "webpack";
 
 import middleware from "../src";
 
@@ -17,59 +25,822 @@ import webpackWatchOptionsConfig from "./fixtures/webpack.watch-options.config";
 import webpackMultiWatchOptionsConfig from "./fixtures/webpack.array.watch-options.config";
 import webpackQueryStringConfig from "./fixtures/webpack.querystring.config";
 import webpackClientServerConfig from "./fixtures/webpack.client.server.config";
+import getCompilerHooks from "./helpers/getCompilerHooks";
+import webpackPublicPathConfig from "./fixtures/webpack.public-path.config";
+import webpackMultiDevServerFalseConfig from "./fixtures/webpack.array.dev-server-false";
+import webpackConfigImmutable from "./fixtures/webpack.immutable.config";
 
 // Suppress unnecessary stats output
 global.console.log = jest.fn();
 
-describe.each([
-  ["express", express],
-  ["connect", connect],
-])("%s framework:", (_, framework) => {
-  describe("middleware", () => {
-    let instance;
-    let listen;
-    let app;
-    let req;
+async function startServer(name, app) {
+  return new Promise((resolve, reject) => {
+    if (name === "router") {
+      // eslint-disable-next-line global-require
+      const server = require("http").createServer((req, res) => {
+        app(req, res, finalhandler(req, res));
+      });
 
-    function listenShorthand(done) {
-      return app.listen((error) => {
+      server.listen({ port: 3000 }, (error) => {
         if (error) {
-          return done(error);
+          return reject(error);
         }
 
-        return done();
+        return resolve(server);
+      });
+    } else if (name === "hono") {
+      const server = serve(app, () => resolve(server));
+    } else {
+      const server = app.listen({ port: 3000 }, (error) => {
+        if (error) {
+          return reject(error);
+        }
+
+        return resolve(server);
       });
     }
+  });
+}
 
-    function close(done) {
-      if (instance.context.watching.closed) {
-        if (listen) {
-          listen.close(done);
+async function frameworkFactory(
+  name,
+  framework,
+  compiler,
+  devMiddlewareOptions,
+  options = {},
+) {
+  switch (name) {
+    case "hapi": {
+      const server = framework.server();
+      const hapiPlugin = {
+        plugin: middleware.hapiWrapper(),
+        options: {
+          compiler,
+          ...devMiddlewareOptions,
+        },
+      };
+
+      const middlewares =
+        typeof options.setupMiddlewares === "function"
+          ? options.setupMiddlewares([hapiPlugin])
+          : [hapiPlugin];
+
+      await Promise.all(
+        middlewares.map((item) => {
+          // eslint-disable-next-line no-shadow
+          const { plugin, options } = item;
+
+          return server.register({
+            plugin,
+            options,
+          });
+        }),
+      );
+
+      await server.start();
+
+      const req = request(server.listener);
+
+      return [server, req, server.webpackDevMiddleware];
+    }
+    case "koa": {
+      // eslint-disable-next-line new-cap
+      const app = new framework();
+      const koaMiddleware = middleware.koaWrapper(
+        compiler,
+        devMiddlewareOptions,
+      );
+      const middlewares =
+        typeof options.setupMiddlewares === "function"
+          ? options.setupMiddlewares([koaMiddleware])
+          : [koaMiddleware];
+
+      for (const item of middlewares) {
+        if (item.route) {
+          app.use(item.route, item.fn);
         } else {
-          done();
+          app.use(item);
         }
+      }
+
+      const server = await startServer(name, app);
+      const req = request(server);
+
+      return [server, req, koaMiddleware.devMiddleware];
+    }
+    case "hono": {
+      // eslint-disable-next-line new-cap
+      const app = new framework();
+      const server = await startServer(name, app);
+      const req = request(server);
+      const instance = middleware.honoWrapper(compiler, devMiddlewareOptions);
+      const middlewares =
+        typeof options.setupMiddlewares === "function"
+          ? options.setupMiddlewares([instance])
+          : [instance];
+
+      for (const item of middlewares) {
+        if (item.route) {
+          app.use(item.route, item.fn);
+        } else {
+          app.use(item);
+        }
+      }
+
+      return [server, req, instance.devMiddleware];
+    }
+    default: {
+      const isFastify = name === "fastify";
+      const isRouter = name === "router";
+      const app = framework();
+
+      if (isFastify) {
+        // eslint-disable-next-line global-require
+        await app.register(require("@fastify/express"));
+      }
+
+      const instance = middleware(compiler, devMiddlewareOptions);
+      const middlewares =
+        typeof options.setupMiddlewares === "function"
+          ? options.setupMiddlewares([instance])
+          : [instance];
+
+      for (const item of middlewares) {
+        if (item.route) {
+          app.use(item.route, item.fn);
+        } else {
+          app.use(item);
+        }
+      }
+
+      if (isFastify) {
+        await app.ready();
+      }
+
+      const server = await startServer(name, app);
+      const req = isFastify
+        ? request(app.server)
+        : isRouter
+          ? request(server)
+          : request(app);
+
+      return [isFastify ? app.server : server, req, instance];
+    }
+  }
+}
+
+async function closeServer(server) {
+  // hapi
+  if (typeof server.stop === "function") {
+    return server.stop();
+  }
+
+  return new Promise((resolve, reject) => {
+    server.close((err) => {
+      if (err) {
+        reject(err);
 
         return;
       }
 
-      instance.close(() => {
-        if (listen) {
-          listen.close(done);
-        } else {
-          done();
-        }
-      });
-    }
+      resolve();
+    });
+  });
+}
 
-    describe("basic", () => {
+async function close(server, instance) {
+  return Promise.resolve()
+    .then(() => {
+      if (!instance.context.watching.closed) {
+        return new Promise((resolve, reject) => {
+          instance.close((err) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+
+            resolve();
+          });
+        });
+      }
+
+      return Promise.resolve();
+    })
+    .then(() => {
+      if (server) {
+        return closeServer(server);
+      }
+
+      return Promise.resolve();
+    });
+}
+
+function get404ContentTypeHeader(name) {
+  switch (name) {
+    case "koa":
+      return "text/plain; charset=utf-8";
+    case "hapi":
+      return "application/json; charset=utf-8";
+    case "fastify":
+      return "application/json; charset=utf-8";
+    case "hono":
+      return "text/plain; charset=UTF-8";
+    default:
+      return "text/html; charset=utf-8";
+  }
+}
+
+function applyTestMiddleware(name, middlewares) {
+  if (name === "hapi") {
+    middlewares.push({
+      plugin: {
+        name: "myPlugin",
+        version: "1.0.0",
+        register(innerServer) {
+          innerServer.route({
+            method: "GET",
+            path: "/file.jpg",
+            handler() {
+              return "welcome";
+            },
+          });
+        },
+      },
+    });
+  } else if (name === "koa") {
+    middlewares.push(async (ctx, next) => {
+      if (ctx.request.url === "/file.jpg") {
+        ctx.set("Content-Type", "text/html");
+        // eslint-disable-next-line no-param-reassign
+        ctx.body = "welcome";
+      }
+
+      await next();
+    });
+  } else if (name === "hono") {
+    // eslint-disable-next-line consistent-return
+    middlewares.push(async (c, next) => {
+      if (c.req.url.endsWith("/file.jpg")) {
+        c.header("Content-Type", "text/html");
+        c.status(200);
+
+        return c.body("welcome");
+      }
+
+      await next();
+    });
+  } else {
+    middlewares.push({
+      route: "/file.jpg",
+      fn: (req, res) => {
+        // Express API
+        if (res.send) {
+          res.send("welcome");
+        }
+        // Connect API
+        else {
+          res.setHeader("Content-Type", "text/html");
+          res.end("welcome");
+        }
+      },
+    });
+  }
+
+  return middlewares;
+}
+
+function parseHttpDate(date) {
+  const timestamp = date && Date.parse(date);
+
+  // istanbul ignore next: guard against date.js Date.parse patching
+  return typeof timestamp === "number" ? timestamp : NaN;
+}
+
+describe.each([
+  ["connect", connect],
+  ["express", express],
+  ["router", router],
+  ["fastify", fastify],
+  ["koa", koa],
+  ["hapi", Hapi],
+  ["hono", Hono],
+])("%s framework:", (name, framework) => {
+  describe("middleware", () => {
+    let instance;
+    let server;
+    let req;
+
+    describe("API", () => {
+      let compiler;
+
+      describe("constructor", () => {
+        describe("should accept compiler", () => {
+          beforeEach(async () => {
+            compiler = getCompiler(webpackConfig);
+
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+            );
+          });
+
+          afterEach(async () => {
+            await close(server, instance);
+          });
+
+          it("should work", (done) => {
+            const doneSpy = jest.spyOn(
+              getCompilerHooks(compiler).done[0],
+              "fn",
+            );
+
+            instance.waitUntilValid(() => {
+              instance.close();
+
+              expect(compiler.running).toBe(false);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+
+              doneSpy.mockRestore();
+
+              done();
+            });
+          });
+        });
+
+        describe("should accept compiler in watch mode", () => {
+          beforeEach(async () => {
+            compiler = getCompiler({ ...webpackConfig, ...{ watch: true } });
+
+            instance = middleware(compiler);
+
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+            );
+          });
+
+          afterEach(async () => {
+            await close(server, instance);
+          });
+
+          it("should work", (done) => {
+            const doneSpy = jest.spyOn(
+              getCompilerHooks(compiler).done[0],
+              "fn",
+            );
+
+            instance.waitUntilValid(() => {
+              instance.close();
+
+              expect(compiler.running).toBe(false);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+
+              doneSpy.mockRestore();
+
+              done();
+            });
+          });
+        });
+      });
+
+      describe("waitUntilValid method", () => {
+        beforeEach(async () => {
+          compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it("should work without callback", (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], "fn");
+
+          instance.waitUntilValid();
+
+          const intervalId = setInterval(() => {
+            if (instance.context.state) {
+              expect(compiler.running).toBe(true);
+              expect(instance.context.state).toBe(true);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+              expect(doneSpy.mock.calls[0][0]).toBeInstanceOf(Stats);
+
+              doneSpy.mockRestore();
+
+              clearInterval(intervalId);
+
+              done();
+            }
+          });
+        });
+
+        it("should work with callback", (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], "fn");
+          let callbackCounter = 0;
+
+          instance.waitUntilValid(() => {
+            callbackCounter += 1;
+          });
+
+          const intervalId = setInterval(() => {
+            if (instance.context.state) {
+              expect(compiler.running).toBe(true);
+              expect(instance.context.state).toBe(true);
+              expect(callbackCounter).toBe(1);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+
+              doneSpy.mockRestore();
+
+              clearInterval(intervalId);
+
+              done();
+            }
+          });
+        });
+
+        it("should run callback immediately when state already valid", (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], "fn");
+          let callbackCounter = 0;
+          let validToCheck = false;
+
+          instance.waitUntilValid(() => {
+            callbackCounter += 1;
+
+            instance.waitUntilValid(() => {
+              validToCheck = true;
+              callbackCounter += 1;
+            });
+          });
+
+          const intervalId = setInterval(() => {
+            if (instance.context.state && validToCheck) {
+              expect(compiler.running).toBe(true);
+              expect(instance.context.state).toBe(true);
+              expect(callbackCounter).toBe(2);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+
+              doneSpy.mockRestore();
+
+              clearInterval(intervalId);
+
+              done();
+            }
+          });
+        });
+      });
+
+      describe("invalidate method", () => {
+        beforeEach(async () => {
+          compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it("should work without callback", (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], "fn");
+
+          instance.invalidate();
+
+          const intervalId = setInterval(() => {
+            if (instance.context.state) {
+              expect(compiler.running).toBe(true);
+              expect(instance.context.state).toBe(true);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+
+              doneSpy.mockRestore();
+
+              clearInterval(intervalId);
+
+              done();
+            }
+          });
+        });
+
+        it("should work with callback", (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], "fn");
+          let callbackCounter = 0;
+
+          instance.invalidate(() => {
+            callbackCounter += 1;
+          });
+
+          const intervalId = setInterval(() => {
+            if (instance.context.state) {
+              expect(compiler.running).toBe(true);
+              expect(instance.context.state).toBe(true);
+              expect(callbackCounter).toBe(1);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+
+              doneSpy.mockRestore();
+
+              clearInterval(intervalId);
+
+              done();
+            }
+          });
+        });
+      });
+
+      describe("getFilenameFromUrl method", () => {
+        describe("should work", () => {
+          beforeEach(async () => {
+            compiler = getCompiler(webpackConfig);
+
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+            );
+          });
+
+          afterEach(async () => {
+            await close(server, instance);
+          });
+
+          it("should work", (done) => {
+            instance.waitUntilValid(() => {
+              expect(instance.getFilenameFromUrl("/bundle.js")).toBe(
+                path.join(webpackConfig.output.path, "/bundle.js"),
+              );
+              expect(instance.getFilenameFromUrl("/")).toBe(
+                path.join(webpackConfig.output.path, "/index.html"),
+              );
+              expect(instance.getFilenameFromUrl("/index.html")).toBe(
+                path.join(webpackConfig.output.path, "/index.html"),
+              );
+              expect(instance.getFilenameFromUrl("/svg.svg")).toBe(
+                path.join(webpackConfig.output.path, "/svg.svg"),
+              );
+              expect(
+                instance.getFilenameFromUrl("/unknown.unknown"),
+              ).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl("/unknown/unknown.unknown"),
+              ).toBeUndefined();
+
+              done();
+            });
+          });
+        });
+
+        describe('should work when the "index" option disabled', () => {
+          beforeEach(async () => {
+            compiler = getCompiler(webpackConfig);
+
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+              {
+                index: false,
+              },
+            );
+          });
+
+          afterEach(async () => {
+            await close(server, instance);
+          });
+
+          it("should work", (done) => {
+            instance.waitUntilValid(() => {
+              expect(instance.getFilenameFromUrl("/bundle.js")).toBe(
+                path.join(webpackConfig.output.path, "/bundle.js"),
+              );
+              // eslint-disable-next-line no-undefined
+              expect(instance.getFilenameFromUrl("/")).toBe(undefined);
+              expect(instance.getFilenameFromUrl("/index.html")).toBe(
+                path.join(webpackConfig.output.path, "/index.html"),
+              );
+              expect(instance.getFilenameFromUrl("/svg.svg")).toBe(
+                path.join(webpackConfig.output.path, "/svg.svg"),
+              );
+              expect(
+                instance.getFilenameFromUrl("/unknown.unknown"),
+              ).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl("/unknown/unknown.unknown"),
+              ).toBeUndefined();
+
+              done();
+            });
+          });
+        });
+
+        describe('should work with the "publicPath"', () => {
+          beforeEach(async () => {
+            compiler = getCompiler(webpackPublicPathConfig);
+
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+            );
+          });
+
+          afterEach(async () => {
+            await close(server, instance);
+          });
+
+          it("should work", (done) => {
+            instance.waitUntilValid(() => {
+              expect(
+                instance.getFilenameFromUrl("/public/path/bundle.js"),
+              ).toBe(
+                path.join(webpackPublicPathConfig.output.path, "/bundle.js"),
+              );
+              expect(instance.getFilenameFromUrl("/public/path/")).toBe(
+                path.join(webpackPublicPathConfig.output.path, "/index.html"),
+              );
+              expect(
+                instance.getFilenameFromUrl("/public/path/index.html"),
+              ).toBe(
+                path.join(webpackPublicPathConfig.output.path, "/index.html"),
+              );
+              expect(instance.getFilenameFromUrl("/public/path/svg.svg")).toBe(
+                path.join(webpackPublicPathConfig.output.path, "/svg.svg"),
+              );
+
+              expect(instance.getFilenameFromUrl("/")).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl("/unknown.unknown"),
+              ).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl("/unknown/unknown.unknown"),
+              ).toBeUndefined();
+
+              done();
+            });
+          });
+        });
+
+        describe("should work in multi compiler mode", () => {
+          beforeEach(async () => {
+            compiler = getCompiler(webpackMultiConfig);
+
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+            );
+          });
+
+          afterEach(async () => {
+            await close(server, instance);
+          });
+
+          it("should work", (done) => {
+            instance.waitUntilValid(() => {
+              expect(instance.getFilenameFromUrl("/static-one/bundle.js")).toBe(
+                path.join(webpackMultiConfig[0].output.path, "/bundle.js"),
+              );
+              expect(instance.getFilenameFromUrl("/static-one/")).toBe(
+                path.join(webpackMultiConfig[0].output.path, "/index.html"),
+              );
+              expect(
+                instance.getFilenameFromUrl("/static-one/index.html"),
+              ).toBe(
+                path.join(webpackMultiConfig[0].output.path, "/index.html"),
+              );
+              expect(instance.getFilenameFromUrl("/static-one/svg.svg")).toBe(
+                path.join(webpackMultiConfig[0].output.path, "/svg.svg"),
+              );
+              expect(
+                instance.getFilenameFromUrl("/static-one/unknown.unknown"),
+              ).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl(
+                  "/static-one/unknown/unknown.unknown",
+                ),
+              ).toBeUndefined();
+
+              expect(instance.getFilenameFromUrl("/static-two/bundle.js")).toBe(
+                path.join(webpackMultiConfig[1].output.path, "/bundle.js"),
+              );
+              expect(
+                instance.getFilenameFromUrl("/static-two/unknown.unknown"),
+              ).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl(
+                  "/static-two/unknown/unknown.unknown",
+                ),
+              ).toBeUndefined();
+
+              expect(instance.getFilenameFromUrl("/")).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl("/static-one/unknown.unknown"),
+              ).toBeUndefined();
+              expect(
+                instance.getFilenameFromUrl(
+                  "/static-one/unknown/unknown.unknown",
+                ),
+              ).toBeUndefined();
+
+              done();
+            });
+          });
+        });
+      });
+
+      describe("close method", () => {
+        beforeEach(async () => {
+          compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it("should work without callback", (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], "fn");
+
+          instance.waitUntilValid(() => {
+            instance.close();
+
+            expect(compiler.running).toBe(false);
+            expect(doneSpy).toHaveBeenCalledTimes(1);
+
+            doneSpy.mockRestore();
+
+            done();
+          });
+        });
+
+        it("should work with callback", (done) => {
+          const doneSpy = jest.spyOn(getCompilerHooks(compiler).done[0], "fn");
+
+          instance.waitUntilValid(() => {
+            instance.close(() => {
+              expect(compiler.running).toBe(false);
+              expect(doneSpy).toHaveBeenCalledTimes(1);
+
+              doneSpy.mockRestore();
+
+              done();
+            });
+          });
+        });
+      });
+
+      describe("context property", () => {
+        beforeEach(async () => {
+          compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it("should contain public properties", (done) => {
+          expect(instance.context.state).toBeDefined();
+          expect(instance.context.options).toBeDefined();
+          expect(instance.context.compiler).toBeDefined();
+          expect(instance.context.watching).toBeDefined();
+          expect(instance.context.outputFileSystem).toBeDefined();
+
+          // the compilation needs to finish, as it will still be running
+          // after the test is done if not finished, potentially impacting other tests
+          compiler.hooks.done.tap("wdm-test", () => {
+            done();
+          });
+        });
+      });
+    });
+
+    describe.only("basic", () => {
       describe("should work", () => {
         let compiler;
         let codeContent;
-        let codeLength;
 
         const outputPath = path.resolve(__dirname, "./outputs/basic-test");
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -77,26 +848,25 @@ describe.each([
               path: outputPath,
             },
           });
-
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(() => {
-            compiler.hooks.afterCompile.tap("wdm-test", (params) => {
-              codeContent = params.assets["bundle.js"].source();
-              codeLength = Buffer.byteLength(codeContent);
-
-              done();
-            });
+          compiler.hooks.afterCompile.tap("wdm-test", (params) => {
+            codeContent = params.assets["bundle.js"].source();
           });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
           });
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "image.svg"),
+            "svg image",
+          );
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "image image.svg"),
             "svg image",
           );
           instance.context.outputFileSystem.writeFileSync(
@@ -120,10 +890,15 @@ describe.each([
             "unknown",
           );
 
-          req = request(app);
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "empty-file.txt"),
+            "",
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it("should not find the bundle file on disk", async () => {
           const response = await req.get("/bundle.js");
@@ -142,7 +917,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual(
-            String(codeLength),
+            String(Buffer.byteLength(codeContent)),
           );
           expect(response.headers["content-type"]).toEqual(
             "application/javascript; charset=utf-8",
@@ -155,7 +930,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual(
-            String(codeLength),
+            String(Buffer.byteLength(codeContent)),
           );
           expect(response.headers["content-type"]).toEqual(
             "application/javascript; charset=utf-8",
@@ -175,6 +950,36 @@ describe.each([
           );
 
           const response = await req.get("/image.svg");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString(),
+          );
+          expect(response.headers["content-type"]).toEqual("image/svg+xml");
+        });
+
+        it('should return the "200" code for the "GET" request to the "image.svg" file with "/../"', async () => {
+          const fileData = instance.context.outputFileSystem.readFileSync(
+            path.resolve(outputPath, "image.svg"),
+          );
+
+          const response = await req.get("/public/../image.svg");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString(),
+          );
+          expect(response.headers["content-type"]).toEqual("image/svg+xml");
+        });
+
+        it('should return the "200" code for the "GET" request to the "image.svg" file with "/../../../"', async () => {
+          const fileData = instance.context.outputFileSystem.readFileSync(
+            path.resolve(outputPath, "image.svg"),
+          );
+
+          const response = await req.get(
+            "/public/assets/images/../../../image.svg",
+          );
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-length"]).toEqual(
@@ -260,10 +1065,22 @@ describe.each([
 
           expect(response.statusCode).toEqual(416);
           expect(response.headers["content-range"]).toEqual(
-            `bytes */${codeLength}`,
+            `bytes */${Buffer.byteLength(codeContent)}`,
           );
           expect(response.headers["content-type"]).toEqual(
             "text/html; charset=utf-8",
+          );
+          expect(response.text).toEqual(
+            `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Range Not Satisfiable</pre>
+</body>
+</html>`,
           );
         });
 
@@ -274,7 +1091,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 3000-3500/${codeLength}`,
+            `bytes 3000-3500/${Buffer.byteLength(codeContent)}`,
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
@@ -284,14 +1101,14 @@ describe.each([
           expect(response.text.length).toBe(501);
         });
 
-        it('should return the "206" code for the "GET" request with the valid range header for "HEAD" request', async () => {
+        it('should return the "206" code for the "HEAD" request with the valid range header', async () => {
           const response = await req
             .head("/bundle.js")
             .set("Range", "bytes=3000-3500");
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 3000-3500/${codeLength}`,
+            `bytes 3000-3500/${Buffer.byteLength(codeContent)}`,
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
@@ -307,7 +1124,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 3000-3500/${codeLength}`,
+            `bytes 3000-3500/${Buffer.byteLength(codeContent)}`,
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
@@ -324,7 +1141,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 3000-3500/${codeLength}`,
+            `bytes 3000-3500/${Buffer.byteLength(codeContent)}`,
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
@@ -341,7 +1158,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 0-3500/${codeLength}`,
+            `bytes 0-3500/${Buffer.byteLength(codeContent)}`,
           );
           expect(response.headers["content-length"]).toEqual("3501");
           expect(response.headers["content-type"]).toEqual(
@@ -358,7 +1175,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-range"]).toEqual(
-            `bytes 0-800/${codeLength}`,
+            `bytes 0-800/${Buffer.byteLength(codeContent)}`,
           );
           expect(response.headers["content-length"]).toEqual("801");
           expect(response.headers["content-type"]).toEqual(
@@ -423,16 +1240,57 @@ describe.each([
           );
         });
 
-        it('should return "200" code code for the "GET" request and "Content-Length" to the file with unicode', async () => {
+        it('should return "200" code for the "GET" request and "Content-Length" to the file with unicode', async () => {
           const response = await req.get("/byte-length.html");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-length"]).toEqual("12");
+
+          // todo bug on node.js@22 and memfs
+          const [major] = process.versions.node.split(".").map(Number);
+
+          if (major < 22) {
+            expect(response.text).toBe("\u00bd + \u00bc = \u00be");
+            expect(response.headers["content-length"]).toEqual("12");
+          }
+
           expect(response.headers["content-type"]).toEqual(
             "text/html; charset=utf-8",
           );
           expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
             false,
+          );
+        });
+
+        it('should return "200" code for the "GET" request and "Content-Length" of "0" when file is empty', async () => {
+          const response = await req.get("/empty-file.txt");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual("0");
+          expect(response.headers["content-type"]).toEqual(
+            "text/plain; charset=utf-8",
+          );
+        });
+
+        it('should return the "200" code for the "GET" request to the "image image.svg" file', async () => {
+          const fileData = instance.context.outputFileSystem.readFileSync(
+            path.resolve(outputPath, "image image.svg"),
+          );
+
+          const response = await req.get("/image image.svg");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString(),
+          );
+          expect(response.headers["content-type"]).toEqual("image/svg+xml");
+        });
+
+        it('should return the "404" code for the "GET" request to the "%FF" file', async () => {
+          const response = await req.get("/%FF");
+
+          expect(response.statusCode).toEqual(404);
+          expect(response.headers["content-type"]).toEqual(
+            get404ContentTypeHeader(name),
           );
         });
       });
@@ -442,7 +1300,7 @@ describe.each([
 
         const outputPath = path.resolve(__dirname, "./outputs/basic");
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -452,17 +1310,16 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "400" code for the "GET" request to the bundle file', async () => {
           const response = await req.get("/bundle.js");
@@ -472,20 +1329,19 @@ describe.each([
       });
 
       describe("should work in multi-compiler mode", () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackMultiConfig);
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
           const response = await req.get("/static-one/bundle.js");
@@ -546,7 +1402,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8",
+            get404ContentTypeHeader(name),
           );
         });
 
@@ -555,7 +1411,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8",
+            get404ContentTypeHeader(name),
           );
         });
 
@@ -564,7 +1420,113 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
+            get404ContentTypeHeader(name),
+          );
+        });
+      });
+
+      describe("should work in multi-compiler mode with `devServer` false", () => {
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/dev-server-false",
+        );
+
+        beforeAll(async () => {
+          const compiler = getCompiler(webpackMultiDevServerFalseConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+        });
+
+        afterAll(async () => {
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
+          await close(server, instance);
+        });
+
+        it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
+          const bundlePath = path.resolve(
+            __dirname,
+            "./outputs/dev-server-false/js4/",
+          );
+
+          expect(fs.existsSync(path.resolve(bundlePath, "bundle.js"))).toBe(
+            false,
+          );
+
+          const response = await req.get("/static-one/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
+        });
+
+        it('should return "404" code for GET request to a non existing file for the first compiler', async () => {
+          const response = await req.get("/static-one/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
+        });
+
+        it('should return "200" code for GET request to the "public" path for the first compiler', async () => {
+          const response = await req.get("/static-one/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
             "text/html; charset=utf-8",
+          );
+        });
+
+        it('should return "200" code for GET request to the "index" option for the first compiler', async () => {
+          const response = await req.get("/static-one/index.html");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+        });
+
+        it('should return "200" code for GET request for the bundle file for the second compiler', async () => {
+          const bundlePath = path.resolve(
+            __dirname,
+            "./outputs/dev-server-false/js3/",
+          );
+
+          expect(fs.existsSync(path.resolve(bundlePath, "bundle.js"))).toBe(
+            true,
+          );
+
+          const response = await req.get("/static-two/bundle.js");
+
+          expect(response.statusCode).toEqual(404);
+        });
+
+        it('should return "404" code for GET request to a non existing file for the second compiler', async () => {
+          const response = await req.get("/static-two/invalid.js");
+
+          expect(response.statusCode).toEqual(404);
+        });
+
+        it('should return "404" code for GET request to the "public" path for the second compiler', async () => {
+          const response = await req.get("/static-two/");
+
+          expect(response.statusCode).toEqual(404);
+        });
+
+        it('should return "404" code for GET request to the "index" option for the second compiler', async () => {
+          const response = await req.get("/static-two/index.html");
+
+          expect(response.statusCode).toEqual(404);
+        });
+
+        it('should return "404" code for GET request to the non-public path', async () => {
+          const response = await req.get("/static-three/");
+
+          expect(response.statusCode).toEqual(404);
+          expect(response.headers["content-type"]).toEqual(
+            get404ContentTypeHeader(name),
           );
         });
       });
@@ -591,32 +1553,32 @@ describe.each([
               },
               {
                 value: "invalid.js",
-                contentType: "text/html; charset=utf-8",
+                contentType: get404ContentTypeHeader(name),
                 code: 404,
               },
               {
                 value: "complex",
-                contentType: "text/html; charset=utf-8",
+                contentType: get404ContentTypeHeader(name),
                 code: 404,
               },
               {
                 value: "complex/invalid.js",
-                contentType: "text/html; charset=utf-8",
+                contentType: get404ContentTypeHeader(name),
                 code: 404,
               },
               {
                 value: "complex/complex",
-                contentType: "text/html; charset=utf-8",
+                contentType: get404ContentTypeHeader(name),
                 code: 404,
               },
               {
                 value: "complex/complex/invalid.js",
-                contentType: "text/html; charset=utf-8",
+                contentType: get404ContentTypeHeader(name),
                 code: 404,
               },
               {
                 value: "%",
-                contentType: "text/html; charset=utf-8",
+                contentType: get404ContentTypeHeader(name),
                 code: 404,
               },
             ],
@@ -699,12 +1661,13 @@ describe.each([
             ],
           },
           {
-            file: "/%foo%/%foo%.js",
+            // fastify uses the `frameworkErrors` option to handle broken URLs
+            file: name === "fastify" ? "/foo/foo.js" : "/%foo%/%foo%.js",
             data: 'console.log("foo");',
             urls: [
               // Filenames can contain characters not allowed in URIs
               {
-                value: "%foo%/%foo%.js",
+                value: name === "fastify" ? "foo/foo.js" : "%foo%/%foo%.js",
                 contentType: "application/javascript; charset=utf-8",
                 code: 200,
               },
@@ -790,6 +1753,39 @@ describe.each([
               },
             ],
           },
+          {
+            file: "windows.txt",
+            data: "windows.txt content",
+            urls: [
+              {
+                value: "windows.txt",
+                contentType: "text/plain; charset=utf-8",
+                code: 200,
+              },
+            ],
+          },
+          {
+            file: "windows 2.txt",
+            data: "windows 2.txt content",
+            urls: [
+              {
+                value: "windows%202.txt",
+                contentType: "text/plain; charset=utf-8",
+                code: 200,
+              },
+            ],
+          },
+          {
+            file: "test & test & %20.txt",
+            data: "test & test & %20.txt content",
+            urls: [
+              {
+                value: "test%20%26%20test%20%26%20%2520.txt",
+                contentType: "text/plain; charset=utf-8",
+                code: 200,
+              },
+            ],
+          },
         ];
 
         const configurations = [
@@ -865,71 +1861,28 @@ describe.each([
             },
             publicPathForRequest: "/",
           },
+          {
+            output: {
+              path: path.join(basicOutputPath, "my static"),
+              publicPath: "/static/",
+            },
+            publicPathForRequest: "/static/",
+          },
+          {
+            output: {
+              path: path.join(basicOutputPath, "my%20static"),
+              publicPath: "/static/",
+            },
+            publicPathForRequest: "/static/",
+          },
+          {
+            output: {
+              path: path.join(basicOutputPath, "my %20 static"),
+              publicPath: "/my%20static/",
+            },
+            publicPathForRequest: "/my%20static/",
+          },
         ];
-
-        const isWindows = process.platform === "win32";
-
-        if (isWindows) {
-          fixtures.push(
-            {
-              file: "windows.txt",
-              data: "windows.txt content",
-              urls: [
-                {
-                  value: "windows.txt",
-                  contentType: "text/plain; charset=utf-8",
-                  code: 200,
-                },
-              ],
-            },
-            {
-              file: "windows 2.txt",
-              data: "windows 2.txt content",
-              urls: [
-                {
-                  value: "windows%202.txt",
-                  contentType: "text/plain; charset=utf-8",
-                  code: 200,
-                },
-              ],
-            },
-            {
-              file: "test & test & %20.txt",
-              data: "test & test & %20.txt content",
-              urls: [
-                {
-                  value: "test%20%26%20test%20%26%20%2520.txt",
-                  contentType: "text/plain; charset=utf-8",
-                  code: 200,
-                },
-              ],
-            },
-          );
-
-          configurations.push(
-            {
-              output: {
-                path: path.join(basicOutputPath, "my static"),
-                publicPath: "/static/",
-              },
-              publicPathForRequest: "/static/",
-            },
-            {
-              output: {
-                path: path.join(basicOutputPath, "my%20static"),
-                publicPath: "/static/",
-              },
-              publicPathForRequest: "/static/",
-            },
-            {
-              output: {
-                path: path.join(basicOutputPath, "my %20 static"),
-                publicPath: "/my%20static/",
-              },
-              publicPathForRequest: "/my%20static/",
-            },
-          );
-        }
 
         for (const configuration of configurations) {
           // eslint-disable-next-line no-loop-func
@@ -939,7 +1892,7 @@ describe.each([
 
             let compiler;
 
-            beforeAll((done) => {
+            beforeAll(async () => {
               compiler = getCompiler({
                 ...webpackConfig,
                 output: {
@@ -949,14 +1902,11 @@ describe.each([
                 },
               });
 
-              instance = middleware(compiler);
-
-              app = framework();
-              app.use(instance);
-
-              listen = listenShorthand(done);
-
-              req = request(app);
+              [server, req, instance] = await frameworkFactory(
+                name,
+                framework,
+                compiler,
+              );
 
               const {
                 context: {
@@ -974,7 +1924,9 @@ describe.each([
               }
             });
 
-            afterAll(close);
+            afterAll(async () => {
+              await close(server, instance);
+            });
 
             for (const { data, urls } of fixtures) {
               for (const { value, contentType, code } of urls) {
@@ -1005,35 +1957,83 @@ describe.each([
       });
 
       describe('should respect the value of the "Content-Type" header from other middleware', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          instance = middleware(compiler);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            // eslint-disable-next-line no-undefined
+            undefined,
+            {
+              setupMiddlewares: (middlewares) => {
+                if (name === "koa") {
+                  middlewares.unshift(async (ctx, next) => {
+                    await next();
 
-          app = framework();
-          // eslint-disable-next-line no-shadow
-          app.use((req, res, next) => {
-            // Express API
-            if (res.set) {
-              res.set("Content-Type", "application/vnd.test+octet-stream");
-            }
-            // Connect API
-            else {
-              res.setHeader(
-                "Content-Type",
-                "application/vnd.test+octet-stream",
-              );
-            }
-            next();
-          });
-          app.use(instance);
+                    ctx.set(
+                      "Content-Type",
+                      "application/vnd.test+octet-stream",
+                    );
+                  });
+                } else if (name === "hapi") {
+                  middlewares.unshift({
+                    plugin: {
+                      name: "myPlugin",
+                      version: "1.0.0",
+                      register(innerServer) {
+                        innerServer.ext("onRequest", (innerRequest, h) => {
+                          innerRequest.raw.res.setHeader(
+                            "Content-Type",
+                            "application/vnd.test+octet-stream",
+                          );
 
-          listen = listenShorthand(done);
+                          return h.continue;
+                        });
+                      },
+                    },
+                  });
+                } else if (name === "hono") {
+                  middlewares.unshift(async (c, next) => {
+                    await next();
 
-          req = request(app);
+                    c.header(
+                      "Content-Type",
+                      "application/vnd.test+octet-stream",
+                    );
+                  });
+                } else {
+                  // eslint-disable-next-line no-shadow
+                  middlewares.unshift((req, res, next) => {
+                    // Express API
+                    if (res.set) {
+                      res.set(
+                        "Content-Type",
+                        "application/vnd.test+octet-stream",
+                      );
+                    }
+                    // Connect API
+                    else {
+                      res.setHeader(
+                        "Content-Type",
+                        "application/vnd.test+octet-stream",
+                      );
+                    }
+
+                    next();
+                  });
+                }
+
+                return middlewares;
+              },
+            },
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should not modify the "Content-Type" header', async () => {
           const response = await req.get("/bundle.js");
@@ -1045,50 +2045,21 @@ describe.each([
         });
       });
 
-      describe('should not throw an error on the valid "output.path" value for linux', () => {
-        it("should be no error", (done) => {
-          expect(() => {
-            const compiler = getCompiler();
-
-            compiler.outputPath = "/my/path";
-
-            instance = middleware(compiler);
-
-            instance.close(done);
-          }).not.toThrow();
-        });
-      });
-
-      describe('should not throw an error on the valid "output.path" value for windows', () => {
-        it("should be no error", (done) => {
-          expect(() => {
-            const compiler = getCompiler();
-
-            compiler.outputPath = "C:/my/path";
-
-            instance = middleware(compiler);
-
-            instance.close(done);
-          }).not.toThrow();
-        });
-      });
-
       describe('should work without "output" options', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           // eslint-disable-next-line no-undefined
           const compiler = getCompiler({ ...webpackConfig, output: undefined });
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get("/main.js");
@@ -1122,7 +2093,7 @@ describe.each([
       });
 
       describe('should work with trailing slash at the end of the "option.path" option', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -1131,17 +2102,16 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get("/bundle.js");
@@ -1175,20 +2145,19 @@ describe.each([
       });
 
       describe('should respect empty "output.publicPath" and "output.path" options', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get("/bundle.js");
@@ -1222,7 +2191,7 @@ describe.each([
       });
 
       describe('should respect "output.publicPath" and "output.path" options', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -1232,17 +2201,16 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get("/static/bundle.js");
@@ -1279,7 +2247,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8",
+            get404ContentTypeHeader(name),
           );
         });
       });
@@ -1287,7 +2255,7 @@ describe.each([
       describe('should respect "output.publicPath" and "output.path" options with hash substitutions', () => {
         let hash;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -1296,23 +2264,30 @@ describe.each([
               path: path.resolve(__dirname, "./outputs/other-basic-[fullhash]"),
             },
           });
-
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(() => {
-            compiler.hooks.afterCompile.tap("wdm-test", ({ hash: h }) => {
-              hash = h;
-              done();
-            });
+          compiler.hooks.afterCompile.tap("wdm-test", ({ hash: h }) => {
+            hash = h;
           });
 
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+
+          await new Promise((resolve) => {
+            const interval = setInterval(() => {
+              if (hash) {
+                clearInterval(interval);
+
+                resolve();
+              }
+            }, 10);
+          });
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get(`/static/${hash}/bundle.js`);
@@ -1355,7 +2330,7 @@ describe.each([
         let hashOne;
         let hashTwo;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler([
             {
               ...webpackMultiConfig[0],
@@ -1380,27 +2355,33 @@ describe.each([
               },
             },
           ]);
+          compiler.hooks.done.tap("wdm-test", (stats) => {
+            const [one, two] = stats.stats;
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(() => {
-            compiler.hooks.done.tap("wdm-test", (params) => {
-              const [one, two] = params.stats;
-
-              hashOne = one.hash;
-              hashTwo = two.hash;
-
-              done();
-            });
+            hashOne = one.hash;
+            hashTwo = two.hash;
           });
 
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+
+          await new Promise((resolve) => {
+            const interval = setInterval(() => {
+              if (hashOne && hashTwo) {
+                clearInterval(interval);
+
+                resolve();
+              }
+            }, 10);
+          });
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
           const response = await req.get(`/static-one/${hashOne}/bundle.js`);
@@ -1446,7 +2427,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8",
+            get404ContentTypeHeader(name),
           );
         });
 
@@ -1470,20 +2451,19 @@ describe.each([
       });
 
       describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with difference "publicPath" and "path"', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackMultiConfig);
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
           const response = await req.get("/static-one/bundle.js");
@@ -1553,7 +2533,7 @@ describe.each([
       });
 
       describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with same "publicPath"', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler([
             {
               ...webpackMultiConfig[0],
@@ -1573,17 +2553,16 @@ describe.each([
             },
           ]);
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
           const response = await req.get("/my-public/bundle-one.js");
@@ -1635,7 +2614,7 @@ describe.each([
       });
 
       describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode with same "path"', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler([
             {
               ...webpackMultiConfig[0],
@@ -1655,17 +2634,16 @@ describe.each([
             },
           ]);
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
           const response = await req.get("/one-public/bundle-one.js");
@@ -1744,20 +2722,19 @@ describe.each([
       });
 
       describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration (in first)', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackClientServerConfig);
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get("/static/bundle.js");
@@ -1800,23 +2777,22 @@ describe.each([
       });
 
       describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration (in second)', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler([
             webpackClientServerConfig[1],
             webpackClientServerConfig[0],
           ]);
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get("/static/bundle.js");
@@ -1856,7 +2832,7 @@ describe.each([
       });
 
       describe('should respect "output.publicPath" and "output.path" options in multi-compiler mode, when the "output.publicPath" option presented in only one configuration with same "path"', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler([
             {
               ...webpackClientServerConfig[0],
@@ -1875,17 +2851,16 @@ describe.each([
             },
           ]);
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return "200" code for GET request to the bundle file', async () => {
           const response = await req.get("/static/bundle-one.js");
@@ -1925,17 +2900,12 @@ describe.each([
       });
 
       describe("should handle an earlier request if a change happened while compiling", () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
-
-          instance = middleware(compiler);
 
           let invalidated = false;
 
-          (compiler.hooks.afterDone
-            ? compiler.hooks.afterDone
-            : compiler.hooks.done
-          ).tap("Invalidated", () => {
+          compiler.hooks.afterDone.tap("Invalidated", () => {
             if (!invalidated) {
               instance.invalidate();
 
@@ -1943,15 +2913,16 @@ describe.each([
             }
           });
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file', async () => {
           const response = await req.get("/bundle.js");
@@ -1959,11 +2930,467 @@ describe.each([
           expect(response.statusCode).toEqual(200);
         });
       });
+
+      describe("should handle custom fs errors and response 500 code", () => {
+        let compiler;
+
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-test-errors-500",
+        );
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "image.svg"),
+            "svg image",
+          );
+
+          instance.context.outputFileSystem.createReadStream =
+            function createReadStream(...args) {
+              const brokenStream = new this.ReadStream(...args);
+
+              // eslint-disable-next-line no-underscore-dangle
+              brokenStream._read = function _read() {
+                this.emit("error", new Error("test"));
+                this.end();
+                this.destroy();
+              };
+
+              return brokenStream;
+            };
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "500" code for the "GET" request to the "image.svg" file', async () => {
+          const response = await req.get("/image.svg");
+
+          expect(response.statusCode).toEqual(500);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toEqual(
+            "<!DOCTYPE html>\n" +
+              '<html lang="en">\n' +
+              "<head>\n" +
+              '<meta charset="utf-8">\n' +
+              "<title>Error</title>\n" +
+              "</head>\n" +
+              "<body>\n" +
+              "<pre>Internal Server Error</pre>\n" +
+              "</body>\n" +
+              "</html>",
+          );
+        });
+      });
+
+      describe("should handle known fs errors and response 404 code", () => {
+        let compiler;
+
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-test-errors-404",
+        );
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "image.svg"),
+            "svg image",
+          );
+
+          instance.context.outputFileSystem.createReadStream =
+            function createReadStream(...args) {
+              const brokenStream = new this.ReadStream(...args);
+
+              // eslint-disable-next-line no-underscore-dangle
+              brokenStream._read = function _read() {
+                const error = new Error("test");
+
+                error.code = "ENAMETOOLONG";
+
+                this.emit("error", error);
+                this.end();
+                this.destroy();
+              };
+
+              return brokenStream;
+            };
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "404" code for the "GET" request to the "image.svg" file', async () => {
+          const response = await req.get("/image.svg");
+
+          expect(response.statusCode).toEqual(404);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toEqual(
+            "<!DOCTYPE html>\n" +
+              '<html lang="en">\n' +
+              "<head>\n" +
+              '<meta charset="utf-8">\n' +
+              "<title>Error</title>\n" +
+              "</head>\n" +
+              "<body>\n" +
+              "<pre>Not Found</pre>\n" +
+              "</body>\n" +
+              "</html>",
+          );
+        });
+      });
+
+      describe("should work without `fs.createReadStream`", () => {
+        let compiler;
+        let codeContent;
+
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-test-no-createReadStream",
+        );
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+          compiler.hooks.afterCompile.tap("wdm-test", (params) => {
+            codeContent = params.assets["bundle.js"].source();
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "image.svg"),
+            "svg image",
+          );
+
+          instance.context.outputFileSystem.createReadStream = null;
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file', async () => {
+          const response = await req.get("/bundle.js");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            String(Buffer.byteLength(codeContent)),
+          );
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8",
+          );
+          expect(response.text).toEqual(codeContent);
+        });
+
+        it('should return the "200" code for the "GET" request to the "image.svg" file', async () => {
+          const fileData = instance.context.outputFileSystem.readFileSync(
+            path.resolve(outputPath, "image.svg"),
+          );
+
+          const response = await req.get("/image.svg");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString(),
+          );
+          expect(response.headers["content-type"]).toEqual("image/svg+xml");
+        });
+
+        it('should return the "200" code for the "HEAD" request to the "image.svg" file', async () => {
+          const fileData = instance.context.outputFileSystem.readFileSync(
+            path.resolve(outputPath, "image.svg"),
+          );
+
+          const response = await req.head("/image.svg");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-length"]).toEqual(
+            fileData.byteLength.toString(),
+          );
+          expect(response.headers["content-type"]).toEqual("image/svg+xml");
+          expect(response.body).toEqual({});
+        });
+      });
+
+      describe("should handle custom fs errors and response 500 code without `fs.createReadStream`", () => {
+        let compiler;
+
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-test-errors-500",
+        );
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "image.svg"),
+            "svg image",
+          );
+
+          instance.context.outputFileSystem.readFileSync =
+            function readFileSync() {
+              throw new Error("test");
+            };
+          instance.context.outputFileSystem.createReadStream = null;
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "500" code for the "GET" request to the "image.svg" file', async () => {
+          const response = await req.get("/image.svg");
+
+          expect(response.statusCode).toEqual(500);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toEqual(
+            "<!DOCTYPE html>\n" +
+              '<html lang="en">\n' +
+              "<head>\n" +
+              '<meta charset="utf-8">\n' +
+              "<title>Error</title>\n" +
+              "</head>\n" +
+              "<body>\n" +
+              "<pre>Internal Server Error</pre>\n" +
+              "</body>\n" +
+              "</html>",
+          );
+        });
+      });
+
+      describe("should handle known fs errors and response 404 code", () => {
+        let compiler;
+
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-test-errors-404",
+        );
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "image.svg"),
+            "svg image",
+          );
+
+          instance.context.outputFileSystem.readFileSync =
+            function readFileSync() {
+              const error = new Error("test");
+
+              error.code = "ENAMETOOLONG";
+
+              throw error;
+            };
+          instance.context.outputFileSystem.createReadStream = null;
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "404" code for the "GET" request to the "image.svg" file', async () => {
+          const response = await req.get("/image.svg");
+
+          expect(response.statusCode).toEqual(404);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toEqual(
+            "<!DOCTYPE html>\n" +
+              '<html lang="en">\n' +
+              "<head>\n" +
+              '<meta charset="utf-8">\n' +
+              "<title>Error</title>\n" +
+              "</head>\n" +
+              "<body>\n" +
+              "<pre>Not Found</pre>\n" +
+              "</body>\n" +
+              "</html>",
+          );
+        });
+      });
+
+      describe("should work when headers are already sent", () => {
+        let compiler;
+
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-test-errors-headers-sent",
+        );
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {},
+            {
+              setupMiddlewares: (middlewares) => {
+                if (name === "hapi") {
+                  // There's no such thing as "the next route handler" in hapi. One request is matched to one or no route handlers.
+                } else if (name === "koa") {
+                  middlewares.push(async (ctx, next) => {
+                    // eslint-disable-next-line no-param-reassign
+                    ctx.url = "/index.html";
+
+                    await next();
+                  });
+                  middlewares.push(middleware.koaWrapper(compiler, {}));
+                } else if (name === "hono") {
+                  middlewares.unshift(async (c, next) => {
+                    await next();
+
+                    return new Response("Hello Node.js!");
+                  });
+                  middlewares.push(middleware.honoWrapper(compiler, {}));
+                } else {
+                  middlewares.push({
+                    route: "/",
+                    fn: (req, res, next) => {
+                      // eslint-disable-next-line no-param-reassign
+                      req.url = "/index.html";
+                      next();
+                    },
+                  });
+                  middlewares.push(middleware(compiler, {}));
+                }
+
+                return middlewares;
+              },
+            },
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "index.html"),
+            "HTML",
+          );
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file', async () => {
+          const response = await req.get("/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+        });
+
+        it('should return the "200" code for the "HEAD" request to the bundle file', async () => {
+          const response = await req.head("/");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toBeUndefined();
+        });
+      });
     });
 
     describe("mimeTypes option", () => {
       describe('should set the correct value for "Content-Type" header to known MIME type', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -1973,14 +3400,11 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -1991,7 +3415,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to "file.html"', async () => {
           const response = await req.get("/file.html");
@@ -2005,7 +3431,7 @@ describe.each([
       });
 
       describe('should set the correct value for "Content-Type" header to specified MIME type', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -2015,18 +3441,16 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler, {
-            mimeTypes: {
-              myhtml: "text/html",
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              mimeTypes: {
+                myhtml: "text/html",
+              },
             },
-          });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          );
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -2037,7 +3461,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request "file.phtml"', async () => {
           const response = await req.get("/file.myhtml");
@@ -2051,7 +3477,7 @@ describe.each([
       });
 
       describe('should override value for "Content-Type" header for known MIME type', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -2061,18 +3487,16 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler, {
-            mimeTypes: {
-              jpg: "image/vnd.test+jpeg",
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              mimeTypes: {
+                jpg: "image/vnd.test+jpeg",
+              },
             },
-          });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          );
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -2083,7 +3507,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request "file.jpg"', async () => {
           const response = await req.get("/file.jpg");
@@ -2096,7 +3522,7 @@ describe.each([
       });
 
       describe('should not set "Content-Type" header for route not from outputFileSystem', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -2106,47 +3532,43 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler, {
-            mimeTypes: {
-              jpg: "image/vnd.test+jpeg",
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              mimeTypes: {
+                jpg: "image/vnd.test+jpeg",
+              },
             },
-          });
+            {
+              setupMiddlewares: (middlewares) => {
+                applyTestMiddleware(name, middlewares);
 
-          app = framework();
-          app.use(instance);
-
-          // eslint-disable-next-line no-shadow
-          app.use("/file.jpg", (req, res) => {
-            // Express API
-            if (res.send) {
-              res.send("welcome");
-            }
-            // Connect API
-            else {
-              res.setHeader("Content-Type", "text/html");
-              res.end("welcome");
-            }
-          });
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+                return middlewares;
+              },
+            },
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request "file.jpg" with default content type', async () => {
           const response = await req.get("/file.jpg");
 
           expect(response.statusCode).toEqual(200);
-          expect(response.headers["content-type"]).toMatch(/text\/html/);
+          expect(response.headers["content-type"]).toMatch(
+            name === "fastify" ? /text\/plain; charset=utf-8/ : /text\/html/,
+          );
         });
       });
     });
 
     describe("mimeTypeDefault option", () => {
       describe('should set the correct value for "Content-Type" header to unknown MIME type', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -2156,16 +3578,14 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler, {
-            mimeTypeDefault: "text/plain",
-          });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              mimeTypeDefault: "text/plain",
+            },
+          );
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -2176,7 +3596,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to "file.html"', async () => {
           const response = await req.get("/file.unknown");
@@ -2195,25 +3617,21 @@ describe.each([
         let compiler;
         let spy;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackConfig);
-
           spy = jest.spyOn(compiler, "watch");
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll((done) => {
+        afterAll(async () => {
           spy.mockRestore();
 
-          close(done);
+          await close(server, instance);
         });
 
         it('should pass arguments to the "watch" method', async () => {
@@ -2229,25 +3647,22 @@ describe.each([
         let compiler;
         let spy;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackWatchOptionsConfig);
 
           spy = jest.spyOn(compiler, "watch");
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll((done) => {
+        afterAll(async () => {
           spy.mockRestore();
 
-          close(done);
+          await close(server, instance);
         });
 
         it('should pass arguments to the "watch" method', async () => {
@@ -2266,25 +3681,22 @@ describe.each([
         let compiler;
         let spy;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackMultiWatchOptionsConfig);
 
           spy = jest.spyOn(compiler, "watch");
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll((done) => {
+        afterAll(async () => {
           spy.mockRestore();
 
-          close(done);
+          await close(server, instance);
         });
 
         it('should pass arguments to the "watch" method', async () => {
@@ -2308,68 +3720,89 @@ describe.each([
       describe('should work with "true" value', () => {
         let compiler;
 
-        beforeAll((done) => {
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/write-to-disk-true",
+        );
+
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
               filename: "bundle.js",
-              path: path.resolve(__dirname, "./outputs/write-to-disk-true"),
+              path: outputPath,
+              publicPath: "/public/",
             },
           });
 
-          instance = middleware(compiler, { writeToDisk: true });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { writeToDisk: true },
+          );
         });
 
-        afterAll((done) => {
-          del.sync(
-            path.posix.resolve(__dirname, "./outputs/write-to-disk-true"),
-          );
-
-          close(done);
+        afterAll(async () => {
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
+          await close(server, instance);
         });
 
         it("should find the bundle file on disk", (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
+          req.get("/public/bundle.js").expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
 
-              const bundlePath = path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-true/bundle.js",
-              );
+            const bundlePath = path.resolve(
+              __dirname,
+              "./outputs/write-to-disk-true/bundle.js",
+            );
 
-              expect(
-                compiler.hooks.assetEmitted.taps.filter(
-                  (hook) => hook.name === "DevMiddleware",
-                ).length,
-              ).toBe(1);
-              expect(fs.existsSync(bundlePath)).toBe(true);
+            expect(
+              compiler.hooks.assetEmitted.taps.filter(
+                (hook) => hook.name === "DevMiddleware",
+              ).length,
+            ).toBe(1);
+            expect(fs.existsSync(bundlePath)).toBe(true);
 
-              instance.invalidate();
+            instance.invalidate();
 
-              return compiler.hooks.done.tap(
-                "DevMiddlewareWriteToDiskTest",
-                () => {
-                  expect(
-                    compiler.hooks.assetEmitted.taps.filter(
-                      (hook) => hook.name === "DevMiddleware",
-                    ).length,
-                  ).toBe(1);
+            return compiler.hooks.done.tap(
+              "DevMiddlewareWriteToDiskTest",
+              () => {
+                expect(
+                  compiler.hooks.assetEmitted.taps.filter(
+                    (hook) => hook.name === "DevMiddleware",
+                  ).length,
+                ).toBe(1);
 
-                  done();
-                },
-              );
-            });
+                done();
+              },
+            );
+          });
+        });
+
+        it("should not allow to get files above root", async () => {
+          const response = await req.get("/public/..%2f../middleware.test.js");
+
+          expect(response.statusCode).toEqual(403);
+          expect(response.headers["content-type"]).toEqual(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toEqual(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Forbidden</pre>
+</body>
+</html>`);
         });
       });
 
@@ -2381,7 +3814,7 @@ describe.each([
 
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -2391,70 +3824,68 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler, { writeToDisk: true });
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { writeToDisk: true },
+          );
 
           fs.mkdirSync(outputPath, {
             recursive: true,
           });
           fs.writeFileSync(path.resolve(outputPath, "test.json"), "{}");
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
         });
 
-        afterAll((done) => {
-          del.sync(outputPath);
-
-          close(done);
+        afterAll(async () => {
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
+          await close(server, instance);
         });
 
         it("should find the bundle file on disk", (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
+          req.get("/bundle.js").expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
 
-              const bundlePath = path.resolve(outputPath, "bundle.js");
+            const bundlePath = path.resolve(outputPath, "bundle.js");
 
-              expect(fs.existsSync(path.resolve(outputPath, "test.json"))).toBe(
-                false,
-              );
+            expect(fs.existsSync(path.resolve(outputPath, "test.json"))).toBe(
+              false,
+            );
 
-              expect(
-                compiler.hooks.assetEmitted.taps.filter(
-                  (hook) => hook.name === "DevMiddleware",
-                ).length,
-              ).toBe(1);
-              expect(fs.existsSync(bundlePath)).toBe(true);
+            expect(
+              compiler.hooks.assetEmitted.taps.filter(
+                (hook) => hook.name === "DevMiddleware",
+              ).length,
+            ).toBe(1);
+            expect(fs.existsSync(bundlePath)).toBe(true);
 
-              instance.invalidate();
+            instance.invalidate();
 
-              return compiler.hooks.done.tap(
-                "DevMiddlewareWriteToDiskTest",
-                () => {
-                  expect(
-                    compiler.hooks.assetEmitted.taps.filter(
-                      (hook) => hook.name === "DevMiddleware",
-                    ).length,
-                  ).toBe(1);
+            return compiler.hooks.done.tap(
+              "DevMiddlewareWriteToDiskTest",
+              () => {
+                expect(
+                  compiler.hooks.assetEmitted.taps.filter(
+                    (hook) => hook.name === "DevMiddleware",
+                  ).length,
+                ).toBe(1);
 
-                  done();
-                },
-              );
-            });
+                done();
+              },
+            );
+          });
         });
       });
 
       describe('should work with "false" value', () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
@@ -2463,90 +3894,87 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler, { writeToDisk: false });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { writeToDisk: false },
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it("should not find the bundle file on disk", (done) => {
-          request(app)
-            .get("/bundle.js")
-            .expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
+          req.get("/bundle.js").expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
 
-              const bundlePath = path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-false/bundle.js",
-              );
+            const bundlePath = path.resolve(
+              __dirname,
+              "./outputs/write-to-disk-false/bundle.js",
+            );
 
-              expect(
-                compiler.hooks.assetEmitted.taps.filter(
-                  (hook) => hook.name === "DevMiddleware",
-                ).length,
-              ).toBe(0);
-              expect(fs.existsSync(bundlePath)).toBe(false);
+            expect(
+              compiler.hooks.assetEmitted.taps.filter(
+                (hook) => hook.name === "DevMiddleware",
+              ).length,
+            ).toBe(0);
+            expect(fs.existsSync(bundlePath)).toBe(false);
 
-              instance.invalidate();
+            instance.invalidate();
 
-              return compiler.hooks.done.tap(
-                "DevMiddlewareWriteToDiskTest",
-                () => {
-                  expect(
-                    compiler.hooks.assetEmitted.taps.filter(
-                      (hook) => hook.name === "DevMiddleware",
-                    ).length,
-                  ).toBe(0);
+            return compiler.hooks.done.tap(
+              "DevMiddlewareWriteToDiskTest",
+              () => {
+                expect(
+                  compiler.hooks.assetEmitted.taps.filter(
+                    (hook) => hook.name === "DevMiddleware",
+                  ).length,
+                ).toBe(0);
 
-                  done();
-                },
-              );
-            });
+                done();
+              },
+            );
+          });
         });
       });
 
       describe('should work with "Function" value when it returns "true"', () => {
         let compiler;
 
-        beforeAll((done) => {
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/write-to-disk-function-true",
+        );
+
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
               filename: "bundle.js",
-              path: path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-function-true",
-              ),
+              path: outputPath,
             },
           });
 
-          instance = middleware(compiler, {
-            writeToDisk: (filePath) => /bundle\.js$/.test(filePath),
-          });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              writeToDisk: (filePath) => /bundle\.js$/.test(filePath),
+            },
+          );
         });
 
-        afterAll((done) => {
-          del.sync(
-            path.posix.resolve(
-              __dirname,
-              "./outputs/write-to-disk-function-true",
-            ),
-          );
-
-          close(done);
+        afterAll(async () => {
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
+          await close(server, instance);
         });
 
         it("should find the bundle file on disk", async () => {
@@ -2566,37 +3994,36 @@ describe.each([
       describe('should work with "Function" value when it returns "false"', () => {
         let compiler;
 
-        beforeAll((done) => {
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/write-to-disk-function-false",
+        );
+
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             output: {
               filename: "bundle.js",
-              path: path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-function-false",
-              ),
+              path: outputPath,
             },
           });
 
-          instance = middleware(compiler, {
-            writeToDisk: (filePath) => !/bundle\.js$/.test(filePath),
-          });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              writeToDisk: (filePath) => !/bundle\.js$/.test(filePath),
+            },
+          );
         });
 
-        afterAll((done) => {
-          del.sync(
-            path.posix.resolve(
-              __dirname,
-              "./outputs/write-to-disk-function-false",
-            ),
-          );
-
-          close(done);
+        afterAll(async () => {
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
+          await close(server, instance);
         });
 
         it("should not find the bundle file on disk", async () => {
@@ -2616,37 +4043,34 @@ describe.each([
       describe("should work when assets have query string", () => {
         let compiler;
 
-        beforeAll((done) => {
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/write-to-disk-query-string",
+        );
+
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackQueryStringConfig,
             output: {
               filename: "bundle.js?[contenthash]",
-              path: path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-query-string",
-              ),
+              path: outputPath,
             },
           });
 
-          instance = middleware(compiler, { writeToDisk: true });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { writeToDisk: true },
+          );
         });
 
-        afterAll((done) => {
-          del.sync(
-            path.posix.resolve(
-              __dirname,
-              "./outputs/write-to-disk-query-string",
-            ),
-          );
-
-          close(done);
+        afterAll(async () => {
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
+          await close(server, instance);
         });
 
         it("should find the bundle file on disk with no querystring", async () => {
@@ -2666,7 +4090,12 @@ describe.each([
       describe("should work in multi-compiler mode", () => {
         let compiler;
 
-        beforeAll((done) => {
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/write-to-disk-multi-compiler/",
+        );
+
+        beforeAll(async () => {
           compiler = getCompiler([
             {
               ...webpackMultiWatchOptionsConfig[0],
@@ -2692,25 +4121,20 @@ describe.each([
             },
           ]);
 
-          instance = middleware(compiler, { writeToDisk: true });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { writeToDisk: true },
+          );
         });
 
-        afterAll((done) => {
-          del.sync(
-            path.posix.resolve(
-              __dirname,
-              "./outputs/write-to-disk-multi-compiler/",
-            ),
-          );
-
-          close(done);
+        afterAll(async () => {
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
+          await close(server, instance);
         });
 
         it("should find the bundle files on disk", async () => {
@@ -2741,7 +4165,12 @@ describe.each([
         let compiler;
         let hash;
 
-        beforeAll((done) => {
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/write-to-disk-with-hash/",
+        );
+
+        beforeAll(async () => {
           compiler = getCompiler({
             ...webpackConfig,
             ...{
@@ -2755,28 +4184,34 @@ describe.each([
               },
             },
           });
-
-          instance = middleware(compiler, { writeToDisk: true });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(() => {
-            compiler.hooks.afterCompile.tap("wdm-test", ({ hash: h }) => {
-              hash = h;
-              done();
-            });
+          compiler.hooks.afterCompile.tap("wdm-test", ({ hash: h }) => {
+            hash = h;
           });
 
-          req = request(app);
-        });
-
-        afterAll((done) => {
-          del.sync(
-            path.posix.resolve(__dirname, "./outputs/write-to-disk-with-hash/"),
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { writeToDisk: true },
           );
 
-          close(done);
+          await new Promise((resolve) => {
+            const interval = setInterval(() => {
+              if (hash) {
+                clearInterval(interval);
+
+                resolve();
+              }
+            }, 10);
+          });
+        });
+
+        afterAll(async () => {
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
+          await close(server, instance);
         });
 
         it("should find the bundle file on disk", async () => {
@@ -2797,23 +4232,23 @@ describe.each([
     describe("methods option", () => {
       let compiler;
 
-      beforeAll((done) => {
+      beforeAll(async () => {
         compiler = getCompiler(webpackConfig);
 
-        instance = middleware(compiler, {
-          methods: ["POST"],
-          publicPath: "/public/",
-        });
-
-        app = framework();
-        app.use(instance);
-
-        listen = listenShorthand(done);
-
-        req = request(app);
+        [server, req, instance] = await frameworkFactory(
+          name,
+          framework,
+          compiler,
+          {
+            methods: ["POST"],
+            publicPath: "/public/",
+          },
+        );
       });
 
-      afterAll(close);
+      afterAll(async () => {
+        await close(server, instance);
+      });
 
       it('should return the "200" code for the "POST" request to the bundle file', async () => {
         const response = await req.post(`/public/bundle.js`);
@@ -2827,7 +4262,7 @@ describe.each([
         expect(response.statusCode).toEqual(404);
       });
 
-      it('should return the "200" code for the "HEAD" request to the bundle file', async () => {
+      it('should return the "404" code for the "HEAD" request to the bundle file', async () => {
         const response = await req.head(`/public/bundle.js`);
 
         expect(response.statusCode).toEqual(404);
@@ -2836,22 +4271,29 @@ describe.each([
 
     describe("headers option", () => {
       describe("works with object", () => {
-        beforeEach((done) => {
+        beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          instance = middleware(compiler, {
-            headers: { "X-nonsense-1": "yes", "X-nonsense-2": "no" },
-          });
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              headers: { "X-nonsense-1": "yes", "X-nonsense-2": "no" },
+            },
+            {
+              setupMiddlewares: (middlewares) => {
+                applyTestMiddleware(name, middlewares);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+                return middlewares;
+              },
+            },
+          );
         });
 
-        afterEach(close);
+        afterEach(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
           const response = await req.get(`/bundle.js`);
@@ -2862,19 +4304,7 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-          // eslint-disable-next-line no-shadow
-          app.use("/file.jpg", (req, res) => {
-            // Express API
-            if (res.send) {
-              res.send("welcome");
-            }
-            // Connect API
-            else {
-              res.end("welcome");
-            }
-          });
-
-          const res = await request(app).get("/file.jpg");
+          const res = await req.get("/file.jpg");
           expect(res.statusCode).toEqual(200);
           expect(res.headers["X-nonsense-1"]).toBeUndefined();
           expect(res.headers["X-nonsense-2"]).toBeUndefined();
@@ -2882,31 +4312,38 @@ describe.each([
       });
 
       describe("works with array of objects", () => {
-        beforeEach((done) => {
+        beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          instance = middleware(compiler, {
-            headers: [
-              {
-                key: "X-Foo",
-                value: "value1",
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              headers: [
+                {
+                  key: "X-Foo",
+                  value: "value1",
+                },
+                {
+                  key: "X-Bar",
+                  value: "value2",
+                },
+              ],
+            },
+            {
+              setupMiddlewares: (middlewares) => {
+                applyTestMiddleware(name, middlewares);
+
+                return middlewares;
               },
-              {
-                key: "X-Bar",
-                value: "value2",
-              },
-            ],
-          });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+            },
+          );
         });
 
-        afterEach(close);
+        afterEach(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
           const response = await req.get(`/bundle.js`);
@@ -2917,19 +4354,7 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-          // eslint-disable-next-line no-shadow
-          app.use("/file.jpg", (req, res) => {
-            // Express API
-            if (res.send) {
-              res.send("welcome");
-            }
-            // Connect API
-            else {
-              res.end("welcome");
-            }
-          });
-
-          const res = await request(app).get("/file.jpg");
+          const res = await req.get("/file.jpg");
           expect(res.statusCode).toEqual(200);
           expect(res.headers["x-foo"]).toBeUndefined();
           expect(res.headers["x-bar"]).toBeUndefined();
@@ -2937,24 +4362,31 @@ describe.each([
       });
 
       describe("works with function", () => {
-        beforeEach((done) => {
+        beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          instance = middleware(compiler, {
-            headers: () => {
-              return { "X-nonsense-1": "yes", "X-nonsense-2": "no" };
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              headers: () => {
+                return { "X-nonsense-1": "yes", "X-nonsense-2": "no" };
+              },
             },
-          });
+            {
+              setupMiddlewares: (middlewares) => {
+                applyTestMiddleware(name, middlewares);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+                return middlewares;
+              },
+            },
+          );
         });
 
-        afterEach(close);
+        afterEach(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
           const response = await req.get(`/bundle.js`);
@@ -2965,18 +4397,6 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-          // eslint-disable-next-line no-shadow
-          app.use("/file.jpg", (req, res) => {
-            // Express API
-            if (res.send) {
-              res.send("welcome");
-            }
-            // Connect API
-            else {
-              res.end("welcome");
-            }
-          });
-
           const res = await req.get("/file.jpg");
           expect(res.statusCode).toEqual(200);
           expect(res.headers["X-nonsense-1"]).toBeUndefined();
@@ -2985,31 +4405,38 @@ describe.each([
       });
 
       describe("works with function returning an array", () => {
-        beforeEach((done) => {
+        beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          instance = middleware(compiler, {
-            headers: () => [
-              {
-                key: "X-Foo",
-                value: "value1",
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              headers: () => [
+                {
+                  key: "X-Foo",
+                  value: "value1",
+                },
+                {
+                  key: "X-Bar",
+                  value: "value2",
+                },
+              ],
+            },
+            {
+              setupMiddlewares: (middlewares) => {
+                applyTestMiddleware(name, middlewares);
+
+                return middlewares;
               },
-              {
-                key: "X-Bar",
-                value: "value2",
-              },
-            ],
-          });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+            },
+          );
         });
 
-        afterEach(close);
+        afterEach(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
           const response = await req.get(`/bundle.js`);
@@ -3020,18 +4447,6 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-          // eslint-disable-next-line no-shadow
-          app.use("/file.jpg", (req, res) => {
-            // Express API
-            if (res.send) {
-              res.send("welcome");
-            }
-            // Connect API
-            else {
-              res.end("welcome");
-            }
-          });
-
           const res = await req.get("/file.jpg");
           expect(res.statusCode).toEqual(200);
           expect(res.headers["x-foo"]).toBeUndefined();
@@ -3040,26 +4455,33 @@ describe.each([
       });
 
       describe("works with headers function with params", () => {
-        beforeEach((done) => {
+        beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          instance = middleware(compiler, {
-            // eslint-disable-next-line no-unused-vars, no-shadow
-            headers: (req, res, context) => {
-              res.setHeader("X-nonsense-1", "yes");
-              res.setHeader("X-nonsense-2", "no");
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              // eslint-disable-next-line no-unused-vars, no-shadow
+              headers: (req, res, context) => {
+                res.setHeader("X-nonsense-1", "yes");
+                res.setHeader("X-nonsense-2", "no");
+              },
             },
-          });
+            {
+              setupMiddlewares: (middlewares) => {
+                applyTestMiddleware(name, middlewares);
 
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+                return middlewares;
+              },
+            },
+          );
         });
 
-        afterEach(close);
+        afterEach(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file and return headers', async () => {
           const response = await req.get(`/bundle.js`);
@@ -3070,19 +4492,8 @@ describe.each([
         });
 
         it('should return the "200" code for the "GET" request to path not in outputFileSystem but not return headers', async () => {
-          // eslint-disable-next-line no-shadow
-          app.use("/file.jpg", (req, res) => {
-            // Express API
-            if (res.send) {
-              res.send("welcome");
-            }
-            // Connect API
-            else {
-              res.end("welcome");
-            }
-          });
-
           const res = await req.get("/file.jpg");
+
           expect(res.statusCode).toEqual(200);
           expect(res.headers["X-nonsense-1"]).toBeUndefined();
           expect(res.headers["X-nonsense-2"]).toBeUndefined();
@@ -3092,20 +4503,20 @@ describe.each([
 
     describe("publicPath option", () => {
       describe('should work with "string" value', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          instance = middleware(compiler, { publicPath: "/public/" });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { publicPath: "/public/" },
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file', async () => {
           const response = await req.get(`/public/bundle.js`);
@@ -3115,20 +4526,20 @@ describe.each([
       });
 
       describe('should work with "auto" value', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          instance = middleware(compiler, { publicPath: "auto" });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { publicPath: "auto" },
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the bundle file', async () => {
           const response = await req.get("/bundle.js");
@@ -3141,36 +4552,77 @@ describe.each([
     describe("serverSideRender option", () => {
       let locals;
 
-      beforeAll((done) => {
+      beforeAll(async () => {
         const compiler = getCompiler(webpackConfig);
 
-        instance = middleware(compiler, { serverSideRender: true });
+        [server, req, instance] = await frameworkFactory(
+          name,
+          framework,
+          compiler,
+          { serverSideRender: true },
+          {
+            setupMiddlewares: (middlewares) => {
+              if (name === "koa") {
+                middlewares.push(async (ctx, next) => {
+                  locals = ctx.state;
 
-        app = framework();
-        app.use(instance);
-        // eslint-disable-next-line no-shadow
-        app.use((req, res) => {
-          // eslint-disable-next-line prefer-destructuring
-          locals = res.locals;
+                  // eslint-disable-next-line no-param-reassign
+                  ctx.status = 200;
 
-          // Express API
-          if (res.sendStatus) {
-            res.sendStatus(200);
-          }
-          // Connect API
-          else {
-            // eslint-disable-next-line no-param-reassign
-            res.statusCode = 200;
-            res.end();
-          }
-        });
+                  await next();
+                });
+              } else if (name === "hono") {
+                middlewares.push((c) => {
+                  locals = { webpack: c.get("webpack") };
 
-        listen = listenShorthand(done);
+                  return c.body("welcome", 200);
+                });
+              } else if (name === "hapi") {
+                middlewares.push({
+                  plugin: {
+                    name: "myPlugin",
+                    version: "1.0.0",
+                    register(innerServer) {
+                      innerServer.route({
+                        method: "GET",
+                        path: "/foo/bar",
+                        handler(innerReq) {
+                          // eslint-disable-next-line prefer-destructuring
+                          locals = innerReq.raw.res.locals;
 
-        req = request(app);
+                          return "welcome";
+                        },
+                      });
+                    },
+                  },
+                });
+              } else {
+                middlewares.push((_req, res) => {
+                  // eslint-disable-next-line prefer-destructuring
+                  locals = res.locals;
+
+                  // Express API
+                  if (res.sendStatus) {
+                    res.sendStatus(200);
+                  }
+                  // Connect API
+                  else {
+                    // eslint-disable-next-line no-param-reassign
+                    res.statusCode = 200;
+                    res.end();
+                  }
+                });
+              }
+
+              return middlewares;
+            },
+          },
+        );
       });
 
-      afterAll(close);
+      afterAll(async () => {
+        await close(server, instance);
+      });
 
       it('should return the "200" code for the "GET" request', async () => {
         const response = await req.get("/foo/bar");
@@ -3184,18 +4636,19 @@ describe.each([
       describe("should work with an unspecified value", () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackConfig);
 
-          instance = middleware(compiler);
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should use the "memfs" package by default', () => {
           const { Stats } = memfs;
@@ -3210,7 +4663,7 @@ describe.each([
       describe("should work with the configured value (native fs)", () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackConfig);
 
           const configuredFs = fs;
@@ -3218,17 +4671,19 @@ describe.each([
           configuredFs.join = path.join.bind(path);
           configuredFs.mkdirp = () => {};
 
-          instance = middleware(compiler, {
-            outputFileSystem: configuredFs,
-          });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              outputFileSystem: configuredFs,
+            },
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it("should use the configurated output filesystem", () => {
           const { Stats } = fs;
@@ -3245,7 +4700,7 @@ describe.each([
       describe("should work with the configured value (memfs)", () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackConfig);
 
           const configuredFs = createFsFromVolume(new Volume());
@@ -3253,17 +4708,19 @@ describe.each([
           configuredFs.join = path.join.bind(path);
           configuredFs.mkdirp = () => {};
 
-          instance = middleware(compiler, {
-            outputFileSystem: configuredFs,
-          });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              outputFileSystem: configuredFs,
+            },
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it("should use the configured output filesystem", () => {
           const { Stats } = memfs;
@@ -3281,7 +4738,7 @@ describe.each([
       describe("should work with the configured value in multi-compiler mode (native fs)", () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackMultiConfig);
 
           const configuredFs = fs;
@@ -3289,17 +4746,19 @@ describe.each([
           configuredFs.join = path.join.bind(path);
           configuredFs.mkdirp = () => {};
 
-          instance = middleware(compiler, {
-            outputFileSystem: configuredFs,
-          });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              outputFileSystem: configuredFs,
+            },
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it("should use configured output filesystems", () => {
           const { Stats } = fs;
@@ -3323,27 +4782,27 @@ describe.each([
 
     describe("index option", () => {
       describe('should work with "false" value', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          instance = middleware(compiler, { index: false, publicPath: "/" });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { index: false, publicPath: "/" },
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "404" code for the "GET" request to the public path', async () => {
           const response = await req.get("/");
 
           expect(response.statusCode).toEqual(404);
           expect(response.headers["content-type"]).toEqual(
-            "text/html; charset=utf-8",
+            get404ContentTypeHeader(name),
           );
         });
 
@@ -3358,20 +4817,20 @@ describe.each([
       });
 
       describe('should work with "true" value', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const compiler = getCompiler(webpackConfig);
 
-          instance = middleware(compiler, { index: true, publicPath: "/" });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { index: true, publicPath: "/" },
+          );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the public path', async () => {
           const response = await req.get("/");
@@ -3393,7 +4852,7 @@ describe.each([
       });
 
       describe('should work with "string" value', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -3403,17 +4862,15 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler, {
-            index: "default.html",
-            publicPath: "/",
-          });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              index: "default.html",
+              publicPath: "/",
+            },
+          );
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -3424,7 +4881,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the public path', async () => {
           const response = await req.get("/");
@@ -3437,7 +4896,7 @@ describe.each([
       });
 
       describe('should work with "string" value with a custom extension', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -3447,17 +4906,15 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler, {
-            index: "index.custom",
-            publicPath: "/",
-          });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              index: "index.custom",
+              publicPath: "/",
+            },
+          );
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -3468,7 +4925,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the public path', async () => {
           const response = await req.get("/");
@@ -3478,7 +4937,7 @@ describe.each([
       });
 
       describe('should work with "string" value with a custom extension and defined a custom MIME type', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -3488,20 +4947,18 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler, {
-            index: "index.mycustom",
-            mimeTypes: {
-              mycustom: "text/html",
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              index: "index.mycustom",
+              mimeTypes: {
+                mycustom: "text/html",
+              },
+              publicPath: "/",
             },
-            publicPath: "/",
-          });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          );
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -3512,7 +4969,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the public path', async () => {
           const response = await req.get("/");
@@ -3525,7 +4984,7 @@ describe.each([
       });
 
       describe('should work with "string" value without an extension', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -3535,14 +4994,12 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler, { index: "noextension" });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { index: "noextension" },
+          );
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -3553,7 +5010,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "200" code for the "GET" request to the public path', async () => {
           const response = await req.get("/");
@@ -3563,7 +5022,7 @@ describe.each([
       });
 
       describe('should work with "string" value but the "index" option is a directory', () => {
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(__dirname, "./outputs/basic");
           const compiler = getCompiler({
             ...webpackConfig,
@@ -3573,17 +5032,15 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler, {
-            index: "custom.html",
-            publicPath: "/",
-          });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              index: "custom.html",
+              publicPath: "/",
+            },
+          );
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -3593,7 +5050,9 @@ describe.each([
           );
         });
 
-        afterAll(close);
+        afterAll(async () => {
+          await close(server, instance);
+        });
 
         it('should return the "404" code for the "GET" request to the public path', async () => {
           const response = await req.get("/");
@@ -3606,13 +5065,18 @@ describe.each([
         let compiler;
         let isDirectory;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           compiler = getCompiler(webpackConfig);
 
-          instance = middleware(compiler, {
-            index: "default.html",
-            publicPath: "/",
-          });
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              index: "default.html",
+              publicPath: "/",
+            },
+          );
 
           isDirectory = jest
             .spyOn(instance.context.outputFileSystem, "statSync")
@@ -3622,19 +5086,12 @@ describe.each([
                 isDirectory: () => false,
               };
             });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
         });
 
-        afterAll((done) => {
+        afterAll(async () => {
           isDirectory.mockRestore();
 
-          close(done);
+          await close(server, instance);
         });
 
         it('should return the "404" code for the "GET" request to the public path', async () => {
@@ -3649,7 +5106,7 @@ describe.each([
       describe("should work", () => {
         let compiler;
 
-        beforeAll((done) => {
+        beforeAll(async () => {
           const outputPath = path.resolve(
             __dirname,
             "./outputs/modify-response-data",
@@ -3663,20 +5120,18 @@ describe.each([
             },
           });
 
-          instance = middleware(compiler, {
-            modifyResponseData: () => {
-              const result = Buffer.from("test");
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              modifyResponseData: () => {
+                const result = Buffer.from("test");
 
-              return { data: result, byteLength: result.length };
+                return { data: result, byteLength: result.length };
+              },
             },
-          });
-
-          app = framework();
-          app.use(instance);
-
-          listen = listenShorthand(done);
-
-          req = request(app);
+          );
 
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
@@ -3687,8 +5142,8 @@ describe.each([
           );
         });
 
-        afterAll((done) => {
-          close(done);
+        afterAll(async () => {
+          await close(server, instance);
         });
 
         it("should modify file", async () => {
@@ -3699,6 +5154,801 @@ describe.each([
             "text/html; charset=utf-8",
           );
           expect(response.text).toEqual("test");
+        });
+      });
+    });
+
+    describe("etag", () => {
+      describe("should work and generate weak etag", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              etag: "weak",
+            },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and set weak etag', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers.etag).toBeDefined();
+          expect(response.headers.etag.startsWith("W/")).toBe(true);
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file with etag and "if-none-match" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-none-match", response1.headers.etag);
+
+          expect(response2.statusCode).toEqual(304);
+          expect(response2.headers.etag).toBeDefined();
+          expect(response2.headers.etag.startsWith("W/")).toBe(true);
+
+          const response3 = await req
+            .get(`/bundle.js`)
+            .set("if-none-match", `${response1.headers.etag}, test`);
+
+          expect(response3.statusCode).toEqual(304);
+          expect(response3.headers.etag).toBeDefined();
+          expect(response3.headers.etag.startsWith("W/")).toBe(true);
+
+          const response4 = await req
+            .get(`/bundle.js`)
+            .set("if-none-match", "*");
+
+          expect(response4.statusCode).toEqual(304);
+          expect(response4.headers.etag).toBeDefined();
+          expect(response4.headers.etag.startsWith("W/")).toBe(true);
+
+          const response5 = await req
+            .get(`/bundle.js`)
+            .set("if-none-match", "test");
+
+          expect(response5.statusCode).toEqual(200);
+          expect(response5.headers.etag).toBeDefined();
+          expect(response5.headers.etag.startsWith("W/")).toBe(true);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file with etag and "if-match" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-match", response1.headers.etag);
+
+          expect(response2.statusCode).toEqual(200);
+          expect(response2.headers.etag).toBeDefined();
+          expect(response2.headers.etag.startsWith("W/")).toBe(true);
+
+          const response3 = await req
+            .get(`/bundle.js`)
+            .set("if-match", `${response1.headers.etag}, foo`);
+
+          expect(response3.statusCode).toEqual(200);
+          expect(response3.headers.etag).toBeDefined();
+          expect(response3.headers.etag.startsWith("W/")).toBe(true);
+
+          const response4 = await req.get(`/bundle.js`).set("if-match", "*");
+
+          expect(response4.statusCode).toEqual(200);
+          expect(response4.headers.etag).toBeDefined();
+          expect(response4.headers.etag.startsWith("W/")).toBe(true);
+
+          const response5 = await req.get(`/bundle.js`).set("if-match", "test");
+
+          expect(response5.statusCode).toEqual(412);
+        });
+
+        it('should return the "412" code for the "GET" request to the bundle file with etag and wrong "if-match" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
+
+          const response2 = await req.get(`/bundle.js`).set("if-match", "test");
+
+          expect(response2.statusCode).toEqual(412);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file with etag and "if-match" and "cache-control: no-cache" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-match", response1.headers.etag)
+            .set("Cache-Control", "no-cache");
+
+          expect(response2.statusCode).toEqual(200);
+          expect(response2.headers.etag).toBeDefined();
+          expect(response2.headers.etag.startsWith("W/")).toBe(true);
+        });
+
+        it('should return the "206" code for the "GET" request with the valid range header and "if-range" header', async () => {
+          const response = await req
+            .get("/bundle.js")
+            .set("if-range", '"test"')
+            .set("Range", "bytes=3000-3500");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8",
+          );
+          expect(response.headers.etag).toBeDefined();
+          expect(response.headers.etag.startsWith("W/")).toBe(true);
+        });
+      });
+
+      describe("should work and generate strong etag", () => {
+        beforeEach(async () => {
+          const outputPath = path.resolve(__dirname, "./outputs/basic");
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              etag: "strong",
+            },
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "file.txt"),
+            "",
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and set strong etag', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers.etag).toBe(
+            /* cspell:disable-next-line */
+            '"1904-nDiSRnwlfx0nYluhHe2GnxHXgzc"',
+          );
+        });
+
+        it('should return the "200" code for the "GET" request to the file.txt and set strong etag on empty file', async () => {
+          const response = await req.get(`/file.txt`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers.etag).toBe(
+            /* cspell:disable-next-line */
+            '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"',
+          );
+        });
+
+        it('should return the "200" code for the "GET" request with the valid range header and wrong "If-Range" header', async () => {
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", "bytes=3000-3500");
+
+          expect(response.statusCode).toEqual(206);
+          expect(response.headers["content-length"]).toEqual("501");
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8",
+          );
+          expect(response.text.length).toBe(501);
+          expect(response.headers.etag).toBeDefined();
+
+          const response1 = await req
+            .get("/bundle.js")
+            .set("If-Range", '"test')
+            .set("Range", "bytes=3000-3500");
+
+          expect(response1.statusCode).toEqual(200);
+        });
+      });
+
+      describe("should work and generate strong etag without createReadStream", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              etag: "strong",
+            },
+          );
+
+          instance.context.outputFileSystem.createReadStream = null;
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and set weak etag', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers.etag).toBe(
+            /* cspell:disable-next-line */
+            '"1904-nDiSRnwlfx0nYluhHe2GnxHXgzc"',
+          );
+        });
+      });
+
+      describe("should work and without etag generation and `if-none-match` header", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and `if-none-match` header without etag', async () => {
+          const response = await req
+            .get(`/bundle.js`)
+            .set("if-none-match", "etag");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers.etag).toBeUndefined();
+        });
+      });
+    });
+
+    describe("lastModified", () => {
+      describe("should work and generate Last-Modified header", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              lastModified: true,
+            },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and set "Last-Modified"', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["last-modified"]).toBeDefined();
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file with "Last-Modified" and "if-modified-since" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-modified-since", response1.headers["last-modified"]);
+
+          expect(response2.statusCode).toEqual(304);
+          expect(response2.headers["last-modified"]).toBeDefined();
+
+          const response3 = await req
+            .get(`/bundle.js`)
+            .set(
+              "if-modified-since",
+              new Date(
+                parseHttpDate(response1.headers["last-modified"]) - 1000,
+              ).toUTCString(),
+            );
+
+          expect(response3.statusCode).toEqual(200);
+          expect(response3.headers["last-modified"]).toBeDefined();
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file with "Last-Modified" and "if-unmodified-since" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-unmodified-since", response1.headers["last-modified"]);
+
+          expect(response2.statusCode).toEqual(200);
+          expect(response2.headers["last-modified"]).toBeDefined();
+
+          const response3 = await req
+            .get(`/bundle.js`)
+            .set("if-unmodified-since", "Fri, 29 Mar 2020 10:25:50 GMT");
+
+          expect(response3.statusCode).toEqual(412);
+        });
+
+        it('should return the "412" code for the "GET" request to the bundle file with etag and "if-unmodified-since" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set(
+              "if-unmodified-since",
+              new Date(
+                parseHttpDate(response1.headers["last-modified"]) - 1000,
+              ).toUTCString(),
+            );
+
+          expect(response2.statusCode).toEqual(412);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file with etag and "if-match" and "cache-control: no-cache" header', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-unmodified-since", response1.headers["last-modified"])
+            .set("Cache-Control", "no-cache");
+
+          expect(response2.statusCode).toEqual(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+        });
+
+        it('should return the "200" code for the "GET" request with the valid range header and old "if-range" header', async () => {
+          const response = await req
+            .get("/bundle.js")
+            .set("if-range", new Date(1000).toUTCString())
+            .set("Range", "bytes=3000-3500");
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["content-type"]).toEqual(
+            "application/javascript; charset=utf-8",
+          );
+          expect(response.headers["last-modified"]).toBeDefined();
+        });
+      });
+
+      describe('should work and prefer "if-match" and "if-none-match"', () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              etag: "weak",
+              lastModified: true,
+            },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file and prefer "if-match" over "if-unmodified-since"', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+          expect(response1.headers.etag).toBeDefined();
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-match", response1.headers.etag)
+            .set(
+              "if-unmodified-since",
+              new Date(
+                parseHttpDate(response1.headers["last-modified"]) - 1000,
+              ).toUTCString(),
+            );
+
+          expect(response2.statusCode).toEqual(200);
+          expect(response2.headers["last-modified"]).toBeDefined();
+          expect(response2.headers.etag).toBeDefined();
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file and prefer "if-none-match" over "if-modified-since"', async () => {
+          const response1 = await req.get(`/bundle.js`);
+
+          expect(response1.statusCode).toEqual(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+          expect(response1.headers.etag).toBeDefined();
+
+          const response2 = await req
+            .get(`/bundle.js`)
+            .set("if-none-match", response1.headers.etag)
+            .set(
+              "if-modified-since",
+              new Date(
+                parseHttpDate(response1.headers["last-modified"]) - 1000,
+              ).toUTCString(),
+            );
+
+          expect(response2.statusCode).toEqual(304);
+          expect(response2.headers["last-modified"]).toBeDefined();
+          expect(response2.headers.etag).toBeDefined();
+        });
+      });
+    });
+
+    describe("cacheControl", () => {
+      describe("should work and don't generate `Cache-Control` header by default", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeUndefined();
+        });
+      });
+
+      describe("should work and generate `Cache-Control` header when it is `true`", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheControl: true },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000",
+          );
+        });
+      });
+
+      describe("should work and generate `Cache-Control` header when it is a number", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheControl: 100000 },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe("public, max-age=100");
+        });
+      });
+
+      describe("should work and generate `Cache-Control` header when it is a string", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheControl: "max-age=123456" },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe("max-age=123456");
+        });
+      });
+
+      describe("should work and generate `Cache-Control` header when it is an object with max-age and immutable", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              cacheControl: {
+                maxAge: 100000,
+                immutable: true,
+              },
+            },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=100, immutable",
+          );
+        });
+      });
+
+      describe("should work and generate `Cache-Control` header when it is an object without max-age, but with immutable", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              cacheControl: {
+                immutable: true,
+              },
+            },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000, immutable",
+          );
+        });
+      });
+
+      describe("should work and generate `Cache-Control` header when it is an object with max-age, but without immutable", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              cacheControl: {
+                maxAge: 100000,
+              },
+            },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe("public, max-age=100");
+        });
+      });
+
+      describe("should work and generate `Cache-Control` header when it is an object without max-age and immutable", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              cacheControl: {},
+            },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+          const response = await req.get(`/bundle.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000",
+          );
+        });
+      });
+    });
+
+    describe("cacheImmutable", () => {
+      describe("should work and generate `Cache-Control` header for immutable assets with publicPath", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler(webpackConfigImmutable);
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheImmutable: true },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+          const response = await req.get(`/static/main.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeUndefined();
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header', async () => {
+          const response = await req.get(`/static/6076fc274f403ebb2d09.svg`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000, immutable",
+          );
+        });
+      });
+
+      describe("should work and generate `Cache-Control` header for immutable assets without publicPath", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler({
+            ...webpackConfigImmutable,
+            output: {
+              path: path.resolve(__dirname, "./outputs/basic"),
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheImmutable: true },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+          const response = await req.get(`/main.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeUndefined();
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and `Cache-Control` header', async () => {
+          const response = await req.get(`/6076fc274f403ebb2d09.svg`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000, immutable",
+          );
+        });
+      });
+
+      describe("should work and generate `Cache-Control` header for immutable assets and take preference over the `cacheControl` option", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler({
+            ...webpackConfigImmutable,
+            output: {
+              path: path.resolve(__dirname, "./outputs/basic"),
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheImmutable: true, cacheControl: 1000000 },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header', async () => {
+          const response = await req.get(`/main.js`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=1000",
+          );
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header', async () => {
+          const response = await req.get(`/6076fc274f403ebb2d09.svg`);
+
+          expect(response.statusCode).toEqual(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000, immutable",
+          );
         });
       });
     });

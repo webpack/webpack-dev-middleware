@@ -7,7 +7,7 @@ const memfs = require("memfs");
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").Context<Request, Response>} context
+ * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context
  */
 function setupOutputFileSystem(context) {
   let outputFileSystem;
@@ -30,8 +30,10 @@ function setupOutputFileSystem(context) {
       // TODO we need to support webpack-dev-server as a plugin or revisit it
       const compiler =
         /** @type {MultiCompiler} */
-        (context.compiler).compilers.filter((item) =>
-          Object.prototype.hasOwnProperty.call(item.options, "devServer"),
+        (context.compiler).compilers.filter(
+          (item) =>
+            Object.prototype.hasOwnProperty.call(item.options, "devServer") &&
+            item.options.devServer !== false,
         );
 
       ({ outputFileSystem } =
@@ -48,6 +50,12 @@ function setupOutputFileSystem(context) {
     (context.compiler).compilers || [context.compiler];
 
   for (const compiler of compilers) {
+    if (compiler.options.devServer === false) {
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
+    // @ts-ignore
     compiler.outputFileSystem = outputFileSystem;
   }
 

@@ -46,6 +46,7 @@ function stdoutToSnapshot(stdout) {
   cleanedStdout = cleanedStdout.replace(/  +/g, " ");
   cleanedStdout = cleanedStdout.replace(/^ +/gm, "");
   cleanedStdout = cleanedStdout.replace(/ +$/gm, "");
+  cleanedStdout = cleanedStdout.replace(/\[compared for emit\]/g, "[emitted]");
 
   return cleanedStdout;
 }
@@ -854,7 +855,7 @@ describe("logging", () => {
     });
   });
 
-  it('should logging in multi-compiler and respect the "stats" option from configuration #3', (done) => {
+  it('should logging in multi-compiler and respect the "stats" option from configuration #4', (done) => {
     let proc;
 
     try {
@@ -862,6 +863,50 @@ describe("logging", () => {
         stdio: "pipe",
         env: {
           WEBPACK_CONFIG: "webpack.array.one-error-one-warning-one-object",
+          FORCE_COLOR: true,
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+
+    let stdout = "";
+    let stderr = "";
+
+    proc.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+
+      if (/compiled-for-tests/gi.test(stdout)) {
+        proc.stdin.write("|exit|");
+      }
+    });
+
+    proc.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+      proc.stdin.write("|exit|");
+    });
+
+    proc.on("error", (error) => {
+      done(error);
+    });
+
+    proc.on("exit", () => {
+      expect(stdout).toContain("\u001b[1m");
+      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
+
+      done();
+    });
+  });
+
+  it('should logging in multi-compiler and respect the "stats" option from configuration #5', (done) => {
+    let proc;
+
+    try {
+      proc = execa(runner, [], {
+        stdio: "pipe",
+        env: {
+          WEBPACK_CONFIG: "webpack.array.dev-server-false",
           FORCE_COLOR: true,
         },
       });
@@ -932,17 +977,12 @@ describe("logging", () => {
 
   if (os.platform() !== "win32") {
     it('should logging an error from the fs error when the "writeToDisk" option is "true"', (done) => {
-      // eslint-disable-next-line global-require
-      const clearDirectory = require("./helpers/clearDirectory").default;
       const outputDir = path.resolve(
         __dirname,
         "./outputs/write-to-disk-mkdir-error",
       );
 
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-      }
-
+      fs.mkdirSync(outputDir, { recursive: true });
       fs.chmodSync(outputDir, 0o400);
 
       let proc;
@@ -977,7 +1017,7 @@ describe("logging", () => {
         expect(extractErrorEntry(stderr)).toMatch("Error: EACCES");
 
         fs.chmodSync(outputDir, 0o700);
-        clearDirectory(outputDir);
+        fs.rmSync(outputDir, { recursive: true, force: true });
 
         done();
       });

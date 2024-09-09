@@ -17,7 +17,14 @@
     "myhtml",
     "configurated",
     "mycustom",
-    "commitlint"
+    "commitlint",
+    "nosniff",
+    "deoptimize",
+    "etag",
+    "cachable",
+    "finalhandler",
+    "hono",
+    "rspack"
   ],
   "ignorePaths": [
     "CHANGELOG.md",

@@ -1,4 +1,3 @@
-/// <reference types="node" />
 export = setupOutputFileSystem;
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
@@ -6,12 +5,17 @@ export = setupOutputFileSystem;
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").Context<Request, Response>} context
+ * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context
  */
 declare function setupOutputFileSystem<
-  Request extends import("http").IncomingMessage,
-  Response extends import("../index.js").ServerResponse,
->(context: import("../index.js").Context<Request, Response>): void;
+  Request extends IncomingMessage,
+  Response extends ServerResponse,
+>(
+  context: import("../index.js").WithOptional<
+    import("../index.js").Context<Request, Response>,
+    "watching" | "outputFileSystem"
+  >,
+): void;
 declare namespace setupOutputFileSystem {
   export { MultiCompiler, IncomingMessage, ServerResponse };
 }

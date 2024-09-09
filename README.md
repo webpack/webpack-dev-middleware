@@ -32,7 +32,7 @@ First thing's first, install the module:
 npm install webpack-dev-middleware --save-dev
 ```
 
-> **Warning**
+> [!WARNING]
 >
 > _We do not recommend installing this module globally._
 
@@ -60,19 +60,23 @@ See [below](#other-servers) for an example of use with fastify.
 
 ## Options
 
-|                      Name                       |           Type            |                    Default                    | Description                                                                                                          |
-| :---------------------------------------------: | :-----------------------: | :-------------------------------------------: | :------------------------------------------------------------------------------------------------------------------- |
-|            **[`methods`](#methods)**            |          `Array`          |              `[ 'GET', 'HEAD' ]`              | Allows to pass the list of HTTP request methods accepted by the middleware                                           |
-|            **[`headers`](#headers)**            | `Array\|Object\|Function` |                  `undefined`                  | Allows to pass custom HTTP headers on each request.                                                                  |
-|              **[`index`](#index)**              |     `Boolean\|String`     |                 `index.html`                  | If `false` (but not `undefined`), the server will not respond to requests to the root URL.                           |
-|          **[`mimeTypes`](#mimetypes)**          |         `Object`          |                  `undefined`                  | Allows to register custom mime types or extension mappings.                                                          |
-|    **[`mimeTypeDefault`](#mimetypedefault)**    |         `String`          |                  `undefined`                  | Allows to register a default mime type when we can't determine the content type.                                     |
-|         **[`publicPath`](#publicpath)**         |         `String`          |  `output.publicPath` (from a configuration)   | The public path that the middleware is bound to.                                                                     |
-|              **[`stats`](#stats)**              | `Boolean\|String\|Object` |        `stats` (from a configuration)         | Stats options object or preset name.                                                                                 |
-|   **[`serverSideRender`](#serversiderender)**   |         `Boolean`         |                  `undefined`                  | Instructs the module to enable or disable the server-side rendering mode.                                            |
-|        **[`writeToDisk`](#writetodisk)**        |    `Boolean\|Function`    |                    `false`                    | Instructs the module to write files to the configured location on disk as specified in your `webpack` configuration. |
-|   **[`outputFileSystem`](#outputfilesystem)**   |         `Object`          | [`memfs`](https://github.com/streamich/memfs) | Set the default file system which will be used by webpack as primary destination of generated files.                 |
-| **[`modifyResponseData`](#modifyresponsedata)** |        `Function`         |                  `undefined`                  | Allows to set up a callback to change the response data.                                                             |
+|                      Name                       |               Type                |                    Default                    | Description                                                                                                          |
+| :---------------------------------------------: | :-------------------------------: | :-------------------------------------------: | :------------------------------------------------------------------------------------------------------------------- |
+|            **[`methods`](#methods)**            |              `Array`              |              `[ 'GET', 'HEAD' ]`              | Allows to pass the list of HTTP request methods accepted by the middleware                                           |
+|            **[`headers`](#headers)**            |     `Array\|Object\|Function`     |                  `undefined`                  | Allows to pass custom HTTP headers on each request.                                                                  |
+|              **[`index`](#index)**              |         `boolean\|string`         |                 `index.html`                  | If `false` (but not `undefined`), the server will not respond to requests to the root URL.                           |
+|          **[`mimeTypes`](#mimetypes)**          |             `Object`              |                  `undefined`                  | Allows to register custom mime types or extension mappings.                                                          |
+|    **[`mimeTypeDefault`](#mimetypedefault)**    |             `string`              |                  `undefined`                  | Allows to register a default mime type when we can't determine the content type.                                     |
+|               **[`etag`](#tag)**                |   `boolean\| "weak"\| "strong"`   |                  `undefined`                  | Enable or disable etag generation.                                                                                   |
+|       **[`lastModified`](#lastmodified)**       |             `boolean`             |                  `undefined`                  | Enable or disable `Last-Modified` header. Uses the file system's last modified value.                                |
+|       **[`cacheControl`](#cachecontrol)**       | `boolean\|number\|string\|Object` |                  `undefined`                  | Enable or disable setting `Cache-Control` response header.                                                           |
+|     **[`cacheImmutable`](#cacheimmutable)**     |            `boolean\`             |                  `undefined`                  | Enable or disable setting `Cache-Control: public, max-age=31536000, immutable` response header for immutable assets. |
+|         **[`publicPath`](#publicpath)**         |             `string`              |                  `undefined`                  | The public path that the middleware is bound to.                                                                     |
+|              **[`stats`](#stats)**              |     `boolean\|string\|Object`     |        `stats` (from a configuration)         | Stats options object or preset name.                                                                                 |
+|   **[`serverSideRender`](#serversiderender)**   |             `boolean`             |                  `undefined`                  | Instructs the module to enable or disable the server-side rendering mode.                                            |
+|        **[`writeToDisk`](#writetodisk)**        |        `boolean\|Function`        |                    `false`                    | Instructs the module to write files to the configured location on disk as specified in your `webpack` configuration. |
+|   **[`outputFileSystem`](#outputfilesystem)**   |             `Object`              | [`memfs`](https://github.com/streamich/memfs) | Set the default file system which will be used by webpack as primary destination of generated files.                 |
+| **[`modifyResponseData`](#modifyresponsedata)** |            `Function`             |                  `undefined`                  | Allows to set up a callback to change the response data.                                                             |
 
 The middleware accepts an `options` Object. The following is a property reference for the Object.
 
@@ -170,6 +174,43 @@ Type: `String`
 Default: `undefined`
 
 This property allows a user to register a default mime type when we can't determine the content type.
+
+### etag
+
+Type: `"weak" | "strong"`  
+Default: `undefined`
+
+Enable or disable etag generation. Boolean value use
+
+### lastModified
+
+Type: `Boolean`
+Default: `undefined`
+
+Enable or disable `Last-Modified` header. Uses the file system's last modified value.
+
+### cacheControl
+
+Type: `Boolean | Number | String | { maxAge?: number, immutable?: boolean }`
+Default: `undefined`
+
+Depending on the setting, the following headers will be generated:
+
+- `Boolean` - `Cache-Control: public, max-age=31536000000`
+- `Number` - `Cache-Control: public, max-age=YOUR_NUMBER`
+- `String` - `Cache-Control: YOUR_STRING`
+- `{ maxAge?: number, immutable?: boolean }` - `Cache-Control: public, max-age=YOUR_MAX_AGE_or_31536000000`, also `, immutable` can be added if you set the `immutable` option to `true`
+
+Enable or disable setting `Cache-Control` response header.
+
+### cacheImmutable
+
+Type: `Boolean`
+Default: `undefined`
+
+Enable or disable setting `Cache-Control: public, max-age=31536000, immutable` response header for immutable assets (i.e. asset with a hash like `image.a4c12bde.jpg`).
+Immutable assets are assets that have their hash in the file name therefore they can be cached, because if you change their contents the file name will be changed.
+Take preference over the `cacheControl` option if the asset was defined as immutable.
 
 ### publicPath
 
@@ -540,6 +581,123 @@ out completely._
 
 Examples of use with other servers will follow here.
 
+### Connect
+
+```js
+const connect = require("connect");
+const http = require("http");
+const webpack = require("webpack");
+const webpackConfig = require("./webpack.config.js");
+const devMiddleware = require("webpack-dev-middleware");
+
+const compiler = webpack(webpackConfig);
+const devMiddlewareOptions = {
+  /** Your webpack-dev-middleware-options */
+};
+const app = connect();
+
+app.use(devMiddleware(compiler, devMiddlewareOptions));
+
+http.createServer(app).listen(3000);
+```
+
+### Router
+
+```js
+const http = require("http");
+const Router = require("router");
+const finalhandler = require("finalhandler");
+const webpack = require("webpack");
+const webpackConfig = require("./webpack.config.js");
+const devMiddleware = require("webpack-dev-middleware");
+
+const compiler = webpack(webpackConfig);
+const devMiddlewareOptions = {
+  /** Your webpack-dev-middleware-options */
+};
+const router = Router();
+
+router.use(devMiddleware(compiler, devMiddlewareOptions));
+
+var server = http.createServer((req, res) => {
+  router(req, res, finalhandler(req, res));
+});
+
+server.listen(3000);
+```
+
+### Express
+
+```js
+const express = require("express");
+const webpack = require("webpack");
+const webpackConfig = require("./webpack.config.js");
+const devMiddleware = require("webpack-dev-middleware");
+
+const compiler = webpack(webpackConfig);
+const devMiddlewareOptions = {
+  /** Your webpack-dev-middleware-options */
+};
+const app = express();
+
+app.use(devMiddleware(compiler, devMiddlewareOptions));
+
+app.listen(3000, () => console.log("Example app listening on port 3000!"));
+```
+
+### Koa
+
+```js
+const Koa = require("koa");
+const webpack = require("webpack");
+const webpackConfig = require("./webpack.simple.config");
+const middleware = require("webpack-dev-middleware");
+
+const compiler = webpack(webpackConfig);
+const devMiddlewareOptions = {
+  /** Your webpack-dev-middleware-options */
+};
+const app = new Koa();
+
+app.use(middleware.koaWrapper(compiler, devMiddlewareOptions));
+
+app.listen(3000);
+```
+
+### Hapi
+
+```js
+const Hapi = require("@hapi/hapi");
+const webpack = require("webpack");
+const webpackConfig = require("./webpack.config.js");
+const devMiddleware = require("webpack-dev-middleware");
+
+const compiler = webpack(webpackConfig);
+const devMiddlewareOptions = {};
+
+(async () => {
+  const server = Hapi.server({ port: 3000, host: "localhost" });
+
+  await server.register({
+    plugin: devMiddleware.hapiPlugin(),
+    options: {
+      // The `compiler` option is required
+      compiler,
+      ...devMiddlewareOptions,
+    },
+  });
+
+  await server.start();
+
+  console.log("Server running on %s", server.info.uri);
+})();
+
+process.on("unhandledRejection", (err) => {
+  console.log(err);
+  process.exit(1);
+});
+```
+
 ### Fastify
 
 Fastify interop will require the use of `fastify-express` instead of `middie` for providing middleware support. As the authors of `fastify-express` recommend, this should only be used as a stopgap while full Fastify support is worked on.
@@ -551,13 +709,36 @@ const webpackConfig = require("./webpack.config.js");
 const devMiddleware = require("webpack-dev-middleware");
 
 const compiler = webpack(webpackConfig);
-const { publicPath } = webpackConfig.output;
+const devMiddlewareOptions = {
+  /** Your webpack-dev-middleware-options */
+};
 
 (async () => {
-  await fastify.register(require("fastify-express"));
-  await fastify.use(devMiddleware(compiler, { publicPath }));
+  await fastify.register(require("@fastify/express"));
+  await fastify.use(devMiddleware(compiler, devMiddlewareOptions));
   await fastify.listen(3000);
 })();
+```
+
+### Hono
+
+```js
+import webpack from "webpack";
+import { serve } from "@hono/node-server";
+import { Hono } from "hono";
+import devMiddleware from "webpack-dev-middleware";
+import webpackConfig from "./webpack.config.js";
+
+const compiler = webpack(webpackConfig);
+const devMiddlewareOptions = {
+  /** Your webpack-dev-middleware-options */
+};
+
+const app = new Hono();
+
+app.use(devMiddleware.honoWrapper(compiler, devMiddlewareOptions));
+
+serve(app);
 ```
 
 ## Contributing

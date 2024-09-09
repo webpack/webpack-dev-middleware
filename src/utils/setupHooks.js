@@ -3,9 +3,9 @@
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
-
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
+
 /** @typedef {Configuration["stats"]} StatsOptions */
 /** @typedef {{ children: Configuration["stats"][] }} MultiStatsOptions */
 /** @typedef {Exclude<Configuration["stats"], boolean | string | undefined>} StatsObjectOptions */
@@ -13,7 +13,7 @@
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").Context<Request, Response>} context
+ * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context
  */
 function setupHooks(context) {
   function invalid() {
@@ -144,20 +144,20 @@ function setupHooks(context) {
       context.callbacks = [];
 
       // Execute callback that are delayed
-      callbacks.forEach(
-        /**
-         * @param {(...args: any[]) => Stats | MultiStats} callback
-         */
-        (callback) => {
-          callback(stats);
-        },
-      );
+      for (const callback of callbacks) {
+        callback(stats);
+      }
     });
   }
 
-  context.compiler.hooks.watchRun.tap("webpack-dev-middleware", invalid);
-  context.compiler.hooks.invalid.tap("webpack-dev-middleware", invalid);
-  context.compiler.hooks.done.tap("webpack-dev-middleware", done);
+  // eslint-disable-next-line prefer-destructuring
+  const compiler =
+    /** @type {import("../index.js").Context<Request, Response>} */
+    (context).compiler;
+
+  compiler.hooks.watchRun.tap("webpack-dev-middleware", invalid);
+  compiler.hooks.invalid.tap("webpack-dev-middleware", invalid);
+  compiler.hooks.done.tap("webpack-dev-middleware", done);
 }
 
 module.exports = setupHooks;

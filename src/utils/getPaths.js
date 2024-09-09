@@ -7,7 +7,7 @@
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").Context<Request, Response>} context
+ * @param {import("../index.js").FilledContext<Request, Response>} context
  */
 function getPaths(context) {
   const { stats, options } = context;
@@ -20,6 +20,11 @@ function getPaths(context) {
   const publicPaths = [];
 
   for (const { compilation } of childStats) {
+    if (compilation.options.devServer === false) {
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
     // The `output.path` is always present and always absolute
     const outputPath = compilation.getPath(
       compilation.outputOptions.path || "",
@@ -30,7 +35,11 @@ function getPaths(context) {
         ? compilation.getPath(compilation.outputOptions.publicPath)
         : "";
 
-    publicPaths.push({ outputPath, publicPath });
+    publicPaths.push({
+      outputPath,
+      publicPath,
+      assetsInfo: compilation.assetsInfo,
+    });
   }
 
   return publicPaths;

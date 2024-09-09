@@ -3,58 +3,60 @@ const { parse } = require("url");
 const querystring = require("querystring");
 
 const getPaths = require("./getPaths");
+const memorize = require("./memorize");
 
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
 
-const cacheStore = new WeakMap();
+// eslint-disable-next-line no-undefined
+const memoizedParse = memorize(parse, undefined, (value) => {
+  if (value.pathname) {
+    // eslint-disable-next-line no-param-reassign
+    value.pathname = decode(value.pathname);
+  }
+
+  return value;
+});
+
+const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
 
 /**
- * @param {Function} fn
- * @param {{ cache?: Map<any, any> }} [cache]
- * @returns {any}
+ * @typedef {Object} Extra
+ * @property {import("fs").Stats=} stats
+ * @property {number=} errorCode
+ * @property {boolean=} immutable
  */
-// @ts-ignore
-const mem = (fn, { cache = new Map() } = {}) => {
-  /**
-   * @param {any} arguments_
-   * @return {any}
-   */
-  const memoized = (...arguments_) => {
-    const [key] = arguments_;
-    const cacheItem = cache.get(key);
 
-    if (cacheItem) {
-      return cacheItem.data;
-    }
+/**
+ * decodeURIComponent.
+ *
+ * Allows V8 to only deoptimize this fn instead of all of send().
+ *
+ * @param {string} input
+ * @returns {string}
+ */
 
-    const result = fn.apply(this, arguments_);
+function decode(input) {
+  return querystring.unescape(input);
+}
 
-    cache.set(key, {
-      data: result,
-    });
-
-    return result;
-  };
-
-  cacheStore.set(memoized, cache);
-
-  return memoized;
-};
-const memoizedParse = mem(parse);
-
+// TODO refactor me in the next major release, this function should return `{ filename, stats, error }`
+// TODO fix redirect logic when `/` at the end, like https://github.com/pillarjs/send/blob/master/index.js#L586
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").Context<Request, Response>} context
+ * @param {import("../index.js").FilledContext<Request, Response>} context
  * @param {string} url
+ * @param {Extra=} extra
  * @returns {string | undefined}
  */
-function getFilenameFromUrl(context, url) {
+function getFilenameFromUrl(context, url, extra = {}) {
   const { options } = context;
   const paths = getPaths(context);
 
+  /** @type {string | undefined} */
   let foundFilename;
+  /** @type {URL} */
   let urlObject;
 
   try {
@@ -64,8 +66,10 @@ function getFilenameFromUrl(context, url) {
     return;
   }
 
-  for (const { publicPath, outputPath } of paths) {
+  for (const { publicPath, outputPath, assetsInfo } of paths) {
+    /** @type {string | undefined} */
     let filename;
+    /** @type {URL} */
     let publicPathObject;
 
     try {
@@ -79,39 +83,59 @@ function getFilenameFromUrl(context, url) {
       continue;
     }
 
-    if (
-      urlObject.pathname &&
-      urlObject.pathname.startsWith(publicPathObject.pathname)
-    ) {
-      filename = outputPath;
+    const { pathname } = urlObject;
+    const { pathname: publicPathPathname } = publicPathObject;
+
+    if (pathname && pathname.startsWith(publicPathPathname)) {
+      // Null byte(s)
+      if (pathname.includes("\0")) {
+        // eslint-disable-next-line no-param-reassign
+        extra.errorCode = 400;
+
+        return;
+      }
+
+      // ".." is malicious
+      if (UP_PATH_REGEXP.test(path.normalize(`./${pathname}`))) {
+        // eslint-disable-next-line no-param-reassign
+        extra.errorCode = 403;
+
+        return;
+      }
 
       // Strip the `pathname` property from the `publicPath` option from the start of requested url
       // `/complex/foo.js` => `foo.js`
-      const pathname = urlObject.pathname.slice(
-        publicPathObject.pathname.length,
+      // and add outputPath
+      // `foo.js` => `/home/user/my-project/dist/foo.js`
+      filename = path.join(
+        outputPath,
+        pathname.slice(publicPathPathname.length),
       );
 
-      if (pathname) {
-        filename = path.join(outputPath, querystring.unescape(pathname));
-      }
-
-      let fsStats;
-
       try {
-        fsStats =
-          /** @type {import("fs").statSync} */
-          (context.outputFileSystem.statSync)(filename);
+        // eslint-disable-next-line no-param-reassign
+        extra.stats = context.outputFileSystem.statSync(filename);
       } catch (_ignoreError) {
         // eslint-disable-next-line no-continue
         continue;
       }
 
-      if (fsStats.isFile()) {
+      if (extra.stats.isFile()) {
         foundFilename = filename;
+
+        // Rspack does not yet support `assetsInfo`, so we need to check if `assetsInfo` exists here
+        if (assetsInfo) {
+          const assetInfo = assetsInfo.get(
+            pathname.slice(publicPathObject.pathname.length),
+          );
+
+          // eslint-disable-next-line no-param-reassign
+          extra.immutable = assetInfo ? assetInfo.immutable : false;
+        }
 
         break;
       } else if (
-        fsStats.isDirectory() &&
+        extra.stats.isDirectory() &&
         (typeof options.index === "undefined" || options.index)
       ) {
         const indexValue =
@@ -123,15 +147,14 @@ function getFilenameFromUrl(context, url) {
         filename = path.join(filename, indexValue);
 
         try {
-          fsStats =
-            /** @type {import("fs").statSync} */
-            (context.outputFileSystem.statSync)(filename);
+          // eslint-disable-next-line no-param-reassign
+          extra.stats = context.outputFileSystem.statSync(filename);
         } catch (__ignoreError) {
           // eslint-disable-next-line no-continue
           continue;
         }
 
-        if (fsStats.isFile()) {
+        if (extra.stats.isFile()) {
           foundFilename = filename;
 
           break;

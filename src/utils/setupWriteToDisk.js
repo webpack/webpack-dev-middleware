@@ -10,7 +10,7 @@ const path = require("path");
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").Context<Request, Response>} context
+ * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context
  */
 function setupWriteToDisk(context) {
   /**
@@ -21,6 +21,11 @@ function setupWriteToDisk(context) {
     (context.compiler).compilers || [context.compiler];
 
   for (const compiler of compilers) {
+    if (compiler.options.devServer === false) {
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
     compiler.hooks.emit.tap("DevMiddleware", () => {
       // @ts-ignore
       if (compiler.hasWebpackDevMiddlewareAssetEmittedCallback) {

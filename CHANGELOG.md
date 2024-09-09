@@ -2,6 +2,79 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.4.2](https://github.com/webpack/webpack-dev-middleware/compare/v7.4.1...v7.4.2) (2024-08-21)
+
+
+### Bug Fixes
+
+* no crash when headers are already sent ([#1929](https://github.com/webpack/webpack-dev-middleware/issues/1929)) ([c20f1d9](https://github.com/webpack/webpack-dev-middleware/commit/c20f1d98dff9b51931fae44a44fbc53387768673))
+
+### [7.4.1](https://github.com/webpack/webpack-dev-middleware/compare/v7.4.0...v7.4.1) (2024-08-20)
+
+
+### Bug Fixes
+
+* `assetsInfo` may be undefined (rspack) ([#1927](https://github.com/webpack/webpack-dev-middleware/issues/1927)) ([21f1797](https://github.com/webpack/webpack-dev-middleware/commit/21f1797ee8aecdae7a2bfb0f8b06ce88e987dfb8))
+
+## [7.4.0](https://github.com/webpack/webpack-dev-middleware/compare/v7.3.0...v7.4.0) (2024-08-15)
+
+
+### Features
+
+* added the cacheImmutable option to cache immutable assets (assets with a hash in file name like `image.e12ab567.jpg`) ([5ed629d](https://github.com/webpack/webpack-dev-middleware/commit/5ed629da0d432fefdd3b5191985ce93c3aab2624))
+* allow to configure the `Cache-Control` header ([#1923](https://github.com/webpack/webpack-dev-middleware/issues/1923)) ([f7529c3](https://github.com/webpack/webpack-dev-middleware/commit/f7529c3188efa1885593993d912155ef2188fda5))
+
+
+### Bug Fixes
+
+* support `devServer: false` ([b443f4d](https://github.com/webpack/webpack-dev-middleware/commit/b443f4df9f38502b73707073a6e2a21e1a9c684a))
+
+## [7.3.0](https://github.com/webpack/webpack-dev-middleware/compare/v7.2.1...v7.3.0) (2024-07-18)
+
+
+### Features
+
+* support hono ([#1890](https://github.com/webpack/webpack-dev-middleware/issues/1890)) ([0f9f398](https://github.com/webpack/webpack-dev-middleware/commit/0f9f3983b6e342e39032a585a64a4c638f8bfbfd))
+
+### [7.2.1](https://github.com/webpack/webpack-dev-middleware/compare/v7.2.0...v7.2.1) (2024-04-02)
+
+
+### Bug Fixes
+
+* avoid extra log
+
+## [7.2.0](https://github.com/webpack/webpack-dev-middleware/compare/v7.1.1...v7.2.0) (2024-03-29)
+
+
+### Features
+
+* hapi support ([b3f9126](https://github.com/webpack/webpack-dev-middleware/commit/b3f9126cfb659c95c0cd77d97eed168c7941c8a8))
+* koa support ([#1792](https://github.com/webpack/webpack-dev-middleware/issues/1792)) ([458c17c](https://github.com/webpack/webpack-dev-middleware/commit/458c17c372a2a1a5a33f8923998dba88d2644135))
+* support `ETag` header generation ([#1797](https://github.com/webpack/webpack-dev-middleware/issues/1797)) ([b759181](https://github.com/webpack/webpack-dev-middleware/commit/b75918163284495dae5a2f995c2d93805fccfbd7))
+* support `Last-Modified` header generation ([#1798](https://github.com/webpack/webpack-dev-middleware/issues/1798)) ([18e5683](https://github.com/webpack/webpack-dev-middleware/commit/18e56833327084c22c1ee6bdad123095a68d144a))
+
+### [7.1.1](https://github.com/webpack/webpack-dev-middleware/compare/v7.1.0...v7.1.1) (2024-03-21)
+
+
+### Bug Fixes
+
+* `ContentLength` incorrectly set for empty files ([#1785](https://github.com/webpack/webpack-dev-middleware/issues/1785)) ([0f3e25e](https://github.com/webpack/webpack-dev-middleware/commit/0f3e25e2b0adbc081ba4c7df70467c6ed7bc3a2a))
+* improve perf ([#1777](https://github.com/webpack/webpack-dev-middleware/issues/1777)) ([5b47c92](https://github.com/webpack/webpack-dev-middleware/commit/5b47c9294ec612e337f87101a4df1ca011b50ace))
+* **types:** make types better ([#1786](https://github.com/webpack/webpack-dev-middleware/issues/1786)) ([e4d183e](https://github.com/webpack/webpack-dev-middleware/commit/e4d183ea6dea1731b69e24d5d5471d876ff6ec3a))
+
+## [7.1.0](https://github.com/webpack/webpack-dev-middleware/compare/v7.0.0...v7.1.0) (2024-03-19)
+
+
+### Features
+
+* prefer to use `fs.createReadStream` over `fs.readFileSync` to read files ([ab533de](https://github.com/webpack/webpack-dev-middleware/commit/ab533de933c6684218172b86992f35c3ca6c58a4))
+
+
+### Bug Fixes
+
+* cleaup stream and handle errors ([#1769](https://github.com/webpack/webpack-dev-middleware/issues/1769)) ([1258fdd](https://github.com/webpack/webpack-dev-middleware/commit/1258fdd3d9c175dbacf6bc3b36d5c3c545738f13))
+* **security:** do not allow to read files above ([#1771](https://github.com/webpack/webpack-dev-middleware/issues/1771)) ([e10008c](https://github.com/webpack/webpack-dev-middleware/commit/e10008c762e4d5821ed6990348dabf0d4d93a10e))
+
 ## [7.0.0](https://github.com/webpack/webpack-dev-middleware/compare/v6.1.1...v7.0.0) (2023-12-26)
 
 
