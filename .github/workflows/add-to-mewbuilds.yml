@@ -1,0 +1,73 @@
+name: add to mewbuilds [v6]
+
+on:
+  push:
+    branches-ignore:
+      - 'gh-pages'
+      - 'gh-pages-history'
+    tags-ignore:
+      - '*'
+
+jobs:
+  mewbuilds:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: setup env
+        id: node-version
+        run: |
+          docker build -t mew-build-container .
+          echo ::set-output name=NODE_VERSION::$(docker run --rm -v `pwd`:/home:rw mew-build-container /bin/bash -c "node --version")
+
+      - name: Cache node modules
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{steps.node-version.outputs.NODE_VERSION}}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{steps.node-version.outputs.NODE_VERSION}}-
+
+      - name: npm install
+        run: docker run --rm -v `pwd`:/home:rw --user "$(id -u):$(id -g)" mew-build-container /bin/bash -c "npm install"
+
+      - name: build
+        run: docker run -e INTERCOM_ID="${{secrets.INTERCOM_ID}}" -e WALLET_CONNECT_PROJECT_ID="${{secrets.WALLET_CONNECT_PROJECT_ID}}" --rm -v `pwd`:/home:rw mew-build-container /bin/bash -c "npm run build:hash"
+
+      - name: post build
+        if: github.base_ref == ''
+        env:
+          IPFS_NODE: ${{secrets.IPFS_NODE}}
+          AWS_DEFAULT_REGION: ${{secrets.AWS_DEFAULT_REGION}}
+          AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          VIRUS_TOTAL_API_KEY: ${{secrets.VIRUS_TOTAL_API_KEY}}
+          GITHUB_TOKEN: ${{secrets.MEW_BOT_TOKEN}}
+        run: |
+          pip install --user awscli
+          mkdir -p ~/.ssh
+          ssh-keyscan -H $IPFS_NODE >> $HOME/.ssh/known_hosts
+          openssl aes-256-cbc -K ${{secrets.FILE_DECRYPT_KEY}} -iv ${{secrets.FILE_DECRYPT_IV}} -in ssh-keys.tar.enc -out ssh-keys.tar -d
+          tar xvf ssh-keys.tar
+          chmod 400 ipfs-host.pem
+          hashOut=`tar -cjvf - -C dist/ . | ssh -i ipfs-host.pem ubuntu@$IPFS_NODE ./ipfs-publish.sh --`
+          HASH=`echo $hashOut | sed -n 's:.*<hash>\(.*\)</hash>.*:\1:p'`
+          aws s3 sync --delete --acl public-read dist/ s3://mewbuilds/v6/build/$GITHUB_SHA
+          aws s3 cp s3://mewbuilds/v6/build/$GITHUB_SHA/service-worker.js s3://mewbuilds/v6/build/$GITHUB_SHA/service-worker.js \
+            --metadata-directive REPLACE --cache-control max-age=0,no-cache,no-store,must-revalidate \
+            --content-type application/javascript --acl public-read
+          aws s3 cp s3://mewbuilds/v6/build/$GITHUB_SHA/index.html s3://mewbuilds/v6/build/$GITHUB_SHA/index.html \
+            --metadata-directive REPLACE --cache-control max-age=0,no-cache,no-store,must-revalidate \
+            --content-type text/html --acl public-read
+          cd dist && zip -r ../MyEtherWallet-$GITHUB_SHA.zip * && cd ..
+          FILE_SHA256=`sha256sum  MyEtherWallet-$GITHUB_SHA.zip | awk '{print $1}'`
+          curl --request GET --url https://www.virustotal.com/api/v3/files/upload_url --header "x-apikey: $VIRUS_TOTAL_API_KEY"
+          UPLOAD_URL=`curl --request GET --url https://www.virustotal.com/api/v3/files/upload_url --header "x-apikey: $VIRUS_TOTAL_API_KEY" | jq --raw-output '.data'`
+          curl --request POST --url "$UPLOAD_URL" --header "x-apikey: $VIRUS_TOTAL_API_KEY" --header 'Accept: application/json' --header 'Content-Type: multipart/form-data' -F "file=@MyEtherWallet-$GITHUB_SHA.zip"
+          VIRUS_TOTAL_URL=https://www.virustotal.com/gui/file/$FILE_SHA256
+          curl -H "Authorization: token ${GITHUB_TOKEN}" -X POST \
+            -d "{\"body\": \"Copy of this build can be found at <br/>https://v6.mewbuilds.com/${GITHUB_SHA}/index.html<br/> \
+                            https://www.cloudflare-ipfs.com/ipfs/$HASH <br/> \
+                            Virus Total analysis <br/> \
+                            $VIRUS_TOTAL_URL\"}" \
+                            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments"

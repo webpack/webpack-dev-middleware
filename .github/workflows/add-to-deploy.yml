@@ -1,0 +1,48 @@
+name: add to develop [v6]
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  develop-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: setup env
+        id: node-version
+        run: |
+          docker build -t mew-build-container .
+          echo ::set-output name=NODE_VERSION::$(docker run --rm -v `pwd`:/home:rw mew-build-container /bin/bash -c "node --version")
+
+      - name: Cache node modules
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{steps.node-version.outputs.NODE_VERSION}}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{steps.node-version.outputs.NODE_VERSION}}-
+
+      - name: npm install
+        run: docker run --rm -v `pwd`:/home:rw --user "$(id -u):$(id -g)" mew-build-container /bin/bash -c "npm install"
+
+      - name: build
+        run: docker run -e INTERCOM_ID="${{secrets.INTERCOM_ID}}" -e WALLET_CONNECT_PROJECT_ID="${{secrets.WALLET_CONNECT_PROJECT_ID}}" --rm -v `pwd`:/home:rw mew-build-container /bin/bash -c "npm run build:history"
+
+      - name: add to develop
+        env:
+          AWS_DEFAULT_REGION: ${{secrets.AWS_DEFAULT_REGION}}
+          AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+        run: |
+          pip install --user awscli
+          aws s3 sync dist/ s3://mewbuilds/develop/ --delete --cache-control max-age=172800,public \
+            --acl public-read
+          aws s3 cp s3://mewbuilds/develop/service-worker.js s3://mewbuilds/develop/service-worker.js \
+            --metadata-directive REPLACE --cache-control max-age=0,no-cache,no-store,must-revalidate \
+            --content-type application/javascript --acl public-read
+          aws s3 cp s3://mewbuilds/develop/index.html s3://mewbuilds/develop/index.html \
+            --metadata-directive REPLACE --cache-control max-age=0,no-cache,no-store,must-revalidate \
+            --content-type text/html --acl public-read

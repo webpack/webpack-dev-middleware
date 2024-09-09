@@ -1,0 +1,31 @@
+name: add to codecov [v6]
+
+on:
+  push:
+    branches-ignore:
+      - 'gh-pages'
+      - 'gh-pages-history'
+      - 'main'
+    tags-ignore:
+      - '*'
+    paths:
+      - './src/translations/**.json'
+
+jobs:
+  upload-translaations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check and create lokalise branch
+        env:
+          TOKEN: ${{secrets.LOKALISE_TOKEN}}
+          PROJECT_ID: ${{secrets.PROJECT_ID}}
+        run: node ./scripts/createLokaliseBranch.js
+      - uses: tj-actions/changed-files@v9
+        with: |
+          ./src/translations
+      - name: Upload changes to lokalise
+        env:
+          TOKEN: ${{secrets.LOKALISE_TOKEN}}
+          PROJECT_ID: ${{secrets.PROJECT_ID}}
+        run: FILES=${{steps.changed-files.outputs.all_modified_files}} node ./scripts/uploadToLokalise.js

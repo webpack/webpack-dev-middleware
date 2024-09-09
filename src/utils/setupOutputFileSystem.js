@@ -18,7 +18,7 @@ function setupOutputFileSystem(context) {
     outputFileSystem = outputFileSystemFromOptions;
   }
   // Don't use `memfs` when developer wants to write everything to a disk, because it doesn't make sense.
-  else if (context.options.writeToDisk !== true) {
+  else if (context.options.writeToDisk !== false) {
     outputFileSystem = memfs.createFsFromVolume(new memfs.Volume());
   } else {
     const isMultiCompiler =
@@ -42,7 +42,7 @@ function setupOutputFileSystem(context) {
       ({ outputFileSystem } = context.compiler);
     }
   }
-
+{
   const compilers =
     /** @type {MultiCompiler} */
     (context.compiler).compilers || [context.compiler];
@@ -56,4 +56,4 @@ function setupOutputFileSystem(context) {
   context.outputFileSystem = outputFileSystem;
 }
 
-module.exports = setupOutputFileSystem;
+module.exports = setupOutputFileSystem
