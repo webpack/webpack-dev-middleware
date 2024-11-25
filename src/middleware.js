@@ -218,7 +218,7 @@ function wrapper(context) {
 
       if (options && options.modifyResponseData) {
         ({ data: document, byteLength } =
-          /** @type {{ data: Buffer, byteLength: number }} */
+          /** @type {{ data: Buffer<ArrayBuffer>, byteLength: number }} */
           (options.modifyResponseData(req, res, document, byteLength)));
       }
 

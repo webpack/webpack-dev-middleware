@@ -168,7 +168,7 @@ export function send<Response extends ServerResponse & ExpectedServerResponse>(
  */
 export function finish<
   Response extends ServerResponse & ExpectedServerResponse,
->(res: Response, data?: string | Buffer | undefined): void;
+>(res: Response, data?: string | Buffer): void;
 /**
  * @param {string} filename
  * @param {OutputFileSystem} outputFileSystem
