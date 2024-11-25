@@ -158,7 +158,7 @@ declare function wdm<
   ResponseInternal extends ServerResponse = ServerResponse,
 >(
   compiler: Compiler | MultiCompiler,
-  options?: Options<RequestInternal, ResponseInternal> | undefined,
+  options?: Options<RequestInternal, ResponseInternal>,
 ): API<RequestInternal, ResponseInternal>;
 declare namespace wdm {
   export {
@@ -239,7 +239,7 @@ declare function koaWrapper<
   ResponseInternal extends ServerResponse = ServerResponse,
 >(
   compiler: Compiler | MultiCompiler,
-  options?: Options<RequestInternal, ResponseInternal> | undefined,
+  options?: Options<RequestInternal, ResponseInternal>,
 ): (ctx: any, next: Function) => Promise<void> | void;
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
@@ -253,7 +253,7 @@ declare function honoWrapper<
   ResponseInternal extends ServerResponse = ServerResponse,
 >(
   compiler: Compiler | MultiCompiler,
-  options?: Options<RequestInternal, ResponseInternal> | undefined,
+  options?: Options<RequestInternal, ResponseInternal>,
 ): (ctx: any, next: Function) => Promise<void> | void;
 type Schema = import("schema-utils/declarations/validate").Schema;
 type Compiler = import("webpack").Compiler;

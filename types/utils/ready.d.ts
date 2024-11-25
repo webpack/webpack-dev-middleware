@@ -15,7 +15,7 @@ declare function ready<
 >(
   context: import("../index.js").FilledContext<Request, Response>,
   callback: (...args: any[]) => any,
-  req?: Request | undefined,
+  req?: Request,
 ): void;
 declare namespace ready {
   export { IncomingMessage, ServerResponse };
