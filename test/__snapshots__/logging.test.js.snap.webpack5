@@ -181,10 +181,7 @@ cacheable modules x bytes
 webpack x.x.x compiled successfully in x ms"
 `;
 
-exports[`logging should logging on successfully build and respect the "NO_COLOR" env: stderr 1`] = `
-"(node:151740) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
-(Use \`node --trace-warnings ...\` to show where the warning was created)"
-`;
+exports[`logging should logging on successfully build and respect the "NO_COLOR" env: stderr 1`] = `""`;
 
 exports[`logging should logging on successfully build and respect the "NO_COLOR" env: stdout 1`] = `
 "asset bundle.js x KiB [emitted] (name: main)
