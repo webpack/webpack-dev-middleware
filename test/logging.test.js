@@ -1660,6 +1660,7 @@ describe("logging", () => {
         env: {
           WEBPACK_CONFIG: "webpack.config",
           NO_COLOR: true,
+          NODE_NO_WARNINGS: 1,
         },
       });
     } catch (error) {
