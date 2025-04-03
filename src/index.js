@@ -521,7 +521,11 @@ function honoWrapper(compiler, options) {
     /**
      * @returns {string | undefined}
      */
-    req.getURL = () => c.req.url;
+    req.getURL = () => {
+      // @ts-ignore
+      const url = c.get("c.req.url");
+      return url || c.req.url;
+    };
 
     let { status } = c.res;
 
