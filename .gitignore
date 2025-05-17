@@ -18,3 +18,6 @@ Thumbs.db
 *.sublime-project
 *.sublime-workspace
 yarn.lock
+src/utils/parseTokenList.js
+*.js
+/src
