@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 
 import connect from "connect";
+import expressOld from "express-4";
 import express from "express";
 import router from "router";
 import finalhandler from "finalhandler";
@@ -14,6 +15,8 @@ import request from "supertest";
 import memfs, { createFsFromVolume, Volume } from "memfs";
 
 import { Stats } from "webpack";
+
+import mime from "mime-types";
 
 import middleware from "../src";
 
@@ -250,6 +253,10 @@ function get404ContentTypeHeader(name) {
   }
 }
 
+function getContentTypeHeader(name, ext = "js") {
+  return mime.contentType(ext);
+}
+
 function applyTestMiddleware(name, middlewares) {
   if (name === "hapi") {
     middlewares.push({
@@ -319,6 +326,7 @@ function parseHttpDate(date) {
 describe.each([
   ["connect", connect],
   ["express", express],
+  ["express-v4", expressOld],
   ["router", router],
   ["fastify", fastify],
   ["koa", koa],
@@ -905,7 +913,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
           expect(fs.existsSync(path.resolve(outputPath, "bundle.js"))).toBe(
             false,
@@ -920,7 +928,7 @@ describe.each([
             String(Buffer.byteLength(codeContent)),
           );
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
           expect(response.text).toEqual(codeContent);
         });
@@ -933,7 +941,7 @@ describe.each([
             String(Buffer.byteLength(codeContent)),
           );
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
           expect(response.text).toBeUndefined();
         });
@@ -1095,7 +1103,7 @@ describe.each([
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
           expect(response.text).toBe(codeContent.slice(3000, 3501));
           expect(response.text.length).toBe(501);
@@ -1112,7 +1120,7 @@ describe.each([
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
           expect(response.text).toBeUndefined();
         });
@@ -1128,7 +1136,7 @@ describe.each([
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
           expect(response.text).toBe(codeContent.slice(3000, 3501));
           expect(response.text.length).toBe(501);
@@ -1145,7 +1153,7 @@ describe.each([
           );
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
           expect(response.text).toBe(codeContent.slice(3000, 3501));
           expect(response.text.length).toBe(501);
@@ -1162,7 +1170,7 @@ describe.each([
           );
           expect(response.headers["content-length"]).toEqual("3501");
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
           expect(response.text).toBe(codeContent.slice(0, 3501));
           expect(response.text.length).toBe(3501);
@@ -1179,7 +1187,7 @@ describe.each([
           );
           expect(response.headers["content-length"]).toEqual("801");
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
           expect(response.text).toBe(codeContent.slice(0, 801));
           expect(response.text.length).toBe(801);
@@ -1538,7 +1546,7 @@ describe.each([
             urls: [
               {
                 value: "bundle.js",
-                contentType: "application/javascript; charset=utf-8",
+                contentType: getContentTypeHeader(),
                 code: 200,
               },
               {
@@ -1611,7 +1619,7 @@ describe.each([
             urls: [
               {
                 value: "foo.js",
-                contentType: "application/javascript; charset=utf-8",
+                contentType: getContentTypeHeader(),
                 code: 200,
               },
             ],
@@ -1622,17 +1630,17 @@ describe.each([
             urls: [
               {
                 value: "complex/foo.js",
-                contentType: "application/javascript; charset=utf-8",
+                contentType: getContentTypeHeader(),
                 code: 200,
               },
               {
                 value: "complex/./foo.js",
-                contentType: "application/javascript; charset=utf-8",
+                contentType: getContentTypeHeader(),
                 code: 200,
               },
               {
                 value: "complex/foo/../foo.js",
-                contentType: "application/javascript; charset=utf-8",
+                contentType: getContentTypeHeader(),
                 code: 200,
               },
             ],
@@ -1643,7 +1651,7 @@ describe.each([
             urls: [
               {
                 value: "complex/complex/foo.js",
-                contentType: "application/javascript; charset=utf-8",
+                contentType: getContentTypeHeader(),
                 code: 200,
               },
             ],
@@ -1655,7 +1663,7 @@ describe.each([
               // Express encodes the URI component, so we do the same
               {
                 value: "f%C3%B6%C3%B6.js",
-                contentType: "application/javascript; charset=utf-8",
+                contentType: getContentTypeHeader(),
                 code: 200,
               },
             ],
@@ -1668,7 +1676,7 @@ describe.each([
               // Filenames can contain characters not allowed in URIs
               {
                 value: name === "fastify" ? "foo/foo.js" : "%foo%/%foo%.js",
-                contentType: "application/javascript; charset=utf-8",
+                contentType: getContentTypeHeader(),
                 code: 200,
               },
             ],
@@ -1695,7 +1703,7 @@ describe.each([
             urls: [
               {
                 value: "pathname%20with%20spaces.js",
-                contentType: "application/javascript; charset=utf-8",
+                contentType: getContentTypeHeader(),
                 code: 200,
               },
             ],
@@ -1706,7 +1714,7 @@ describe.each([
             urls: [
               {
                 value: "dirname%20with%20spaces/filename%20with%20spaces.js",
-                contentType: "application/javascript; charset=utf-8",
+                contentType: getContentTypeHeader(),
                 code: 200,
               },
             ],
@@ -2418,7 +2426,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
         });
 
@@ -2680,7 +2688,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
         });
 
@@ -2741,7 +2749,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
         });
 
@@ -3129,7 +3137,7 @@ describe.each([
             String(Buffer.byteLength(codeContent)),
           );
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
           expect(response.text).toEqual(codeContent);
         });
@@ -3340,9 +3348,9 @@ describe.each([
                 } else {
                   middlewares.push({
                     route: "/",
-                    fn: (req, res, next) => {
+                    fn: (oldReq, res, next) => {
                       // eslint-disable-next-line no-param-reassign
-                      req.url = "/index.html";
+                      oldReq.url = "/index.html";
                       next();
                     },
                   });
@@ -4651,11 +4659,11 @@ describe.each([
         });
 
         it('should use the "memfs" package by default', () => {
-          const { Stats } = memfs;
+          const { Stats: fsStats } = memfs;
 
-          expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
+          expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(fsStats);
           expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
-            Stats,
+            fsStats,
           );
         });
       });
@@ -4686,11 +4694,11 @@ describe.each([
         });
 
         it("should use the configurated output filesystem", () => {
-          const { Stats } = fs;
+          const { Stats: fsStats } = fs;
 
-          expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
+          expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(fsStats);
           expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
-            Stats,
+            fsStats,
           );
           expect(compiler.outputFileSystem).toHaveProperty("join");
           expect(compiler.outputFileSystem).toHaveProperty("mkdirp");
@@ -4723,11 +4731,11 @@ describe.each([
         });
 
         it("should use the configured output filesystem", () => {
-          const { Stats } = memfs;
+          const { Stats: fsStats } = memfs;
 
-          expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
+          expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(fsStats);
           expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
-            Stats,
+            fsStats,
           );
           expect(compiler.outputFileSystem).toHaveProperty("join");
           expect(compiler.outputFileSystem).toHaveProperty("mkdirp");
@@ -4761,18 +4769,18 @@ describe.each([
         });
 
         it("should use configured output filesystems", () => {
-          const { Stats } = fs;
+          const { Stats: fsStats } = fs;
 
           for (const childCompiler of compiler.compilers) {
             expect(new childCompiler.outputFileSystem.Stats()).toBeInstanceOf(
-              Stats,
+              fsStats,
             );
             expect(childCompiler.outputFileSystem).toHaveProperty("join");
             expect(childCompiler.outputFileSystem).toHaveProperty("mkdirp");
           }
 
           expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
-            Stats,
+            fsStats,
           );
           expect(instance.context.outputFileSystem).toHaveProperty("join");
           expect(instance.context.outputFileSystem).toHaveProperty("mkdirp");
@@ -5296,7 +5304,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
           expect(response.headers.etag).toBeDefined();
           expect(response.headers.etag.startsWith("W/")).toBe(true);
@@ -5358,7 +5366,7 @@ describe.each([
           expect(response.statusCode).toEqual(206);
           expect(response.headers["content-length"]).toEqual("501");
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
           expect(response.text.length).toBe(501);
           expect(response.headers.etag).toBeDefined();
@@ -5542,7 +5550,7 @@ describe.each([
 
           expect(response.statusCode).toEqual(200);
           expect(response.headers["content-type"]).toEqual(
-            "application/javascript; charset=utf-8",
+            getContentTypeHeader(),
           );
           expect(response.headers["last-modified"]).toBeDefined();
         });
