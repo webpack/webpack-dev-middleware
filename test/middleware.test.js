@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 
 import connect from "connect";
+import expressOld from "express-4";
 import express from "express";
 import router from "router";
 import finalhandler from "finalhandler";
@@ -319,6 +320,7 @@ function parseHttpDate(date) {
 describe.each([
   ["connect", connect],
   ["express", express],
+  ["express-v4", expressOld],
   ["router", router],
   ["fastify", fastify],
   ["koa", koa],
@@ -3340,9 +3342,9 @@ describe.each([
                 } else {
                   middlewares.push({
                     route: "/",
-                    fn: (req, res, next) => {
+                    fn: (oldReq, res, next) => {
                       // eslint-disable-next-line no-param-reassign
-                      req.url = "/index.html";
+                      oldReq.url = "/index.html";
                       next();
                     },
                   });
@@ -4651,11 +4653,11 @@ describe.each([
         });
 
         it('should use the "memfs" package by default', () => {
-          const { Stats } = memfs;
+          const { Stats: fsStats } = memfs;
 
-          expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
+          expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(fsStats);
           expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
-            Stats,
+            fsStats,
           );
         });
       });
@@ -4686,11 +4688,11 @@ describe.each([
         });
 
         it("should use the configurated output filesystem", () => {
-          const { Stats } = fs;
+          const { Stats: fsStats } = fs;
 
-          expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
+          expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(fsStats);
           expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
-            Stats,
+            fsStats,
           );
           expect(compiler.outputFileSystem).toHaveProperty("join");
           expect(compiler.outputFileSystem).toHaveProperty("mkdirp");
@@ -4723,11 +4725,11 @@ describe.each([
         });
 
         it("should use the configured output filesystem", () => {
-          const { Stats } = memfs;
+          const { Stats: fsStats } = memfs;
 
-          expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(Stats);
+          expect(new compiler.outputFileSystem.Stats()).toBeInstanceOf(fsStats);
           expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
-            Stats,
+            fsStats,
           );
           expect(compiler.outputFileSystem).toHaveProperty("join");
           expect(compiler.outputFileSystem).toHaveProperty("mkdirp");
@@ -4761,18 +4763,18 @@ describe.each([
         });
 
         it("should use configured output filesystems", () => {
-          const { Stats } = fs;
+          const { Stats: fsStats } = fs;
 
           for (const childCompiler of compiler.compilers) {
             expect(new childCompiler.outputFileSystem.Stats()).toBeInstanceOf(
-              Stats,
+              fsStats,
             );
             expect(childCompiler.outputFileSystem).toHaveProperty("join");
             expect(childCompiler.outputFileSystem).toHaveProperty("mkdirp");
           }
 
           expect(new instance.context.outputFileSystem.Stats()).toBeInstanceOf(
-            Stats,
+            fsStats,
           );
           expect(instance.context.outputFileSystem).toHaveProperty("join");
           expect(instance.context.outputFileSystem).toHaveProperty("mkdirp");
