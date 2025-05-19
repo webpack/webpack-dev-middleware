@@ -597,6 +597,9 @@ function honoWrapper(compiler, options) {
            * @param {string | Buffer} data data
            */
           res.send = (data) => {
+            // Hono sets `Content-Length` by default
+            c.res.headers.delete("Content-Length");
+
             body = data;
           };
 
@@ -604,7 +607,14 @@ function honoWrapper(compiler, options) {
            * @param {string | Buffer} [data] data
            */
           res.finish = (data) => {
-            body = typeof data !== "undefined" ? data : null;
+            const isDataExist = typeof data !== "undefined";
+
+            // Hono sets `Content-Length` by default
+            if (isDataExist) {
+              c.res.headers.delete("Content-Length");
+            }
+
+            body = isDataExist ? data : null;
           };
 
           devMiddleware(req, res, (err) => {
