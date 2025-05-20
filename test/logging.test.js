@@ -503,9 +503,9 @@ describe("logging", () => {
   });
 
   it("should logging on successfully build in multi-compiler mode", (done) => {
-    fs.readdir('D:\\System Volume Information', (err, files) => {
+    fs.lstat('D:\\System Volume Information', (err, stats) => {
       if (err) console.error('>>> Error:', err); // 可能返回 EINVAL 或 EACCES
-      else console.log(files);
+      else console.log(111, stats);
     });
 
     let proc;
