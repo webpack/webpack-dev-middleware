@@ -503,6 +503,11 @@ describe("logging", () => {
   });
 
   it("should logging on successfully build in multi-compiler mode", (done) => {
+    fs.readdir('D:\\System Volume Information', (err, files) => {
+      if (err) console.error('>>> Error:', err); // 可能返回 EINVAL 或 EACCES
+      else console.log(files);
+    });
+
     let proc;
 
     try {
