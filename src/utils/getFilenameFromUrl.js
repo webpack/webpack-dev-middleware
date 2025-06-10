@@ -1,6 +1,6 @@
-const path = require("path");
-const { parse } = require("url");
-const querystring = require("querystring");
+const path = require("node:path");
+const { parse } = require("node:url");
+const querystring = require("node:querystring");
 
 const getPaths = require("./getPaths");
 const memorize = require("./memorize");
@@ -8,10 +8,16 @@ const memorize = require("./memorize");
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
 
-// eslint-disable-next-line no-undefined
+/**
+ * @param {string} input input
+ * @returns {string} unescape input
+ */
+function decode(input) {
+  return querystring.unescape(input);
+}
+
 const memoizedParse = memorize(parse, undefined, (value) => {
   if (value.pathname) {
-    // eslint-disable-next-line no-param-reassign
     value.pathname = decode(value.pathname);
   }
 
@@ -21,34 +27,29 @@ const memoizedParse = memorize(parse, undefined, (value) => {
 const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
 
 /**
- * @typedef {Object} Extra
- * @property {import("fs").Stats=} stats
- * @property {number=} errorCode
- * @property {boolean=} immutable
+ * @typedef {object} Extra
+ * @property {import("fs").Stats=} stats stats
+ * @property {number=} errorCode error code
+ * @property {boolean=} immutable true when immutable, otherwise false
  */
 
 /**
  * decodeURIComponent.
  *
  * Allows V8 to only deoptimize this fn instead of all of send().
- *
  * @param {string} input
  * @returns {string}
  */
-
-function decode(input) {
-  return querystring.unescape(input);
-}
 
 // TODO refactor me in the next major release, this function should return `{ filename, stats, error }`
 // TODO fix redirect logic when `/` at the end, like https://github.com/pillarjs/send/blob/master/index.js#L586
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").FilledContext<Request, Response>} context
- * @param {string} url
- * @param {Extra=} extra
- * @returns {string | undefined}
+ * @param {import("../index.js").FilledContext<Request, Response>} context context
+ * @param {string} url url
+ * @param {Extra=} extra extra
+ * @returns {string | undefined} filename
  */
 function getFilenameFromUrl(context, url, extra = {}) {
   const { options } = context;
@@ -56,20 +57,20 @@ function getFilenameFromUrl(context, url, extra = {}) {
 
   /** @type {string | undefined} */
   let foundFilename;
-  /** @type {URL} */
+  /** @type {import("node:url").Url} */
   let urlObject;
 
   try {
     // The `url` property of the `request` is contains only  `pathname`, `search` and `hash`
     urlObject = memoizedParse(url, false, true);
-  } catch (_ignoreError) {
+  } catch {
     return;
   }
 
   for (const { publicPath, outputPath, assetsInfo } of paths) {
     /** @type {string | undefined} */
     let filename;
-    /** @type {URL} */
+    /** @type {import("node:url").Url} */
     let publicPathObject;
 
     try {
@@ -78,18 +79,20 @@ function getFilenameFromUrl(context, url, extra = {}) {
         false,
         true,
       );
-    } catch (_ignoreError) {
-      // eslint-disable-next-line no-continue
+    } catch {
       continue;
     }
 
     const { pathname } = urlObject;
     const { pathname: publicPathPathname } = publicPathObject;
 
-    if (pathname && pathname.startsWith(publicPathPathname)) {
+    if (
+      pathname &&
+      publicPathPathname &&
+      pathname.startsWith(publicPathPathname)
+    ) {
       // Null byte(s)
       if (pathname.includes("\0")) {
-        // eslint-disable-next-line no-param-reassign
         extra.errorCode = 400;
 
         return;
@@ -97,7 +100,6 @@ function getFilenameFromUrl(context, url, extra = {}) {
 
       // ".." is malicious
       if (UP_PATH_REGEXP.test(path.normalize(`./${pathname}`))) {
-        // eslint-disable-next-line no-param-reassign
         extra.errorCode = 403;
 
         return;
@@ -113,10 +115,8 @@ function getFilenameFromUrl(context, url, extra = {}) {
       );
 
       try {
-        // eslint-disable-next-line no-param-reassign
         extra.stats = context.outputFileSystem.statSync(filename);
-      } catch (_ignoreError) {
-        // eslint-disable-next-line no-continue
+      } catch {
         continue;
       }
 
@@ -126,10 +126,9 @@ function getFilenameFromUrl(context, url, extra = {}) {
         // Rspack does not yet support `assetsInfo`, so we need to check if `assetsInfo` exists here
         if (assetsInfo) {
           const assetInfo = assetsInfo.get(
-            pathname.slice(publicPathObject.pathname.length),
+            pathname.slice(publicPathPathname.length),
           );
 
-          // eslint-disable-next-line no-param-reassign
           extra.immutable = assetInfo ? assetInfo.immutable : false;
         }
 
@@ -147,10 +146,8 @@ function getFilenameFromUrl(context, url, extra = {}) {
         filename = path.join(filename, indexValue);
 
         try {
-          // eslint-disable-next-line no-param-reassign
           extra.stats = context.outputFileSystem.statSync(filename);
-        } catch (__ignoreError) {
-          // eslint-disable-next-line no-continue
+        } catch {
           continue;
         }
 
@@ -163,7 +160,6 @@ function getFilenameFromUrl(context, url, extra = {}) {
     }
   }
 
-  // eslint-disable-next-line consistent-return
   return foundFilename;
 }
 

@@ -2,15 +2,15 @@ export = wrapper;
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @typedef {Object} SendErrorOptions send error options
+ * @typedef {object} SendErrorOptions send error options
  * @property {Record<string, number | string | string[] | undefined>=} headers headers
  * @property {import("./index").ModifyResponseData<Request, Response>=} modifyResponseData modify response data callback
  */
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("./index.js").FilledContext<Request, Response>} context
- * @return {import("./index.js").Middleware<Request, Response>}
+ * @param {import("./index.js").FilledContext<Request, Response>} context context
+ * @returns {import("./index.js").Middleware<Request, Response>} wrapper
  */
 declare function wrapper<
   Request extends IncomingMessage,

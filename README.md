@@ -41,10 +41,13 @@ npm install webpack-dev-middleware --save-dev
 ```js
 const webpack = require("webpack");
 const middleware = require("webpack-dev-middleware");
+
 const compiler = webpack({
   // webpack options
 });
+
 const express = require("express");
+
 const app = express();
 
 app.use(
@@ -99,11 +102,9 @@ or
 
 ```js
 webpackDevMiddleware(compiler, {
-  headers: () => {
-    return {
-      "Last-Modified": new Date(),
-    };
-  },
+  headers: () => ({
+    "Last-Modified": new Date(),
+  }),
 });
 ```
 
@@ -250,15 +251,14 @@ The function follows the same premise as [`Array#filter`](https://developer.mozi
 
 ```js
 const webpack = require("webpack");
+
 const configuration = {
   /* Webpack configuration */
 };
 const compiler = webpack(configuration);
 
 middleware(compiler, {
-  writeToDisk: (filePath) => {
-    return /superman\.css$/.test(filePath);
-  },
+  writeToDisk: (filePath) => /superman\.css$/.test(filePath),
 });
 ```
 
@@ -276,7 +276,7 @@ This can be done simply by using `path.join`:
 
 ```js
 const webpack = require("webpack");
-const path = require("path");
+const path = require("node:path");
 const myOutputFileSystem = require("my-fs");
 const mkdirp = require("mkdirp");
 
@@ -296,6 +296,7 @@ Allows to set up a callback to change the response data.
 
 ```js
 const webpack = require("webpack");
+
 const configuration = {
   /* Webpack configuration */
 };
@@ -304,11 +305,10 @@ const compiler = webpack(configuration);
 middleware(compiler, {
   // Note - if you send the `Range` header you will have `ReadStream`
   // Also `data` can be `string` or `Buffer`
-  modifyResponseData: (req, res, data, byteLength) => {
+  modifyResponseData: (req, res, data, byteLength) =>
     // Your logic
     // Don't use `res.end()` or `res.send()` here
-    return { data, byteLength };
-  },
+    ({ data, byteLength }),
 });
 ```
 
@@ -333,12 +333,16 @@ A function executed once the middleware has stopped watching.
 ```js
 const express = require("express");
 const webpack = require("webpack");
+
 const compiler = webpack({
   /* Webpack configuration */
 });
+
 const middleware = require("webpack-dev-middleware");
+
 const instance = middleware(compiler);
 
+// eslint-disable-next-line new-cap
 const app = new express();
 
 app.use(instance);
@@ -365,12 +369,16 @@ A function executed once the middleware has invalidated.
 ```js
 const express = require("express");
 const webpack = require("webpack");
+
 const compiler = webpack({
   /* Webpack configuration */
 });
+
 const middleware = require("webpack-dev-middleware");
+
 const instance = middleware(compiler);
 
+// eslint-disable-next-line new-cap
 const app = new express();
 
 app.use(instance);
@@ -402,12 +410,16 @@ If the bundle is valid at the time of calling, the callback is executed immediat
 ```js
 const express = require("express");
 const webpack = require("webpack");
+
 const compiler = webpack({
   /* Webpack configuration */
 });
+
 const middleware = require("webpack-dev-middleware");
+
 const instance = middleware(compiler);
 
+// eslint-disable-next-line new-cap
 const app = new express();
 
 app.use(instance);
@@ -433,12 +445,16 @@ URL for the requested file.
 ```js
 const express = require("express");
 const webpack = require("webpack");
+
 const compiler = webpack({
   /* Webpack configuration */
 });
+
 const middleware = require("webpack-dev-middleware");
+
 const instance = middleware(compiler);
 
+// eslint-disable-next-line new-cap
 const app = new express();
 
 app.use(instance);
@@ -461,10 +477,13 @@ But there is a solution to avoid it - mount the middleware to a non-root route, 
 ```js
 const webpack = require("webpack");
 const middleware = require("webpack-dev-middleware");
+
 const compiler = webpack({
   // webpack options
 });
+
 const express = require("express");
+
 const app = express();
 
 // Mounting the middleware to the non-root route allows avoids this.
@@ -500,12 +519,15 @@ Example Implementation:
 ```js
 const express = require("express");
 const webpack = require("webpack");
+
 const compiler = webpack({
   /* Webpack configuration */
 });
+
 const isObject = require("is-object");
 const middleware = require("webpack-dev-middleware");
 
+// eslint-disable-next-line new-cap
 const app = new express();
 
 // This function makes server rendering of asset references consistent with different webpack chunk/entry configurations
@@ -522,7 +544,7 @@ app.use(middleware(compiler, { serverSideRender: true }));
 // The following middleware would not be invoked until the latest build is finished.
 app.use((req, res) => {
   const { devMiddleware } = res.locals.webpack;
-  const outputFileSystem = devMiddleware.outputFileSystem;
+  const { outputFileSystem } = devMiddleware;
   const jsonWebpackStats = devMiddleware.stats.toJson();
   const { assetsByChunkName, outputPath } = jsonWebpackStats;
 
@@ -585,7 +607,7 @@ Examples of use with other servers will follow here.
 
 ```js
 const connect = require("connect");
-const http = require("http");
+const http = require("node:http");
 const webpack = require("webpack");
 const webpackConfig = require("./webpack.config.js");
 const devMiddleware = require("webpack-dev-middleware");
@@ -604,7 +626,7 @@ http.createServer(app).listen(3000);
 ### Router
 
 ```js
-const http = require("http");
+const http = require("node:http");
 const Router = require("router");
 const finalhandler = require("finalhandler");
 const webpack = require("webpack");
@@ -615,11 +637,13 @@ const compiler = webpack(webpackConfig);
 const devMiddlewareOptions = {
   /** Your webpack-dev-middleware-options */
 };
+
+// eslint-disable-next-line new-cap
 const router = Router();
 
 router.use(devMiddleware(compiler, devMiddlewareOptions));
 
-var server = http.createServer((req, res) => {
+const server = http.createServer((req, res) => {
   router(req, res, finalhandler(req, res));
 });
 
@@ -675,22 +699,20 @@ const devMiddleware = require("webpack-dev-middleware");
 const compiler = webpack(webpackConfig);
 const devMiddlewareOptions = {};
 
-(async () => {
-  const server = Hapi.server({ port: 3000, host: "localhost" });
+const server = Hapi.server({ port: 3000, host: "localhost" });
 
-  await server.register({
-    plugin: devMiddleware.hapiPlugin(),
-    options: {
-      // The `compiler` option is required
-      compiler,
-      ...devMiddlewareOptions,
-    },
-  });
+await server.register({
+  plugin: devMiddleware.hapiPlugin(),
+  options: {
+    // The `compiler` option is required
+    compiler,
+    ...devMiddlewareOptions,
+  },
+});
 
-  await server.start();
+await server.start();
 
-  console.log("Server running on %s", server.info.uri);
-})();
+console.log("Server running on %s", server.info.uri);
 
 process.on("unhandledRejection", (err) => {
   console.log(err);
@@ -713,11 +735,9 @@ const devMiddlewareOptions = {
   /** Your webpack-dev-middleware-options */
 };
 
-(async () => {
-  await fastify.register(require("@fastify/express"));
-  await fastify.use(devMiddleware(compiler, devMiddlewareOptions));
-  await fastify.listen(3000);
-})();
+await fastify.register(require("@fastify/express"));
+await fastify.use(devMiddleware(compiler, devMiddlewareOptions));
+await fastify.listen(3000);
 ```
 
 ### Hono

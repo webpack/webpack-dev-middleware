@@ -20,17 +20,18 @@ const noop = () => {};
 /** @typedef {import("fs").ReadStream} ReadStream */
 
 /**
- * @typedef {Object} ExtendedServerResponse
- * @property {{ webpack?: { devMiddleware?: Context<IncomingMessage, ServerResponse> } }} [locals]
+ * @typedef {object} ExtendedServerResponse
+ * @property {{ webpack?: { devMiddleware?: Context<IncomingMessage, ServerResponse> } }=} locals locals
  */
 
 /** @typedef {import("http").IncomingMessage} IncomingMessage */
 /** @typedef {import("http").ServerResponse & ExtendedServerResponse} ServerResponse */
 
+// eslint-disable-next-line jsdoc/no-restricted-syntax
 /**
  * @callback NextFunction
- * @param {any} [err]
- * @return {void}
+ * @param {any=} err error
+ * @returns {void}
  */
 
 /**
@@ -53,38 +54,38 @@ const noop = () => {};
 
 /**
  * @callback Callback
- * @param {Stats | MultiStats} [stats]
+ * @param {(Stats | MultiStats)=} stats
  */
 
 /**
- * @typedef {Object} ResponseData
- * @property {Buffer | ReadStream} data
- * @property {number} byteLength
+ * @typedef {object} ResponseData
+ * @property {Buffer | ReadStream} data data
+ * @property {number} byteLength byte length
  */
 
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @callback ModifyResponseData
- * @param {RequestInternal} req
- * @param {ResponseInternal} res
- * @param {Buffer | ReadStream} data
- * @param {number} byteLength
- * @return {ResponseData}
+ * @param {RequestInternal} req req
+ * @param {ResponseInternal} res res
+ * @param {Buffer | ReadStream} data data
+ * @param {number} byteLength byte length
+ * @returns {ResponseData}
  */
 
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @typedef {Object} Context
- * @property {boolean} state
- * @property {Stats | MultiStats | undefined} stats
- * @property {Callback[]} callbacks
- * @property {Options<RequestInternal, ResponseInternal>} options
- * @property {Compiler | MultiCompiler} compiler
- * @property {Watching | MultiWatching | undefined} watching
- * @property {Logger} logger
- * @property {OutputFileSystem} outputFileSystem
+ * @typedef {object} Context
+ * @property {boolean} state state
+ * @property {Stats | MultiStats | undefined} stats stats
+ * @property {Callback[]} callbacks callbacks
+ * @property {Options<RequestInternal, ResponseInternal>} options options
+ * @property {Compiler | MultiCompiler} compiler compiler
+ * @property {Watching | MultiWatching | undefined} watching watching
+ * @property {Logger} logger logger
+ * @property {OutputFileSystem} outputFileSystem output file system
  */
 
 /**
@@ -104,22 +105,22 @@ const noop = () => {};
 /**
  * @template {IncomingMessage} [RequestInternal = IncomingMessage]
  * @template {ServerResponse} [ResponseInternal = ServerResponse]
- * @typedef {Object} Options
- * @property {{[key: string]: string}} [mimeTypes]
- * @property {string | undefined} [mimeTypeDefault]
- * @property {boolean | ((targetPath: string) => boolean)} [writeToDisk]
- * @property {string[]} [methods]
- * @property {Headers<RequestInternal, ResponseInternal>} [headers]
- * @property {NonNullable<Configuration["output"]>["publicPath"]} [publicPath]
- * @property {Configuration["stats"]} [stats]
- * @property {boolean} [serverSideRender]
- * @property {OutputFileSystem} [outputFileSystem]
- * @property {boolean | string} [index]
- * @property {ModifyResponseData<RequestInternal, ResponseInternal>} [modifyResponseData]
- * @property {"weak" | "strong"} [etag]
- * @property {boolean} [lastModified]
- * @property {boolean | number | string | { maxAge?: number, immutable?: boolean }} [cacheControl]
- * @property {boolean} [cacheImmutable]
+ * @typedef {object} Options
+ * @property {{ [key: string]: string }=} mimeTypes mime types
+ * @property {(string | undefined)=} mimeTypeDefault mime type default
+ * @property {(boolean | ((targetPath: string) => boolean))=} writeToDisk write to disk
+ * @property {string[]=} methods methods
+ * @property {Headers<RequestInternal, ResponseInternal>=} headers headers
+ * @property {NonNullable<Configuration["output"]>["publicPath"]=} publicPath public path
+ * @property {Configuration["stats"]=} stats stats
+ * @property {boolean=} serverSideRender is server side render
+ * @property {OutputFileSystem=} outputFileSystem output file system
+ * @property {(boolean | string)=} index index
+ * @property {ModifyResponseData<RequestInternal, ResponseInternal>=} modifyResponseData modify response data
+ * @property {"weak" | "strong"=} etag options to generate etag header
+ * @property {boolean=} lastModified options to generate last modified header
+ * @property {(boolean | number | string | { maxAge?: number, immutable?: boolean })=} cacheControl options to generate cache headers
+ * @property {boolean=} cacheImmutable is cache immutable
  */
 
 /**
@@ -129,7 +130,7 @@ const noop = () => {};
  * @param {RequestInternal} req
  * @param {ResponseInternal} res
  * @param {NextFunction} next
- * @return {Promise<void>}
+ * @returns {Promise<void>}
  */
 
 /** @typedef {import("./utils/getFilenameFromUrl").Extra} Extra */
@@ -159,12 +160,12 @@ const noop = () => {};
 /**
  * @template {IncomingMessage} RequestInternal
  * @template {ServerResponse} ResponseInternal
- * @typedef {Object} AdditionalMethods
- * @property {GetFilenameFromUrl} getFilenameFromUrl
- * @property {WaitUntilValid} waitUntilValid
- * @property {Invalidate} invalidate
- * @property {Close} close
- * @property {Context<RequestInternal, ResponseInternal>} context
+ * @typedef {object} AdditionalMethods
+ * @property {GetFilenameFromUrl} getFilenameFromUrl get filename from url
+ * @property {WaitUntilValid} waitUntilValid wait until valid
+ * @property {Invalidate} invalidate invalidate
+ * @property {Close} close close
+ * @property {Context<RequestInternal, ResponseInternal>} context context
  */
 
 /**
@@ -188,9 +189,9 @@ const noop = () => {};
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @param {Compiler | MultiCompiler} compiler
- * @param {Options<RequestInternal, ResponseInternal>} [options]
- * @returns {API<RequestInternal, ResponseInternal>}
+ * @param {Compiler | MultiCompiler} compiler compiler
+ * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @returns {API<RequestInternal, ResponseInternal>} webpack dev middleware
  */
 function wdm(compiler, options = {}) {
   validate(/** @type {Schema} */ (schema), options, {
@@ -205,7 +206,7 @@ function wdm(compiler, options = {}) {
 
     // mimeTypes from user provided options should take priority
     // over existing, known types
-    // @ts-ignore
+    // @ts-expect-error
     mime.types = { ...types, ...mimeTypes };
   }
 
@@ -214,7 +215,7 @@ function wdm(compiler, options = {}) {
    */
   const context = {
     state: false,
-    // eslint-disable-next-line no-undefined
+
     stats: undefined,
     callbacks: [],
     options,
@@ -235,7 +236,7 @@ function wdm(compiler, options = {}) {
     context.watching = /** @type {Compiler} */ (context.compiler).watching;
   } else {
     /**
-     * @param {Error | null | undefined} error
+     * @param {Error | null | undefined} error error
      */
     const errorHandler = (error) => {
       if (error) {
@@ -250,15 +251,15 @@ function wdm(compiler, options = {}) {
     if (
       Array.isArray(/** @type {MultiCompiler} */ (context.compiler).compilers)
     ) {
-      const c = /** @type {MultiCompiler} */ (context.compiler);
-      const watchOptions = c.compilers.map(
+      const compilers = /** @type {MultiCompiler} */ (context.compiler);
+      const watchOptions = compilers.compilers.map(
         (childCompiler) => childCompiler.options.watchOptions || {},
       );
 
       context.watching = compiler.watch(watchOptions, errorHandler);
     } else {
-      const c = /** @type {Compiler} */ (context.compiler);
-      const watchOptions = c.options.watchOptions || {};
+      const oneCompiler = /** @type {Compiler} */ (context.compiler);
+      const watchOptions = oneCompiler.options.watchOptions || {};
 
       context.watching = compiler.watch(watchOptions, errorHandler);
     }
@@ -298,8 +299,8 @@ function wdm(compiler, options = {}) {
 /**
  * @template S
  * @template O
- * @typedef {Object} HapiPluginBase
- * @property {(server: S, options: O) => void | Promise<void>} register
+ * @typedef {object} HapiPluginBase
+ * @property {(server: S, options: O) => void | Promise<void>} register register
  */
 
 /**
@@ -315,7 +316,7 @@ function wdm(compiler, options = {}) {
 /**
  * @template HapiServer
  * @template {HapiOptions} HapiOptionsInternal
- * @returns {HapiPlugin<HapiServer, HapiOptionsInternal>}
+ * @returns {HapiPlugin<HapiServer, HapiOptionsInternal>} hapi wrapper
  */
 function hapiWrapper() {
   return {
@@ -333,30 +334,31 @@ function hapiWrapper() {
 
       const devMiddleware = wdm(compiler, rest);
 
-      // @ts-ignore
+      // @ts-expect-error
       if (!server.decorations.server.includes("webpackDevMiddleware")) {
-        // @ts-ignore
+        // @ts-expect-error
         server.decorate("server", "webpackDevMiddleware", devMiddleware);
       }
 
-      // @ts-ignore
+      // @ts-expect-error
+      // eslint-disable-next-line id-length
       server.ext("onRequest", (request, h) =>
         new Promise((resolve, reject) => {
           let isFinished = false;
 
           /**
-           * @param {string | Buffer} [data]
+           * @param {(string | Buffer)=} data
            */
-          // eslint-disable-next-line no-param-reassign
+
           request.raw.res.send = (data) => {
             isFinished = true;
             request.raw.res.end(data);
           };
 
           /**
-           * @param {string | Buffer} [data]
+           * @param {(string | Buffer)=} data
            */
-          // eslint-disable-next-line no-param-reassign
+
           request.raw.res.finish = (data) => {
             isFinished = true;
             request.raw.res.end(data);
@@ -384,23 +386,24 @@ function hapiWrapper() {
 
 wdm.hapiWrapper = hapiWrapper;
 
+// eslint-disable-next-line jsdoc/no-restricted-syntax
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @param {Compiler | MultiCompiler} compiler
- * @param {Options<RequestInternal, ResponseInternal>} [options]
- * @returns {(ctx: any, next: Function) => Promise<void> | void}
+ * @param {Compiler | MultiCompiler} compiler compiler
+ * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @returns {(ctx: any, next: Function) => Promise<void> | void} kow wrapper
  */
 function koaWrapper(compiler, options) {
   const devMiddleware = wdm(compiler, options);
 
+  // eslint-disable-next-line jsdoc/no-restricted-syntax
   /**
-   * @param {{ req: RequestInternal, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse, status: number, body: string | Buffer | import("fs").ReadStream | { message: string }, state: Object }} ctx
-   * @param {Function} next
+   * @param {{req: RequestInternal, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse, status: number, body: string | Buffer | import("fs").ReadStream | {message: string}, state: object}} ctx context
+   * @param {Function} next next
    * @returns {Promise<void>}
    */
-
-  const wrapper = async function webpackDevMiddleware(ctx, next) {
+  async function webpackDevMiddleware(ctx, next) {
     const { req, res } = ctx;
 
     res.locals = ctx.state;
@@ -417,7 +420,7 @@ function koaWrapper(compiler, options) {
      */
     res.setStatusCode = (statusCode) => {
       status = statusCode;
-      // eslint-disable-next-line no-param-reassign
+
       ctx.status = statusCode;
     };
 
@@ -426,30 +429,27 @@ function koaWrapper(compiler, options) {
     try {
       await new Promise(
         /**
-         * @param {(value: void) => void} resolve
-         * @param {(reason?: any) => void} reject
+         * @param {(value: void) => void} resolve resolve
+         * @param {(reason?: Error) => void} reject reject
          */
         (resolve, reject) => {
           /**
            * @param {import("fs").ReadStream} stream readable stream
            */
           res.stream = (stream) => {
-            // eslint-disable-next-line no-param-reassign
             ctx.body = stream;
           };
           /**
            * @param {string | Buffer} data data
            */
           res.send = (data) => {
-            // eslint-disable-next-line no-param-reassign
             ctx.body = data;
           };
 
           /**
-           * @param {string | Buffer} [data] data
+           * @param {(string | Buffer)=} data data
            */
           res.finish = (data) => {
-            // eslint-disable-next-line no-param-reassign
             ctx.status = status;
             res.end(data);
           };
@@ -465,73 +465,73 @@ function koaWrapper(compiler, options) {
         },
       );
     } catch (err) {
-      // eslint-disable-next-line no-param-reassign
       ctx.status =
         /** @type {Error & { statusCode: number }} */ (err).statusCode ||
         /** @type {Error & { status: number }} */ (err).status ||
         500;
-      // eslint-disable-next-line no-param-reassign
+
       ctx.body = {
         message: /** @type {Error} */ (err).message,
       };
     }
 
     await next();
-  };
+  }
 
-  wrapper.devMiddleware = devMiddleware;
+  webpackDevMiddleware.devMiddleware = devMiddleware;
 
-  return wrapper;
+  return webpackDevMiddleware;
 }
 
 wdm.koaWrapper = koaWrapper;
 
+// eslint-disable-next-line jsdoc/no-restricted-syntax
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @param {Compiler | MultiCompiler} compiler
- * @param {Options<RequestInternal, ResponseInternal>} [options]
- * @returns {(ctx: any, next: Function) => Promise<void> | void}
+ * @param {Compiler | MultiCompiler} compiler compiler
+ * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @returns {(ctx: any, next: Function) => Promise<void> | void} hono wrapper
  */
 function honoWrapper(compiler, options) {
   const devMiddleware = wdm(compiler, options);
 
+  // eslint-disable-next-line jsdoc/no-restricted-syntax
   /**
-   * @param {{ env: any, body: any, json: any, status: any, set:any, req: RequestInternal & import("./utils/compatibleAPI").ExpectedIncomingMessage & { header: (name: string) => string }, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse & { headers: any, status: any } }} c
-   * @param {Function} next
+   * @param {{ env: any, body: any, json: any, status: any, set: any, req: RequestInternal & import("./utils/compatibleAPI").ExpectedIncomingMessage & { header: (name: string) => string }, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse & { headers: any, status: any } }} context context
+   * @param {Function} next next function
    * @returns {Promise<void>}
    */
-  // eslint-disable-next-line consistent-return
-  const wrapper = async function webpackDevMiddleware(c, next) {
-    const { req, res } = c;
+  async function webpackDevMiddleware(context, next) {
+    const { req, res } = context;
 
-    c.set("webpack", { devMiddleware: devMiddleware.context });
+    context.set("webpack", { devMiddleware: devMiddleware.context });
 
     /**
-     * @returns {string | undefined}
+     * @returns {string | undefined} method
      */
-    req.getMethod = () => c.req.method;
+    req.getMethod = () => context.req.method;
 
     /**
-     * @param {string} name
-     * @returns {string | string[] | undefined}
+     * @param {string} name name
+     * @returns {string | string[] | undefined} header value
      */
-    req.getHeader = (name) => c.req.header(name);
+    req.getHeader = (name) => context.req.header(name);
 
     /**
-     * @returns {string | undefined}
+     * @returns {string | undefined} URL
      */
-    req.getURL = () => c.req.url;
+    req.getURL = () => context.req.url;
 
-    let { status } = c.res;
+    let { status } = context.res;
 
     /**
-     * @returns {number} code
+     * @returns {number} code code
      */
     res.getStatusCode = () => status;
 
     /**
-     * @param {number} code
+     * @param {number} code code
      */
     res.setStatusCode = (code) => {
       status = code;
@@ -539,34 +539,37 @@ function honoWrapper(compiler, options) {
 
     /**
      * @param {string} name header name
+     * @returns {string | string[] | undefined} header
      */
-    res.getHeader = (name) => c.res.headers.get(name);
+    res.getHeader = (name) => context.res.headers.get(name);
 
+    // eslint-disable-next-line jsdoc/no-restricted-syntax
     /**
-     * @param {string} name
-     * @param {string | number | Readonly<string[]>} value
+     * @param {string} name header name
+     * @param {string | number | Readonly<string[]>} value value
+     * @returns {ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse & { headers: any, status: any }} response
      */
     res.setHeader = (name, value) => {
-      c.res.headers.append(name, value);
-      return c.res;
+      context.res.headers.append(name, value);
+      return context.res;
     };
 
     /**
-     * @param {string} name
+     * @param {string} name header name
      */
     res.removeHeader = (name) => {
-      c.res.headers.delete(name);
+      context.res.headers.delete(name);
     };
 
     /**
-     * @returns {string[]}
+     * @returns {string[]} response headers
      */
-    res.getResponseHeaders = () => Array.from(c.res.headers.keys());
+    res.getResponseHeaders = () => [...context.res.headers.keys()];
 
     /**
-     * @returns {ServerResponse}
+     * @returns {ServerResponse} server response
      */
-    res.getOutgoing = () => c.env.outgoing;
+    res.getOutgoing = () => context.env.outgoing;
 
     res.setState = () => {
       // Do nothing, because we set it before
@@ -574,15 +577,15 @@ function honoWrapper(compiler, options) {
 
     res.getReadyReadableStreamState = () => "readable";
 
-    res.getHeadersSent = () => c.env.outgoing.headersSent;
+    res.getHeadersSent = () => context.env.outgoing.headersSent;
 
     let body;
 
     try {
       await new Promise(
         /**
-         * @param {(value: void) => void} resolve
-         * @param {(reason?: any) => void} reject
+         * @param {(value: void) => void} resolve resolve
+         * @param {(reason?: Error) => void} reject reject
          */
         (resolve, reject) => {
           /**
@@ -598,20 +601,20 @@ function honoWrapper(compiler, options) {
            */
           res.send = (data) => {
             // Hono sets `Content-Length` by default
-            c.res.headers.delete("Content-Length");
+            context.res.headers.delete("Content-Length");
 
             body = data;
           };
 
           /**
-           * @param {string | Buffer} [data] data
+           * @param {(string | Buffer)=} data data
            */
           res.finish = (data) => {
             const isDataExist = typeof data !== "undefined";
 
             // Hono sets `Content-Length` by default
             if (isDataExist) {
-              c.res.headers.delete("Content-Length");
+              context.res.headers.delete("Content-Length");
             }
 
             body = isDataExist ? data : null;
@@ -628,21 +631,21 @@ function honoWrapper(compiler, options) {
         },
       );
     } catch (err) {
-      c.status(500);
+      context.status(500);
 
-      return c.json({ message: /** @type {Error} */ (err).message });
+      return context.json({ message: /** @type {Error} */ (err).message });
     }
 
     if (typeof body !== "undefined") {
-      return c.body(body, status);
+      return context.body(body, status);
     }
 
     await next();
-  };
+  }
 
-  wrapper.devMiddleware = devMiddleware;
+  webpackDevMiddleware.devMiddleware = devMiddleware;
 
-  return wrapper;
+  return webpackDevMiddleware;
 }
 
 wdm.honoWrapper = honoWrapper;

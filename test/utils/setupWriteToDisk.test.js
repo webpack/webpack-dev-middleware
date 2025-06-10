@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "node:fs";
 
 import setupWriteToDisk from "../../src/utils/setupWriteToDisk";
 
@@ -56,7 +56,7 @@ describe("setupWriteToDisk", () => {
     // this simulates the emit hook being called twice
     emitHook.mock.calls[0][1]();
     emitHook.mock.calls[0][1]();
-    expect(assetEmittedHook.mock.calls.length).toEqual(1);
+    expect(assetEmittedHook.mock.calls).toHaveLength(1);
   });
 
   it("filters out unwanted emits with writeToDisk", () => {
@@ -77,14 +77,14 @@ describe("setupWriteToDisk", () => {
     );
 
     // the getPath helper is not needed for webpack@5
-    expect(getPath.mock.calls.length).toEqual(0);
+    expect(getPath.mock.calls).toHaveLength(0);
 
-    expect(filter.mock.calls.length).toEqual(1);
-    expect(filter.mock.calls[0][0]).toEqual("targetPath");
+    expect(filter.mock.calls).toHaveLength(1);
+    expect(filter.mock.calls[0][0]).toBe("targetPath");
     // the callback should always be called
-    expect(cb.mock.calls.length).toEqual(1);
+    expect(cb.mock.calls).toHaveLength(1);
     // the filter prevents a directory from being made
-    expect(mkdirSpy.mock.calls.length).toEqual(0);
+    expect(mkdirSpy.mock.calls).toHaveLength(0);
   });
 
   const writeErrors = [
@@ -105,7 +105,8 @@ describe("setupWriteToDisk", () => {
     },
   ];
 
-  writeErrors.forEach((writeError) => {
+  for (const writeError of writeErrors) {
+    // eslint-disable-next-line no-loop-func
     it(`tries to create directories and write file if not filtered out ${writeError.title}`, () => {
       context.options = {};
       setupWriteToDisk(context);
@@ -122,20 +123,20 @@ describe("setupWriteToDisk", () => {
       );
 
       // the getPath helper is not needed for webpack@5
-      expect(getPath.mock.calls.length).toEqual(0);
+      expect(getPath.mock.calls).toHaveLength(0);
 
-      expect(mkdirSpy.mock.calls.length).toEqual(1);
-      expect(mkdirSpy.mock.calls[0][0]).toEqual("/target/path");
+      expect(mkdirSpy.mock.calls).toHaveLength(1);
+      expect(mkdirSpy.mock.calls[0][0]).toBe("/target/path");
 
       // simulates the mkdir callback being called
       mkdirSpy.mock.calls[0][2](writeError.mkdirError);
 
       if (writeError.mkdirError) {
-        expect(writeFileSpy.mock.calls.length).toEqual(0);
+        expect(writeFileSpy.mock.calls).toHaveLength(0);
       } else {
-        expect(writeFileSpy.mock.calls.length).toEqual(1);
-        expect(writeFileSpy.mock.calls[0][0]).toEqual("/target/path/file");
-        expect(writeFileSpy.mock.calls[0][1]).toEqual("content");
+        expect(writeFileSpy.mock.calls).toHaveLength(1);
+        expect(writeFileSpy.mock.calls[0][0]).toBe("/target/path/file");
+        expect(writeFileSpy.mock.calls[0][1]).toBe("content");
 
         // simulates the writeFile callback being called
         writeFileSpy.mock.calls[0][2](writeError.writeFileError);
@@ -146,9 +147,9 @@ describe("setupWriteToDisk", () => {
       expect(context.logger.log.mock.calls).toMatchSnapshot();
 
       // the callback should always be called
-      expect(cb.mock.calls.length).toEqual(1);
+      expect(cb.mock.calls).toHaveLength(1);
       // no errors are expected
       expect(cb.mock.calls).toMatchSnapshot();
     });
-  });
+  }
 });

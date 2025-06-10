@@ -4,11 +4,9 @@ import setupOutputFileSystem from "../../src/utils/setupOutputFileSystem";
 
 const createFsFromVolume = jest.spyOn(memfs, "createFsFromVolume");
 
-createFsFromVolume.mockImplementation(() => {
-  return {
-    testFs: true,
-  };
-});
+createFsFromVolume.mockImplementation(() => ({
+  testFs: true,
+}));
 
 describe("setupOutputFileSystem", () => {
   afterEach(() => {
@@ -26,7 +24,7 @@ describe("setupOutputFileSystem", () => {
     // make sure that this is the default fs created
     expect(context.compiler.outputFileSystem.testFs).toBeTruthy();
     expect(context.outputFileSystem.testFs).toBeTruthy();
-    expect(createFsFromVolume.mock.calls.length).toEqual(1);
+    expect(createFsFromVolume.mock.calls).toHaveLength(1);
   });
 
   it("should set fs for multi compiler", () => {
@@ -39,9 +37,9 @@ describe("setupOutputFileSystem", () => {
 
     setupOutputFileSystem(context);
 
-    context.compiler.compilers.forEach((comp) => {
+    for (const comp of context.compiler.compilers) {
       expect(comp.outputFileSystem).toBeTruthy();
-    });
+    }
   });
 
   it("should use provided fs with correct methods", () => {

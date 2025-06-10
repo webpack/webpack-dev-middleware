@@ -1,16 +1,23 @@
 const cacheStore = new WeakMap();
 
+// eslint-disable-next-line jsdoc/no-restricted-syntax
 /**
  * @template T
- * @param {Function} fn
- * @param {{ cache?: Map<string, { data: T }> } | undefined} cache
- * @param {((value: T) => T)=} callback
- * @returns {any}
+ * @typedef {(...args: any) => T} FunctionReturning
  */
-function memorize(fn, { cache = new Map() } = {}, callback) {
+
+/**
+ * @template T
+ * @param {FunctionReturning<T>} fn memorized function
+ * @param {({ cache?: Map<string, { data: T }> } | undefined)=} cache cache
+ * @param {((value: T) => T)=} callback callback
+ * @returns {FunctionReturning<T>} new function
+ */
+function memorize(fn, { cache = new Map() } = {}, callback = undefined) {
+  // eslint-disable-next-line jsdoc/no-restricted-syntax
   /**
-   * @param {any} arguments_
-   * @return {any}
+   * @param {any} arguments_ args
+   * @returns {any} result
    */
   const memoized = (...arguments_) => {
     const [key] = arguments_;
@@ -20,7 +27,7 @@ function memorize(fn, { cache = new Map() } = {}, callback) {
       return cacheItem.data;
     }
 
-    // @ts-ignore
+    // @ts-expect-error
     let result = fn.apply(this, arguments_);
 
     if (callback) {

@@ -10,8 +10,72 @@ const defaultConfig = require("../fixtures/webpack.config");
 const configEntries = [];
 const configMiddlewareEntries = [];
 
+/**
+ * @param {string} NSKey NSKey
+ * @param {string[]} accumulator accumulator
+ */
+function fillConfigEntries(NSKey, accumulator) {
+  for (const key of Object.keys(process.env).filter(
+    (key) => key.indexOf(NSKey) === 0,
+  )) {
+    let value = process.env[key];
+    const keys = key.replace(NSKey, "").split("_");
+
+    value = value === "true" ? true : value === "false" ? false : value;
+
+    keys.push(value);
+    accumulator.push(keys);
+  }
+}
+
 fillConfigEntries("WCF_", configEntries);
 fillConfigEntries("WMC_", configMiddlewareEntries);
+
+/**
+ * @param {string} name name
+ * @returns {import("webpack").Configuration | import("webpack").Configuration[]} configuration
+ */
+function getWebpackConfig(name) {
+  try {
+    return require(`../fixtures/${name}`);
+  } catch {
+    return require("../fixtures/webpack.config");
+  }
+}
+
+/**
+ * @param {import("webpack").Configuration[]} data data
+ * @returns {import("webpack").Configuration} configuration
+ */
+function createConfig(data) {
+  /**
+   * @param {string} entry entry
+   * @returns {{ [string]: string }} object
+   */
+  function getObject(entry) {
+    return { [entry[0]]: entry[1] };
+  }
+
+  /**
+   * @param {import("webpack").Configuration[]} arr arr
+   * @returns {import("webpack").Configuration} result
+   */
+  function reduceObject(arr) {
+    if (arr.length > 1) {
+      const temp = [];
+      temp.push(arr.pop());
+      temp.push(arr.pop());
+
+      return reduceObject([...arr, getObject(temp.reverse())]);
+    }
+
+    return arr[0];
+  }
+
+  const result = data.map((el) => reduceObject([...el]));
+
+  return merge.all(result);
+}
 
 const createdConfig = createConfig(configEntries);
 const unionConfig =
@@ -26,8 +90,6 @@ if (Array.isArray(config)) {
 }
 
 const compiler = webpack(config);
-
-let instance;
 
 if (process.env.WEBPACK_BREAK_WATCH) {
   compiler.watch = function watch() {
@@ -56,20 +118,10 @@ switch (process.env.WEBPACK_DEV_MIDDLEWARE_STATS) {
   // Nothing
 }
 
-try {
-  instance = middleware(compiler, configMiddleware);
-} catch (error) {
-  throw error;
-}
-
+const instance = middleware(compiler, configMiddleware);
 const app = express();
 
-try {
-  app.use(instance);
-} catch (error) {
-  throw error;
-}
-
+app.use(instance);
 app.listen((error) => {
   if (error) {
     throw error;
@@ -84,10 +136,9 @@ app.listen((error) => {
     incompleteCommand += entries.shift();
     commands.push(incompleteCommand);
     incompleteCommand = entries.pop();
-    commands = commands.concat(entries);
+    commands = [...commands, ...entries];
 
     while (commands.length > 0) {
-      // eslint-disable-next-line default-case
       switch (commands.shift()) {
         // case 'invalidate':
         //   stdinInput = '';
@@ -102,49 +153,3 @@ app.listen((error) => {
     }
   });
 });
-
-function getWebpackConfig(name) {
-  try {
-    // eslint-disable-next-line global-require,import/no-dynamic-require
-    return require(`../fixtures/${name}`);
-  } catch (error) {
-    // eslint-disable-next-line global-require
-    return require(`../fixtures/webpack.config`);
-  }
-}
-
-function createConfig(data) {
-  function getObject(entry) {
-    return { [entry[0]]: entry[1] };
-  }
-
-  function reduceObject(arr) {
-    if (arr.length > 1) {
-      const temp = [];
-      temp.push(arr.pop());
-      temp.push(arr.pop());
-
-      return reduceObject([...arr, getObject(temp.reverse())]);
-    }
-
-    return arr[0];
-  }
-
-  const result = data.map((el) => reduceObject([...el]));
-
-  return merge.all(result);
-}
-
-function fillConfigEntries(NSKey, accumulator) {
-  Object.keys(process.env)
-    .filter((key) => key.indexOf(NSKey) === 0)
-    .forEach((key) => {
-      let value = process.env[key];
-      const keys = key.replace(NSKey, "").split("_");
-
-      value = value === "true" ? true : value === "false" ? false : value;
-
-      keys.push(value);
-      accumulator.push(keys);
-    });
-}
