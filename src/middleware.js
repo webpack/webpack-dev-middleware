@@ -1,4 +1,4 @@
-const path = require("path");
+const path = require("node:path");
 
 const mime = require("mime-types");
 
@@ -38,10 +38,10 @@ const memorize = require("./utils/memorize");
 const BYTES_RANGE_REGEXP = /^ *bytes/i;
 
 /**
- * @param {string} type
- * @param {number} size
- * @param {import("range-parser").Range} [range]
- * @returns {string}
+ * @param {"bytes"} type type
+ * @param {number} size size
+ * @param {import("range-parser").Range=} range range
+ * @returns {string} value of content range header
  */
 function getValueContentRangeHeader(type, size, range) {
   return `${type} ${range ? `${range.start}-${range.end}` : "*"}/${size}`;
@@ -49,15 +49,14 @@ function getValueContentRangeHeader(type, size, range) {
 
 /**
  * Parse an HTTP Date into a number.
- *
- * @param {string} date
- * @returns {number}
+ * @param {string} date date
+ * @returns {number} timestamp
  */
 function parseHttpDate(date) {
   const timestamp = date && Date.parse(date);
 
   // istanbul ignore next: guard against date.js Date.parse patching
-  return typeof timestamp === "number" ? timestamp : NaN;
+  return typeof timestamp === "number" ? timestamp : Number.NaN;
 }
 
 const CACHE_CONTROL_NO_CACHE_REGEXP = /(?:^|,)\s*?no-cache\s*?(?:,|$)/;
@@ -80,7 +79,7 @@ function destroyStream(stream, suppress) {
        * @this {import("fs").ReadStream}
        */
       function onOpenClose() {
-        // @ts-ignore
+        // @ts-expect-error
         if (typeof this.fd === "number") {
           // actually close down the fd
           this.close();
@@ -106,13 +105,12 @@ const statuses = {
 
 const parseRangeHeaders = memorize(
   /**
-   * @param {string} value
-   * @returns {import("range-parser").Result | import("range-parser").Ranges}
+   * @param {string} value value
+   * @returns {import("range-parser").Result | import("range-parser").Ranges} ranges
    */
   (value) => {
     const [len, rangeHeader] = value.split("|");
 
-    // eslint-disable-next-line global-require
     return require("range-parser")(Number(len), rangeHeader, {
       combine: true,
     });
@@ -124,7 +122,7 @@ const MAX_MAX_AGE = 31536000000;
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @typedef {Object} SendErrorOptions send error options
+ * @typedef {object} SendErrorOptions send error options
  * @property {Record<string, number | string | string[] | undefined>=} headers headers
  * @property {import("./index").ModifyResponseData<Request, Response>=} modifyResponseData modify response data callback
  */
@@ -132,8 +130,8 @@ const MAX_MAX_AGE = 31536000000;
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("./index.js").FilledContext<Request, Response>} context
- * @return {import("./index.js").Middleware<Request, Response>}
+ * @param {import("./index.js").FilledContext<Request, Response>} context context
+ * @returns {import("./index.js").Middleware<Request, Response>} wrapper
  */
 function wrapper(context) {
   return async function middleware(req, res, next) {
@@ -141,6 +139,9 @@ function wrapper(context) {
 
     initState(res);
 
+    /**
+     * @returns {Promise<void>}
+     */
     async function goNext() {
       if (!context.options.serverSideRender) {
         return next();
@@ -171,8 +172,8 @@ function wrapper(context) {
      * @returns {void}
      */
     function sendError(status, options) {
-      // eslint-disable-next-line global-require
       const escapeHtml = require("./utils/escapeHtml");
+
       const content = statuses[status] || String(status);
       let document = Buffer.from(
         `<!DOCTYPE html>
@@ -185,7 +186,7 @@ function wrapper(context) {
 <pre>${escapeHtml(content)}</pre>
 </body>
 </html>`,
-        "utf-8",
+        "utf8",
       );
 
       // Clear existing headers
@@ -228,7 +229,8 @@ function wrapper(context) {
     }
 
     /**
-     * @param {NodeJS.ErrnoException} error
+     * @param {NodeJS.ErrnoException} error error
+     * @returns {void}
      */
     function errorHandler(error) {
       switch (error.code) {
@@ -247,6 +249,9 @@ function wrapper(context) {
       }
     }
 
+    /**
+     * @returns {string | string[] | undefined} something when conditional get exist
+     */
     function isConditionalGET() {
       return (
         getRequestHeader(req, "if-match") ||
@@ -256,6 +261,9 @@ function wrapper(context) {
       );
     }
 
+    /**
+     * @returns {boolean} true when precondition failure, otherwise false
+     */
     function isPreconditionFailure() {
       // if-match
       const ifMatch = /** @type {string} */ (getRequestHeader(req, "if-match"));
@@ -290,12 +298,12 @@ function wrapper(context) {
 
         // A recipient MUST ignore the If-Unmodified-Since header field if the
         // received field-value is not a valid HTTP-date.
-        if (!isNaN(unmodifiedSince)) {
+        if (!Number.isNaN(unmodifiedSince)) {
           const lastModified = parseHttpDate(
             /** @type {string} */ (getResponseHeader(res, "Last-Modified")),
           );
 
-          return isNaN(lastModified) || lastModified > unmodifiedSince;
+          return Number.isNaN(lastModified) || lastModified > unmodifiedSince;
         }
       }
 
@@ -316,8 +324,8 @@ function wrapper(context) {
     }
 
     /**
-     * @param {import("http").OutgoingHttpHeaders} resHeaders
-     * @returns {boolean}
+     * @param {import("http").OutgoingHttpHeaders} resHeaders res header
+     * @returns {boolean} true when fresh, otherwise false
      */
     function isFresh(resHeaders) {
       // Always return stale when Cache-Control: no-cache to support end-to-end reload requests
@@ -397,6 +405,9 @@ function wrapper(context) {
       return true;
     }
 
+    /**
+     * @returns {boolean} true when range is fresh, otherwise false
+     */
     function isRangeFresh() {
       const ifRange =
         /** @type {string | undefined} */
@@ -407,7 +418,7 @@ function wrapper(context) {
       }
 
       // if-range as etag
-      if (ifRange.indexOf('"') !== -1) {
+      if (ifRange.includes('"')) {
         const etag =
           /** @type {string | undefined} */
           (getResponseHeader(res, "ETag"));
@@ -416,7 +427,7 @@ function wrapper(context) {
           return true;
         }
 
-        return Boolean(etag && ifRange.indexOf(etag) !== -1);
+        return Boolean(etag && ifRange.includes(etag));
       }
 
       // if-range as modified date
@@ -432,7 +443,7 @@ function wrapper(context) {
     }
 
     /**
-     * @returns {string | undefined}
+     * @returns {string | undefined} range header
      */
     function getRangeHeader() {
       const range = /** @type {string} */ (getRequestHeader(req, "range"));
@@ -441,13 +452,12 @@ function wrapper(context) {
         return range;
       }
 
-      // eslint-disable-next-line no-undefined
       return undefined;
     }
 
     /**
-     * @param {import("range-parser").Range} range
-     * @returns {[number, number]}
+     * @param {import("range-parser").Range} range range
+     * @returns {[number, number]} offset and length
      */
     function getOffsetAndLenFromRange(range) {
       const offset = range.start;
@@ -457,9 +467,9 @@ function wrapper(context) {
     }
 
     /**
-     * @param {number} offset
-     * @param {number} len
-     * @returns {[number, number]}
+     * @param {number} offset offset
+     * @param {number} len len
+     * @returns {[number, number]} start and end
      */
     function calcStartAndEnd(offset, len) {
       const start = offset;
@@ -468,6 +478,9 @@ function wrapper(context) {
       return [start, end];
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     async function processRequest() {
       // Pipe and SendFile
       /** @type {import("./utils/getFilenameFromUrl").Extra} */
@@ -644,7 +657,6 @@ function wrapper(context) {
         }
 
         if (value) {
-          // eslint-disable-next-line global-require
           const result = await require("./utils/etag")(value);
 
           // Because we already read stream, we can cache buffer to avoid extra read from fs

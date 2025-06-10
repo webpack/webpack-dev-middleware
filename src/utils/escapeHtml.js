@@ -40,11 +40,11 @@ function escapeHtml(string) {
         escape = "&gt;";
         break;
       default:
-        // eslint-disable-next-line no-continue
         continue;
     }
 
     if (lastIndex !== index) {
+      // eslint-disable-next-line unicorn/prefer-string-slice
       html += str.substring(lastIndex, index);
     }
 
@@ -52,6 +52,7 @@ function escapeHtml(string) {
     html += escape;
   }
 
+  // eslint-disable-next-line unicorn/prefer-string-slice
   return lastIndex !== index ? html + str.substring(lastIndex, index) : html;
 }
 

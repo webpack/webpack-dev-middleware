@@ -1,5 +1,5 @@
-const fs = require("fs");
-const path = require("path");
+const fs = require("node:fs");
+const path = require("node:path");
 
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
@@ -10,7 +10,7 @@ const path = require("path");
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context
+ * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context context
  */
 function setupWriteToDisk(context) {
   /**
@@ -22,12 +22,11 @@ function setupWriteToDisk(context) {
 
   for (const compiler of compilers) {
     if (compiler.options.devServer === false) {
-      // eslint-disable-next-line no-continue
       continue;
     }
 
     compiler.hooks.emit.tap("DevMiddleware", () => {
-      // @ts-ignore
+      // @ts-expect-error
       if (compiler.hasWebpackDevMiddlewareAssetEmittedCallback) {
         return;
       }
@@ -77,7 +76,7 @@ function setupWriteToDisk(context) {
         },
       );
 
-      // @ts-ignore
+      // @ts-expect-error
       compiler.hasWebpackDevMiddlewareAssetEmittedCallback = true;
     });
   }

@@ -1,12 +1,13 @@
 export = ready;
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
+/** @typedef {import("../index.js").Callback} Callback */
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").FilledContext<Request, Response>} context
- * @param {(...args: any[]) => any} callback
- * @param {Request} [req]
+ * @param {import("../index.js").FilledContext<Request, Response>} context context
+ * @param {Callback} callback callback
+ * @param {Request=} req req
  * @returns {void}
  */
 declare function ready<
@@ -14,11 +15,12 @@ declare function ready<
   Response extends ServerResponse,
 >(
   context: import("../index.js").FilledContext<Request, Response>,
-  callback: (...args: any[]) => any,
-  req?: Request,
+  callback: Callback,
+  req?: Request | undefined,
 ): void;
 declare namespace ready {
-  export { IncomingMessage, ServerResponse };
+  export { IncomingMessage, ServerResponse, Callback };
 }
 type IncomingMessage = import("../index.js").IncomingMessage;
 type ServerResponse = import("../index.js").ServerResponse;
+type Callback = import("../index.js").Callback;

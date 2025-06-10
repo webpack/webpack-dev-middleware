@@ -1,7 +1,6 @@
 /**
  * Parse a HTTP token list.
- *
- * @param {string} str
+ * @param {string} str str
  * @returns {string[]} tokens
  */
 function parseTokenList(str) {
@@ -21,7 +20,7 @@ function parseTokenList(str) {
         break;
       case 0x2c /* , */:
         if (start !== end) {
-          list.push(str.substring(start, end));
+          list.push(str.slice(start, end));
         }
         end = i + 1;
         start = end;
@@ -34,7 +33,7 @@ function parseTokenList(str) {
 
   // final token
   if (start !== end) {
-    list.push(str.substring(start, end));
+    list.push(str.slice(start, end));
   }
 
   return list;

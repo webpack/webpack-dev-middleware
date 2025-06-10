@@ -1,27 +1,30 @@
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
+/** @typedef {import("webpack").Asset} Asset */
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
 
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").FilledContext<Request, Response>} context
+ * @param {import("../index.js").FilledContext<Request, Response>} context context
+ * @returns {{ outputPath: string, publicPath: string, assetsInfo: Asset["info"] }[]} paths
  */
 function getPaths(context) {
   const { stats, options } = context;
   /** @type {Stats[]} */
   const childStats =
     /** @type {MultiStats} */
+    // eslint-disable-next-line unicorn/prefer-logical-operator-over-ternary
     (stats).stats
       ? /** @type {MultiStats} */ (stats).stats
       : [/** @type {Stats} */ (stats)];
+  /** @type {{ outputPath: string, publicPath: string, assetsInfo: Asset["info"] }[]} */
   const publicPaths = [];
 
   for (const { compilation } of childStats) {
     if (compilation.options.devServer === false) {
-      // eslint-disable-next-line no-continue
       continue;
     }
 

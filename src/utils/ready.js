@@ -1,12 +1,13 @@
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
+/** @typedef {import("../index.js").Callback} Callback */
 
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").FilledContext<Request, Response>} context
- * @param {(...args: any[]) => any} callback
- * @param {Request} [req]
+ * @param {import("../index.js").FilledContext<Request, Response>} context context
+ * @param {Callback} callback callback
+ * @param {Request=} req req
  * @returns {void}
  */
 function ready(context, callback, req) {

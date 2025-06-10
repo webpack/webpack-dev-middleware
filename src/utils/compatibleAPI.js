@@ -3,34 +3,35 @@
 /** @typedef {import("../index").OutputFileSystem} OutputFileSystem */
 
 /**
- * @typedef {Object} ExpectedIncomingMessage
- * @property {(name: string) => string | string[] | undefined} [getHeader]
- * @property {() => string | undefined} [getMethod]
- * @property {() => string | undefined} [getURL]
+ * @typedef {object} ExpectedIncomingMessage
+ * @property {((name: string) => string | string[] | undefined)=} getHeader get header extra method
+ * @property {(() => string | undefined)=} getMethod get method extra method
+ * @property {(() => string | undefined)=} getURL get URL extra method
  */
 
+// eslint-disable-next-line jsdoc/no-restricted-syntax
 /**
- * @typedef {Object} ExpectedServerResponse
- * @property {(status: number) => void} [setStatusCode]
- * @property {() => number} [getStatusCode]
- * @property {(name: string) => string | string[] | undefined | number} [getHeader]
- * @property {(name: string, value: number | string | Readonly<string[]>) => ExpectedServerResponse} [setHeader]
- * @property {(name: string) => void} [removeHeader]
- * @property {(data: string | Buffer) => void} [send]
- * @property {(data?: string | Buffer) => void} [finish]
- * @property {() => string[]} [getResponseHeaders]
- * @property {() => boolean} [getHeadersSent]
- * @property {(data: any) => void} [stream]
- * @property {() => any} [getOutgoing]
- * @property {(name: string, value: any) => void} [setState]
- * @property {() => "ready" | "open" | "readable"} [getReadyReadableStreamState]
+ * @typedef {object} ExpectedServerResponse
+ * @property {((status: number) => void)=} setStatusCode set status code
+ * @property {(() => number)=} getStatusCode get status code
+ * @property {((name: string) => string | string[] | undefined | number)} getHeader get header
+ * @property {((name: string, value: number | string | Readonly<string[]>) => ExpectedServerResponse)=} setHeader set header
+ * @property {((name: string) => void)=} removeHeader remove header
+ * @property {((data: string | Buffer) => void)=} send send
+ * @property {((data?: string | Buffer) => void)=} finish finish
+ * @property {(() => string[])=} getResponseHeaders get response header
+ * @property {(() => boolean)=} getHeadersSent get headers sent
+ * @property {((data: any) => void)=} stream stream
+ * @property {(() => any)=} getOutgoing get outgoing
+ * @property {((name: string, value: any) => void)=} setState set state
+ * @property {(() => "ready" | "open" | "readable")=} getReadyReadableStreamState get ready readable streamState
  */
 
 /**
  * @template {IncomingMessage & ExpectedIncomingMessage} Request
- * @param {Request} req
- * @param {string} name
- * @returns {string | string[] | undefined}
+ * @param {Request} req req
+ * @param {string} name name
+ * @returns {string | string[] | undefined} request header
  */
 function getRequestHeader(req, name) {
   // Pseudo API
@@ -43,8 +44,8 @@ function getRequestHeader(req, name) {
 
 /**
  * @template {IncomingMessage & ExpectedIncomingMessage} Request
- * @param {Request} req
- * @returns {string | undefined}
+ * @param {Request} req req
+ * @returns {string | undefined} request method
  */
 function getRequestMethod(req) {
   // Pseudo API
@@ -57,8 +58,8 @@ function getRequestMethod(req) {
 
 /**
  * @template {IncomingMessage & ExpectedIncomingMessage} Request
- * @param {Request} req
- * @returns {string | undefined}
+ * @param {Request} req req
+ * @returns {string | undefined} request URL
  */
 function getRequestURL(req) {
   // Pseudo API
@@ -71,8 +72,9 @@ function getRequestURL(req) {
 
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res
- * @param {number} code
+ * @param {Response} res res
+ * @param {number} code code
+ * @returns {void}
  */
 function setStatusCode(res, code) {
   // Pseudo API
@@ -83,14 +85,14 @@ function setStatusCode(res, code) {
   }
 
   // Node.js API
-  // eslint-disable-next-line no-param-reassign
+
   res.statusCode = code;
 }
 
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res
- * @returns {number}
+ * @param {Response} res res
+ * @returns {number} status code
  */
 function getStatusCode(res) {
   // Pseudo API
@@ -103,9 +105,9 @@ function getStatusCode(res) {
 
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res
- * @param {string} name
- * @returns {string | string[] | undefined | number}
+ * @param {Response} res res
+ * @param {string} name name
+ * @returns {string | string[] | undefined | number} header
  */
 function getResponseHeader(res, name) {
   // Real and Pseudo API
@@ -114,10 +116,10 @@ function getResponseHeader(res, name) {
 
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res
- * @param {string} name
- * @param {number | string | Readonly<string[]>} value
- * @returns {Response}
+ * @param {Response} res res
+ * @param {string} name name
+ * @param {number | string | Readonly<string[]>} value value
+ * @returns {Response} response
  */
 function setResponseHeader(res, name, value) {
   // Real and Pseudo API
@@ -126,8 +128,9 @@ function setResponseHeader(res, name, value) {
 
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res
- * @param {string} name
+ * @param {Response} res res
+ * @param {string} name name
+ * @returns {void}
  */
 function removeResponseHeader(res, name) {
   // Real and Pseudo API
@@ -136,8 +139,8 @@ function removeResponseHeader(res, name) {
 
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res
- * @returns {string[]}
+ * @param {Response} res res
+ * @returns {string[]} header names
  */
 function getResponseHeaders(res) {
   // Pseudo API
@@ -150,8 +153,8 @@ function getResponseHeaders(res) {
 
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res
- * @returns {boolean}
+ * @param {Response} res res
+ * @returns {boolean} true when headers were sent, otherwise false
  */
 function getHeadersSent(res) {
   // Pseudo API
@@ -164,8 +167,8 @@ function getHeadersSent(res) {
 
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res
- * @param {import("fs").ReadStream} bufferOrStream
+ * @param {Response} res res
+ * @param {import("fs").ReadStream} bufferOrStream buffer or stream
  */
 function pipe(res, bufferOrStream) {
   // Pseudo API and Koa API
@@ -181,8 +184,9 @@ function pipe(res, bufferOrStream) {
 
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res
- * @param {string | Buffer} bufferOrString
+ * @param {Response} res res
+ * @param {string | Buffer} bufferOrString buffer or string
+ * @returns {void}
  */
 function send(res, bufferOrString) {
   // Pseudo API and Express API and Koa API
@@ -196,8 +200,8 @@ function send(res, bufferOrString) {
 
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res
- * @param {string | Buffer} [data]
+ * @param {Response} res res
+ * @param {(string | Buffer)=} data data
  */
 function finish(res, data) {
   // Pseudo API and Express API and Koa API
@@ -211,11 +215,11 @@ function finish(res, data) {
 }
 
 /**
- * @param {string} filename
- * @param {OutputFileSystem} outputFileSystem
- * @param {number} start
- * @param {number} end
- * @returns {{ bufferOrStream: (Buffer | import("fs").ReadStream), byteLength: number }}
+ * @param {string} filename filename
+ * @param {OutputFileSystem} outputFileSystem output file system
+ * @param {number} start start
+ * @param {number} end end
+ * @returns {{ bufferOrStream: (Buffer | import("fs").ReadStream), byteLength: number }} result with buffer or stream and byte length
  */
 function createReadStreamOrReadFileSync(
   filename,
@@ -252,8 +256,8 @@ function createReadStreamOrReadFileSync(
 
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res
- * @returns {Response} res
+ * @param {Response} res res
+ * @returns {Response} res res
  */
 function getOutgoing(res) {
   // Pseudo API and Express API and Koa API
@@ -266,7 +270,7 @@ function getOutgoing(res) {
 
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res
+ * @param {Response} res res
  */
 function initState(res) {
   if (typeof res.setState === "function") {
@@ -274,15 +278,16 @@ function initState(res) {
   }
 
   // fixes #282. credit @cexoso. in certain edge situations res.locals is undefined.
-  // eslint-disable-next-line no-param-reassign
-  res.locals = res.locals || {};
+  res.locals ||= {};
 }
 
+// eslint-disable-next-line jsdoc/no-restricted-syntax
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res
- * @param {string} name
- * @param {any} value
+ * @param {Response} res res
+ * @param {string} name name
+ * @param {any} value state
+ * @returns {void}
  */
 function setState(res, name, value) {
   if (typeof res.setState === "function") {
@@ -291,15 +296,15 @@ function setState(res, name, value) {
     return;
   }
 
+  // eslint-disable-next-line jsdoc/no-restricted-syntax
   /** @type {any} */
-  // eslint-disable-next-line no-param-reassign
   (res.locals)[name] = value;
 }
 
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res
- * @returns {"ready" | "open" | "readable"}
+ * @param {Response} res res
+ * @returns {"ready" | "open" | "readable"} state
  */
 function getReadyReadableStreamState(res) {
   // Pseudo API and Express API and Koa API

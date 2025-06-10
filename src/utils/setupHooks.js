@@ -13,34 +13,34 @@
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context
+ * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context context
  */
 function setupHooks(context) {
+  /**
+   * @returns {void}
+   */
   function invalid() {
     if (context.state) {
       context.logger.log("Compilation starting...");
     }
 
     // We are now in invalid state
-    // eslint-disable-next-line no-param-reassign
+
     context.state = false;
-    // eslint-disable-next-line no-param-reassign, no-undefined
+
     context.stats = undefined;
   }
 
   /**
-   * @param {StatsOptions} statsOptions
-   * @returns {StatsObjectOptions}
+   * @param {StatsOptions} statsOptions stats options
+   * @returns {StatsObjectOptions} object stats options
    */
   function normalizeStatsOptions(statsOptions) {
     if (typeof statsOptions === "undefined") {
-      // eslint-disable-next-line no-param-reassign
       statsOptions = { preset: "normal" };
     } else if (typeof statsOptions === "boolean") {
-      // eslint-disable-next-line no-param-reassign
       statsOptions = statsOptions ? { preset: "normal" } : { preset: "none" };
     } else if (typeof statsOptions === "string") {
-      // eslint-disable-next-line no-param-reassign
       statsOptions = { preset: statsOptions };
     }
 
@@ -48,13 +48,13 @@ function setupHooks(context) {
   }
 
   /**
-   * @param {Stats | MultiStats} stats
+   * @param {Stats | MultiStats} stats stats
    */
   function done(stats) {
     // We are now on valid state
-    // eslint-disable-next-line no-param-reassign
+
     context.state = true;
-    // eslint-disable-next-line no-param-reassign
+
     context.stats = stats;
 
     // Do the stuff in nextTick, because bundle may be invalidated if a change happened while compiling
@@ -102,17 +102,14 @@ function setupHooks(context) {
           /** @type {MultiStatsOptions} */
           (statsOptions).children.map(
             /**
-             * @param {StatsOptions} childStatsOptions
-             * @return {StatsObjectOptions}
+             * @param {StatsOptions} childStatsOptions child stats options
+             * @returns {StatsObjectOptions} object child stats options
              */
             (childStatsOptions) => {
-              // eslint-disable-next-line no-param-reassign
               childStatsOptions = normalizeStatsOptions(childStatsOptions);
 
               if (typeof childStatsOptions.colors === "undefined") {
-                // eslint-disable-next-line no-param-reassign
                 childStatsOptions.colors =
-                  // eslint-disable-next-line global-require
                   require("colorette").isColorSupported;
               }
 
@@ -125,7 +122,6 @@ function setupHooks(context) {
         );
 
         if (typeof statsOptions.colors === "undefined") {
-          // eslint-disable-next-line global-require
           statsOptions.colors = require("colorette").isColorSupported;
         }
       }
@@ -140,7 +136,6 @@ function setupHooks(context) {
         console.log(printedStats);
       }
 
-      // eslint-disable-next-line no-param-reassign
       context.callbacks = [];
 
       // Execute callback that are delayed

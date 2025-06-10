@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 
 import { createFsFromVolume, Volume } from "memfs";
 
@@ -7,7 +7,7 @@ import middleware from "../src";
 import getCompiler from "./helpers/getCompiler";
 
 // Suppress unnecessary stats output
-global.console.log = jest.fn();
+jest.spyOn(globalThis.console, "log").mockImplementation();
 
 const configuredFs = createFsFromVolume(new Volume());
 
@@ -60,11 +60,7 @@ describe("validation", () => {
       failure: [0],
     },
     modifyResponseData: {
-      success: [
-        (_ignore, _ignore1, foo, bar) => {
-          return { foo, bar };
-        },
-      ],
+      success: [(_ignore, _ignore1, foo, bar) => ({ foo, bar })],
       failure: [true],
     },
     etag: {
@@ -91,6 +87,11 @@ describe("validation", () => {
     },
   };
 
+  // eslint-disable-next-line jsdoc/no-restricted-syntax
+  /**
+   * @param {any} value value
+   * @returns {string} stringified value
+   */
   function stringifyValue(value) {
     if (
       Array.isArray(value) ||
@@ -102,7 +103,13 @@ describe("validation", () => {
     return value;
   }
 
-  async function createTestCase(key, value, type) {
+  // eslint-disable-next-line jsdoc/no-restricted-syntax
+  /**
+   * @param {string} key key
+   * @param {any} value value
+   * @param {"success" | "failure"} type type
+   */
+  function createTestCase(key, value, type) {
     it(`should ${
       type === "success" ? "successfully validate" : "throw an error on"
     } the "${key}" option with "${stringifyValue(value)}" value`, (done) => {
@@ -113,12 +120,12 @@ describe("validation", () => {
 
       try {
         webpackDevMiddleware = middleware(compiler, { [key]: value });
-      } catch (maybeError) {
-        if (maybeError.name !== "ValidationError") {
-          throw maybeError;
+      } catch (err) {
+        if (err.name !== "ValidationError") {
+          throw err;
         }
 
-        error = maybeError;
+        error = err;
       } finally {
         if (type === "success") {
           expect(error).toBeUndefined();

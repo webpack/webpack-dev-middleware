@@ -1,26 +1,24 @@
-const crypto = require("crypto");
+const crypto = require("node:crypto");
 
 /** @typedef {import("fs").Stats} Stats */
 /** @typedef {import("fs").ReadStream} ReadStream */
 
 /**
  * Generate a tag for a stat.
- *
- * @param {Stats} stat
- * @return {{ hash: string, buffer?: Buffer }}
+ * @param {Stats} stats stats
+ * @returns {{ hash: string, buffer?: Buffer }} etag
  */
-function statTag(stat) {
-  const mtime = stat.mtime.getTime().toString(16);
-  const size = stat.size.toString(16);
+function statTag(stats) {
+  const mtime = stats.mtime.getTime().toString(16);
+  const size = stats.size.toString(16);
 
   return { hash: `W/"${size}-${mtime}"` };
 }
 
 /**
  * Generate an entity tag.
- *
- * @param {Buffer | ReadStream} entity
- * @return {Promise<{ hash: string, buffer?: Buffer }>}
+ * @param {Buffer | ReadStream} entity entity
+ * @returns {Promise<{ hash: string, buffer?: Buffer }>} etag
  */
 async function entityTag(entity) {
   const sha1 = crypto.createHash("sha1");
@@ -46,7 +44,7 @@ async function entityTag(entity) {
 
     return {
       buffer: Buffer.concat(buffers),
-      hash: `"${byteLength.toString(16)}-${sha1.digest("base64").substring(0, 27)}"`,
+      hash: `"${byteLength.toString(16)}-${sha1.digest("base64").slice(0, 27)}"`,
     };
   }
 
@@ -56,7 +54,7 @@ async function entityTag(entity) {
   }
 
   // Compute hash of entity
-  const hash = sha1.update(entity).digest("base64").substring(0, 27);
+  const hash = sha1.update(entity).digest("base64").slice(0, 27);
 
   // Compute length of entity
   const { byteLength } = entity;
@@ -66,9 +64,8 @@ async function entityTag(entity) {
 
 /**
  * Create a simple ETag.
- *
- * @param {Buffer | ReadStream | Stats} entity
- * @return {Promise<{ hash: string, buffer?: Buffer }>}
+ * @param {Buffer | ReadStream | Stats} entity entity
+ * @returns {Promise<{ hash: string, buffer?: Buffer }>} etag
  */
 async function etag(entity) {
   const isStrong =
