@@ -1,5 +1,6 @@
 const cacheStore = new WeakMap();
 
+// eslint-disable-next-line jsdoc/no-restricted-syntax
 /**
  * @template T
  * @typedef {(...args: any) => T} FunctionReturning
