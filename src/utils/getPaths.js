@@ -13,10 +13,10 @@
  */
 function getPaths(context) {
   const { stats, options } = context;
+  /* eslint-disable unicorn/prefer-logical-operator-over-ternary */
   /** @type {Stats[]} */
   const childStats =
     /** @type {MultiStats} */
-    // eslint-disable-next-line unicorn/prefer-logical-operator-over-ternary
     (stats).stats
       ? /** @type {MultiStats} */ (stats).stats
       : [/** @type {Stats} */ (stats)];
