@@ -535,7 +535,6 @@ function wrapper(context) {
 
         if (typeof headers !== "undefined") {
           if (!Array.isArray(headers)) {
-            // eslint-disable-next-line guard-for-in
             for (const name in headers) {
               allHeaders.push({ key: name, value: headers[name] });
             }
