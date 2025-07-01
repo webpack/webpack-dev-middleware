@@ -1,13 +1,13 @@
-const { validate } = require("schema-utils");
 const mime = require("mime-types");
+const { validate } = require("schema-utils");
 
 const middleware = require("./middleware");
-const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
-const setupHooks = require("./utils/setupHooks");
-const setupWriteToDisk = require("./utils/setupWriteToDisk");
-const setupOutputFileSystem = require("./utils/setupOutputFileSystem");
-const ready = require("./utils/ready");
 const schema = require("./options.json");
+const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
+const ready = require("./utils/ready");
+const setupHooks = require("./utils/setupHooks");
+const setupOutputFileSystem = require("./utils/setupOutputFileSystem");
+const setupWriteToDisk = require("./utils/setupWriteToDisk");
 
 const noop = () => {};
 

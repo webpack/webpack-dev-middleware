@@ -4,30 +4,30 @@ const mime = require("mime-types");
 
 const onFinishedStream = require("on-finished");
 
-const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
 const {
-  setStatusCode,
-  getStatusCode,
+  createReadStreamOrReadFileSync,
+  finish,
+  getHeadersSent,
+  getOutgoing,
+  getReadyReadableStreamState,
   getRequestHeader,
   getRequestMethod,
   getRequestURL,
   getResponseHeader,
-  setResponseHeader,
-  removeResponseHeader,
   getResponseHeaders,
-  getHeadersSent,
-  send,
-  finish,
-  pipe,
-  createReadStreamOrReadFileSync,
-  getOutgoing,
+  getStatusCode,
   initState,
+  pipe,
+  removeResponseHeader,
+  send,
+  setResponseHeader,
   setState,
-  getReadyReadableStreamState,
+  setStatusCode,
 } = require("./utils/compatibleAPI");
-const ready = require("./utils/ready");
-const parseTokenList = require("./utils/parseTokenList");
+const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
 const memorize = require("./utils/memorize");
+const parseTokenList = require("./utils/parseTokenList");
+const ready = require("./utils/ready");
 
 /** @typedef {import("./index.js").NextFunction} NextFunction */
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */

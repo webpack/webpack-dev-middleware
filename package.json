@@ -2,20 +2,26 @@
   "name": "webpack-dev-middleware",
   "version": "7.4.2",
   "description": "A development middleware for webpack",
-  "license": "MIT",
-  "repository": "webpack/webpack-dev-middleware",
-  "author": "Tobias Koppers @sokra",
+  "keywords": [
+    "webpack",
+    "middleware",
+    "development"
+  ],
   "homepage": "https://github.com/webpack/webpack-dev-middleware",
   "bugs": "https://github.com/webpack/webpack-dev-middleware/issues",
+  "repository": "webpack/webpack-dev-middleware",
   "funding": {
     "type": "opencollective",
     "url": "https://opencollective.com/webpack"
   },
+  "license": "MIT",
+  "author": "Tobias Koppers @sokra",
   "main": "dist/index.js",
   "types": "types/index.d.ts",
-  "engines": {
-    "node": ">= 18.12.0"
-  },
+  "files": [
+    "dist",
+    "types"
+  ],
   "scripts": {
     "commitlint": "commitlint --from=master",
     "security": "npm audit --production",
@@ -39,18 +45,6 @@
     "test": "npm run test:coverage",
     "prepare": "husky && npm run build",
     "release": "standard-version"
-  },
-  "files": [
-    "dist",
-    "types"
-  ],
-  "peerDependencies": {
-    "webpack": "^5.0.0"
-  },
-  "peerDependenciesMeta": {
-    "webpack": {
-      "optional": true
-    }
   },
   "dependencies": {
     "colorette": "^2.0.10",
@@ -85,7 +79,7 @@
     "del-cli": "^6.0.0",
     "globals": "^16.2.0",
     "eslint": "^9.28.0",
-    "eslint-config-webpack": "^4.1.4",
+    "eslint-config-webpack": "^4.2.2",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-jest": "^28.12.0",
@@ -114,9 +108,15 @@
     "typescript": "^5.3.3",
     "webpack": "^5.93.0"
   },
-  "keywords": [
-    "webpack",
-    "middleware",
-    "development"
-  ]
+  "peerDependencies": {
+    "webpack": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "webpack": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">= 18.12.0"
+  }
 }
