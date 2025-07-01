@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const merge = require("deepmerge");
 const express = require("express");
 const webpack = require("webpack");
