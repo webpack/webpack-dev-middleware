@@ -77,22 +77,53 @@ export type ExpectedServerResponse = {
     | undefined;
 };
 /**
- * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res res
- * @param {number} code code
- * @returns {void}
+ * @param {string} filename filename
+ * @param {OutputFileSystem} outputFileSystem output file system
+ * @param {number} start start
+ * @param {number} end end
+ * @returns {{ bufferOrStream: (Buffer | import("fs").ReadStream), byteLength: number }} result with buffer or stream and byte length
  */
-export function setStatusCode<
-  Response extends ServerResponse & ExpectedServerResponse,
->(res: Response, code: number): void;
+export function createReadStreamOrReadFileSync(
+  filename: string,
+  outputFileSystem: OutputFileSystem,
+  start: number,
+  end: number,
+): {
+  bufferOrStream: Buffer | import("fs").ReadStream;
+  byteLength: number;
+};
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res
- * @returns {number} status code
+ * @param {(string | Buffer)=} data data
  */
-export function getStatusCode<
+export function finish<
   Response extends ServerResponse & ExpectedServerResponse,
->(res: Response): number;
+>(res: Response, data?: (string | Buffer) | undefined): void;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res res
+ * @returns {boolean} true when headers were sent, otherwise false
+ */
+export function getHeadersSent<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response): boolean;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res res
+ * @returns {Response} res res
+ */
+export function getOutgoing<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response): Response;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res res
+ * @returns {"ready" | "open" | "readable"} state
+ */
+export function getReadyReadableStreamState<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response): "ready" | "open" | "readable";
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
 /** @typedef {import("../index").OutputFileSystem} OutputFileSystem */
@@ -155,6 +186,57 @@ export function getResponseHeader<
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res
+ * @returns {string[]} header names
+ */
+export function getResponseHeaders<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response): string[];
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res res
+ * @returns {number} status code
+ */
+export function getStatusCode<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response): number;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res res
+ */
+export function initState<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response): void;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res res
+ * @param {import("fs").ReadStream} bufferOrStream buffer or stream
+ */
+export function pipe<Response extends ServerResponse & ExpectedServerResponse>(
+  res: Response,
+  bufferOrStream: import("fs").ReadStream,
+): void;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res res
+ * @param {string} name name
+ * @returns {void}
+ */
+export function removeResponseHeader<
+  Response extends ServerResponse & ExpectedServerResponse,
+>(res: Response, name: string): void;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res res
+ * @param {string | Buffer} bufferOrString buffer or string
+ * @returns {void}
+ */
+export function send<Response extends ServerResponse & ExpectedServerResponse>(
+  res: Response,
+  bufferOrString: string | Buffer,
+): void;
+/**
+ * @template {ServerResponse & ExpectedServerResponse} Response
+ * @param {Response} res res
  * @param {string} name name
  * @param {number | string | Readonly<string[]>} value value
  * @returns {Response} response
@@ -170,89 +252,6 @@ export function setResponseHeader<
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res
  * @param {string} name name
- * @returns {void}
- */
-export function removeResponseHeader<
-  Response extends ServerResponse & ExpectedServerResponse,
->(res: Response, name: string): void;
-/**
- * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res res
- * @returns {string[]} header names
- */
-export function getResponseHeaders<
-  Response extends ServerResponse & ExpectedServerResponse,
->(res: Response): string[];
-/**
- * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res res
- * @returns {boolean} true when headers were sent, otherwise false
- */
-export function getHeadersSent<
-  Response extends ServerResponse & ExpectedServerResponse,
->(res: Response): boolean;
-/**
- * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res res
- * @param {import("fs").ReadStream} bufferOrStream buffer or stream
- */
-export function pipe<Response extends ServerResponse & ExpectedServerResponse>(
-  res: Response,
-  bufferOrStream: import("fs").ReadStream,
-): void;
-/**
- * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res res
- * @param {string | Buffer} bufferOrString buffer or string
- * @returns {void}
- */
-export function send<Response extends ServerResponse & ExpectedServerResponse>(
-  res: Response,
-  bufferOrString: string | Buffer,
-): void;
-/**
- * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res res
- * @param {(string | Buffer)=} data data
- */
-export function finish<
-  Response extends ServerResponse & ExpectedServerResponse,
->(res: Response, data?: (string | Buffer) | undefined): void;
-/**
- * @param {string} filename filename
- * @param {OutputFileSystem} outputFileSystem output file system
- * @param {number} start start
- * @param {number} end end
- * @returns {{ bufferOrStream: (Buffer | import("fs").ReadStream), byteLength: number }} result with buffer or stream and byte length
- */
-export function createReadStreamOrReadFileSync(
-  filename: string,
-  outputFileSystem: OutputFileSystem,
-  start: number,
-  end: number,
-): {
-  bufferOrStream: Buffer | import("fs").ReadStream;
-  byteLength: number;
-};
-/**
- * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res res
- * @returns {Response} res res
- */
-export function getOutgoing<
-  Response extends ServerResponse & ExpectedServerResponse,
->(res: Response): Response;
-/**
- * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res res
- */
-export function initState<
-  Response extends ServerResponse & ExpectedServerResponse,
->(res: Response): void;
-/**
- * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res res
- * @param {string} name name
  * @param {any} value state
  * @returns {void}
  */
@@ -262,8 +261,9 @@ export function setState<
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res
- * @returns {"ready" | "open" | "readable"} state
+ * @param {number} code code
+ * @returns {void}
  */
-export function getReadyReadableStreamState<
+export function setStatusCode<
   Response extends ServerResponse & ExpectedServerResponse,
->(res: Response): "ready" | "open" | "readable";
+>(res: Response, code: number): void;

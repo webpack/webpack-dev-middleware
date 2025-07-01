@@ -1,6 +1,7 @@
 const path = require("node:path");
-const { parse } = require("node:url");
 const querystring = require("node:querystring");
+// eslint-disable-next-line n/no-deprecated-api
+const { parse } = require("node:url");
 
 const getPaths = require("./getPaths");
 const memorize = require("./memorize");

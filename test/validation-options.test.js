@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { createFsFromVolume, Volume } from "memfs";
+import { Volume, createFsFromVolume } from "memfs";
 
 import middleware from "../src";
 

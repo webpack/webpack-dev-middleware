@@ -5,4 +5,10 @@ export default defineConfig([
   {
     extends: [configs["recommended-dirty"]],
   },
+  {
+    files: ["test/helpers/runner.js"],
+    rules: {
+      "n/hashbang": "off",
+    },
+  },
 ]);

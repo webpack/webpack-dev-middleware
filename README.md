@@ -39,14 +39,13 @@ npm install webpack-dev-middleware --save-dev
 ## Usage
 
 ```js
+const express = require("express");
 const webpack = require("webpack");
 const middleware = require("webpack-dev-middleware");
 
 const compiler = webpack({
   // webpack options
 });
-
-const express = require("express");
 
 const app = express();
 
@@ -275,10 +274,10 @@ You have to provide `.join()` and `mkdirp` method to the `outputFileSystem` inst
 This can be done simply by using `path.join`:
 
 ```js
-const webpack = require("webpack");
 const path = require("node:path");
-const myOutputFileSystem = require("my-fs");
 const mkdirp = require("mkdirp");
+const myOutputFileSystem = require("my-fs");
+const webpack = require("webpack");
 
 myOutputFileSystem.join = path.join.bind(path); // no need to bind
 myOutputFileSystem.mkdirp = mkdirp.bind(mkdirp); // no need to bind
@@ -475,14 +474,13 @@ Since `output.publicPath` and `output.filename`/`output.chunkFilename` can be dy
 But there is a solution to avoid it - mount the middleware to a non-root route, for example:
 
 ```js
+const express = require("express");
 const webpack = require("webpack");
 const middleware = require("webpack-dev-middleware");
 
 const compiler = webpack({
   // webpack options
 });
-
-const express = require("express");
 
 const app = express();
 
@@ -518,14 +516,13 @@ Example Implementation:
 
 ```js
 const express = require("express");
+const isObject = require("is-object");
 const webpack = require("webpack");
+const middleware = require("webpack-dev-middleware");
 
 const compiler = webpack({
   /* Webpack configuration */
 });
-
-const isObject = require("is-object");
-const middleware = require("webpack-dev-middleware");
 
 // eslint-disable-next-line new-cap
 const app = new express();
@@ -606,11 +603,11 @@ Examples of use with other servers will follow here.
 ### Connect
 
 ```js
-const connect = require("connect");
 const http = require("node:http");
+const connect = require("connect");
 const webpack = require("webpack");
-const webpackConfig = require("./webpack.config.js");
 const devMiddleware = require("webpack-dev-middleware");
+const webpackConfig = require("./webpack.config.js");
 
 const compiler = webpack(webpackConfig);
 const devMiddlewareOptions = {
@@ -627,11 +624,11 @@ http.createServer(app).listen(3000);
 
 ```js
 const http = require("node:http");
-const Router = require("router");
 const finalhandler = require("finalhandler");
+const Router = require("router");
 const webpack = require("webpack");
-const webpackConfig = require("./webpack.config.js");
 const devMiddleware = require("webpack-dev-middleware");
+const webpackConfig = require("./webpack.config.js");
 
 const compiler = webpack(webpackConfig);
 const devMiddlewareOptions = {
@@ -655,8 +652,8 @@ server.listen(3000);
 ```js
 const express = require("express");
 const webpack = require("webpack");
-const webpackConfig = require("./webpack.config.js");
 const devMiddleware = require("webpack-dev-middleware");
+const webpackConfig = require("./webpack.config.js");
 
 const compiler = webpack(webpackConfig);
 const devMiddlewareOptions = {
@@ -674,8 +671,8 @@ app.listen(3000, () => console.log("Example app listening on port 3000!"));
 ```js
 const Koa = require("koa");
 const webpack = require("webpack");
-const webpackConfig = require("./webpack.simple.config");
 const middleware = require("webpack-dev-middleware");
+const webpackConfig = require("./webpack.simple.config");
 
 const compiler = webpack(webpackConfig);
 const devMiddlewareOptions = {
@@ -693,8 +690,8 @@ app.listen(3000);
 ```js
 const Hapi = require("@hapi/hapi");
 const webpack = require("webpack");
-const webpackConfig = require("./webpack.config.js");
 const devMiddleware = require("webpack-dev-middleware");
+const webpackConfig = require("./webpack.config.js");
 
 const compiler = webpack(webpackConfig);
 const devMiddlewareOptions = {};
@@ -727,8 +724,8 @@ Fastify interop will require the use of `fastify-express` instead of `middie` fo
 ```js
 const fastify = require("fastify")();
 const webpack = require("webpack");
-const webpackConfig = require("./webpack.config.js");
 const devMiddleware = require("webpack-dev-middleware");
+const webpackConfig = require("./webpack.config.js");
 
 const compiler = webpack(webpackConfig);
 const devMiddlewareOptions = {
@@ -743,9 +740,9 @@ await fastify.listen(3000);
 ### Hono
 
 ```js
-import webpack from "webpack";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import webpack from "webpack";
 import devMiddleware from "webpack-dev-middleware";
 import webpackConfig from "./webpack.config.js";
 

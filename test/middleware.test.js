@@ -1,37 +1,36 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import connect from "connect";
-import expressOld from "express-4";
-import express from "express";
-import router from "router";
-import finalhandler from "finalhandler";
-import fastify from "fastify";
-import koa from "koa";
 import Hapi from "@hapi/hapi";
-import { Hono } from "hono";
 import { serve } from "@hono/node-server";
+import connect from "connect";
+import express from "express";
+import expressOld from "express-4";
+import fastify from "fastify";
+import finalhandler from "finalhandler";
+import { Hono } from "hono";
+import koa from "koa";
+import memfs, { Volume, createFsFromVolume } from "memfs";
+import mime from "mime-types";
+import router from "router";
 import request from "supertest";
-import memfs, { createFsFromVolume, Volume } from "memfs";
 
 import { Stats } from "webpack";
 
-import mime from "mime-types";
-
 import middleware from "../src";
 
+import webpackMultiConfig from "./fixtures/webpack.array.config";
+import webpackMultiDevServerFalseConfig from "./fixtures/webpack.array.dev-server-false";
+import webpackMultiWatchOptionsConfig from "./fixtures/webpack.array.watch-options.config";
+import webpackClientServerConfig from "./fixtures/webpack.client.server.config";
+import webpackConfig from "./fixtures/webpack.config";
+import webpackConfigImmutable from "./fixtures/webpack.immutable.config";
+import webpackPublicPathConfig from "./fixtures/webpack.public-path.config";
+import webpackQueryStringConfig from "./fixtures/webpack.querystring.config";
+import webpackWatchOptionsConfig from "./fixtures/webpack.watch-options.config";
 import getCompiler from "./helpers/getCompiler";
 
-import webpackConfig from "./fixtures/webpack.config";
-import webpackMultiConfig from "./fixtures/webpack.array.config";
-import webpackWatchOptionsConfig from "./fixtures/webpack.watch-options.config";
-import webpackMultiWatchOptionsConfig from "./fixtures/webpack.array.watch-options.config";
-import webpackQueryStringConfig from "./fixtures/webpack.querystring.config";
-import webpackClientServerConfig from "./fixtures/webpack.client.server.config";
 import getCompilerHooks from "./helpers/getCompilerHooks";
-import webpackPublicPathConfig from "./fixtures/webpack.public-path.config";
-import webpackMultiDevServerFalseConfig from "./fixtures/webpack.array.dev-server-false";
-import webpackConfigImmutable from "./fixtures/webpack.immutable.config";
 
 // Suppress unnecessary stats output
 jest.spyOn(globalThis.console, "log").mockImplementation();

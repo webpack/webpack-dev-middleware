@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
+const merge = require("deepmerge");
 const express = require("express");
 const webpack = require("webpack");
-const merge = require("deepmerge");
 
 const middleware = require("../../dist");
 const defaultConfig = require("../fixtures/webpack.config");
@@ -147,6 +147,7 @@ app.listen((error) => {
         //   });
         //   break;
         case "exit":
+          // eslint-disable-next-line n/no-process-exit
           process.exit();
           break;
       }
