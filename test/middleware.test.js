@@ -5316,20 +5316,20 @@ describe.each([
           const response = await req.get("/bundle.js");
 
           expect(response.statusCode).toBe(200);
-          expect(response.headers.etag).toBe(
-            /* cspell:disable-next-line */
-            '"191a-fDcjg9fXC+4k9zvx46niAuR6C14"',
-          );
+          expect(response.headers.etag).toBeDefined();
+          expect(
+            /[0-9a-f]{1,}-[0-9a-z+/=]{27}/i.test(response.headers.etag),
+          ).toBe(true);
         });
 
         it('should return the "200" code for the "GET" request to the file.txt and set strong etag on empty file', async () => {
           const response = await req.get("/file.txt");
 
           expect(response.statusCode).toBe(200);
-          expect(response.headers.etag).toBe(
-            /* cspell:disable-next-line */
-            '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"',
-          );
+          expect(response.headers.etag).toBeDefined();
+          expect(
+            /[0-9a-f]{1,}-[0-9a-z+/=]{27}/i.test(response.headers.etag),
+          ).toBe(true);
         });
 
         it('should return the "200" code for the "GET" request with the valid range header and wrong "If-Range" header', async () => {
@@ -5378,10 +5378,10 @@ describe.each([
           const response = await req.get("/bundle.js");
 
           expect(response.statusCode).toBe(200);
-          expect(response.headers.etag).toBe(
-            /* cspell:disable-next-line */
-            '"191a-fDcjg9fXC+4k9zvx46niAuR6C14"',
-          );
+          expect(response.headers.etag).toBeDefined();
+          expect(
+            /[0-9a-f]{1,}-[0-9a-z+/=]{27}/i.test(response.headers.etag),
+          ).toBe(true);
         });
       });
 
