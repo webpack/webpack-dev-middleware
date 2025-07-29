@@ -112,9 +112,13 @@ function setupHooks(context) {
                 const [firstCompiler] =
                   /** @type {MultiCompiler} */
                   (compiler).compilers;
+
+                // TODO remove `colorette` and set minimum supported webpack version is `5.101.0`
                 childStatsOptions.colors =
+                  typeof firstCompiler.webpack !== "undefined" &&
+                  typeof firstCompiler.webpack.cli !== "undefined" &&
                   typeof firstCompiler.webpack.cli.isColorSupported ===
-                  "function"
+                    "function"
                     ? firstCompiler.webpack.cli.isColorSupported()
                     : require("colorette").isColorSupported;
               }
@@ -128,14 +132,13 @@ function setupHooks(context) {
         );
 
         if (typeof statsOptions.colors === "undefined") {
+          const { compiler } = /** @type {{ compiler: Compiler }} */ (context);
           // TODO remove `colorette` and set minimum supported webpack version is `5.101.0`
           statsOptions.colors =
-            typeof (
-              /** @type {Compiler} */
-              (context.compiler).webpack.cli.isColorSupported
-            ) === "function"
-              ? /** @type {Compiler} */
-                (context.compiler).webpack.cli.isColorSupported()
+            typeof compiler.webpack !== "undefined" &&
+            typeof compiler.webpack.cli !== "undefined" &&
+            typeof compiler.webpack.cli.isColorSupported === "function"
+              ? compiler.webpack.cli.isColorSupported()
               : require("colorette").isColorSupported;
         }
       }
