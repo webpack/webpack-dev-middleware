@@ -109,8 +109,18 @@ function setupHooks(context) {
               childStatsOptions = normalizeStatsOptions(childStatsOptions);
 
               if (typeof childStatsOptions.colors === "undefined") {
+                const [firstCompiler] =
+                  /** @type {MultiCompiler} */
+                  (compiler).compilers;
+
+                // TODO remove `colorette` and set minimum supported webpack version is `5.101.0`
                 childStatsOptions.colors =
-                  require("colorette").isColorSupported;
+                  typeof firstCompiler.webpack !== "undefined" &&
+                  typeof firstCompiler.webpack.cli !== "undefined" &&
+                  typeof firstCompiler.webpack.cli.isColorSupported ===
+                    "function"
+                    ? firstCompiler.webpack.cli.isColorSupported()
+                    : require("colorette").isColorSupported;
               }
 
               return childStatsOptions;
@@ -122,12 +132,20 @@ function setupHooks(context) {
         );
 
         if (typeof statsOptions.colors === "undefined") {
-          statsOptions.colors = require("colorette").isColorSupported;
+          const { compiler } = /** @type {{ compiler: Compiler }} */ (context);
+          // TODO remove `colorette` and set minimum supported webpack version is `5.101.0`
+          statsOptions.colors =
+            typeof compiler.webpack !== "undefined" &&
+            typeof compiler.webpack.cli !== "undefined" &&
+            typeof compiler.webpack.cli.isColorSupported === "function"
+              ? compiler.webpack.cli.isColorSupported()
+              : require("colorette").isColorSupported;
         }
       }
 
       const printedStats = stats.toString(
-        /** @type {StatsObjectOptions} */ (statsOptions),
+        /** @type {StatsObjectOptions} */
+        (statsOptions),
       );
 
       // Avoid extra empty line when `stats: 'none'`
