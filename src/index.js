@@ -606,6 +606,8 @@ function honoWrapper(compiler, options) {
             body = data;
           };
 
+          let isFinished = false;
+
           /**
            * @param {(string | Buffer)=} data data
            */
@@ -618,6 +620,9 @@ function honoWrapper(compiler, options) {
             }
 
             body = isDataExist ? data : null;
+            isFinished = true;
+
+            resolve();
           };
 
           devMiddleware(req, res, (err) => {
@@ -626,7 +631,9 @@ function honoWrapper(compiler, options) {
               return;
             }
 
-            resolve();
+            if (!isFinished) {
+              resolve();
+            }
           });
         },
       );

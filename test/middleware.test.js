@@ -329,7 +329,7 @@ describe.each([
     let server;
     let req;
 
-    describe("aPI", () => {
+    describe("API", () => {
       let compiler;
 
       describe("constructor", () => {
@@ -5354,6 +5354,106 @@ describe.each([
         });
       });
 
+      describe("should work and generate etag with other middlewares", () => {
+        beforeAll(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          let isFirstRequest = true;
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              etag: "weak",
+            },
+            {
+              setupMiddlewares: (middlewares) => {
+                if (name === "koa") {
+                  middlewares.push(async (ctx, next) => {
+                    await next();
+
+                    if (!isFirstRequest) {
+                      ctx.status = 500;
+                      ctx.body = "shouldn't get there";
+                    }
+
+                    isFirstRequest = false;
+                  });
+                } else if (name === "hapi") {
+                  middlewares.push({
+                    plugin: {
+                      name: "myPlugin",
+                      version: "1.0.0",
+                      register(innerServer) {
+                        innerServer.ext("onRequest", () => {
+                          if (!isFirstRequest) {
+                            throw new Error("shouldn't get there");
+                          }
+
+                          isFirstRequest = false;
+                        });
+                      },
+                    },
+                  });
+                } else if (name === "hono") {
+                  middlewares.push(async (c, next) => {
+                    await next();
+
+                    if (!isFirstRequest) {
+                      throw new Error("shouldn't get there");
+                    }
+
+                    isFirstRequest = false;
+                  });
+                } else {
+                  middlewares.push(async (req, res, next) => {
+                    if (!isFirstRequest) {
+                      next(new Error("shouldn't get there"));
+                      return;
+                    }
+
+                    isFirstRequest = false;
+
+                    next();
+                  });
+                }
+
+                return middlewares;
+              },
+            },
+          );
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file with etag and "if-none-match" header with additional middlewares', async () => {
+          const response1 = await req.get("/bundle.js");
+
+          expect(response1.statusCode).toBe(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
+
+          const response2 = await req
+            .get("/bundle.js")
+            .set("if-none-match", response1.headers.etag);
+
+          expect(response2.statusCode).toBe(304);
+          expect(response2.headers.etag).toBeDefined();
+          expect(response2.headers.etag.startsWith("W/")).toBe(true);
+
+          const response3 = await req
+            .get("/bundle.js")
+            .set("if-none-match", response1.headers.etag);
+
+          expect(response3.statusCode).toBe(304);
+          expect(response3.headers.etag).toBeDefined();
+          expect(response3.headers.etag.startsWith("W/")).toBe(true);
+        });
+      });
+
       describe("should work and generate strong etag without createReadStream", () => {
         beforeEach(async () => {
           const compiler = getCompiler(webpackConfig);
@@ -5591,6 +5691,103 @@ describe.each([
           expect(response2.statusCode).toBe(304);
           expect(response2.headers["last-modified"]).toBeDefined();
           expect(response2.headers.etag).toBeDefined();
+        });
+      });
+
+      describe("should work and generate etag with other middlewares", () => {
+        beforeAll(async () => {
+          const compiler = getCompiler(webpackConfig);
+
+          let isFirstRequest = true;
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              lastModified: true,
+            },
+            {
+              setupMiddlewares: (middlewares) => {
+                if (name === "koa") {
+                  middlewares.push(async (ctx, next) => {
+                    await next();
+
+                    if (!isFirstRequest) {
+                      ctx.status = 500;
+                      ctx.body = "shouldn't get there";
+                    }
+
+                    isFirstRequest = false;
+                  });
+                } else if (name === "hapi") {
+                  middlewares.push({
+                    plugin: {
+                      name: "myPlugin",
+                      version: "1.0.0",
+                      register(innerServer) {
+                        innerServer.ext("onRequest", () => {
+                          if (!isFirstRequest) {
+                            throw new Error("shouldn't get there");
+                          }
+
+                          isFirstRequest = false;
+                        });
+                      },
+                    },
+                  });
+                } else if (name === "hono") {
+                  middlewares.push(async (c, next) => {
+                    await next();
+
+                    if (!isFirstRequest) {
+                      throw new Error("shouldn't get there");
+                    }
+
+                    isFirstRequest = false;
+                  });
+                } else {
+                  middlewares.push(async (req, res, next) => {
+                    if (!isFirstRequest) {
+                      next(new Error("shouldn't get there"));
+                      return;
+                    }
+
+                    isFirstRequest = false;
+
+                    next();
+                  });
+                }
+
+                return middlewares;
+              },
+            },
+          );
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file with lastModified and "if-modified-since" header with additional middlewares', async () => {
+          const response1 = await req.get("/bundle.js");
+
+          expect(response1.statusCode).toBe(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+
+          const response2 = await req
+            .get("/bundle.js")
+            .set("if-modified-since", response1.headers["last-modified"]);
+
+          expect(response2.statusCode).toBe(304);
+          expect(response2.headers["last-modified"]).toBeDefined();
+
+          const response3 = await req
+            .get("/bundle.js")
+            .set("if-modified-since", response2.headers["last-modified"]);
+
+          expect(response3.statusCode).toBe(304);
+          expect(response3.headers["last-modified"]).toBeDefined();
         });
       });
     });
