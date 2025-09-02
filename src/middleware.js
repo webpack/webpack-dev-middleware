@@ -719,7 +719,6 @@ function wrapper(context) {
           removeResponseHeader(res, "Content-Type");
 
           finish(res);
-          await goNext();
           return;
         }
       }
