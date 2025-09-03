@@ -424,8 +424,6 @@ function koaWrapper(compiler, options) {
       ctx.status = statusCode;
     };
 
-    res.getReadyReadableStreamState = () => "open";
-
     try {
       await new Promise(
         /**
@@ -574,8 +572,6 @@ function honoWrapper(compiler, options) {
     res.setState = () => {
       // Do nothing, because we set it before
     };
-
-    res.getReadyReadableStreamState = () => "readable";
 
     res.getHeadersSent = () => context.env.outgoing.headersSent;
 
