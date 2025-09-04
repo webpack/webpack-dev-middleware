@@ -635,8 +635,10 @@ function wrapper(context) {
       const rangeHeader = getRangeHeader();
 
       if (context.options.etag && !getResponseHeader(res, "ETag")) {
+        const isStrongETag = context.options.etag === "strong";
+
         // TODO cache strong etag generation?
-        if (context.options.etag === "strong") {
+        if (isStrongETag) {
           if (rangeHeader) {
             const parsedRanges =
               /** @type {import("range-parser").Ranges | import("range-parser").Result} */
@@ -668,20 +670,18 @@ function wrapper(context) {
           }
         }
 
-        if (bufferOrStream) {
-          const result = await getETag()(
-            context.options.etag === "strong"
-              ? bufferOrStream
-              : /** @type {import("fs").Stats} */ (extra.stats),
-          );
+        const result = await getETag()(
+          isStrongETag
+            ? /** @type {Buffer | ReadStream} */ (bufferOrStream)
+            : /** @type {import("fs").Stats} */ (extra.stats),
+        );
 
-          // Because we already read stream, we can cache buffer to avoid extra read from fs
-          if (result.buffer) {
-            bufferOrStream = result.buffer;
-          }
-
-          setResponseHeader(res, "ETag", result.hash);
+        // Because we already read stream, we can cache buffer to avoid extra read from fs
+        if (result.buffer) {
+          bufferOrStream = result.buffer;
         }
+
+        setResponseHeader(res, "ETag", result.hash);
       }
 
       if (
