@@ -25,7 +25,6 @@ const {
 } = require("./utils/compatibleAPI");
 const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
 const memorize = require("./utils/memorize");
-const parseTokenList = require("./utils/parseTokenList");
 const ready = require("./utils/ready");
 
 /** @typedef {import("./index.js").NextFunction} NextFunction */
@@ -116,6 +115,10 @@ const parseRangeHeaders = memorize(
   },
 );
 
+const getETag = memorize(() => require("./utils/etag"));
+const getEscapeHtml = memorize(() => require("./utils/escapeHtml"));
+const getParseTokenList = memorize(() => require("./utils/parseTokenList"));
+
 const MAX_MAX_AGE = 31536000000;
 
 /**
@@ -184,7 +187,7 @@ function wrapper(context) {
         await goNext(error);
       }
 
-      const escapeHtml = require("./utils/escapeHtml");
+      const escapeHtml = getEscapeHtml();
 
       const content = statuses[status] || String(status);
       let document = Buffer.from(
@@ -291,7 +294,7 @@ function wrapper(context) {
         return (
           !etag ||
           (ifMatch !== "*" &&
-            parseTokenList(ifMatch).every(
+            getParseTokenList()(ifMatch).every(
               (match) =>
                 match !== etag &&
                 match !== `W/${etag}` &&
@@ -369,7 +372,7 @@ function wrapper(context) {
           return false;
         }
 
-        const matches = parseTokenList(noneMatch);
+        const matches = getParseTokenList()(noneMatch);
 
         let etagStale = true;
 
@@ -632,13 +635,10 @@ function wrapper(context) {
       const rangeHeader = getRangeHeader();
 
       if (context.options.etag && !getResponseHeader(res, "ETag")) {
-        /** @type {import("fs").Stats | Buffer | ReadStream | undefined} */
-        let value;
+        const isStrongETag = context.options.etag === "strong";
 
-        // TODO cache etag generation?
-        if (context.options.etag === "weak") {
-          value = /** @type {import("fs").Stats} */ (extra.stats);
-        } else {
+        // TODO cache strong etag generation?
+        if (isStrongETag) {
           if (rangeHeader) {
             const parsedRanges =
               /** @type {import("range-parser").Ranges | import("range-parser").Result} */
@@ -663,7 +663,6 @@ function wrapper(context) {
               end,
             );
 
-            value = result.bufferOrStream;
             ({ bufferOrStream, byteLength } = result);
           } catch (error) {
             await errorHandler(/** @type {NodeJS.ErrnoException} */ (error));
@@ -671,16 +670,18 @@ function wrapper(context) {
           }
         }
 
-        if (value) {
-          const result = await require("./utils/etag")(value);
+        const result = await getETag()(
+          isStrongETag
+            ? /** @type {Buffer | ReadStream} */ (bufferOrStream)
+            : /** @type {import("fs").Stats} */ (extra.stats),
+        );
 
-          // Because we already read stream, we can cache buffer to avoid extra read from fs
-          if (result.buffer) {
-            bufferOrStream = result.buffer;
-          }
-
-          setResponseHeader(res, "ETag", result.hash);
+        // Because we already read stream, we can cache buffer to avoid extra read from fs
+        if (result.buffer) {
+          bufferOrStream = result.buffer;
         }
+
+        setResponseHeader(res, "ETag", result.hash);
       }
 
       if (
@@ -688,7 +689,7 @@ function wrapper(context) {
         getStatusCode(res) === 404
       ) {
         removeResponseHeader(res, "Content-Type");
-        // content-type name(like application/javascript; charset=utf-8) or false
+        // content-type name (like application/javascript; charset=utf-8) or false
         const contentType = mime.contentType(path.extname(filename));
 
         // Only set content-type header if media type is known
