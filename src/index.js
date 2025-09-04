@@ -424,7 +424,8 @@ function koaWrapper(compiler, options) {
       ctx.status = statusCode;
     };
 
-    res.getReadyReadableStreamState = () => "open";
+    let isFinished = false;
+    let needNext = false;
 
     try {
       await new Promise(
@@ -438,12 +439,18 @@ function koaWrapper(compiler, options) {
            */
           res.stream = (stream) => {
             ctx.body = stream;
+
+            isFinished = true;
+            resolve();
           };
           /**
            * @param {string | Buffer} data data
            */
           res.send = (data) => {
             ctx.body = data;
+
+            isFinished = true;
+            resolve();
           };
 
           /**
@@ -452,6 +459,9 @@ function koaWrapper(compiler, options) {
           res.finish = (data) => {
             ctx.status = status;
             res.end(data);
+
+            isFinished = true;
+            resolve();
           };
 
           devMiddleware(req, res, (err) => {
@@ -460,7 +470,11 @@ function koaWrapper(compiler, options) {
               return;
             }
 
-            resolve();
+            needNext = true;
+
+            if (!isFinished) {
+              resolve();
+            }
           });
         },
       );
@@ -475,7 +489,9 @@ function koaWrapper(compiler, options) {
       };
     }
 
-    await next();
+    if (needNext) {
+      await next();
+    }
   }
 
   webpackDevMiddleware.devMiddleware = devMiddleware;
@@ -575,11 +591,10 @@ function honoWrapper(compiler, options) {
       // Do nothing, because we set it before
     };
 
-    res.getReadyReadableStreamState = () => "readable";
-
     res.getHeadersSent = () => context.env.outgoing.headersSent;
 
     let body;
+    let isFinished = false;
 
     try {
       await new Promise(
@@ -593,7 +608,9 @@ function honoWrapper(compiler, options) {
            */
           res.stream = (stream) => {
             body = stream;
-            // responseHandler(stream);
+
+            isFinished = true;
+            resolve();
           };
 
           /**
@@ -604,9 +621,10 @@ function honoWrapper(compiler, options) {
             context.res.headers.delete("Content-Length");
 
             body = data;
-          };
 
-          let isFinished = false;
+            isFinished = true;
+            resolve();
+          };
 
           /**
            * @param {(string | Buffer)=} data data
@@ -620,8 +638,8 @@ function honoWrapper(compiler, options) {
             }
 
             body = isDataExist ? data : null;
-            isFinished = true;
 
+            isFinished = true;
             resolve();
           };
 

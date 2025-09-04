@@ -9,7 +9,6 @@ const {
   finish,
   getHeadersSent,
   getOutgoing,
-  getReadyReadableStreamState,
   getRequestHeader,
   getRequestMethod,
   getRequestURL,
@@ -135,16 +134,13 @@ const MAX_MAX_AGE = 31536000000;
  */
 function wrapper(context) {
   return async function middleware(req, res, next) {
-    const acceptedMethods = context.options.methods || ["GET", "HEAD"];
-
-    initState(res);
-
     /**
+     * @param {NodeJS.ErrnoException=} err an error
      * @returns {Promise<void>}
      */
-    async function goNext() {
+    async function goNext(err) {
       if (!context.options.serverSideRender) {
-        return next();
+        return next(err);
       }
 
       return new Promise((resolve) => {
@@ -152,12 +148,18 @@ function wrapper(context) {
           context,
           () => {
             setState(res, "webpack", { devMiddleware: context });
-            resolve(next());
+            resolve(next(err));
           },
           req,
         );
       });
     }
+
+    const acceptedMethods = context.options.methods || ["GET", "HEAD"];
+    // TODO do we need an option here?
+    const forwardError = false;
+
+    initState(res);
 
     const method = getRequestMethod(req);
 
@@ -167,11 +169,21 @@ function wrapper(context) {
     }
 
     /**
+     * @param {NodeJS.ErrnoException} err ann error
      * @param {number} status status
      * @param {Partial<SendErrorOptions<Request, Response>>=} options options
-     * @returns {void}
+     * @returns {Promise<void>}
      */
-    function sendError(status, options) {
+    async function sendError(err, status, options) {
+      if (forwardError) {
+        const error =
+          /** @type {Error & { statusCode: number }} */
+          (new Error(err.message));
+        error.statusCode = status;
+
+        await goNext(error);
+      }
+
       const escapeHtml = require("./utils/escapeHtml");
 
       const content = statuses[status] || String(status);
@@ -230,19 +242,19 @@ function wrapper(context) {
 
     /**
      * @param {NodeJS.ErrnoException} error error
-     * @returns {void}
+     * @returns {Promise<void>}
      */
-    function errorHandler(error) {
+    async function errorHandler(error) {
       switch (error.code) {
         case "ENAMETOOLONG":
         case "ENOENT":
         case "ENOTDIR":
-          sendError(404, {
+          await sendError(error, 404, {
             modifyResponseData: context.options.modifyResponseData,
           });
           break;
         default:
-          sendError(500, {
+          await sendError(error, 500, {
             modifyResponseData: context.options.modifyResponseData,
           });
           break;
@@ -496,10 +508,15 @@ function wrapper(context) {
           context.logger.error(`Malicious path "${filename}".`);
         }
 
-        sendError(extra.errorCode, {
-          modifyResponseData: context.options.modifyResponseData,
-        });
-        await goNext();
+        await sendError(
+          extra.errorCode === 400
+            ? new Error("Bad Request")
+            : new Error("Forbidden"),
+          extra.errorCode,
+          {
+            modifyResponseData: context.options.modifyResponseData,
+          },
+        );
         return;
       }
 
@@ -649,8 +666,7 @@ function wrapper(context) {
             value = result.bufferOrStream;
             ({ bufferOrStream, byteLength } = result);
           } catch (error) {
-            errorHandler(/** @type {NodeJS.ErrnoException} */ (error));
-            await goNext();
+            await errorHandler(/** @type {NodeJS.ErrnoException} */ (error));
             return;
           }
         }
@@ -691,10 +707,9 @@ function wrapper(context) {
       // Conditional GET support
       if (isConditionalGET()) {
         if (isPreconditionFailure()) {
-          sendError(412, {
+          await sendError(new Error("Precondition Failed"), 412, {
             modifyResponseData: context.options.modifyResponseData,
           });
-          await goNext();
           return;
         }
 
@@ -744,13 +759,12 @@ function wrapper(context) {
             getValueContentRangeHeader("bytes", size),
           );
 
-          sendError(416, {
+          await sendError(new Error("Range Not Satisfiable"), 416, {
             headers: {
               "Content-Range": getResponseHeader(res, "Content-Range"),
             },
             modifyResponseData: context.options.modifyResponseData,
           });
-          await goNext();
           return;
         } else if (parsedRanges === -2) {
           context.logger.error(
@@ -793,8 +807,7 @@ function wrapper(context) {
             end,
           ));
         } catch (error) {
-          errorHandler(/** @type {NodeJS.ErrnoException} */ (error));
-          await goNext();
+          await errorHandler(/** @type {NodeJS.ErrnoException} */ (error));
           return;
         }
       }
@@ -823,7 +836,6 @@ function wrapper(context) {
         }
 
         finish(res);
-        await goNext();
         return;
       }
 
@@ -838,7 +850,6 @@ function wrapper(context) {
 
       if (!isPipeSupports) {
         send(res, /** @type {Buffer} */ (bufferOrStream));
-        await goNext();
         return;
       }
 
@@ -852,16 +863,11 @@ function wrapper(context) {
 
       // Error handling
       /** @type {import("fs").ReadStream} */
-      (bufferOrStream)
-        .on("error", (error) => {
-          // clean up stream early
-          cleanup();
-          errorHandler(error);
-          goNext();
-        })
-        .on(getReadyReadableStreamState(res), () => {
-          goNext();
-        });
+      (bufferOrStream).on("error", (error) => {
+        // clean up stream early
+        cleanup();
+        errorHandler(error);
+      });
 
       pipe(res, /** @type {ReadStream} */ (bufferOrStream));
 

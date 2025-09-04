@@ -69,12 +69,6 @@ export type ExpectedServerResponse = {
    * set state
    */
   setState?: ((name: string, value: any) => void) | undefined;
-  /**
-   * get ready readable streamState
-   */
-  getReadyReadableStreamState?:
-    | (() => "ready" | "open" | "readable")
-    | undefined;
 };
 /**
  * @param {string} filename filename
@@ -116,14 +110,6 @@ export function getHeadersSent<
 export function getOutgoing<
   Response extends ServerResponse & ExpectedServerResponse,
 >(res: Response): Response;
-/**
- * @template {ServerResponse & ExpectedServerResponse} Response
- * @param {Response} res res
- * @returns {"ready" | "open" | "readable"} state
- */
-export function getReadyReadableStreamState<
-  Response extends ServerResponse & ExpectedServerResponse,
->(res: Response): "ready" | "open" | "readable";
 /** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("../index.js").ServerResponse} ServerResponse */
 /** @typedef {import("../index").OutputFileSystem} OutputFileSystem */
@@ -147,7 +133,6 @@ export function getReadyReadableStreamState<
  * @property {((data: any) => void)=} stream stream
  * @property {(() => any)=} getOutgoing get outgoing
  * @property {((name: string, value: any) => void)=} setState set state
- * @property {(() => "ready" | "open" | "readable")=} getReadyReadableStreamState get ready readable streamState
  */
 /**
  * @template {IncomingMessage & ExpectedIncomingMessage} Request
