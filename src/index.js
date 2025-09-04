@@ -425,6 +425,7 @@ function koaWrapper(compiler, options) {
     };
 
     let isFinished = false;
+    let needNext = false;
 
     try {
       await new Promise(
@@ -469,6 +470,8 @@ function koaWrapper(compiler, options) {
               return;
             }
 
+            needNext = true;
+
             if (!isFinished) {
               resolve();
             }
@@ -486,7 +489,9 @@ function koaWrapper(compiler, options) {
       };
     }
 
-    await next();
+    if (needNext) {
+      await next();
+    }
   }
 
   webpackDevMiddleware.devMiddleware = devMiddleware;
