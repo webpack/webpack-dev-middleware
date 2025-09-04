@@ -3547,7 +3547,7 @@ describe.each([
           expect(nextWasCalled).toBe(false);
         });
 
-        it.only('should return the "200" code for the "HEAD" request to the bundle file', async () => {
+        it('should return the "200" code for the "HEAD" request to the bundle file', async () => {
           const response = await req.head("/");
 
           expect(response.statusCode).toBe(200);
