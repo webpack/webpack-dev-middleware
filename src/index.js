@@ -576,6 +576,7 @@ function honoWrapper(compiler, options) {
     res.getHeadersSent = () => context.env.outgoing.headersSent;
 
     let body;
+    let isFinished = false;
 
     try {
       await new Promise(
@@ -589,7 +590,9 @@ function honoWrapper(compiler, options) {
            */
           res.stream = (stream) => {
             body = stream;
-            // responseHandler(stream);
+
+            isFinished = true;
+            resolve();
           };
 
           /**
@@ -600,9 +603,10 @@ function honoWrapper(compiler, options) {
             context.res.headers.delete("Content-Length");
 
             body = data;
-          };
 
-          let isFinished = false;
+            isFinished = true;
+            resolve();
+          };
 
           /**
            * @param {(string | Buffer)=} data data
@@ -616,8 +620,8 @@ function honoWrapper(compiler, options) {
             }
 
             body = isDataExist ? data : null;
-            isFinished = true;
 
+            isFinished = true;
             resolve();
           };
 
