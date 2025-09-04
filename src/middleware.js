@@ -172,16 +172,16 @@ function wrapper(context) {
     }
 
     /**
-     * @param {NodeJS.ErrnoException} err ann error
+     * @param {string} message an error message
      * @param {number} status status
      * @param {Partial<SendErrorOptions<Request, Response>>=} options options
      * @returns {Promise<void>}
      */
-    async function sendError(err, status, options) {
+    async function sendError(message, status, options) {
       if (forwardError) {
         const error =
           /** @type {Error & { statusCode: number }} */
-          (new Error(err.message));
+          (new Error(message));
         error.statusCode = status;
 
         await goNext(error);
@@ -252,12 +252,12 @@ function wrapper(context) {
         case "ENAMETOOLONG":
         case "ENOENT":
         case "ENOTDIR":
-          await sendError(error, 404, {
+          await sendError(error.message, 404, {
             modifyResponseData: context.options.modifyResponseData,
           });
           break;
         default:
-          await sendError(error, 500, {
+          await sendError(error.message, 500, {
             modifyResponseData: context.options.modifyResponseData,
           });
           break;
@@ -512,9 +512,7 @@ function wrapper(context) {
         }
 
         await sendError(
-          extra.errorCode === 400
-            ? new Error("Bad Request")
-            : new Error("Forbidden"),
+          extra.errorCode === 400 ? "Bad Request" : "Forbidden",
           extra.errorCode,
           {
             modifyResponseData: context.options.modifyResponseData,
@@ -708,7 +706,7 @@ function wrapper(context) {
       // Conditional GET support
       if (isConditionalGET()) {
         if (isPreconditionFailure()) {
-          await sendError(new Error("Precondition Failed"), 412, {
+          await sendError("Precondition Failed", 412, {
             modifyResponseData: context.options.modifyResponseData,
           });
           return;
@@ -760,7 +758,7 @@ function wrapper(context) {
             getValueContentRangeHeader("bytes", size),
           );
 
-          await sendError(new Error("Range Not Satisfiable"), 416, {
+          await sendError("Range Not Satisfiable", 416, {
             headers: {
               "Content-Range": getResponseHeader(res, "Content-Range"),
             },
