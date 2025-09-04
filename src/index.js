@@ -424,6 +424,8 @@ function koaWrapper(compiler, options) {
       ctx.status = statusCode;
     };
 
+    let isFinished = false;
+
     try {
       await new Promise(
         /**
@@ -436,12 +438,18 @@ function koaWrapper(compiler, options) {
            */
           res.stream = (stream) => {
             ctx.body = stream;
+
+            isFinished = true;
+            resolve();
           };
           /**
            * @param {string | Buffer} data data
            */
           res.send = (data) => {
             ctx.body = data;
+
+            isFinished = true;
+            resolve();
           };
 
           /**
@@ -450,6 +458,9 @@ function koaWrapper(compiler, options) {
           res.finish = (data) => {
             ctx.status = status;
             res.end(data);
+
+            isFinished = true;
+            resolve();
           };
 
           devMiddleware(req, res, (err) => {
@@ -458,7 +469,9 @@ function koaWrapper(compiler, options) {
               return;
             }
 
-            resolve();
+            if (!isFinished) {
+              resolve();
+            }
           });
         },
       );
