@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.4.3](https://github.com/webpack/webpack-dev-middleware/compare/v7.4.2...v7.4.3) (2025-09-05)
+
+
+### Bug Fixes
+
+* do not call the next middleware for 304 responses ([#2155](https://github.com/webpack/webpack-dev-middleware/issues/2155)) ([c26a326](https://github.com/webpack/webpack-dev-middleware/commit/c26a32679c6f4f74895011c4cab4e6d3e2d4cbf4))
+* do not call the next middleware when request is finished or errored ([#2156](https://github.com/webpack/webpack-dev-middleware/issues/2156)) ([116c680](https://github.com/webpack/webpack-dev-middleware/commit/116c680de72f726a25201195d2100d81d696e4ac))
+
 ### [7.4.2](https://github.com/webpack/webpack-dev-middleware/compare/v7.4.1...v7.4.2) (2024-08-21)
 
 

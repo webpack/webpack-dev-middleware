@@ -1,6 +1,6 @@
 {
   "name": "webpack-dev-middleware",
-  "version": "7.4.2",
+  "version": "7.4.3",
   "description": "A development middleware for webpack",
   "keywords": [
     "webpack",
