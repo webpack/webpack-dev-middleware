@@ -3,11 +3,11 @@ name: webpack-dev-middleware
 on:
   push:
     branches:
-      - master
+      - main
       - next
   pull_request:
     branches:
-      - master
+      - main
       - next
 
 permissions:
