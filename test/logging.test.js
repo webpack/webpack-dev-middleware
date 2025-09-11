@@ -2,8 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { stripVTControlCharacters } from "node:util";
 import execa from "execa";
-import stripAnsi from "strip-ansi";
 
 function extractErrorEntry(string) {
   const matches = string.match(/error:\s\D[^:||\n||\r]+/gim);
@@ -12,7 +12,7 @@ function extractErrorEntry(string) {
 }
 
 function stdoutToSnapshot(stdout) {
-  let cleanedStdout = stripAnsi(stdout.trim());
+  let cleanedStdout = stripVTControlCharacters(stdout.trim());
 
   // Bugs in `strip-ansi`
   cleanedStdout = cleanedStdout.replaceAll("null main ", "main");
