@@ -48,7 +48,7 @@
   },
   "dependencies": {
     "colorette": "^2.0.10",
-    "memfs": "^4.6.0",
+    "memfs": ">=4.6.0 <4.43.0",
     "mime-types": "^3.0.1",
     "on-finished": "^2.4.1",
     "range-parser": "^1.2.1",
