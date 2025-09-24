@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.4.5](https://github.com/webpack/webpack-dev-middleware/compare/v7.4.4...v7.4.5) (2025-09-24)
+
+
+### Bug Fixes
+
+* unpin memfs ([#2176](https://github.com/webpack/webpack-dev-middleware/issues/2176)) ([c9a0e68](https://github.com/webpack/webpack-dev-middleware/commit/c9a0e682d3e57d88030bad264a30a1887a892ce7))
+
 ### [7.4.4](https://github.com/webpack/webpack-dev-middleware/compare/v7.4.3...v7.4.4) (2025-09-23)
 
 
