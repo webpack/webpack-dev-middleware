@@ -32,6 +32,10 @@ import getCompiler from "./helpers/getCompiler";
 
 import getCompilerHooks from "./helpers/getCompilerHooks";
 
+fs.lstat("D:\\System Volume Information", (err, stats) => {
+	console.log("CI_TEST: ", err, stats)
+});
+
 // Suppress unnecessary stats output
 jest.spyOn(globalThis.console, "log").mockImplementation();
 
