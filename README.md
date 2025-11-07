@@ -762,7 +762,7 @@ serve(app);
 
 Please take a moment to read our contributing guidelines if you haven't yet done so.
 
-[CONTRIBUTING](./CONTRIBUTING.md)
+[CONTRIBUTING](https://github.com/webpack/sass-loader?tab=contributing-ov-file#contributing)
 
 ## License
 
