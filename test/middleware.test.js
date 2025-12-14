@@ -329,7 +329,7 @@ describe.each([
     let server;
     let req;
 
-    describe("aPI", () => {
+    describe("API", () => {
       let compiler;
 
       describe("constructor", () => {
@@ -3318,28 +3318,21 @@ describe.each([
                 if (name === "hapi") {
                   // There's no such thing as "the next route handler" in hapi. One request is matched to one or no route handlers.
                 } else if (name === "koa") {
-                  middlewares.push(async (ctx, next) => {
+                  middlewares.unshift(async (ctx, next) => {
                     ctx.url = "/index.html";
 
                     await next();
                   });
-                  middlewares.push(middleware.koaWrapper(compiler, {}));
                 } else if (name === "hono") {
-                  middlewares.unshift(async (c, next) => {
-                    await next();
-
-                    return new Response("Hello Node.js!");
-                  });
-                  middlewares.push(middleware.honoWrapper(compiler, {}));
+                  // Hono doesn't have this problem due design
                 } else {
-                  middlewares.push({
+                  middlewares.unshift({
                     route: "/",
                     fn: (oldReq, res, next) => {
                       oldReq.url = "/index.html";
                       next();
                     },
                   });
-                  middlewares.push(middleware(compiler, {}));
                 }
 
                 return middlewares;
@@ -3377,6 +3370,309 @@ describe.each([
             "text/html; charset=utf-8",
           );
           expect(response.text).toBeUndefined();
+        });
+      });
+
+      describe("should work and don't call the next middleware for finished or errored requests by default", () => {
+        let compiler;
+
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-test-errors-headers-sent",
+        );
+
+        let nextWasCalled = false;
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              etag: "weak",
+              lastModified: true,
+            },
+            {
+              setupMiddlewares: (middlewares) => {
+                if (name === "hapi") {
+                  // There's no such thing as "the next route handler" in hapi. One request is matched to one or no route handlers.
+                } else if (name === "koa") {
+                  middlewares.push(async () => {
+                    nextWasCalled = true;
+                  });
+                } else if (name === "hono") {
+                  // Hono doesn't have this problem due design
+                } else {
+                  middlewares.push(() => {
+                    nextWasCalled = true;
+                  });
+                }
+
+                return middlewares;
+              },
+            },
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "index.html"),
+            "HTML",
+          );
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "image.svg"),
+            "svg image",
+          );
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "file.text"),
+            "text",
+          );
+
+          const originalMethod =
+            instance.context.outputFileSystem.createReadStream;
+
+          instance.context.outputFileSystem.createReadStream =
+            function createReadStream(...args) {
+              if (args[0].endsWith("image.svg")) {
+                const brokenStream = new this.ReadStream(...args);
+
+                brokenStream._read = function _read() {
+                  const error = new Error("test");
+                  error.code = "ENAMETOOLONG";
+                  this.emit("error", error);
+                  this.end();
+                  this.destroy();
+                };
+
+                return brokenStream;
+              }
+
+              return originalMethod(...args);
+            };
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it("should work with piping stream", async () => {
+          const response1 = await req.get("/file.text");
+
+          expect(response1.statusCode).toBe(200);
+          expect(nextWasCalled).toBe(false);
+        });
+
+        it("should not allow to get files above root", async () => {
+          const response = await req.get("/public/..%2f../middleware.test.js");
+
+          expect(response.statusCode).toBe(403);
+          expect(response.headers["content-type"]).toBe(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toBe(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Forbidden</pre>
+</body>
+</html>`);
+          expect(nextWasCalled).toBe(false);
+        });
+
+        it('should return the "412" code for the "GET" request to the bundle file with etag and wrong "if-match" header', async () => {
+          const response1 = await req.get("/file.text");
+
+          expect(response1.statusCode).toBe(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
+
+          const response2 = await req.get("/file.text").set("if-match", "test");
+
+          expect(response2.statusCode).toBe(412);
+          expect(nextWasCalled).toBe(false);
+        });
+
+        it('should return the "416" code for the "GET" request with the invalid range header', async () => {
+          const response = await req
+            .get("/file.text")
+            .set("Range", "bytes=9999999-");
+
+          expect(response.statusCode).toBe(416);
+          expect(response.headers["content-type"]).toBe(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toBe(
+            `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Range Not Satisfiable</pre>
+</body>
+</html>`,
+          );
+          expect(nextWasCalled).toBe(false);
+        });
+
+        it('should return the "404" code for the "GET" request to the "image.svg" file when it throws a reading error', async () => {
+          const response = await req.get("/image.svg");
+
+          expect(response.statusCode).toBe(404);
+          expect(response.headers["content-type"]).toBe(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toEqual(
+            "<!DOCTYPE html>\n" +
+              '<html lang="en">\n' +
+              "<head>\n" +
+              '<meta charset="utf-8">\n' +
+              "<title>Error</title>\n" +
+              "</head>\n" +
+              "<body>\n" +
+              "<pre>Not Found</pre>\n" +
+              "</body>\n" +
+              "</html>",
+          );
+          expect(nextWasCalled).toBe(false);
+        });
+
+        it('should return the "200" code for the "HEAD" request to the bundle file', async () => {
+          const response = await req.head("/file.text");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.text).toBeUndefined();
+          expect(nextWasCalled).toBe(false);
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file with etag and "if-none-match"', async () => {
+          const response1 = await req.get("/file.text");
+
+          expect(response1.statusCode).toBe(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
+
+          const response2 = await req
+            .get("/file.text")
+            .set("if-none-match", response1.headers.etag);
+
+          expect(response2.statusCode).toBe(304);
+          expect(response2.headers.etag).toBeDefined();
+          expect(response2.headers.etag.startsWith("W/")).toBe(true);
+
+          const response3 = await req
+            .get("/file.text")
+            .set("if-none-match", response1.headers.etag);
+
+          expect(response3.statusCode).toBe(304);
+          expect(response3.headers.etag).toBeDefined();
+          expect(response3.headers.etag.startsWith("W/")).toBe(true);
+          expect(nextWasCalled).toBe(false);
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file with lastModified and "if-modified-since" header', async () => {
+          const response1 = await req.get("/file.text");
+
+          expect(response1.statusCode).toBe(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+
+          const response2 = await req
+            .get("/file.text")
+            .set("if-modified-since", response1.headers["last-modified"]);
+
+          expect(response2.statusCode).toBe(304);
+          expect(response2.headers["last-modified"]).toBeDefined();
+
+          const response3 = await req
+            .get("/file.text")
+            .set("if-modified-since", response2.headers["last-modified"]);
+
+          expect(response3.statusCode).toBe(304);
+          expect(response3.headers["last-modified"]).toBeDefined();
+          expect(nextWasCalled).toBe(false);
+        });
+      });
+
+      describe("should fallthrough for not found files", () => {
+        let compiler;
+
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-not-found-files",
+        );
+
+        let nextWasCalled = false;
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {},
+            {
+              setupMiddlewares: (middlewares) => {
+                if (name === "hapi") {
+                  nextWasCalled = true;
+                } else if (name === "koa") {
+                  middlewares.push(async (ctx, next) => {
+                    nextWasCalled = true;
+
+                    await next();
+                  });
+                } else if (name === "hono") {
+                  middlewares.push(async (c, next) => {
+                    await next();
+
+                    nextWasCalled = true;
+                  });
+                } else {
+                  middlewares.push((req, res, next) => {
+                    nextWasCalled = true;
+
+                    next();
+                  });
+                }
+
+                return middlewares;
+              },
+            },
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it("should work", async () => {
+          const response = await req.get("/not-found.js");
+
+          expect(response.statusCode).toBe(404);
+          expect(nextWasCalled).toBe(true);
         });
       });
     });

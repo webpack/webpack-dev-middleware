@@ -1,9 +1,0 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
-
-exports[`setupHooks handles multi compiler 1`] = `Array []`;
-
-exports[`setupHooks handles multi compiler 2`] = `Array []`;
-
-exports[`setupHooks handles multi compiler 3`] = `Array []`;
-
-exports[`setupHooks sets state, then logs stats and handles callbacks on nextTick from done hook 1`] = `Array []`;

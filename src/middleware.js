@@ -9,7 +9,6 @@ const {
   finish,
   getHeadersSent,
   getOutgoing,
-  getReadyReadableStreamState,
   getRequestHeader,
   getRequestMethod,
   getRequestURL,
@@ -26,7 +25,6 @@ const {
 } = require("./utils/compatibleAPI");
 const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
 const memorize = require("./utils/memorize");
-const parseTokenList = require("./utils/parseTokenList");
 const ready = require("./utils/ready");
 
 /** @typedef {import("./index.js").NextFunction} NextFunction */
@@ -117,6 +115,10 @@ const parseRangeHeaders = memorize(
   },
 );
 
+const getETag = memorize(() => require("./utils/etag"));
+const getEscapeHtml = memorize(() => require("./utils/escapeHtml"));
+const getParseTokenList = memorize(() => require("./utils/parseTokenList"));
+
 const MAX_MAX_AGE = 31536000000;
 
 /**
@@ -135,16 +137,13 @@ const MAX_MAX_AGE = 31536000000;
  */
 function wrapper(context) {
   return async function middleware(req, res, next) {
-    const acceptedMethods = context.options.methods || ["GET", "HEAD"];
-
-    initState(res);
-
     /**
+     * @param {NodeJS.ErrnoException=} err an error
      * @returns {Promise<void>}
      */
-    async function goNext() {
+    async function goNext(err) {
       if (!context.options.serverSideRender) {
-        return next();
+        return next(err);
       }
 
       return new Promise((resolve) => {
@@ -152,12 +151,18 @@ function wrapper(context) {
           context,
           () => {
             setState(res, "webpack", { devMiddleware: context });
-            resolve(next());
+            resolve(next(err));
           },
           req,
         );
       });
     }
+
+    const acceptedMethods = context.options.methods || ["GET", "HEAD"];
+    // TODO do we need an option here?
+    const forwardError = false;
+
+    initState(res);
 
     const method = getRequestMethod(req);
 
@@ -167,12 +172,22 @@ function wrapper(context) {
     }
 
     /**
+     * @param {string} message an error message
      * @param {number} status status
      * @param {Partial<SendErrorOptions<Request, Response>>=} options options
-     * @returns {void}
+     * @returns {Promise<void>}
      */
-    function sendError(status, options) {
-      const escapeHtml = require("./utils/escapeHtml");
+    async function sendError(message, status, options) {
+      if (forwardError) {
+        const error =
+          /** @type {Error & { statusCode: number }} */
+          (new Error(message));
+        error.statusCode = status;
+
+        await goNext(error);
+      }
+
+      const escapeHtml = getEscapeHtml();
 
       const content = statuses[status] || String(status);
       let document = Buffer.from(
@@ -230,19 +245,19 @@ function wrapper(context) {
 
     /**
      * @param {NodeJS.ErrnoException} error error
-     * @returns {void}
+     * @returns {Promise<void>}
      */
-    function errorHandler(error) {
+    async function errorHandler(error) {
       switch (error.code) {
         case "ENAMETOOLONG":
         case "ENOENT":
         case "ENOTDIR":
-          sendError(404, {
+          await sendError(error.message, 404, {
             modifyResponseData: context.options.modifyResponseData,
           });
           break;
         default:
-          sendError(500, {
+          await sendError(error.message, 500, {
             modifyResponseData: context.options.modifyResponseData,
           });
           break;
@@ -279,7 +294,7 @@ function wrapper(context) {
         return (
           !etag ||
           (ifMatch !== "*" &&
-            parseTokenList(ifMatch).every(
+            getParseTokenList()(ifMatch).every(
               (match) =>
                 match !== etag &&
                 match !== `W/${etag}` &&
@@ -357,7 +372,7 @@ function wrapper(context) {
           return false;
         }
 
-        const matches = parseTokenList(noneMatch);
+        const matches = getParseTokenList()(noneMatch);
 
         let etagStale = true;
 
@@ -496,10 +511,13 @@ function wrapper(context) {
           context.logger.error(`Malicious path "${filename}".`);
         }
 
-        sendError(extra.errorCode, {
-          modifyResponseData: context.options.modifyResponseData,
-        });
-        await goNext();
+        await sendError(
+          extra.errorCode === 400 ? "Bad Request" : "Forbidden",
+          extra.errorCode,
+          {
+            modifyResponseData: context.options.modifyResponseData,
+          },
+        );
         return;
       }
 
@@ -615,13 +633,10 @@ function wrapper(context) {
       const rangeHeader = getRangeHeader();
 
       if (context.options.etag && !getResponseHeader(res, "ETag")) {
-        /** @type {import("fs").Stats | Buffer | ReadStream | undefined} */
-        let value;
+        const isStrongETag = context.options.etag === "strong";
 
-        // TODO cache etag generation?
-        if (context.options.etag === "weak") {
-          value = /** @type {import("fs").Stats} */ (extra.stats);
-        } else {
+        // TODO cache strong etag generation?
+        if (isStrongETag) {
           if (rangeHeader) {
             const parsedRanges =
               /** @type {import("range-parser").Ranges | import("range-parser").Result} */
@@ -646,25 +661,25 @@ function wrapper(context) {
               end,
             );
 
-            value = result.bufferOrStream;
             ({ bufferOrStream, byteLength } = result);
           } catch (error) {
-            errorHandler(/** @type {NodeJS.ErrnoException} */ (error));
-            await goNext();
+            await errorHandler(/** @type {NodeJS.ErrnoException} */ (error));
             return;
           }
         }
 
-        if (value) {
-          const result = await require("./utils/etag")(value);
+        const result = await getETag()(
+          isStrongETag
+            ? /** @type {Buffer | ReadStream} */ (bufferOrStream)
+            : /** @type {import("fs").Stats} */ (extra.stats),
+        );
 
-          // Because we already read stream, we can cache buffer to avoid extra read from fs
-          if (result.buffer) {
-            bufferOrStream = result.buffer;
-          }
-
-          setResponseHeader(res, "ETag", result.hash);
+        // Because we already read stream, we can cache buffer to avoid extra read from fs
+        if (result.buffer) {
+          bufferOrStream = result.buffer;
         }
+
+        setResponseHeader(res, "ETag", result.hash);
       }
 
       if (
@@ -672,7 +687,7 @@ function wrapper(context) {
         getStatusCode(res) === 404
       ) {
         removeResponseHeader(res, "Content-Type");
-        // content-type name(like application/javascript; charset=utf-8) or false
+        // content-type name (like application/javascript; charset=utf-8) or false
         const contentType = mime.contentType(path.extname(filename));
 
         // Only set content-type header if media type is known
@@ -691,10 +706,9 @@ function wrapper(context) {
       // Conditional GET support
       if (isConditionalGET()) {
         if (isPreconditionFailure()) {
-          sendError(412, {
+          await sendError("Precondition Failed", 412, {
             modifyResponseData: context.options.modifyResponseData,
           });
-          await goNext();
           return;
         }
 
@@ -719,7 +733,6 @@ function wrapper(context) {
           removeResponseHeader(res, "Content-Type");
 
           finish(res);
-          await goNext();
           return;
         }
       }
@@ -745,13 +758,12 @@ function wrapper(context) {
             getValueContentRangeHeader("bytes", size),
           );
 
-          sendError(416, {
+          await sendError("Range Not Satisfiable", 416, {
             headers: {
               "Content-Range": getResponseHeader(res, "Content-Range"),
             },
             modifyResponseData: context.options.modifyResponseData,
           });
-          await goNext();
           return;
         } else if (parsedRanges === -2) {
           context.logger.error(
@@ -794,8 +806,7 @@ function wrapper(context) {
             end,
           ));
         } catch (error) {
-          errorHandler(/** @type {NodeJS.ErrnoException} */ (error));
-          await goNext();
+          await errorHandler(/** @type {NodeJS.ErrnoException} */ (error));
           return;
         }
       }
@@ -824,7 +835,6 @@ function wrapper(context) {
         }
 
         finish(res);
-        await goNext();
         return;
       }
 
@@ -839,7 +849,6 @@ function wrapper(context) {
 
       if (!isPipeSupports) {
         send(res, /** @type {Buffer} */ (bufferOrStream));
-        await goNext();
         return;
       }
 
@@ -853,16 +862,11 @@ function wrapper(context) {
 
       // Error handling
       /** @type {import("fs").ReadStream} */
-      (bufferOrStream)
-        .on("error", (error) => {
-          // clean up stream early
-          cleanup();
-          errorHandler(error);
-          goNext();
-        })
-        .on(getReadyReadableStreamState(res), () => {
-          goNext();
-        });
+      (bufferOrStream).on("error", (error) => {
+        // clean up stream early
+        cleanup();
+        errorHandler(error);
+      });
 
       pipe(res, /** @type {ReadStream} */ (bufferOrStream));
 
