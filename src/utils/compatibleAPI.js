@@ -1,6 +1,7 @@
-/** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
-/** @typedef {import("../index.js").ServerResponse} ServerResponse */
+/** @typedef {import("../index").IncomingMessage} IncomingMessage */
+/** @typedef {import("../index").ServerResponse} ServerResponse */
 /** @typedef {import("../index").OutputFileSystem} OutputFileSystem */
+/** @typedef {import("../index").EXPECTED_ANY} EXPECTED_ANY */
 
 /**
  * @typedef {object} ExpectedIncomingMessage
@@ -9,7 +10,6 @@
  * @property {(() => string | undefined)=} getURL get URL extra method
  */
 
-// eslint-disable-next-line jsdoc/no-restricted-syntax
 /**
  * @typedef {object} ExpectedServerResponse
  * @property {((status: number) => void)=} setStatusCode set status code
@@ -21,9 +21,9 @@
  * @property {((data?: string | Buffer) => void)=} finish finish
  * @property {(() => string[])=} getResponseHeaders get response header
  * @property {(() => boolean)=} getHeadersSent get headers sent
- * @property {((data: any) => void)=} stream stream
- * @property {(() => any)=} getOutgoing get outgoing
- * @property {((name: string, value: any) => void)=} setState set state
+ * @property {((data: EXPECTED_ANY) => void)=} stream stream
+ * @property {(() => EXPECTED_ANY)=} getOutgoing get outgoing
+ * @property {((name: string, value: EXPECTED_ANY) => void)=} setState set state
  */
 
 /**
@@ -280,12 +280,11 @@ function initState(res) {
   res.locals ||= {};
 }
 
-// eslint-disable-next-line jsdoc/no-restricted-syntax
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res
  * @param {string} name name
- * @param {any} value state
+ * @param {EXPECTED_ANY} value state
  * @returns {void}
  */
 function setState(res, name, value) {
@@ -295,8 +294,7 @@ function setState(res, name, value) {
     return;
   }
 
-  // eslint-disable-next-line jsdoc/no-restricted-syntax
-  /** @type {any} */
+  /** @type {Record<string, EXPECTED_ANY>} */
   (res.locals)[name] = value;
 }
 

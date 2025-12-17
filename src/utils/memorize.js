@@ -1,9 +1,10 @@
+/** @typedef {import("../index").EXPECTED_ANY} EXPECTED_ANY */
+
 const cacheStore = new WeakMap();
 
-// eslint-disable-next-line jsdoc/no-restricted-syntax
 /**
  * @template T
- * @typedef {(...args: any) => T} FunctionReturning
+ * @typedef {(...args: EXPECTED_ANY) => T} FunctionReturning
  */
 
 /**
@@ -14,10 +15,9 @@ const cacheStore = new WeakMap();
  * @returns {FunctionReturning<T>} new function
  */
 function memorize(fn, { cache = new Map() } = {}, callback = undefined) {
-  // eslint-disable-next-line jsdoc/no-restricted-syntax
   /**
-   * @param {any} arguments_ args
-   * @returns {any} result
+   * @param {EXPECTED_ANY[]} arguments_ args
+   * @returns {EXPECTED_ANY} result
    */
   const memoized = (...arguments_) => {
     const [key] = arguments_;

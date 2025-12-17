@@ -27,10 +27,14 @@ const noop = () => {};
 /** @typedef {import("http").IncomingMessage} IncomingMessage */
 /** @typedef {import("http").ServerResponse & ExtendedServerResponse} ServerResponse */
 
-// eslint-disable-next-line jsdoc/no-restricted-syntax
+// eslint-disable-next-line jsdoc/reject-any-type
+/** @typedef {any} EXPECTED_ANY */
+// eslint-disable-next-line jsdoc/reject-function-type
+/** @typedef {Function} EXPECTED_FUNCTION */
+
 /**
  * @callback NextFunction
- * @param {any=} err error
+ * @param {EXPECTED_ANY=} err error
  * @returns {void}
  */
 
@@ -386,21 +390,19 @@ function hapiWrapper() {
 
 wdm.hapiWrapper = hapiWrapper;
 
-// eslint-disable-next-line jsdoc/no-restricted-syntax
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
- * @returns {(ctx: any, next: Function) => Promise<void> | void} kow wrapper
+ * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow wrapper
  */
 function koaWrapper(compiler, options) {
   const devMiddleware = wdm(compiler, options);
 
-  // eslint-disable-next-line jsdoc/no-restricted-syntax
   /**
    * @param {{req: RequestInternal, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse, status: number, body: string | Buffer | import("fs").ReadStream | {message: string}, state: object}} ctx context
-   * @param {Function} next next
+   * @param {EXPECTED_FUNCTION} next next
    * @returns {Promise<void>}
    */
   async function webpackDevMiddleware(ctx, next) {
@@ -501,21 +503,19 @@ function koaWrapper(compiler, options) {
 
 wdm.koaWrapper = koaWrapper;
 
-// eslint-disable-next-line jsdoc/no-restricted-syntax
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
- * @returns {(ctx: any, next: Function) => Promise<void> | void} hono wrapper
+ * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono wrapper
  */
 function honoWrapper(compiler, options) {
   const devMiddleware = wdm(compiler, options);
 
-  // eslint-disable-next-line jsdoc/no-restricted-syntax
   /**
-   * @param {{ env: any, body: any, json: any, status: any, set: any, req: RequestInternal & import("./utils/compatibleAPI").ExpectedIncomingMessage & { header: (name: string) => string }, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse & { headers: any, status: any } }} context context
-   * @param {Function} next next function
+   * @param {{ env: EXPECTED_ANY, body: EXPECTED_ANY, json: EXPECTED_ANY, status: EXPECTED_ANY, set: EXPECTED_ANY, req: RequestInternal & import("./utils/compatibleAPI").ExpectedIncomingMessage & { header: (name: string) => string }, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse & { headers: EXPECTED_ANY, status: EXPECTED_ANY } }} context context
+   * @param {EXPECTED_FUNCTION} next next function
    * @returns {Promise<void>}
    */
   async function webpackDevMiddleware(context, next) {
@@ -559,11 +559,10 @@ function honoWrapper(compiler, options) {
      */
     res.getHeader = (name) => context.res.headers.get(name);
 
-    // eslint-disable-next-line jsdoc/no-restricted-syntax
     /**
      * @param {string} name header name
      * @param {string | number | Readonly<string[]>} value value
-     * @returns {ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse & { headers: any, status: any }} response
+     * @returns {ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse & { headers: EXPECTED_ANY, status: EXPECTED_ANY }} response
      */
     res.setHeader = (name, value) => {
       context.res.headers.append(name, value);

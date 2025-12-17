@@ -59,9 +59,9 @@ describe("setupHooks", () => {
 
   it("taps watchRun, invalid, and done", () => {
     setupHooks(context);
-    expect(watchRunHook.mock.calls).toHaveLength(1);
-    expect(invalidHook.mock.calls).toHaveLength(1);
-    expect(doneHook.mock.calls).toHaveLength(1);
+    expect(watchRunHook).toHaveBeenCalledTimes(1);
+    expect(invalidHook).toHaveBeenCalledTimes(1);
+    expect(doneHook).toHaveBeenCalledTimes(1);
   });
 
   it("watchRun hook invalidates", () => {
@@ -70,7 +70,7 @@ describe("setupHooks", () => {
     watchRunHook.mock.calls[0][1]();
     expect(context.state).toBe(false);
     expect(context.stats).toBeUndefined();
-    expect(loggerInfo.mock.calls).toHaveLength(0);
+    expect(loggerInfo).not.toHaveBeenCalled();
   });
 
   it("invalid hook invalidates", () => {
@@ -79,7 +79,7 @@ describe("setupHooks", () => {
     invalidHook.mock.calls[0][1]();
     expect(context.state).toBe(false);
     expect(context.stats).toBeUndefined();
-    expect(loggerInfo.mock.calls).toHaveLength(0);
+    expect(loggerInfo).not.toHaveBeenCalled();
   });
 
   it("logs if state is set on invalidate", () => {
@@ -101,12 +101,12 @@ describe("setupHooks", () => {
     });
     expect(context.stats).toBeTruthy();
     expect(context.state).toBeTruthy();
-    expect(nextTick.mock.calls).toHaveLength(1);
+    expect(nextTick).toHaveBeenCalledTimes(1);
 
     nextTick.mock.calls[0][0]();
     expect(loggerInfo.mock.calls).toMatchSnapshot();
-    expect(loggerError.mock.calls).toHaveLength(0);
-    expect(loggerWarn.mock.calls).toHaveLength(0);
+    expect(loggerError).not.toHaveBeenCalled();
+    expect(loggerWarn).not.toHaveBeenCalled();
 
     expect(cb1.mock.calls[0][0]).toEqual(context.stats);
     expect(cb2.mock.calls[0][0]).toEqual(context.stats);
@@ -117,10 +117,10 @@ describe("setupHooks", () => {
     doneHook.mock.calls[0][1]("stats");
     expect(context.stats).toBe("stats");
     expect(context.state).toBeTruthy();
-    expect(nextTick.mock.calls).toHaveLength(1);
+    expect(nextTick).toHaveBeenCalledTimes(1);
     context.state = false;
     nextTick.mock.calls[0][0]();
-    expect(loggerInfo.mock.calls).toHaveLength(0);
+    expect(loggerInfo).not.toHaveBeenCalled();
   });
 
   it("handles multi compiler", () => {
@@ -155,7 +155,7 @@ describe("setupHooks", () => {
     });
     expect(context.stats).toBeTruthy();
     expect(context.state).toBeTruthy();
-    expect(nextTick.mock.calls).toHaveLength(1);
+    expect(nextTick).toHaveBeenCalledTimes(1);
 
     nextTick.mock.calls[0][0]();
     expect(loggerInfo.mock.calls).toMatchSnapshot();

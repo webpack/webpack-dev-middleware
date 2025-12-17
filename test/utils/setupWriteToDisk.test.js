@@ -56,7 +56,7 @@ describe("setupWriteToDisk", () => {
     // this simulates the emit hook being called twice
     emitHook.mock.calls[0][1]();
     emitHook.mock.calls[0][1]();
-    expect(assetEmittedHook.mock.calls).toHaveLength(1);
+    expect(assetEmittedHook).toHaveBeenCalledTimes(1);
   });
 
   it("filters out unwanted emits with writeToDisk", () => {
@@ -77,14 +77,14 @@ describe("setupWriteToDisk", () => {
     );
 
     // the getPath helper is not needed for webpack@5
-    expect(getPath.mock.calls).toHaveLength(0);
+    expect(getPath).not.toHaveBeenCalled();
 
-    expect(filter.mock.calls).toHaveLength(1);
+    expect(filter).toHaveBeenCalledTimes(1);
     expect(filter.mock.calls[0][0]).toBe("targetPath");
     // the callback should always be called
-    expect(cb.mock.calls).toHaveLength(1);
+    expect(cb).toHaveBeenCalledTimes(1);
     // the filter prevents a directory from being made
-    expect(mkdirSpy.mock.calls).toHaveLength(0);
+    expect(mkdirSpy).not.toHaveBeenCalled();
   });
 
   const writeErrors = [
@@ -123,18 +123,18 @@ describe("setupWriteToDisk", () => {
       );
 
       // the getPath helper is not needed for webpack@5
-      expect(getPath.mock.calls).toHaveLength(0);
+      expect(getPath).not.toHaveBeenCalled();
 
-      expect(mkdirSpy.mock.calls).toHaveLength(1);
+      expect(mkdirSpy).toHaveBeenCalledTimes(1);
       expect(mkdirSpy.mock.calls[0][0]).toBe("/target/path");
 
       // simulates the mkdir callback being called
       mkdirSpy.mock.calls[0][2](writeError.mkdirError);
 
       if (writeError.mkdirError) {
-        expect(writeFileSpy.mock.calls).toHaveLength(0);
+        expect(writeFileSpy).not.toHaveBeenCalled();
       } else {
-        expect(writeFileSpy.mock.calls).toHaveLength(1);
+        expect(writeFileSpy).toHaveBeenCalledTimes(1);
         expect(writeFileSpy.mock.calls[0][0]).toBe("/target/path/file");
         expect(writeFileSpy.mock.calls[0][1]).toBe("content");
 
@@ -147,7 +147,7 @@ describe("setupWriteToDisk", () => {
       expect(context.logger.log.mock.calls).toMatchSnapshot();
 
       // the callback should always be called
-      expect(cb.mock.calls).toHaveLength(1);
+      expect(cb).toHaveBeenCalledTimes(1);
       // no errors are expected
       expect(cb.mock.calls).toMatchSnapshot();
     });
