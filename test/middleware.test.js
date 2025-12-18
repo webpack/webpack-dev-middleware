@@ -315,13 +315,13 @@ function parseHttpDate(date) {
 }
 
 describe.each([
-  // ["connect", connect],
-  // ["express", express],
-  // ["express-v4", expressOld],
-  // ["router", router],
-  // ["fastify", fastify],
-  // ["koa", koa],
-  // ["hapi", Hapi],
+  ["connect", connect],
+  ["express", express],
+  ["express-v4", expressOld],
+  ["router", router],
+  ["fastify", fastify],
+  ["koa", koa],
+  ["hapi", Hapi],
   ["hono", Hono],
 ])("%s framework:", (name, framework) => {
   describe("middleware", () => {
@@ -4004,8 +4004,8 @@ describe.each([
       });
     });
 
-    describe.skip("writeToDisk option", () => {
-      describe('should work with "true" value', () => {
+    describe("writeToDisk option", () => {
+      (name === "hono" ? describe.only : describe)('should work with "true" value', () => {
         let compiler;
 
         const outputPath = path.resolve(
