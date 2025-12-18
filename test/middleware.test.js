@@ -832,7 +832,7 @@ describe.each([
       });
     });
 
-    describe.skip("basic", () => {
+    describe("basic", () => {
       describe("should work", () => {
         let compiler;
         let codeContent;
