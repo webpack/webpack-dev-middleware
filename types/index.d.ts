@@ -12,9 +12,11 @@ export = wdm;
  */
 /** @typedef {import("http").IncomingMessage} IncomingMessage */
 /** @typedef {import("http").ServerResponse & ExtendedServerResponse} ServerResponse */
+/** @typedef {any} EXPECTED_ANY */
+/** @typedef {Function} EXPECTED_FUNCTION */
 /**
  * @callback NextFunction
- * @param {any=} err error
+ * @param {EXPECTED_ANY=} err error
  * @returns {void}
  */
 /**
@@ -175,6 +177,8 @@ declare namespace wdm {
     ExtendedServerResponse,
     IncomingMessage,
     ServerResponse,
+    EXPECTED_ANY,
+    EXPECTED_FUNCTION,
     NextFunction,
     WatchOptions,
     Watching,
@@ -232,7 +236,7 @@ declare function hapiWrapper<
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
- * @returns {(ctx: any, next: Function) => Promise<void> | void} kow wrapper
+ * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow wrapper
  */
 declare function koaWrapper<
   RequestInternal extends IncomingMessage = import("http").IncomingMessage,
@@ -240,13 +244,13 @@ declare function koaWrapper<
 >(
   compiler: Compiler | MultiCompiler,
   options?: Options<RequestInternal, ResponseInternal> | undefined,
-): (ctx: any, next: Function) => Promise<void> | void;
+): (ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void;
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
- * @returns {(ctx: any, next: Function) => Promise<void> | void} hono wrapper
+ * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono wrapper
  */
 declare function honoWrapper<
   RequestInternal extends IncomingMessage = import("http").IncomingMessage,
@@ -254,7 +258,7 @@ declare function honoWrapper<
 >(
   compiler: Compiler | MultiCompiler,
   options?: Options<RequestInternal, ResponseInternal> | undefined,
-): (ctx: any, next: Function) => Promise<void> | void;
+): (ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void;
 type Schema = import("schema-utils/declarations/validate").Schema;
 type Compiler = import("webpack").Compiler;
 type MultiCompiler = import("webpack").MultiCompiler;
@@ -276,7 +280,9 @@ type ExtendedServerResponse = {
 };
 type IncomingMessage = import("http").IncomingMessage;
 type ServerResponse = import("http").ServerResponse & ExtendedServerResponse;
-type NextFunction = (err?: any | undefined) => void;
+type EXPECTED_ANY = any;
+type EXPECTED_FUNCTION = Function;
+type NextFunction = (err?: EXPECTED_ANY | undefined) => void;
 type WatchOptions = NonNullable<Configuration["watchOptions"]>;
 type Watching = Compiler["watching"];
 type MultiWatching = ReturnType<MultiCompiler["watch"]>;

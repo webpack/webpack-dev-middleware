@@ -1,7 +1,7 @@
 export = memorize;
 /**
  * @template T
- * @typedef {(...args: any) => T} FunctionReturning
+ * @typedef {(...args: EXPECTED_ANY) => T} FunctionReturning
  */
 /**
  * @template T
@@ -30,6 +30,7 @@ declare function memorize<T>(
   callback?: ((value: T) => T) | undefined,
 ): FunctionReturning<T>;
 declare namespace memorize {
-  export { FunctionReturning };
+  export { FunctionReturning, EXPECTED_ANY };
 }
-type FunctionReturning<T> = (...args: any) => T;
+type FunctionReturning<T> = (...args: EXPECTED_ANY) => T;
+type EXPECTED_ANY = import("../index").EXPECTED_ANY;

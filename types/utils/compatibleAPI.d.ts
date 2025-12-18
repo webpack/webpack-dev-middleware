@@ -1,6 +1,7 @@
-export type IncomingMessage = import("../index.js").IncomingMessage;
-export type ServerResponse = import("../index.js").ServerResponse;
+export type IncomingMessage = import("../index").IncomingMessage;
+export type ServerResponse = import("../index").ServerResponse;
 export type OutputFileSystem = import("../index").OutputFileSystem;
+export type EXPECTED_ANY = import("../index").EXPECTED_ANY;
 export type ExpectedIncomingMessage = {
   /**
    * get header extra method
@@ -60,15 +61,15 @@ export type ExpectedServerResponse = {
   /**
    * stream
    */
-  stream?: ((data: any) => void) | undefined;
+  stream?: ((data: EXPECTED_ANY) => void) | undefined;
   /**
    * get outgoing
    */
-  getOutgoing?: (() => any) | undefined;
+  getOutgoing?: (() => EXPECTED_ANY) | undefined;
   /**
    * set state
    */
-  setState?: ((name: string, value: any) => void) | undefined;
+  setState?: ((name: string, value: EXPECTED_ANY) => void) | undefined;
 };
 /**
  * @param {string} filename filename
@@ -110,9 +111,10 @@ export function getHeadersSent<
 export function getOutgoing<
   Response extends ServerResponse & ExpectedServerResponse,
 >(res: Response): Response;
-/** @typedef {import("../index.js").IncomingMessage} IncomingMessage */
-/** @typedef {import("../index.js").ServerResponse} ServerResponse */
+/** @typedef {import("../index").IncomingMessage} IncomingMessage */
+/** @typedef {import("../index").ServerResponse} ServerResponse */
 /** @typedef {import("../index").OutputFileSystem} OutputFileSystem */
+/** @typedef {import("../index").EXPECTED_ANY} EXPECTED_ANY */
 /**
  * @typedef {object} ExpectedIncomingMessage
  * @property {((name: string) => string | string[] | undefined)=} getHeader get header extra method
@@ -130,9 +132,9 @@ export function getOutgoing<
  * @property {((data?: string | Buffer) => void)=} finish finish
  * @property {(() => string[])=} getResponseHeaders get response header
  * @property {(() => boolean)=} getHeadersSent get headers sent
- * @property {((data: any) => void)=} stream stream
- * @property {(() => any)=} getOutgoing get outgoing
- * @property {((name: string, value: any) => void)=} setState set state
+ * @property {((data: EXPECTED_ANY) => void)=} stream stream
+ * @property {(() => EXPECTED_ANY)=} getOutgoing get outgoing
+ * @property {((name: string, value: EXPECTED_ANY) => void)=} setState set state
  */
 /**
  * @template {IncomingMessage & ExpectedIncomingMessage} Request
@@ -237,12 +239,12 @@ export function setResponseHeader<
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res
  * @param {string} name name
- * @param {any} value state
+ * @param {EXPECTED_ANY} value state
  * @returns {void}
  */
 export function setState<
   Response extends ServerResponse & ExpectedServerResponse,
->(res: Response, name: string, value: any): void;
+>(res: Response, name: string, value: EXPECTED_ANY): void;
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res

@@ -87,9 +87,11 @@ describe("validation", () => {
     },
   };
 
-  // eslint-disable-next-line jsdoc/no-restricted-syntax
+  // eslint-disable-next-line jsdoc/reject-any-type
+  /** @typedef {any} EXPECTED_ANY */
+
   /**
-   * @param {any} value value
+   * @param {EXPECTED_ANY} value value
    * @returns {string} stringified value
    */
   function stringifyValue(value) {
@@ -103,10 +105,9 @@ describe("validation", () => {
     return value;
   }
 
-  // eslint-disable-next-line jsdoc/no-restricted-syntax
   /**
    * @param {string} key key
-   * @param {any} value value
+   * @param {EXPECTED_ANY} value value
    * @param {"success" | "failure"} type type
    */
   function createTestCase(key, value, type) {

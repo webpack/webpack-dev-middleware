@@ -24,7 +24,7 @@ describe("setupOutputFileSystem", () => {
     // make sure that this is the default fs created
     expect(context.compiler.outputFileSystem.testFs).toBeTruthy();
     expect(context.outputFileSystem.testFs).toBeTruthy();
-    expect(createFsFromVolume.mock.calls).toHaveLength(1);
+    expect(createFsFromVolume).toHaveBeenCalledTimes(1);
   });
 
   it("should set fs for multi compiler", () => {

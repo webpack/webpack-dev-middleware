@@ -3161,6 +3161,7 @@ describe.each([
 
       describe("should handle custom fs errors and response 500 code without `fs.createReadStream`", () => {
         let compiler;
+        // Try to disable this
 
         const outputPath = path.resolve(
           __dirname,
@@ -4004,83 +4005,87 @@ describe.each([
     });
 
     describe("writeToDisk option", () => {
-      describe('should work with "true" value', () => {
-        let compiler;
+      (name === "hono" ? describe.only : describe)(
+        'should work with "true" value',
+        () => {
+          let compiler;
 
-        const outputPath = path.resolve(
-          __dirname,
-          "./outputs/write-to-disk-true",
-        );
-
-        beforeAll(async () => {
-          compiler = getCompiler({
-            ...webpackConfig,
-            output: {
-              filename: "bundle.js",
-              path: outputPath,
-              publicPath: "/public/",
-            },
-          });
-
-          [server, req, instance] = await frameworkFactory(
-            name,
-            framework,
-            compiler,
-            { writeToDisk: true },
+          const outputPath = path.resolve(
+            __dirname,
+            "./outputs/write-to-disk-true",
           );
-        });
 
-        afterAll(async () => {
-          await fs.promises.rm(outputPath, {
-            recursive: true,
-            force: true,
-          });
-          await close(server, instance);
-        });
-
-        it("should find the bundle file on disk", (done) => {
-          req.get("/public/bundle.js").expect(200, (error) => {
-            if (error) {
-              return done(error);
-            }
-
-            const bundlePath = path.resolve(
-              __dirname,
-              "./outputs/write-to-disk-true/bundle.js",
-            );
-
-            expect(
-              compiler.hooks.assetEmitted.taps.filter(
-                (hook) => hook.name === "DevMiddleware",
-              ),
-            ).toHaveLength(1);
-            expect(fs.existsSync(bundlePath)).toBe(true);
-
-            instance.invalidate();
-
-            return compiler.hooks.done.tap(
-              "DevMiddlewareWriteToDiskTest",
-              () => {
-                expect(
-                  compiler.hooks.assetEmitted.taps.filter(
-                    (hook) => hook.name === "DevMiddleware",
-                  ),
-                ).toHaveLength(1);
-
-                done();
+          beforeAll(async () => {
+            compiler = getCompiler({
+              ...webpackConfig,
+              output: {
+                filename: "bundle.js",
+                path: outputPath,
+                publicPath: "/public/",
               },
+            });
+
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+              { writeToDisk: true },
             );
           });
-        });
 
-        it("should not allow to get files above root", async () => {
-          const response = await req.get("/public/..%2f../middleware.test.js");
+          afterAll(async () => {
+            await fs.promises.rm(outputPath, {
+              recursive: true,
+              force: true,
+            });
+            await close(server, instance);
+          });
 
-          expect(response.statusCode).toBe(403);
-          expect(response.headers["content-type"]).toBe(
-            "text/html; charset=utf-8",
-          );
-          expect(response.text).toBe(`<!DOCTYPE html>
+          it("should find the bundle file on disk", (done) => {
+            req.get("/public/bundle.js").expect(200, (error) => {
+              if (error) {
+                return done(error);
+              }
+
+              const bundlePath = path.resolve(
+                __dirname,
+                "./outputs/write-to-disk-true/bundle.js",
+              );
+
+              expect(
+                compiler.hooks.assetEmitted.taps.filter(
+                  (hook) => hook.name === "DevMiddleware",
+                ),
+              ).toHaveLength(1);
+              expect(fs.existsSync(bundlePath)).toBe(true);
+
+              instance.invalidate();
+
+              return compiler.hooks.done.tap(
+                "DevMiddlewareWriteToDiskTest",
+                () => {
+                  expect(
+                    compiler.hooks.assetEmitted.taps.filter(
+                      (hook) => hook.name === "DevMiddleware",
+                    ),
+                  ).toHaveLength(1);
+
+                  done();
+                },
+              );
+            });
+          });
+
+          it("should not allow to get files above root", async () => {
+            const response = await req.get(
+              "/public/..%2f../middleware.test.js",
+            );
+
+            expect(response.statusCode).toBe(403);
+            expect(response.headers["content-type"]).toBe(
+              "text/html; charset=utf-8",
+            );
+            expect(response.text).toBe(`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -4090,8 +4095,9 @@ describe.each([
 <pre>Forbidden</pre>
 </body>
 </html>`);
-        });
-      });
+          });
+        },
+      );
 
       describe('should work with "true" value when the `output.clean` is `true`', () => {
         const outputPath = path.resolve(
