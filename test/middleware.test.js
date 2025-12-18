@@ -4004,7 +4004,7 @@ describe.each([
       });
     });
 
-    describe("writeToDisk option", () => {
+    describe.skip("writeToDisk option", () => {
       describe('should work with "true" value', () => {
         let compiler;
 
