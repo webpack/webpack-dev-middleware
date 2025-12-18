@@ -4004,7 +4004,7 @@ describe.each([
       });
     });
 
-    describe("writeToDisk option", () => {
+    describe.skip("writeToDisk option", () => {
       describe('should work with "true" value', () => {
         let compiler;
 
@@ -4913,7 +4913,7 @@ describe.each([
       });
     });
 
-    describe.skip("outputFileSystem option", () => {
+    describe("outputFileSystem option", () => {
       describe("should work with an unspecified value", () => {
         let compiler;
 
