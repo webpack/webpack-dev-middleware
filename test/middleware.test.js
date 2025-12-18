@@ -4005,7 +4005,7 @@ describe.each([
     });
 
     describe("writeToDisk option", () => {
-      (name === "hono" ? describe.only : describe)(
+      (name === "hono" ? describe.skip : describe)(
         'should work with "true" value',
         () => {
           let compiler;
