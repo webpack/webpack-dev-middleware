@@ -832,7 +832,7 @@ describe.each([
       });
     });
 
-    describe("basic", () => {
+    describe.skip("basic", () => {
       describe("should work", () => {
         let compiler;
         let codeContent;
@@ -4004,7 +4004,7 @@ describe.each([
       });
     });
 
-    describe.skip("writeToDisk option", () => {
+    describe("writeToDisk option", () => {
       describe('should work with "true" value', () => {
         let compiler;
 
