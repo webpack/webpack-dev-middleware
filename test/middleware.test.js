@@ -33,7 +33,7 @@ import getCompiler from "./helpers/getCompiler";
 import getCompilerHooks from "./helpers/getCompilerHooks";
 
 // Suppress unnecessary stats output
-// jest.spyOn(globalThis.console, "log").mockImplementation();
+jest.spyOn(globalThis.console, "log").mockImplementation();
 
 async function startServer(name, app) {
   return new Promise((resolve, reject) => {
@@ -3159,7 +3159,7 @@ describe.each([
         });
       });
 
-      describe.skip("should handle custom fs errors and response 500 code without `fs.createReadStream`", () => {
+      describe("should handle custom fs errors and response 500 code without `fs.createReadStream`", () => {
         let compiler;
         // Try to disable this
 
@@ -4913,7 +4913,7 @@ describe.each([
       });
     });
 
-    describe("outputFileSystem option", () => {
+    describe.skip("outputFileSystem option", () => {
       describe("should work with an unspecified value", () => {
         let compiler;
 
