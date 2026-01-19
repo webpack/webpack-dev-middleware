@@ -12,6 +12,7 @@ describe("setupHooks", () => {
   const loggerInfo = jest.fn();
   const loggerWarn = jest.fn();
   const loggerError = jest.fn();
+  const colorSupport = jest.fn();
   let nextTick;
 
   const cb1 = jest.fn();
@@ -22,6 +23,11 @@ describe("setupHooks", () => {
     context = {
       options: {},
       compiler: {
+        webpack: {
+          cli: {
+            isColorSupported: colorSupport,
+          },
+        },
         hooks: {
           watchRun: {
             tap: watchRunHook,
@@ -126,12 +132,22 @@ describe("setupHooks", () => {
   it("handles multi compiler", () => {
     context.compiler.compilers = [
       {
+        webpack: {
+          cli: {
+            isColorSupported: colorSupport,
+          },
+        },
         options: {
           name: "comp1",
           stats: {},
         },
       },
       {
+        webpack: {
+          cli: {
+            isColorSupported: colorSupport,
+          },
+        },
         options: {
           name: "comp2",
           stats: {},
