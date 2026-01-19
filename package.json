@@ -47,7 +47,6 @@
     "release": "standard-version"
   },
   "dependencies": {
-    "colorette": "^2.0.10",
     "memfs": "^4.43.1",
     "mime-types": "^3.0.1",
     "on-finished": "^2.4.1",
@@ -95,7 +94,7 @@
     "webpack": "^5.101.0"
   },
   "peerDependencies": {
-    "webpack": "^5.0.0"
+    "webpack": "^5.101.0"
   },
   "peerDependenciesMeta": {
     "webpack": {
