@@ -547,7 +547,7 @@ function wrapper(context) {
         }
 
         /**
-         * @type {{key: string, value: string | number}[]}
+         * @type {{ key: string, value: string | number }[]}
          */
         const allHeaders = [];
 

@@ -69,11 +69,11 @@ export = wdm;
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @typedef {WithoutUndefined<Context<RequestInternal, ResponseInternal>, "watching">} FilledContext
  */
-/** @typedef {Record<string, string | number> | Array<{ key: string, value: number | string }>} NormalizedHeaders */
+/** @typedef {Record<string, string | number> | { key: string, value: number | string }[]} NormalizedHeaders */
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @typedef {NormalizedHeaders | ((req: RequestInternal, res: ResponseInternal, context: Context<RequestInternal, ResponseInternal>) =>  void | undefined | NormalizedHeaders) | undefined} Headers
+ * @typedef {NormalizedHeaders | ((req: RequestInternal, res: ResponseInternal, context: Context<RequestInternal, ResponseInternal>) => void | undefined | NormalizedHeaders) | undefined} Headers
  */
 /**
  * @template {IncomingMessage} [RequestInternal = IncomingMessage]
@@ -355,10 +355,10 @@ type FilledContext<
 > = WithoutUndefined<Context<RequestInternal, ResponseInternal>, "watching">;
 type NormalizedHeaders =
   | Record<string, string | number>
-  | Array<{
+  | {
       key: string;
       value: number | string;
-    }>;
+    }[];
 type Headers<
   RequestInternal extends IncomingMessage = import("http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
