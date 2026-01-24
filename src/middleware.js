@@ -586,17 +586,13 @@ function wrapper(context) {
         } else if (typeof cacheControl === "boolean") {
           cacheControl = { maxAge: MAX_MAX_AGE };
         } else if (typeof cacheControl === "number") {
-          cacheControl = {
-            maxAge: Math.min(Math.max(0, cacheControl), MAX_MAX_AGE),
-          };
+          cacheControl = { maxAge: cacheControl };
         }
 
         if (cacheControl && typeof cacheControl === "object") {
           const maxAge =
             cacheControl.maxAge !== undefined
-              ? Math.floor(
-                  Math.min(Math.max(0, cacheControl.maxAge), MAX_MAX_AGE),
-                )
+              ? Math.min(Math.max(0, cacheControl.maxAge), MAX_MAX_AGE)
               : MAX_MAX_AGE;
 
           let cacheControlValue = `public, max-age=${Math.floor(maxAge / 1000)}`;
