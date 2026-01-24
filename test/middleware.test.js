@@ -6086,9 +6086,7 @@ describe.each([
 
           expect(response.statusCode).toBe(200);
           expect(response.headers["cache-control"]).toBeDefined();
-          expect(response.headers["cache-control"]).toBe(
-            "public, max-age=100, immutable",
-          );
+          expect(response.headers["cache-control"]).toBe("public, max-age=100");
         });
       });
 
@@ -6116,7 +6114,7 @@ describe.each([
           expect(response.statusCode).toBe(200);
           expect(response.headers["cache-control"]).toBeDefined();
           expect(response.headers["cache-control"]).toBe(
-            "public, max-age=31536000, immutable",
+            "public, max-age=31536000",
           );
         });
       });

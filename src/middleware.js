@@ -604,7 +604,7 @@ function wrapper(context) {
 
             cacheControlValue = `public, max-age=${maxAge}`;
 
-            if (cacheControl.immutable !== false && hasCacheImmutable) {
+            if (cacheControl.immutable && hasCacheImmutable) {
               cacheControlValue += ", immutable";
             }
           }
