@@ -5943,7 +5943,7 @@ describe.each([
           expect(response.statusCode).toBe(200);
           expect(response.headers["cache-control"]).toBeDefined();
           expect(response.headers["cache-control"]).toBe(
-            "public, max-age=31536000, immutable",
+            "public, max-age=31536000",
           );
         });
       });
@@ -5964,14 +5964,12 @@ describe.each([
           await close(server, instance);
         });
 
-        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header', async () => {
           const response = await req.get("/bundle.js");
 
           expect(response.statusCode).toBe(200);
           expect(response.headers["cache-control"]).toBeDefined();
-          expect(response.headers["cache-control"]).toBe(
-            "public, max-age=100, immutable",
-          );
+          expect(response.headers["cache-control"]).toBe("public, max-age=100");
         });
       });
 
@@ -6224,7 +6222,7 @@ describe.each([
           expect(response.statusCode).toBe(200);
           expect(response.headers["cache-control"]).toBeDefined();
           expect(response.headers["cache-control"]).toBe(
-            "public, max-age=1000, immutable",
+            "public, max-age=1000",
           );
         });
 

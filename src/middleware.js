@@ -586,20 +586,12 @@ function wrapper(context) {
 
           if (typeof cacheControl === "boolean") {
             cacheControlValue = "public, max-age=31536000";
-
-            if (hasCacheImmutable) {
-              cacheControlValue += ", immutable";
-            }
           } else if (typeof cacheControl === "number") {
             const maxAge = Math.floor(
               Math.min(Math.max(0, cacheControl), MAX_MAX_AGE) / 1000,
             );
 
             cacheControlValue = `public, max-age=${maxAge}`;
-
-            if (hasCacheImmutable) {
-              cacheControlValue += ", immutable";
-            }
           } else if (typeof cacheControl === "string") {
             cacheControlValue = cacheControl;
           } else {
