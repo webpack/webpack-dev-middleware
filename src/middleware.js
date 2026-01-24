@@ -576,37 +576,33 @@ function wrapper(context) {
             ? true
             : context.options.cacheImmutable;
 
-        const cacheControl =
-          hasCacheImmutable && extra.immutable
-            ? { immutable: true }
-            : context.options.cacheControl;
+        let { cacheControl } = context.options;
 
-        if (cacheControl) {
-          let cacheControlValue;
+        // Normalize cacheControl to object
+        if (typeof cacheControl === "string") {
+          setResponseHeader(res, "Cache-Control", cacheControl);
+        } else if (hasCacheImmutable && extra.immutable) {
+          cacheControl = { immutable: true };
+        } else if (typeof cacheControl === "boolean") {
+          cacheControl = { maxAge: MAX_MAX_AGE };
+        } else if (typeof cacheControl === "number") {
+          cacheControl = {
+            maxAge: Math.min(Math.max(0, cacheControl), MAX_MAX_AGE),
+          };
+        }
 
-          if (typeof cacheControl === "boolean") {
-            cacheControlValue = "public, max-age=31536000";
-          } else if (typeof cacheControl === "number") {
-            const maxAge = Math.floor(
-              Math.min(Math.max(0, cacheControl), MAX_MAX_AGE) / 1000,
-            );
-
-            cacheControlValue = `public, max-age=${maxAge}`;
-          } else if (typeof cacheControl === "string") {
-            cacheControlValue = cacheControl;
-          } else {
-            const maxAge = cacheControl.maxAge
+        if (cacheControl && typeof cacheControl === "object") {
+          const maxAge =
+            cacheControl.maxAge !== undefined
               ? Math.floor(
-                  Math.min(Math.max(0, cacheControl.maxAge), MAX_MAX_AGE) /
-                    1000,
+                  Math.min(Math.max(0, cacheControl.maxAge), MAX_MAX_AGE),
                 )
-              : MAX_MAX_AGE / 1000;
+              : MAX_MAX_AGE;
 
-            cacheControlValue = `public, max-age=${maxAge}`;
+          let cacheControlValue = `public, max-age=${Math.floor(maxAge / 1000)}`;
 
-            if (cacheControl.immutable && hasCacheImmutable) {
-              cacheControlValue += ", immutable";
-            }
+          if (cacheControl.immutable && hasCacheImmutable) {
+            cacheControlValue += ", immutable";
           }
 
           setResponseHeader(res, "Cache-Control", cacheControlValue);
