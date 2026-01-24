@@ -6393,6 +6393,48 @@ describe.each([
         });
       });
 
+      describe("should use cacheControl object option (with only immutable: true) when cacheImmutable is false, and not add 'immutable' to Cache-Control header", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler({
+            ...webpackConfigImmutable,
+            output: {
+              path: path.resolve(__dirname, "./outputs/basic"),
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheImmutable: false, cacheControl: { immutable: true } },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header from cacheControl object option without immutable', async () => {
+          const response = await req.get("/main.js");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000",
+          );
+        });
+
+        it('should return the "200" code for the "GET" request to the immutable asset and generate `Cache-Control` header from cacheControl object option without immutable', async () => {
+          const response = await req.get("/6076fc274f403ebb2d09.svg");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000",
+          );
+        });
+      });
+
       describe("should use cacheControl object option with explicit immutable false", () => {
         beforeEach(async () => {
           const compiler = getCompiler({
