@@ -279,7 +279,7 @@ function wdm(compiler, options = {}) {
 
   // API
   instance.getFilenameFromUrl = (url, extra) =>
-    getFilenameFromUrl(filledContext, url, extra);
+    getFilenameFromUrl(filledContext, url, extra)?.filename;
 
   instance.waitUntilValid = (callback = noop) => {
     ready(filledContext, callback);

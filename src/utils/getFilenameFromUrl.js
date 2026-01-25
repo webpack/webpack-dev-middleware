@@ -30,7 +30,6 @@ const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
 /**
  * @typedef {object} Extra
  * @property {import("fs").Stats=} stats stats
- * @property {number=} errorCode error code
  * @property {boolean=} immutable true when immutable, otherwise false
  */
 
@@ -42,7 +41,6 @@ const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
  * @returns {string}
  */
 
-// TODO refactor me in the next major release, this function should return `{ filename, stats, error }`
 // TODO fix redirect logic when `/` at the end, like https://github.com/pillarjs/send/blob/master/index.js#L586
 /**
  * @template {IncomingMessage} Request
@@ -50,7 +48,7 @@ const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
  * @param {import("../index.js").FilledContext<Request, Response>} context context
  * @param {string} url url
  * @param {Extra=} extra extra
- * @returns {string | undefined} filename
+ * @returns {{ filename?: string, extra: Extra, errorCode?: number }} filename
  */
 function getFilenameFromUrl(context, url, extra = {}) {
   const { options } = context;
@@ -58,6 +56,8 @@ function getFilenameFromUrl(context, url, extra = {}) {
 
   /** @type {string | undefined} */
   let foundFilename;
+  /** @type {number | undefined} */
+  let errorCode;
   /** @type {import("node:url").Url} */
   let urlObject;
 
@@ -65,7 +65,7 @@ function getFilenameFromUrl(context, url, extra = {}) {
     // The `url` property of the `request` is contains only  `pathname`, `search` and `hash`
     urlObject = memoizedParse(url, false, true);
   } catch {
-    return;
+    return { errorCode, filename: foundFilename, extra };
   }
 
   for (const { publicPath, outputPath, assetsInfo } of paths) {
@@ -94,16 +94,16 @@ function getFilenameFromUrl(context, url, extra = {}) {
     ) {
       // Null byte(s)
       if (pathname.includes("\0")) {
-        extra.errorCode = 400;
+        errorCode = 400;
 
-        return;
+        return { errorCode, filename: foundFilename, extra };
       }
 
       // ".." is malicious
       if (UP_PATH_REGEXP.test(path.normalize(`./${pathname}`))) {
-        extra.errorCode = 403;
+        errorCode = 403;
 
-        return;
+        return { errorCode, filename: foundFilename, extra };
       }
 
       // Strip the `pathname` property from the `publicPath` option from the start of requested url
@@ -161,7 +161,7 @@ function getFilenameFromUrl(context, url, extra = {}) {
     }
   }
 
-  return foundFilename;
+  return { filename: foundFilename, extra, errorCode };
 }
 
 module.exports = getFilenameFromUrl;

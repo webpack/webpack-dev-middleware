@@ -498,22 +498,20 @@ function wrapper(context) {
      */
     async function processRequest() {
       // Pipe and SendFile
-      /** @type {import("./utils/getFilenameFromUrl").Extra} */
-      const extra = {};
-      const filename = getFilenameFromUrl(
+      const { filename, extra, errorCode } = getFilenameFromUrl(
         context,
         /** @type {string} */ (getRequestURL(req)),
-        extra,
+        {},
       );
 
-      if (extra.errorCode) {
-        if (extra.errorCode === 403) {
+      if (errorCode) {
+        if (errorCode === 403) {
           context.logger.error(`Malicious path "${filename}".`);
         }
 
         await sendError(
-          extra.errorCode === 400 ? "Bad Request" : "Forbidden",
-          extra.errorCode,
+          errorCode === 400 ? "Bad Request" : "Forbidden",
+          errorCode,
           {
             modifyResponseData: context.options.modifyResponseData,
           },
