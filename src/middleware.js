@@ -571,38 +571,34 @@ function wrapper(context) {
       }
 
       if (!getResponseHeader(res, "Cache-Control")) {
-        // TODO enable the `cacheImmutable` by default for the next major release
-        const cacheControl =
-          context.options.cacheImmutable && extra.immutable
-            ? { immutable: true }
-            : context.options.cacheControl;
+        const hasCacheImmutable =
+          context.options.cacheImmutable === undefined
+            ? true
+            : context.options.cacheImmutable;
 
-        if (cacheControl) {
-          let cacheControlValue;
+        let { cacheControl } = context.options;
 
-          if (typeof cacheControl === "boolean") {
-            cacheControlValue = "public, max-age=31536000";
-          } else if (typeof cacheControl === "number") {
-            const maxAge = Math.floor(
-              Math.min(Math.max(0, cacheControl), MAX_MAX_AGE) / 1000,
-            );
+        // Normalize cacheControl to object
+        if (typeof cacheControl === "string") {
+          setResponseHeader(res, "Cache-Control", cacheControl);
+        } else if (hasCacheImmutable && extra.immutable) {
+          cacheControl = { immutable: true };
+        } else if (typeof cacheControl === "boolean") {
+          cacheControl = { maxAge: MAX_MAX_AGE };
+        } else if (typeof cacheControl === "number") {
+          cacheControl = { maxAge: cacheControl };
+        }
 
-            cacheControlValue = `public, max-age=${maxAge}`;
-          } else if (typeof cacheControl === "string") {
-            cacheControlValue = cacheControl;
-          } else {
-            const maxAge = cacheControl.maxAge
-              ? Math.floor(
-                  Math.min(Math.max(0, cacheControl.maxAge), MAX_MAX_AGE) /
-                    1000,
-                )
-              : MAX_MAX_AGE / 1000;
+        if (cacheControl && typeof cacheControl === "object") {
+          const maxAge =
+            cacheControl.maxAge !== undefined
+              ? Math.min(Math.max(0, cacheControl.maxAge), MAX_MAX_AGE)
+              : MAX_MAX_AGE;
 
-            cacheControlValue = `public, max-age=${maxAge}`;
+          let cacheControlValue = `public, max-age=${Math.floor(maxAge / 1000)}`;
 
-            if (cacheControl.immutable) {
-              cacheControlValue += ", immutable";
-            }
+          if (cacheControl.immutable && hasCacheImmutable) {
+            cacheControlValue += ", immutable";
           }
 
           setResponseHeader(res, "Cache-Control", cacheControlValue);
