@@ -1302,7 +1302,7 @@ describe.each([
         });
       });
 
-      describe('should not work with the broken "publicPath" option', () => {
+      describe('should work with the broken "publicPath" option (malformed URI parsed as "/")', () => {
         let compiler;
 
         const outputPath = path.resolve(__dirname, "./outputs/basic");
@@ -1313,7 +1313,7 @@ describe.each([
             output: {
               filename: "bundle.js",
               path: outputPath,
-              publicPath: "https://test:malfor%5Med@test.example.com",
+              publicPath: "http/s://test:malformed%5Med@test.example.com",
             },
           });
 

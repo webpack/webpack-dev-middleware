@@ -15,23 +15,10 @@ function decode(input) {
   return querystring.unescape(input);
 }
 
-// const memoizedParse = memorize(parse,
-//   undefined,
-//   (value) => {
-//     console.log({encode: value.pathname});
-//     if (value.pathname) {
-//       value.pathname = decode(value.pathname);
-//     }
-//     console.log({decode: value.pathname});
-
-//     return value;
-//   },
-// );
-
 const memoizedParse = memorize((url) => {
   const urlObject = new URL(url, "http://localhost");
 
-  // We cann't change pathname in URL object directly because don't decode correctly
+  // We can't change pathname in URL object directly because don't decode correctly
   return { ...urlObject, pathname: decode(urlObject.pathname) };
 }, undefined);
 
@@ -72,7 +59,7 @@ class FilenameError extends Error {
  * @returns {{ filename: string, extra: Extra } | undefined} result of get filename from url
  */
 function getFilenameFromUrl(context, url) {
-  /** @type {import("node:url").URL} */
+  /** @type {URL} */
   let urlObject;
 
   /** @type {string | undefined} */
@@ -94,7 +81,7 @@ function getFilenameFromUrl(context, url) {
   for (const { publicPath, outputPath, assetsInfo } of paths) {
     /** @type {string | undefined} */
     let filename;
-    /** @type {import("node:url").URL} */
+    /** @type {URL} */
     let publicPathObject;
 
     try {
