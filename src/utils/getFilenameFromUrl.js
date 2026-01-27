@@ -1,7 +1,5 @@
 const path = require("node:path");
 const querystring = require("node:querystring");
-// eslint-disable-next-line n/no-deprecated-api
-const { parse } = require("node:url");
 
 const getPaths = require("./getPaths");
 const memorize = require("./memorize");
@@ -17,13 +15,25 @@ function decode(input) {
   return querystring.unescape(input);
 }
 
-const memoizedParse = memorize(parse, undefined, (value) => {
-  if (value.pathname) {
-    value.pathname = decode(value.pathname);
-  }
+// const memoizedParse = memorize(parse,
+//   undefined,
+//   (value) => {
+//     console.log({encode: value.pathname});
+//     if (value.pathname) {
+//       value.pathname = decode(value.pathname);
+//     }
+//     console.log({decode: value.pathname});
 
-  return value;
-});
+//     return value;
+//   },
+// );
+
+const memoizedParse = memorize((url) => {
+  const urlObject = new URL(url, "http://localhost");
+
+  // We cann't change pathname in URL object directly because don't decode correctly
+  return { ...urlObject, pathname: decode(urlObject.pathname) };
+}, undefined);
 
 const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
 
@@ -59,12 +69,12 @@ function getFilenameFromUrl(context, url) {
   let foundFilename;
   /** @type {number | undefined} */
   let errorCode;
-  /** @type {import("node:url").Url} */
+  /** @type {import("node:url").URL} */
   let urlObject;
 
   try {
     // The `url` property of the `request` is contains only  `pathname`, `search` and `hash`
-    urlObject = memoizedParse(url, false, true);
+    urlObject = memoizedParse(url);
   } catch {
     return { errorCode, filename: foundFilename, extra };
   }
@@ -72,14 +82,12 @@ function getFilenameFromUrl(context, url) {
   for (const { publicPath, outputPath, assetsInfo } of paths) {
     /** @type {string | undefined} */
     let filename;
-    /** @type {import("node:url").Url} */
+    /** @type {import("node:url").URL} */
     let publicPathObject;
 
     try {
       publicPathObject = memoizedParse(
         publicPath !== "auto" && publicPath ? publicPath : "/",
-        false,
-        true,
       );
     } catch {
       continue;
