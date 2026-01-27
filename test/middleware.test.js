@@ -6393,7 +6393,7 @@ describe.each([
         });
       });
 
-      describe("should use cacheControl object option (with only immutable: true) when cacheImmutable is false, and not add 'immutable' to Cache-Control header", () => {
+      describe("should use cacheControl object option (with only immutable: true) when cacheImmutable is false, and add 'immutable' to Cache-Control header", () => {
         beforeEach(async () => {
           const compiler = getCompiler({
             ...webpackConfigImmutable,
@@ -6420,7 +6420,7 @@ describe.each([
           expect(response.statusCode).toBe(200);
           expect(response.headers["cache-control"]).toBeDefined();
           expect(response.headers["cache-control"]).toBe(
-            "public, max-age=31536000",
+            "public, max-age=31536000, immutable",
           );
         });
 
@@ -6430,7 +6430,7 @@ describe.each([
           expect(response.statusCode).toBe(200);
           expect(response.headers["cache-control"]).toBeDefined();
           expect(response.headers["cache-control"]).toBe(
-            "public, max-age=31536000",
+            "public, max-age=31536000, immutable",
           );
         });
       });
