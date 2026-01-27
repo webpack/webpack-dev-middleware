@@ -131,9 +131,9 @@ const noop = () => {};
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @callback Middleware
- * @param {RequestInternal} req
- * @param {ResponseInternal} res
- * @param {NextFunction} next
+ * @param {RequestInternal} req request
+ * @param {ResponseInternal} res response
+ * @param {NextFunction} next next function
  * @returns {Promise<void>}
  */
 
@@ -141,9 +141,8 @@ const noop = () => {};
 
 /**
  * @callback GetFilenameFromUrl
- * @param {string} url
- * @param {Extra=} extra
- * @returns {string | undefined}
+ * @param {string} url request URL
+ * @returns {{ filename: string, extra: Extra } | undefined} a filename with additional information, or `undefined` if nothing is found
  */
 
 /**
@@ -278,8 +277,7 @@ function wdm(compiler, options = {}) {
     (middleware(filledContext));
 
   // API
-  instance.getFilenameFromUrl = (url, extra) =>
-    getFilenameFromUrl(filledContext, url, extra);
+  instance.getFilenameFromUrl = (url) => getFilenameFromUrl(filledContext, url);
 
   instance.waitUntilValid = (callback = noop) => {
     ready(filledContext, callback);

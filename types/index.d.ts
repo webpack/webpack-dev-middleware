@@ -99,17 +99,16 @@ export = wdm;
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @callback Middleware
- * @param {RequestInternal} req
- * @param {ResponseInternal} res
- * @param {NextFunction} next
+ * @param {RequestInternal} req request
+ * @param {ResponseInternal} res response
+ * @param {NextFunction} next next function
  * @returns {Promise<void>}
  */
 /** @typedef {import("./utils/getFilenameFromUrl").Extra} Extra */
 /**
  * @callback GetFilenameFromUrl
- * @param {string} url
- * @param {Extra=} extra
- * @returns {string | undefined}
+ * @param {string} url request URL
+ * @returns {{ filename: string, extra: Extra } | undefined} a filename with additional information, or `undefined` if nothing is found
  */
 /**
  * @callback WaitUntilValid
@@ -460,10 +459,12 @@ type Middleware<
   next: NextFunction,
 ) => Promise<void>;
 type Extra = import("./utils/getFilenameFromUrl").Extra;
-type GetFilenameFromUrl = (
-  url: string,
-  extra?: Extra | undefined,
-) => string | undefined;
+type GetFilenameFromUrl = (url: string) =>
+  | {
+      filename: string;
+      extra: Extra;
+    }
+  | undefined;
 type WaitUntilValid = (callback: Callback) => any;
 type Invalidate = (callback: Callback) => any;
 type Close = (callback: (err: Error | null | undefined) => void) => any;
