@@ -1736,6 +1736,10 @@ describe.each([
                 value: "noextension",
                 code: 200,
               },
+              {
+                value: "noextension/",
+                code: 404,
+              },
             ],
           },
           {
@@ -1779,6 +1783,11 @@ describe.each([
                 value: "windows%202.txt",
                 contentType: "text/plain; charset=utf-8",
                 code: 200,
+              },
+              {
+                value: "windows%202.txt/",
+                contentType: get404ContentTypeHeader(name),
+                code: 404,
               },
             ],
           },
@@ -1945,7 +1954,7 @@ describe.each([
 
                   expect(response.statusCode).toEqual(code);
 
-                  if (data) {
+                  if (data && code !== 404) {
                     expect(response.headers["content-length"]).toEqual(
                       String(data.length),
                     );
@@ -5185,6 +5194,15 @@ describe.each([
           expect(response.statusCode).toBe(200);
           expect(response.headers["content-type"]).toBe(
             "text/html; charset=utf-8",
+          );
+        });
+
+        it('should return the "404" code for the "GET" request with a non-existent file', async () => {
+          const response = await req.get("/default.html/");
+
+          expect(response.statusCode).toBe(404);
+          expect(response.headers["content-type"]).toBe(
+            get404ContentTypeHeader(name),
           );
         });
       });

@@ -50,7 +50,6 @@ class FilenameError extends Error {
   }
 }
 
-// TODO fix redirect logic when `/` at the end, like https://github.com/pillarjs/send/blob/master/index.js#L586
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
@@ -120,6 +119,16 @@ function getFilenameFromUrl(context, url) {
       );
 
       try {
+        if (filename[filename.length - 1] === "/") {
+          if (options.index === false) {
+            return;
+          } else if (options.index === "string") {
+            filename = path.join(filename, options.index);
+          } else {
+            filename = path.join(filename, "index.html");
+          }
+        }
+
         extra.stats = context.outputFileSystem.statSync(filename);
       } catch {
         continue;
