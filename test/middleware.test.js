@@ -586,11 +586,10 @@ describe.each([
                 path.join(webpackConfig.output.path, "/svg.svg"),
               );
               expect(
-                instance.getFilenameFromUrl("/unknown.unknown").filename,
+                instance.getFilenameFromUrl("/unknown.unknown"),
               ).toBeUndefined();
               expect(
-                instance.getFilenameFromUrl("/unknown/unknown.unknown")
-                  .filename,
+                instance.getFilenameFromUrl("/unknown/unknown.unknown"),
               ).toBeUndefined();
 
               done();
@@ -622,7 +621,7 @@ describe.each([
                 path.join(webpackConfig.output.path, "/bundle.js"),
               );
 
-              expect(instance.getFilenameFromUrl("/").filename).toBeUndefined();
+              expect(instance.getFilenameFromUrl("/")).toBeUndefined();
               expect(instance.getFilenameFromUrl("/index.html").filename).toBe(
                 path.join(webpackConfig.output.path, "/index.html"),
               );
@@ -630,11 +629,10 @@ describe.each([
                 path.join(webpackConfig.output.path, "/svg.svg"),
               );
               expect(
-                instance.getFilenameFromUrl("/unknown.unknown").filename,
+                instance.getFilenameFromUrl("/unknown.unknown"),
               ).toBeUndefined();
               expect(
-                instance.getFilenameFromUrl("/unknown/unknown.unknown")
-                  .filename,
+                instance.getFilenameFromUrl("/unknown/unknown.unknown"),
               ).toBeUndefined();
 
               done();
@@ -680,13 +678,12 @@ describe.each([
                 path.join(webpackPublicPathConfig.output.path, "/svg.svg"),
               );
 
-              expect(instance.getFilenameFromUrl("/").filename).toBeUndefined();
+              expect(instance.getFilenameFromUrl("/")).toBeUndefined();
               expect(
-                instance.getFilenameFromUrl("/unknown.unknown").filename,
+                instance.getFilenameFromUrl("/unknown.unknown"),
               ).toBeUndefined();
               expect(
-                instance.getFilenameFromUrl("/unknown/unknown.unknown")
-                  .filename,
+                instance.getFilenameFromUrl("/unknown/unknown.unknown"),
               ).toBeUndefined();
 
               done();
@@ -728,13 +725,12 @@ describe.each([
                 instance.getFilenameFromUrl("/static-one/svg.svg").filename,
               ).toBe(path.join(webpackMultiConfig[0].output.path, "/svg.svg"));
               expect(
-                instance.getFilenameFromUrl("/static-one/unknown.unknown")
-                  .filename,
+                instance.getFilenameFromUrl("/static-one/unknown.unknown"),
               ).toBeUndefined();
               expect(
                 instance.getFilenameFromUrl(
                   "/static-one/unknown/unknown.unknown",
-                ).filename,
+                ),
               ).toBeUndefined();
 
               expect(
@@ -743,24 +739,22 @@ describe.each([
                 path.join(webpackMultiConfig[1].output.path, "/bundle.js"),
               );
               expect(
-                instance.getFilenameFromUrl("/static-two/unknown.unknown")
-                  .filename,
+                instance.getFilenameFromUrl("/static-two/unknown.unknown"),
               ).toBeUndefined();
               expect(
                 instance.getFilenameFromUrl(
                   "/static-two/unknown/unknown.unknown",
-                ).filename,
+                ),
               ).toBeUndefined();
 
-              expect(instance.getFilenameFromUrl("/").filename).toBeUndefined();
+              expect(instance.getFilenameFromUrl("/")).toBeUndefined();
               expect(
-                instance.getFilenameFromUrl("/static-one/unknown.unknown")
-                  .filename,
+                instance.getFilenameFromUrl("/static-one/unknown.unknown"),
               ).toBeUndefined();
               expect(
                 instance.getFilenameFromUrl(
                   "/static-one/unknown/unknown.unknown",
-                ).filename,
+                ),
               ).toBeUndefined();
 
               done();
