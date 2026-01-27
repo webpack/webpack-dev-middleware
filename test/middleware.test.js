@@ -5366,10 +5366,10 @@ describe.each([
 
           isDirectory = jest
             .spyOn(instance.context.outputFileSystem, "statSync")
-            .mockImplementation(() => ({
+            .mockReturnValue({
               isFile: () => false,
               isDirectory: () => false,
-            }));
+            });
         });
 
         afterAll(async () => {

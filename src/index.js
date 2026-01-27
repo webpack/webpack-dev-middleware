@@ -98,12 +98,12 @@ const noop = () => {};
  * @typedef {WithoutUndefined<Context<RequestInternal, ResponseInternal>, "watching">} FilledContext
  */
 
-/** @typedef {Record<string, string | number> | Array<{ key: string, value: number | string }>} NormalizedHeaders */
+/** @typedef {Record<string, string | number> | { key: string, value: number | string }[]} NormalizedHeaders */
 
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @typedef {NormalizedHeaders | ((req: RequestInternal, res: ResponseInternal, context: Context<RequestInternal, ResponseInternal>) =>  void | undefined | NormalizedHeaders) | undefined} Headers
+ * @typedef {NormalizedHeaders | ((req: RequestInternal, res: ResponseInternal, context: Context<RequestInternal, ResponseInternal>) => void | undefined | NormalizedHeaders) | undefined} Headers
  */
 
 /**
@@ -401,7 +401,7 @@ function koaWrapper(compiler, options) {
   const devMiddleware = wdm(compiler, options);
 
   /**
-   * @param {{req: RequestInternal, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse, status: number, body: string | Buffer | import("fs").ReadStream | {message: string}, state: object}} ctx context
+   * @param {{ req: RequestInternal, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse, status: number, body: string | Buffer | import("fs").ReadStream | { message: string }, state: object }} ctx context
    * @param {EXPECTED_FUNCTION} next next
    * @returns {Promise<void>}
    */
