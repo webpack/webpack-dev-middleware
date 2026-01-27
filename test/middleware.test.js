@@ -5109,6 +5109,15 @@ describe.each([
           );
         });
 
+        it('should return the "404" code for the "GET" request to the  "index.html" file', async () => {
+          const response = await req.get("/index.html/");
+
+          expect(response.statusCode).toBe(404);
+          expect(response.headers["content-type"]).toEqual(
+            get404ContentTypeHeader(name),
+          );
+        });
+
         it('should return the "200" code for the "GET" request to the "index.html" file', async () => {
           const response = await req.get("/index.html");
 
