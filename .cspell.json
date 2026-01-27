@@ -23,7 +23,8 @@
     "cachable",
     "finalhandler",
     "hono",
-    "rspack"
+    "rspack",
+    "malformed"
   ],
   "ignorePaths": [
     "CHANGELOG.md",

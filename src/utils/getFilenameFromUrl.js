@@ -1,7 +1,5 @@
 const path = require("node:path");
 const querystring = require("node:querystring");
-// eslint-disable-next-line n/no-deprecated-api
-const { parse } = require("node:url");
 
 const getPaths = require("./getPaths");
 const memorize = require("./memorize");
@@ -17,20 +15,18 @@ function decode(input) {
   return querystring.unescape(input);
 }
 
-const memoizedParse = memorize(parse, undefined, (value) => {
-  if (value.pathname) {
-    value.pathname = decode(value.pathname);
-  }
+const memoizedParse = memorize((url) => {
+  const urlObject = new URL(url, "http://localhost");
 
-  return value;
-});
+  // We can't change pathname in URL object directly because don't decode correctly
+  return { ...urlObject, pathname: decode(urlObject.pathname) };
+}, undefined);
 
 const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
 
 /**
  * @typedef {object} Extra
- * @property {import("fs").Stats=} stats stats
- * @property {number=} errorCode error code
+ * @property {import("fs").Stats} stats stats
  * @property {boolean=} immutable true when immutable, otherwise false
  */
 
@@ -42,43 +38,55 @@ const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
  * @returns {string}
  */
 
-// TODO refactor me in the next major release, this function should return `{ filename, stats, error }`
+class FilenameError extends Error {
+  /**
+   * @param {string} message message
+   * @param {number=} code error code
+   */
+  constructor(message, code) {
+    super(message);
+    this.name = "FilenameError";
+    this.code = code;
+  }
+}
+
 // TODO fix redirect logic when `/` at the end, like https://github.com/pillarjs/send/blob/master/index.js#L586
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
  * @param {import("../index.js").FilledContext<Request, Response>} context context
  * @param {string} url url
- * @param {Extra=} extra extra
- * @returns {string | undefined} filename
+ * @returns {{ filename: string, extra: Extra } | undefined} result of get filename from url
  */
-function getFilenameFromUrl(context, url, extra = {}) {
-  const { options } = context;
-  const paths = getPaths(context);
+function getFilenameFromUrl(context, url) {
+  /** @type {URL} */
+  let urlObject;
 
   /** @type {string | undefined} */
   let foundFilename;
-  /** @type {import("node:url").Url} */
-  let urlObject;
 
   try {
     // The `url` property of the `request` is contains only  `pathname`, `search` and `hash`
-    urlObject = memoizedParse(url, false, true);
+    urlObject = memoizedParse(url);
   } catch {
     return;
   }
 
+  const { options } = context;
+  const paths = getPaths(context);
+
+  /** @type {Extra} */
+  const extra = {};
+
   for (const { publicPath, outputPath, assetsInfo } of paths) {
     /** @type {string | undefined} */
     let filename;
-    /** @type {import("node:url").Url} */
+    /** @type {URL} */
     let publicPathObject;
 
     try {
       publicPathObject = memoizedParse(
         publicPath !== "auto" && publicPath ? publicPath : "/",
-        false,
-        true,
       );
     } catch {
       continue;
@@ -94,16 +102,12 @@ function getFilenameFromUrl(context, url, extra = {}) {
     ) {
       // Null byte(s)
       if (pathname.includes("\0")) {
-        extra.errorCode = 400;
-
-        return;
+        throw new FilenameError("Bad Request", 400);
       }
 
       // ".." is malicious
       if (UP_PATH_REGEXP.test(path.normalize(`./${pathname}`))) {
-        extra.errorCode = 403;
-
-        return;
+        throw new FilenameError("Forbidden", 403);
       }
 
       // Strip the `pathname` property from the `publicPath` option from the start of requested url
@@ -161,7 +165,12 @@ function getFilenameFromUrl(context, url, extra = {}) {
     }
   }
 
-  return foundFilename;
+  if (!foundFilename) {
+    return;
+  }
+
+  return { filename: foundFilename, extra };
 }
 
 module.exports = getFilenameFromUrl;
+module.exports.FilenameError = FilenameError;
