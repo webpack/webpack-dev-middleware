@@ -31,6 +31,8 @@ const ready = require("./utils/ready");
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index.js").ServerResponse} ServerResponse */
 /** @typedef {import("./index.js").NormalizedHeaders} NormalizedHeaders */
+/** @typedef {import("./utils/getFilenameFromUrl.js").FilenameError} FilenameError */
+/** @typedef {import("./utils/getFilenameFromUrl.js").Extra} Extra */
 /** @typedef {import("fs").ReadStream} ReadStream */
 
 const BYTES_RANGE_REGEXP = /^ *bytes/i;
@@ -498,14 +500,24 @@ function wrapper(context) {
      */
     async function processRequest() {
       // Pipe and SendFile
-      const { filename, extra, errorCode } = getFilenameFromUrl(
-        context,
-        /** @type {string} */ (getRequestURL(req)),
-      );
+      /** @type {{ filename: string, extra: Extra } | undefined} */
+      let resolved;
 
-      if (errorCode) {
+      const requestUrl = /** @type {string} */ (getRequestURL(req));
+
+      try {
+        resolved = getFilenameFromUrl(context, requestUrl);
+      } catch (err) {
+        // Fallback to 403 for unknown errors
+        const errorCode =
+          typeof err === "object" &&
+          err !== null &&
+          typeof (/** @type {FilenameError} */ (err).code) !== "undefined"
+            ? /** @type {FilenameError} */ (err).code
+            : 403;
+
         if (errorCode === 403) {
-          context.logger.error(`Malicious path "${filename}".`);
+          context.logger.error(`Malicious path "${requestUrl}".`);
         }
 
         await sendError(
@@ -518,7 +530,7 @@ function wrapper(context) {
         return;
       }
 
-      if (!filename) {
+      if (!resolved) {
         await goNext();
         return;
       }
@@ -528,7 +540,8 @@ function wrapper(context) {
         return;
       }
 
-      const { size } = /** @type {import("fs").Stats} */ (extra.stats);
+      const { extra, filename } = resolved;
+      const { size } = extra.stats;
 
       let len = size;
       let offset = 0;
@@ -606,9 +619,7 @@ function wrapper(context) {
         context.options.lastModified &&
         !getResponseHeader(res, "Last-Modified")
       ) {
-        const modified =
-          /** @type {import("fs").Stats} */
-          (extra.stats).mtime.toUTCString();
+        const modified = extra.stats.mtime.toUTCString();
 
         setResponseHeader(res, "Last-Modified", modified);
       }
@@ -664,7 +675,7 @@ function wrapper(context) {
         const result = await getETag()(
           isStrongETag
             ? /** @type {Buffer | ReadStream} */ (bufferOrStream)
-            : /** @type {import("fs").Stats} */ (extra.stats),
+            : extra.stats,
         );
 
         // Because we already read stream, we can cache buffer to avoid extra read from fs

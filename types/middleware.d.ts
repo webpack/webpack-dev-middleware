@@ -25,6 +25,8 @@ declare namespace wrapper {
     IncomingMessage,
     ServerResponse,
     NormalizedHeaders,
+    FilenameError,
+    Extra,
     ReadStream,
   };
 }
@@ -50,4 +52,6 @@ type NextFunction = import("./index.js").NextFunction;
 type IncomingMessage = import("./index.js").IncomingMessage;
 type ServerResponse = import("./index.js").ServerResponse;
 type NormalizedHeaders = import("./index.js").NormalizedHeaders;
+type FilenameError = import("./utils/getFilenameFromUrl.js").FilenameError;
+type Extra = import("./utils/getFilenameFromUrl.js").Extra;
 type ReadStream = import("fs").ReadStream;
