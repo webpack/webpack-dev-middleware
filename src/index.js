@@ -142,8 +142,7 @@ const noop = () => {};
 /**
  * @callback GetFilenameFromUrl
  * @param {string} url
- * @param {Extra=} extra
- * @returns {string | undefined}
+ * @returns {{ filename?: string, extra: Extra, errorCode?: number }}
  */
 
 /**
@@ -278,8 +277,7 @@ function wdm(compiler, options = {}) {
     (middleware(filledContext));
 
   // API
-  instance.getFilenameFromUrl = (url, extra) =>
-    getFilenameFromUrl(filledContext, url, extra)?.filename;
+  instance.getFilenameFromUrl = (url) => getFilenameFromUrl(filledContext, url);
 
   instance.waitUntilValid = (callback = noop) => {
     ready(filledContext, callback);

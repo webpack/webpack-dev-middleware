@@ -501,7 +501,6 @@ function wrapper(context) {
       const { filename, extra, errorCode } = getFilenameFromUrl(
         context,
         /** @type {string} */ (getRequestURL(req)),
-        {},
       );
 
       if (errorCode) {

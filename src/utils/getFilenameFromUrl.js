@@ -47,10 +47,11 @@ const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
  * @template {ServerResponse} Response
  * @param {import("../index.js").FilledContext<Request, Response>} context context
  * @param {string} url url
- * @param {Extra=} extra extra
- * @returns {{ filename?: string, extra: Extra, errorCode?: number }} filename
+ * @returns {{ filename?: string, extra: Extra, errorCode?: number }} result of get filename from url
  */
-function getFilenameFromUrl(context, url, extra = {}) {
+function getFilenameFromUrl(context, url) {
+  /** @type {Extra} */
+  const extra = {};
   const { options } = context;
   const paths = getPaths(context);
 

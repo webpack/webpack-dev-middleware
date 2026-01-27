@@ -459,7 +459,7 @@ const app = new express();
 app.use(instance);
 
 instance.waitUntilValid(() => {
-  const filename = instance.getFilenameFromUrl("/bundle.js");
+  const { filename } = instance.getFilenameFromUrl("/bundle.js");
 
   console.log(`Filename is ${filename}`);
 });

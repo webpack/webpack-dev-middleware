@@ -108,8 +108,7 @@ export = wdm;
 /**
  * @callback GetFilenameFromUrl
  * @param {string} url
- * @param {Extra=} extra
- * @returns {string | undefined}
+ * @returns {{ filename?: string, extra: Extra, errorCode?: number }}
  */
 /**
  * @callback WaitUntilValid
@@ -460,10 +459,11 @@ type Middleware<
   next: NextFunction,
 ) => Promise<void>;
 type Extra = import("./utils/getFilenameFromUrl").Extra;
-type GetFilenameFromUrl = (
-  url: string,
-  extra?: Extra | undefined,
-) => string | undefined;
+type GetFilenameFromUrl = (url: string) => {
+  filename?: string;
+  extra: Extra;
+  errorCode?: number;
+};
 type WaitUntilValid = (callback: Callback) => any;
 type Invalidate = (callback: Callback) => any;
 type Close = (callback: (err: Error | null | undefined) => void) => any;

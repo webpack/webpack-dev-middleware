@@ -2,7 +2,6 @@ export = getFilenameFromUrl;
 /**
  * @typedef {object} Extra
  * @property {import("fs").Stats=} stats stats
- * @property {number=} errorCode error code
  * @property {boolean=} immutable true when immutable, otherwise false
  */
 /**
@@ -17,8 +16,7 @@ export = getFilenameFromUrl;
  * @template {ServerResponse} Response
  * @param {import("../index.js").FilledContext<Request, Response>} context context
  * @param {string} url url
- * @param {Extra=} extra extra
- * @returns {string | undefined} filename
+ * @returns {{ filename?: string, extra: Extra, errorCode?: number }} result of get filename from url
  */
 declare function getFilenameFromUrl<
   Request extends IncomingMessage,
@@ -26,8 +24,11 @@ declare function getFilenameFromUrl<
 >(
   context: import("../index.js").FilledContext<Request, Response>,
   url: string,
-  extra?: Extra | undefined,
-): string | undefined;
+): {
+  filename?: string;
+  extra: Extra;
+  errorCode?: number;
+};
 declare namespace getFilenameFromUrl {
   export { IncomingMessage, ServerResponse, Extra };
 }
@@ -38,10 +39,6 @@ type Extra = {
    * stats
    */
   stats?: import("fs").Stats | undefined;
-  /**
-   * error code
-   */
-  errorCode?: number | undefined;
   /**
    * true when immutable, otherwise false
    */
