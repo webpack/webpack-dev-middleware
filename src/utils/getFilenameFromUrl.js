@@ -122,7 +122,7 @@ function getFilenameFromUrl(context, url) {
         if (filename[filename.length - 1] === "/") {
           if (options.index === false) {
             return;
-          } else if (options.index === "string") {
+          } else if (typeof options.index === "string") {
             filename = path.join(filename, options.index);
           } else {
             filename = path.join(filename, "index.html");

@@ -5187,8 +5187,20 @@ describe.each([
           instance.context.outputFileSystem.mkdirSync(outputPath, {
             recursive: true,
           });
+
+          instance.context.outputFileSystem.mkdirSync(
+            path.resolve(outputPath, "slug"),
+            {
+              recursive: true,
+            },
+          );
           instance.context.outputFileSystem.writeFileSync(
             path.resolve(outputPath, "default.html"),
+            "hello",
+          );
+
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "slug", "default.html"),
             "hello",
           );
         });
@@ -5203,6 +5215,24 @@ describe.each([
           expect(response.statusCode).toBe(200);
           expect(response.headers["content-type"]).toBe(
             "text/html; charset=utf-8",
+          );
+        });
+
+        it('should return the "200" code for the "GET" request to the "/slug/" path', async () => {
+          const response = await req.get("/slug/");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["content-type"]).toBe(
+            "text/html; charset=utf-8",
+          );
+        });
+
+        it('should return the "404" code for the "GET" request to the "/slug" path', async () => {
+          const response = await req.get("/slug");
+
+          expect(response.statusCode).toBe(404);
+          expect(response.headers["content-type"]).toEqual(
+            get404ContentTypeHeader(name),
           );
         });
 
