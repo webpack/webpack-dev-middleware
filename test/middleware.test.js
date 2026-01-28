@@ -1252,13 +1252,8 @@ describe.each([
 
           expect(response.statusCode).toBe(200);
 
-          // todo bug on node.js@22 and memfs
-          const [major] = process.versions.node.split(".").map(Number);
-
-          if (major < 22) {
-            expect(response.text).toBe("\u00BD + \u00BC = \u00BE");
-            expect(response.headers["content-length"]).toBe("12");
-          }
+          expect(response.text).toBe("\u00BD + \u00BC = \u00BE");
+          expect(response.headers["content-length"]).toBe("12");
 
           expect(response.headers["content-type"]).toBe(
             "text/html; charset=utf-8",
