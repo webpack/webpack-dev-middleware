@@ -119,7 +119,7 @@ function getFilenameFromUrl(context, url) {
       );
 
       try {
-        if (filename[filename.length - 1] === "/") {
+        if (pathname[pathname.length - 1] === "/") {
           if (options.index === false) {
             return;
           } else if (typeof options.index === "string") {
