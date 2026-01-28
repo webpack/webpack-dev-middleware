@@ -5227,12 +5227,12 @@ describe.each([
           );
         });
 
-        it('should return the "404" code for the "GET" request to the "/slug" path', async () => {
+        it('should return the "200" code for the "GET" request to the "/slug" path', async () => {
           const response = await req.get("/slug");
 
-          expect(response.statusCode).toBe(404);
-          expect(response.headers["content-type"]).toEqual(
-            get404ContentTypeHeader(name),
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["content-type"]).toBe(
+            "text/html; charset=utf-8",
           );
         });
 
