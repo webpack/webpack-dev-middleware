@@ -47,11 +47,11 @@
     "release": "standard-version"
   },
   "dependencies": {
-    "memfs": "^4.43.1",
-    "mime-types": "^3.0.1",
+    "memfs": "^4.56.10",
+    "mime-types": "^3.0.2",
     "on-finished": "^2.4.1",
     "range-parser": "^1.2.1",
-    "schema-utils": "^4.0.0"
+    "schema-utils": "^4.3.3"
   },
   "devDependencies": {
     "@babel/cli": "^7.16.7",
