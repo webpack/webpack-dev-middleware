@@ -161,8 +161,6 @@ function wrapper(context) {
     }
 
     const acceptedMethods = context.options.methods || ["GET", "HEAD"];
-    // TODO do we need an option here?
-    const forwardError = false;
 
     initState(res);
 
@@ -180,13 +178,14 @@ function wrapper(context) {
      * @returns {Promise<void>}
      */
     async function sendError(message, status, options) {
-      if (forwardError) {
+      if (context.options.forwardError) {
         const error =
           /** @type {Error & { statusCode: number }} */
           (new Error(message));
         error.statusCode = status;
 
         await goNext(error);
+        return;
       }
 
       const escapeHtml = getEscapeHtml();

@@ -125,6 +125,7 @@ const noop = () => {};
  * @property {boolean=} lastModified options to generate last modified header
  * @property {(boolean | number | string | { maxAge?: number, immutable?: boolean })=} cacheControl options to generate cache headers
  * @property {boolean=} cacheImmutable is cache immutable
+ * @property {boolean=} forwardError forward error to next middleware
  */
 
 /**
