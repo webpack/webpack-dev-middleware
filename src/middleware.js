@@ -179,6 +179,14 @@ function wrapper(context) {
      */
     async function sendError(message, status, options) {
       if (context.options.forwardError) {
+        if (!getHeadersSent(res)) {
+          const headers = getResponseHeaders(res);
+
+          for (let i = 0; i < headers.length; i++) {
+            removeResponseHeader(res, headers[i]);
+          }
+        }
+
         const error =
           /** @type {Error & { statusCode: number }} */
           (new Error(message));
