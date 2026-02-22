@@ -3609,10 +3609,10 @@ describe.each([
         });
       });
 
-      (name === "express" || name === "router" || name === "express-v4"
-        ? describe
-        : describe.skip)(
-        "should call the next middleware for finished or errored requests by default",
+      (name === "koa" || name === "hapi" || name === "hono"
+        ? describe.skip
+        : describe)(
+        "should call the next middleware for finished or errored requests when forwardError is enabled",
         () => {
           let compiler;
 
@@ -3708,7 +3708,7 @@ describe.each([
             expect(nextWasCalled).toBe(false);
           });
 
-          it("should not allow to get files above root", async () => {
+          it('should return the "500" code for requests above root', async () => {
             const response = await req.get(
               "/public/..%2f../middleware.test.js",
             );
@@ -3718,7 +3718,7 @@ describe.each([
             expect(nextWasCalled).toBe(true);
           });
 
-          it('should return the "412" code for the "GET" request to the bundle file with etag and wrong "if-match" header', async () => {
+          it('should return the "500" code for the "GET" request to the bundle file with etag and wrong "if-match" header', async () => {
             const response1 = await req.get("/file.text");
 
             expect(response1.statusCode).toBe(200);
@@ -3734,7 +3734,7 @@ describe.each([
             expect(nextWasCalled).toBe(true);
           });
 
-          it('should return the "416" code for the "GET" request with the invalid range header', async () => {
+          it('should return the "500" code for the "GET" request with the invalid range header', async () => {
             const response = await req
               .get("/file.text")
               .set("Range", "bytes=9999999-");
