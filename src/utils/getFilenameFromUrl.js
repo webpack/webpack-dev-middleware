@@ -50,7 +50,6 @@ class FilenameError extends Error {
   }
 }
 
-// TODO fix redirect logic when `/` at the end, like https://github.com/pillarjs/send/blob/master/index.js#L586
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
@@ -110,13 +109,26 @@ function getFilenameFromUrl(context, url) {
         throw new FilenameError("Forbidden", 403);
       }
 
-      // Strip the `pathname` property from the `publicPath` option from the start of requested url
-      // `/complex/foo.js` => `foo.js`
-      // and add outputPath
-      // `foo.js` => `/home/user/my-project/dist/foo.js`
+      let index;
+
+      if (pathname && pathname.endsWith("/")) {
+        if (options.index === false) {
+          return;
+        }
+        index =
+          typeof options.index === "string" ? options.index : "index.html";
+      }
+
+      // Builds the absolute path of the file to serve:
+      // - If the URL ends with '/', appends the index file (index.html or custom) to the directory path.
+      // - If the URL does not end with '/', only joins the relative path to outputPath.
+      // Example:
+      //   URL: /complex/foo.js  => outputPath/complex/foo.js
+      //   URL: /complex/        => outputPath/complex/index.html (or the configured index file)
       filename = path.join(
         outputPath,
         pathname.slice(publicPathPathname.length),
+        index || "",
       );
 
       try {
