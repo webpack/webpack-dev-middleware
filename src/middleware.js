@@ -161,8 +161,6 @@ function wrapper(context) {
     }
 
     const acceptedMethods = context.options.methods || ["GET", "HEAD"];
-    // TODO do we need an option here?
-    const forwardError = false;
 
     initState(res);
 
@@ -180,13 +178,24 @@ function wrapper(context) {
      * @returns {Promise<void>}
      */
     async function sendError(message, status, options) {
-      if (forwardError) {
+      if (context.options.forwardError) {
+        if (!getHeadersSent(res)) {
+          const headers = getResponseHeaders(res);
+
+          for (let i = 0; i < headers.length; i++) {
+            removeResponseHeader(res, headers[i]);
+          }
+        }
+
         const error =
           /** @type {Error & { statusCode: number }} */
           (new Error(message));
         error.statusCode = status;
 
         await goNext(error);
+
+        // need the return for prevent to execute the code below and override the status and body set by user in the next middleware
+        return;
       }
 
       const escapeHtml = getEscapeHtml();

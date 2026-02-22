@@ -79,6 +79,7 @@ See [below](#other-servers) for an example of use with fastify.
 |        **[`writeToDisk`](#writetodisk)**        |        `boolean\|Function`        |                    `false`                    | Instructs the module to write files to the configured location on disk as specified in your `webpack` configuration. |
 |   **[`outputFileSystem`](#outputfilesystem)**   |             `Object`              | [`memfs`](https://github.com/streamich/memfs) | Set the default file system which will be used by webpack as primary destination of generated files.                 |
 | **[`modifyResponseData`](#modifyresponsedata)** |            `Function`             |                  `undefined`                  | Allows to set up a callback to change the response data.                                                             |
+|       **[`forwardError`](#forwarderror)**       |             `boolean`             |                    `false`                    | Enable or disable forwarding errors to the next middleware.                                                          |
 
 The middleware accepts an `options` Object. The following is a property reference for the Object.
 
@@ -473,6 +474,35 @@ instance.waitUntilValid(() => {
   }
 
   console.log(`Filename is ${filename}`);
+});
+```
+
+### `forwardError`
+
+Type: `boolean`
+Default: `false`
+
+Enable or disable forwarding errors to the next middleware. If `true`, errors will be forwarded to the next middleware, otherwise, they will be handled by `webpack-dev-middleware` and a response will be handled case by case.
+
+This option don't work with hono, koa and hapi, because of the differences in error handling between these frameworks and express.
+
+```js
+const express = require("express");
+const webpack = require("webpack");
+const middleware = require("webpack-dev-middleware");
+
+const compiler = webpack({
+  /* Webpack configuration */
+});
+
+const instance = middleware(compiler, { forwardError: true });
+
+const app = express();
+app.use(instance);
+
+app.use((err, req, res, next) => {
+  console.log(`Error: ${err}`);
+  res.status(500).send("Something broke!");
 });
 ```
 
