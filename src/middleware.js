@@ -193,6 +193,8 @@ function wrapper(context) {
         error.statusCode = status;
 
         await goNext(error);
+
+        // need the return for prevent to execute the code below and override the status and body set by user in the next middleware
         return;
       }
 

@@ -442,6 +442,7 @@ function koaWrapper(compiler, options) {
             ctx.body = stream;
 
             isFinished = true;
+
             resolve();
           };
           /**
@@ -480,6 +481,13 @@ function koaWrapper(compiler, options) {
         },
       );
     } catch (err) {
+      if (options?.forwardError) {
+        await next();
+
+        // need the return for prevent to execute the code below and override the status and body set by user in the next middleware
+        return;
+      }
+
       ctx.status =
         /** @type {Error & { statusCode: number }} */ (err).statusCode ||
         /** @type {Error & { status: number }} */ (err).status ||
