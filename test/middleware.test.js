@@ -3609,9 +3609,7 @@ describe.each([
         });
       });
 
-      (name === "koa" || name === "hapi" || name === "hono"
-        ? describe.skip
-        : describe)(
+      (name === "koa" || name === "hono" ? describe.skip : describe)(
         "should call the next middleware for finished or errored requests when forwardError is enabled",
         () => {
           let compiler;
@@ -3643,11 +3641,15 @@ describe.each([
               },
               {
                 setupMiddlewares: (middlewares) => {
-                  middlewares.push((_error, _req, res, _next) => {
-                    nextWasCalled = true;
-                    res.statusCode = 500;
-                    res.end("error");
-                  });
+                  if (name === "hapi") {
+                    // There's no such thing as "the next route handler" in hapi. One request is matched to one or no route handlers.
+                  } else {
+                    middlewares.push((_error, _req, res, _next) => {
+                      nextWasCalled = true;
+                      res.statusCode = 500;
+                      res.end("error");
+                    });
+                  }
 
                   return middlewares;
                 },
@@ -3714,8 +3716,12 @@ describe.each([
             );
 
             expect(response.statusCode).toBe(500);
-            expect(response.text).toBe("error");
-            expect(nextWasCalled).toBe(true);
+            if (name !== "hapi") {
+              expect(response.text).toBe("error");
+              expect(nextWasCalled).toBe(true);
+            } else {
+              expect(nextWasCalled).toBe(false);
+            }
           });
 
           it('should return the "500" code for the "GET" request to the bundle file with etag and wrong "if-match" header', async () => {
@@ -3730,8 +3736,12 @@ describe.each([
               .set("if-match", "test");
 
             expect(response2.statusCode).toBe(500);
-            expect(response2.text).toBe("error");
-            expect(nextWasCalled).toBe(true);
+            if (name !== "hapi") {
+              expect(response2.text).toBe("error");
+              expect(nextWasCalled).toBe(true);
+            } else {
+              expect(nextWasCalled).toBe(false);
+            }
           });
 
           it('should return the "500" code for the "GET" request with the invalid range header', async () => {
@@ -3740,16 +3750,24 @@ describe.each([
               .set("Range", "bytes=9999999-");
 
             expect(response.statusCode).toBe(500);
-            expect(response.text).toBe("error");
-            expect(nextWasCalled).toBe(true);
+            if (name !== "hapi") {
+              expect(response.text).toBe("error");
+              expect(nextWasCalled).toBe(true);
+            } else {
+              expect(nextWasCalled).toBe(false);
+            }
           });
 
           it('should return the "500" code for the "GET" request to the "image.svg" file when it throws a reading error', async () => {
             const response = await req.get("/image.svg");
 
             expect(response.statusCode).toBe(500);
-            expect(response.text).toBe("error");
-            expect(nextWasCalled).toBe(true);
+            if (name !== "hapi") {
+              expect(response.text).toBe("error");
+              expect(nextWasCalled).toBe(true);
+            } else {
+              expect(nextWasCalled).toBe(false);
+            }
           });
 
           it('should return the "200" code for the "HEAD" request to the bundle file', async () => {
