@@ -662,6 +662,12 @@ function honoWrapper(compiler, options) {
         },
       );
     } catch (err) {
+      if (options?.forwardError) {
+        await next();
+
+        // need the return for prevent to execute the code below and override the status and body set by user in the next middleware
+        return;
+      }
       context.status(500);
 
       return context.json({ message: /** @type {Error} */ (err).message });

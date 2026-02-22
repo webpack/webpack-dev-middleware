@@ -3609,235 +3609,234 @@ describe.each([
         });
       });
 
-      (name === "hono" ? describe.skip : describe)(
-        "should call the next middleware for finished or errored requests when forwardError is enabled",
-        () => {
-          let compiler;
+      describe("should call the next middleware for finished or errored requests when forwardError is enabled", () => {
+        let compiler;
 
-          const outputPath = path.resolve(
-            __dirname,
-            "./outputs/basic-test-errors-headers-sent",
-          );
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-test-errors-headers-sent",
+        );
 
-          let nextWasCalled = false;
+        let nextWasCalled = false;
 
-          beforeAll(async () => {
-            compiler = getCompiler({
-              ...webpackConfig,
-              output: {
-                filename: "bundle.js",
-                path: outputPath,
-              },
-            });
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
 
-            [server, req, instance] = await frameworkFactory(
-              name,
-              framework,
-              compiler,
-              {
-                etag: "weak",
-                lastModified: true,
-                forwardError: true,
-              },
-              {
-                setupMiddlewares: (middlewares) => {
-                  if (name === "hapi") {
-                    // There's no such thing as "the next route handler" in hapi. One request is matched to one or no route handlers.
-                  } else if (name === "koa") {
-                    middlewares.push(async (ctx) => {
-                      nextWasCalled = true;
-                      ctx.status = 500;
-                      ctx.body = "error";
-                    });
-                  } else {
-                    middlewares.push((_error, _req, res, _next) => {
-                      nextWasCalled = true;
-                      res.statusCode = 500;
-                      res.end("error");
-                    });
-                  }
-
-                  return middlewares;
-                },
-              },
-            );
-
-            instance.context.outputFileSystem.mkdirSync(outputPath, {
-              recursive: true,
-            });
-            instance.context.outputFileSystem.writeFileSync(
-              path.resolve(outputPath, "index.html"),
-              "HTML",
-            );
-            instance.context.outputFileSystem.writeFileSync(
-              path.resolve(outputPath, "image.svg"),
-              "svg image",
-            );
-            instance.context.outputFileSystem.writeFileSync(
-              path.resolve(outputPath, "file.text"),
-              "text",
-            );
-
-            const originalMethod =
-              instance.context.outputFileSystem.createReadStream;
-
-            instance.context.outputFileSystem.createReadStream =
-              function createReadStream(...args) {
-                if (args[0].endsWith("image.svg")) {
-                  const brokenStream = new this.ReadStream(...args);
-
-                  brokenStream._read = function _read() {
-                    const error = new Error("test");
-                    error.code = "ENAMETOOLONG";
-                    this.emit("error", error);
-                    this.end();
-                    this.destroy();
-                  };
-
-                  return brokenStream;
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              etag: "weak",
+              lastModified: true,
+              forwardError: true,
+            },
+            {
+              setupMiddlewares: (middlewares) => {
+                if (name === "hapi") {
+                  // There's no such thing as "the next route handler" in hapi. One request is matched to one or no route handlers.
+                } else if (name === "koa") {
+                  middlewares.push(async (ctx) => {
+                    nextWasCalled = true;
+                    ctx.status = 500;
+                    ctx.body = "error";
+                  });
+                } else if (name === "hono") {
+                  middlewares.push(async (ctx) => {
+                    nextWasCalled = true;
+                    ctx.status(500);
+                    return ctx.text("error");
+                  });
+                } else {
+                  middlewares.push((_error, _req, res, _next) => {
+                    nextWasCalled = true;
+                    res.statusCode = 500;
+                    res.end("error");
+                  });
                 }
 
-                return originalMethod(...args);
-              };
-          });
-
-          beforeEach(() => {
-            nextWasCalled = false;
-          });
-
-          afterAll(async () => {
-            await close(server, instance);
-          });
-
-          it("should work with piping stream", async () => {
-            const response1 = await req.get("/file.text");
-
-            expect(response1.statusCode).toBe(200);
-            expect(nextWasCalled).toBe(false);
-          });
-
-          it('should return the "500" code for requests above root', async () => {
-            const response = await req.get(
-              "/public/..%2f../middleware.test.js",
-            );
-
-            expect(response.statusCode).toBe(500);
-            if (name !== "hapi") {
-              expect(response.text).toBe("error");
-              expect(nextWasCalled).toBe(true);
-            } else {
-              expect(nextWasCalled).toBe(false);
-            }
-          });
-
-          it('should return the "500" code for the "GET" request to the bundle file with etag and wrong "if-match" header', async () => {
-            const response1 = await req.get("/file.text");
-
-            expect(response1.statusCode).toBe(200);
-            expect(response1.headers.etag).toBeDefined();
-            expect(response1.headers.etag.startsWith("W/")).toBe(true);
-
-            const response2 = await req
-              .get("/file.text")
-              .set("if-match", "test");
-
-            expect(response2.statusCode).toBe(500);
-            if (name !== "hapi") {
-              expect(response2.text).toBe("error");
-              expect(nextWasCalled).toBe(true);
-            } else {
-              expect(nextWasCalled).toBe(false);
-            }
-          });
-
-          it('should return the "500" code for the "GET" request with the invalid range header', async () => {
-            const response = await req
-              .get("/file.text")
-              .set("Range", "bytes=9999999-");
-
-            expect(response.statusCode).toBe(500);
-            if (name !== "hapi") {
-              expect(response.text).toBe("error");
-              expect(nextWasCalled).toBe(true);
-            } else {
-              expect(nextWasCalled).toBe(false);
-            }
-          });
-
-          // TODO: why koa don't catch for their error handling when stream emit error?
-          (name === "koa" ? it.skip : it)(
-            'should return the "500" code for the "GET" request to the "image.svg" file when it throws a reading error',
-            async () => {
-              const response = await req.get("/image.svg");
-
-              // eslint-disable-next-line jest/no-standalone-expect
-              expect(response.statusCode).toBe(500);
-              if (name !== "hapi") {
-                // eslint-disable-next-line jest/no-standalone-expect
-                expect(nextWasCalled).toBe(true);
-              } else {
-                // eslint-disable-next-line jest/no-standalone-expect
-                expect(nextWasCalled).toBe(false);
-              }
+                return middlewares;
+              },
             },
           );
 
-          it('should return the "200" code for the "HEAD" request to the bundle file', async () => {
-            const response = await req.head("/file.text");
-
-            expect(response.statusCode).toBe(200);
-            expect(response.text).toBeUndefined();
-            expect(nextWasCalled).toBe(false);
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
           });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "index.html"),
+            "HTML",
+          );
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "image.svg"),
+            "svg image",
+          );
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "file.text"),
+            "text",
+          );
 
-          it('should return the "304" code for the "GET" request to the bundle file with etag and "if-none-match"', async () => {
-            const response1 = await req.get("/file.text");
+          const originalMethod =
+            instance.context.outputFileSystem.createReadStream;
 
-            expect(response1.statusCode).toBe(200);
-            expect(response1.headers.etag).toBeDefined();
-            expect(response1.headers.etag.startsWith("W/")).toBe(true);
+          instance.context.outputFileSystem.createReadStream =
+            function createReadStream(...args) {
+              if (args[0].endsWith("image.svg")) {
+                const brokenStream = new this.ReadStream(...args);
 
-            const response2 = await req
-              .get("/file.text")
-              .set("if-none-match", response1.headers.etag);
+                brokenStream._read = function _read() {
+                  const error = new Error("test");
+                  error.code = "ENAMETOOLONG";
+                  this.emit("error", error);
+                  this.end();
+                  this.destroy();
+                };
 
-            expect(response2.statusCode).toBe(304);
-            expect(response2.headers.etag).toBeDefined();
-            expect(response2.headers.etag.startsWith("W/")).toBe(true);
+                return brokenStream;
+              }
 
-            const response3 = await req
-              .get("/file.text")
-              .set("if-none-match", response1.headers.etag);
+              return originalMethod(...args);
+            };
+        });
 
-            expect(response3.statusCode).toBe(304);
-            expect(response3.headers.etag).toBeDefined();
-            expect(response3.headers.etag.startsWith("W/")).toBe(true);
+        beforeEach(() => {
+          nextWasCalled = false;
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it("should work with piping stream", async () => {
+          const response1 = await req.get("/file.text");
+
+          expect(response1.statusCode).toBe(200);
+          expect(nextWasCalled).toBe(false);
+        });
+
+        it('should return the "500" code for requests above root', async () => {
+          const response = await req.get("/public/..%2f../middleware.test.js");
+
+          expect(response.statusCode).toBe(500);
+          if (name !== "hapi") {
+            expect(response.text).toBe("error");
+            expect(nextWasCalled).toBe(true);
+          } else {
             expect(nextWasCalled).toBe(false);
-          });
+          }
+        });
 
-          it('should return the "304" code for the "GET" request to the bundle file with lastModified and "if-modified-since" header', async () => {
-            const response1 = await req.get("/file.text");
+        it('should return the "500" code for the "GET" request to the bundle file with etag and wrong "if-match" header', async () => {
+          const response1 = await req.get("/file.text");
 
-            expect(response1.statusCode).toBe(200);
-            expect(response1.headers["last-modified"]).toBeDefined();
+          expect(response1.statusCode).toBe(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
 
-            const response2 = await req
-              .get("/file.text")
-              .set("if-modified-since", response1.headers["last-modified"]);
+          const response2 = await req.get("/file.text").set("if-match", "test");
 
-            expect(response2.statusCode).toBe(304);
-            expect(response2.headers["last-modified"]).toBeDefined();
-
-            const response3 = await req
-              .get("/file.text")
-              .set("if-modified-since", response2.headers["last-modified"]);
-
-            expect(response3.statusCode).toBe(304);
-            expect(response3.headers["last-modified"]).toBeDefined();
+          expect(response2.statusCode).toBe(500);
+          if (name !== "hapi") {
+            expect(response2.text).toBe("error");
+            expect(nextWasCalled).toBe(true);
+          } else {
             expect(nextWasCalled).toBe(false);
-          });
-        },
-      );
+          }
+        });
+
+        it('should return the "500" code for the "GET" request with the invalid range header', async () => {
+          const response = await req
+            .get("/file.text")
+            .set("Range", "bytes=9999999-");
+
+          expect(response.statusCode).toBe(500);
+          if (name !== "hapi") {
+            expect(response.text).toBe("error");
+            expect(nextWasCalled).toBe(true);
+          } else {
+            expect(nextWasCalled).toBe(false);
+          }
+        });
+
+        // TODO: why koa and hono don't catch for their error handling when stream emit error?
+        (name === "koa" || name === "hono" ? it.skip : it)(
+          'should return the "500" code for the "GET" request to the "image.svg" file when it throws a reading error',
+          async () => {
+            const response = await req.get("/image.svg");
+
+            // eslint-disable-next-line jest/no-standalone-expect
+            expect(response.statusCode).toBe(500);
+            if (name !== "hapi") {
+              // eslint-disable-next-line jest/no-standalone-expect
+              expect(nextWasCalled).toBe(true);
+            } else {
+              // eslint-disable-next-line jest/no-standalone-expect
+              expect(nextWasCalled).toBe(false);
+            }
+          },
+        );
+
+        it('should return the "200" code for the "HEAD" request to the bundle file', async () => {
+          const response = await req.head("/file.text");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.text).toBeUndefined();
+          expect(nextWasCalled).toBe(false);
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file with etag and "if-none-match"', async () => {
+          const response1 = await req.get("/file.text");
+
+          expect(response1.statusCode).toBe(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
+
+          const response2 = await req
+            .get("/file.text")
+            .set("if-none-match", response1.headers.etag);
+
+          expect(response2.statusCode).toBe(304);
+          expect(response2.headers.etag).toBeDefined();
+          expect(response2.headers.etag.startsWith("W/")).toBe(true);
+
+          const response3 = await req
+            .get("/file.text")
+            .set("if-none-match", response1.headers.etag);
+
+          expect(response3.statusCode).toBe(304);
+          expect(response3.headers.etag).toBeDefined();
+          expect(response3.headers.etag.startsWith("W/")).toBe(true);
+          expect(nextWasCalled).toBe(false);
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file with lastModified and "if-modified-since" header', async () => {
+          const response1 = await req.get("/file.text");
+
+          expect(response1.statusCode).toBe(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+
+          const response2 = await req
+            .get("/file.text")
+            .set("if-modified-since", response1.headers["last-modified"]);
+
+          expect(response2.statusCode).toBe(304);
+          expect(response2.headers["last-modified"]).toBeDefined();
+
+          const response3 = await req
+            .get("/file.text")
+            .set("if-modified-since", response2.headers["last-modified"]);
+
+          expect(response3.statusCode).toBe(304);
+          expect(response3.headers["last-modified"]).toBeDefined();
+          expect(nextWasCalled).toBe(false);
+        });
+      });
 
       describe("should fallthrough for not found files", () => {
         let compiler;
