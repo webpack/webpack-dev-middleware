@@ -123,10 +123,6 @@ async function frameworkFactory(
         }
       }
 
-      if (options.errorMiddleware) {
-        app.use(options.errorMiddleware);
-      }
-
       const server = await startServer(name, app);
       const req = request(server);
 
@@ -150,11 +146,6 @@ async function frameworkFactory(
           app.use(item);
         }
       }
-
-      if (options.errorMiddleware) {
-        app.use(options.errorMiddleware);
-      }
-
       return [server, req, instance.devMiddleware];
     }
     default: {
@@ -178,10 +169,6 @@ async function frameworkFactory(
         } else {
           app.use(item);
         }
-      }
-
-      if (options.errorMiddleware) {
-        app.use(options.errorMiddleware);
       }
 
       if (isFastify) {
@@ -3655,21 +3642,14 @@ describe.each([
                 forwardError: true,
               },
               {
-                errorMiddleware: (_error, _req, res, _next) => {
-                  if (name === "hapi") {
-                    // There's no such thing as "the next route handler" in hapi. One request is matched to one or no route handlers.
-                  } else if (name === "koa") {
-                    // Middleware de error para Koa: (err, ctx, next)
-                    nextWasCalled = true;
-                  } else if (name === "hono") {
-                    // Middleware de error para Hono: (err, c, next)
-                    nextWasCalled = true;
-                  } else {
-                    // Middleware de error para Express, Connect, Fastify, Router: (err, req, res, next)
+                setupMiddlewares: (middlewares) => {
+                  middlewares.push((_error, _req, res, _next) => {
                     nextWasCalled = true;
                     res.statusCode = 500;
                     res.end("error");
-                  }
+                  });
+
+                  return middlewares;
                 },
               },
             );
