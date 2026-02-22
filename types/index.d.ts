@@ -94,6 +94,7 @@ export = wdm;
  * @property {boolean=} lastModified options to generate last modified header
  * @property {(boolean | number | string | { maxAge?: number, immutable?: boolean })=} cacheControl options to generate cache headers
  * @property {boolean=} cacheImmutable is cache immutable
+ * @property {boolean=} forwardError forward error to next middleware
  */
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
@@ -449,6 +450,10 @@ type Options<
    * is cache immutable
    */
   cacheImmutable?: boolean | undefined;
+  /**
+   * forward error to next middleware
+   */
+  forwardError?: boolean | undefined;
 };
 type Middleware<
   RequestInternal extends IncomingMessage = import("http").IncomingMessage,
