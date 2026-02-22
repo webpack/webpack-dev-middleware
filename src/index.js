@@ -125,6 +125,7 @@ const noop = () => {};
  * @property {boolean=} lastModified options to generate last modified header
  * @property {(boolean | number | string | { maxAge?: number, immutable?: boolean })=} cacheControl options to generate cache headers
  * @property {boolean=} cacheImmutable is cache immutable
+ * @property {boolean=} forwardError forward error to next middleware
  */
 
 /**
@@ -441,6 +442,7 @@ function koaWrapper(compiler, options) {
             ctx.body = stream;
 
             isFinished = true;
+
             resolve();
           };
           /**
@@ -479,6 +481,13 @@ function koaWrapper(compiler, options) {
         },
       );
     } catch (err) {
+      if (options?.forwardError) {
+        await next();
+
+        // need the return for prevent to execute the code below and override the status and body set by user in the next middleware
+        return;
+      }
+
       ctx.status =
         /** @type {Error & { statusCode: number }} */ (err).statusCode ||
         /** @type {Error & { status: number }} */ (err).status ||
@@ -653,6 +662,12 @@ function honoWrapper(compiler, options) {
         },
       );
     } catch (err) {
+      if (options?.forwardError) {
+        await next();
+
+        // need the return for prevent to execute the code below and override the status and body set by user in the next middleware
+        return;
+      }
       context.status(500);
 
       return context.json({ message: /** @type {Error} */ (err).message });
