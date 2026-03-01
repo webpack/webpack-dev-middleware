@@ -29,6 +29,11 @@ function setupHooks(context) {
     context.state = false;
 
     context.stats = undefined;
+
+    // Notify EventStream clients about compilation starting
+    if (context.eventStream) {
+      context.eventStream.publish({ action: "building" });
+    }
   }
 
   /**
@@ -140,6 +145,27 @@ function setupHooks(context) {
       if (printedStats) {
         // eslint-disable-next-line no-console
         console.log(printedStats);
+      }
+
+      // Notify EventStream clients about compilation completion
+      if (context.eventStream) {
+        const statsData = stats.toJson({
+          all: false,
+          hash: true,
+          assets: false,
+          warnings: true,
+          errors: true,
+          errorDetails: false,
+        });
+
+        context.eventStream.publish({
+          action: "built",
+          time: statsData.time,
+          hash: statsData.hash,
+          warnings: statsData.warnings || [],
+          errors: statsData.errors || [],
+          modules: statsData.modules,
+        });
       }
 
       context.callbacks = [];

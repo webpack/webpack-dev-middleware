@@ -514,6 +514,15 @@ function wrapper(context) {
 
       const requestUrl = /** @type {string} */ (getRequestURL(req));
 
+      // Handle EventStream requests for Hot Module Replacement
+      if (
+        context.eventStream &&
+        context.eventStream.isEventStreamRequest(requestUrl)
+      ) {
+        context.eventStream.handler(req, res);
+        return;
+      }
+
       try {
         resolved = getFilenameFromUrl(context, requestUrl);
       } catch (err) {

@@ -177,6 +177,29 @@
       "description": "Enable or disable forwarding errors to next middleware.",
       "link": "https://github.com/webpack/webpack-dev-middleware#forwarderrors",
       "type": "boolean"
+    },
+    "eventStream": {
+      "description": "Enable or configure Server-Sent Events endpoint for Hot Module Replacement.",
+      "link": "https://github.com/webpack/webpack-dev-middleware#eventstream",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "description": "Path for the event stream endpoint.",
+              "type": "string"
+            },
+            "heartbeat": {
+              "description": "Heartbeat interval in milliseconds.",
+              "type": "number"
+            }
+          }
+        }
+      ]
     }
   },
   "additionalProperties": false

@@ -63,6 +63,7 @@ export = wdm;
  * @property {Watching | MultiWatching | undefined} watching watching
  * @property {Logger} logger logger
  * @property {OutputFileSystem} outputFileSystem output file system
+ * @property {import("./utils/eventStream") | undefined} eventStream event stream for hot updates
  */
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
@@ -95,6 +96,7 @@ export = wdm;
  * @property {(boolean | number | string | { maxAge?: number, immutable?: boolean })=} cacheControl options to generate cache headers
  * @property {boolean=} cacheImmutable is cache immutable
  * @property {boolean=} forwardError forward error to next middleware
+ * @property {(boolean | { path?: string, heartbeat?: number })=} eventStream event stream configuration for hot module replacement
  */
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
@@ -348,6 +350,10 @@ type Context<
    * output file system
    */
   outputFileSystem: OutputFileSystem;
+  /**
+   * event stream for hot updates
+   */
+  eventStream: import("./utils/eventStream") | undefined;
 };
 type FilledContext<
   RequestInternal extends IncomingMessage = import("http").IncomingMessage,
@@ -454,6 +460,18 @@ type Options<
    * forward error to next middleware
    */
   forwardError?: boolean | undefined;
+  /**
+   * event stream configuration for hot module replacement
+   */
+  eventStream?:
+    | (
+        | boolean
+        | {
+            path?: string;
+            heartbeat?: number;
+          }
+      )
+    | undefined;
 };
 type Middleware<
   RequestInternal extends IncomingMessage = import("http").IncomingMessage,

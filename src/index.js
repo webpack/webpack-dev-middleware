@@ -3,6 +3,7 @@ const { validate } = require("schema-utils");
 
 const middleware = require("./middleware");
 const schema = require("./options.json");
+const EventStream = require("./utils/eventStream");
 const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
 const ready = require("./utils/ready");
 const setupHooks = require("./utils/setupHooks");
@@ -90,6 +91,7 @@ const noop = () => {};
  * @property {Watching | MultiWatching | undefined} watching watching
  * @property {Logger} logger logger
  * @property {OutputFileSystem} outputFileSystem output file system
+ * @property {import("./utils/eventStream") | undefined} eventStream event stream for hot updates
  */
 
 /**
@@ -126,6 +128,7 @@ const noop = () => {};
  * @property {(boolean | number | string | { maxAge?: number, immutable?: boolean })=} cacheControl options to generate cache headers
  * @property {boolean=} cacheImmutable is cache immutable
  * @property {boolean=} forwardError forward error to next middleware
+ * @property {(boolean | { path?: string, heartbeat?: number })=} eventStream event stream configuration for hot module replacement
  */
 
 /**
@@ -225,6 +228,14 @@ function wdm(compiler, options = {}) {
     options,
     compiler,
     logger: compiler.getInfrastructureLogger("webpack-dev-middleware"),
+    eventStream:
+      options.eventStream !== false
+        ? new EventStream(
+            typeof options.eventStream === "object"
+              ? options.eventStream
+              : undefined,
+          )
+        : undefined,
   };
 
   setupHooks(context);
@@ -291,6 +302,11 @@ function wdm(compiler, options = {}) {
   };
 
   instance.close = (callback = noop) => {
+    // Close EventStream connections
+    if (filledContext.eventStream) {
+      filledContext.eventStream.close();
+    }
+
     filledContext.watching.close(callback);
   };
 
