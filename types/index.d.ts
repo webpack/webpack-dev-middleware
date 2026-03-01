@@ -165,8 +165,12 @@ declare function wdm<
 declare namespace wdm {
   export {
     hapiWrapper,
+    hapiPluginWrapper,
     koaWrapper,
+    koaPluginWrapper,
     honoWrapper,
+    honoPluginWrapper,
+    plugin,
     Schema,
     Compiler,
     MultiCompiler,
@@ -232,6 +236,15 @@ declare function hapiWrapper<
   HapiOptionsInternal extends HapiOptions,
 >(): HapiPlugin<HapiServer, HapiOptionsInternal>;
 /**
+ * @template HapiServer
+ * @template {HapiOptions} HapiOptionsInternal
+ * @returns {HapiPlugin<HapiServer, HapiOptionsInternal>} hapi plugin wrapper
+ */
+declare function hapiPluginWrapper<
+  HapiServer,
+  HapiOptionsInternal extends HapiOptions,
+>(): HapiPlugin<HapiServer, HapiOptionsInternal>;
+/**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
@@ -239,6 +252,20 @@ declare function hapiWrapper<
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow wrapper
  */
 declare function koaWrapper<
+  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse = ServerResponse,
+>(
+  compiler: Compiler | MultiCompiler,
+  options?: Options<RequestInternal, ResponseInternal> | undefined,
+): (ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void;
+/**
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
+ * @param {Compiler | MultiCompiler} compiler compiler
+ * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow plugin wrapper
+ */
+declare function koaPluginWrapper<
   RequestInternal extends IncomingMessage = import("http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 >(
@@ -259,6 +286,34 @@ declare function honoWrapper<
   compiler: Compiler | MultiCompiler,
   options?: Options<RequestInternal, ResponseInternal> | undefined,
 ): (ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void;
+/**
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
+ * @param {Compiler | MultiCompiler} compiler compiler
+ * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono plugin wrapper
+ */
+declare function honoPluginWrapper<
+  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse = ServerResponse,
+>(
+  compiler: Compiler | MultiCompiler,
+  options?: Options<RequestInternal, ResponseInternal> | undefined,
+): (ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void;
+/**
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
+ * @param {Compiler | MultiCompiler} compiler compiler
+ * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @returns {API<RequestInternal, ResponseInternal>} webpack dev middleware
+ */
+declare function plugin<
+  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
+  ResponseInternal extends ServerResponse = ServerResponse,
+>(
+  compiler: Compiler | MultiCompiler,
+  options?: Options<RequestInternal, ResponseInternal> | undefined,
+): API<RequestInternal, ResponseInternal>;
 type Schema = import("schema-utils/declarations/validate").Schema;
 type Compiler = import("webpack").Compiler;
 type MultiCompiler = import("webpack").MultiCompiler;
