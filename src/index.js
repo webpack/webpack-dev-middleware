@@ -90,6 +90,7 @@ const noop = () => {};
  * @property {Watching | MultiWatching | undefined} watching watching
  * @property {Logger} logger logger
  * @property {OutputFileSystem} outputFileSystem output file system
+ * @property {boolean} isPlugin whether wdm is used as webpack plugin
  */
 
 /**
@@ -225,6 +226,7 @@ function wdm(compiler, options = {}) {
     options,
     compiler,
     logger: compiler.getInfrastructureLogger("webpack-dev-middleware"),
+    isPlugin: false,
   };
 
   setupHooks(context);
@@ -319,9 +321,10 @@ function wdm(compiler, options = {}) {
 /**
  * @template HapiServer
  * @template {HapiOptions} HapiOptionsInternal
+ * @param {boolean} usePlugin whether to use as webpack plugin
  * @returns {HapiPlugin<HapiServer, HapiOptionsInternal>} hapi wrapper
  */
-function hapiWrapper() {
+function createHapiWrapper(usePlugin = false) {
   return {
     pkg: {
       name: "webpack-dev-middleware",
@@ -336,6 +339,11 @@ function hapiWrapper() {
       }
 
       const devMiddleware = wdm(compiler, rest);
+
+      if (usePlugin) {
+        // Use logger when used as webpack plugin
+        devMiddleware.context.isPlugin = true;
+      }
 
       // @ts-expect-error
       if (!server.decorations.server.includes("webpackDevMiddleware")) {
@@ -387,17 +395,41 @@ function hapiWrapper() {
   };
 }
 
+/**
+ * @template HapiServer
+ * @template {HapiOptions} HapiOptionsInternal
+ * @returns {HapiPlugin<HapiServer, HapiOptionsInternal>} hapi wrapper
+ */
+function hapiWrapper() {
+  return createHapiWrapper(false);
+}
+
+/**
+ * @template HapiServer
+ * @template {HapiOptions} HapiOptionsInternal
+ * @returns {HapiPlugin<HapiServer, HapiOptionsInternal>} hapi plugin wrapper
+ */
+function hapiPluginWrapper() {
+  return createHapiWrapper(true);
+}
+
 wdm.hapiWrapper = hapiWrapper;
+wdm.hapiPluginWrapper = hapiPluginWrapper;
 
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @param {boolean} usePlugin whether to use as webpack plugin
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow wrapper
  */
-function koaWrapper(compiler, options) {
+function createKoaWrapper(compiler, options, usePlugin = false) {
   const devMiddleware = wdm(compiler, options);
+
+  if (usePlugin) {
+    devMiddleware.context.isPlugin = true;
+  }
 
   /**
    * @param {{ req: RequestInternal, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse, status: number, body: string | Buffer | import("fs").ReadStream | { message: string }, state: object }} ctx context
@@ -508,17 +540,45 @@ function koaWrapper(compiler, options) {
   return webpackDevMiddleware;
 }
 
-wdm.koaWrapper = koaWrapper;
+/**
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
+ * @param {Compiler | MultiCompiler} compiler compiler
+ * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow wrapper
+ */
+function koaWrapper(compiler, options) {
+  return createKoaWrapper(compiler, options, false);
+}
 
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow plugin wrapper
+ */
+function koaPluginWrapper(compiler, options) {
+  return createKoaWrapper(compiler, options, true);
+}
+
+wdm.koaWrapper = koaWrapper;
+wdm.koaPluginWrapper = koaPluginWrapper;
+
+/**
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
+ * @param {Compiler | MultiCompiler} compiler compiler
+ * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @param {boolean} usePlugin whether to use as webpack plugin
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono wrapper
  */
-function honoWrapper(compiler, options) {
+function createHonoWrapper(compiler, options, usePlugin = false) {
   const devMiddleware = wdm(compiler, options);
+
+  if (usePlugin) {
+    devMiddleware.context.isPlugin = true;
+  }
 
   /**
    * @param {{ env: EXPECTED_ANY, body: EXPECTED_ANY, json: EXPECTED_ANY, status: EXPECTED_ANY, set: EXPECTED_ANY, req: RequestInternal & import("./utils/compatibleAPI").ExpectedIncomingMessage & { header: (name: string) => string }, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse & { headers: EXPECTED_ANY, status: EXPECTED_ANY } }} context context
@@ -685,6 +745,45 @@ function honoWrapper(compiler, options) {
   return webpackDevMiddleware;
 }
 
+/**
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
+ * @param {Compiler | MultiCompiler} compiler compiler
+ * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono wrapper
+ */
+function honoWrapper(compiler, options) {
+  return createHonoWrapper(compiler, options, false);
+}
+
+/**
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
+ * @param {Compiler | MultiCompiler} compiler compiler
+ * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono plugin wrapper
+ */
+function honoPluginWrapper(compiler, options) {
+  return createHonoWrapper(compiler, options, true);
+}
+
 wdm.honoWrapper = honoWrapper;
+wdm.honoPluginWrapper = honoPluginWrapper;
+
+/**
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
+ * @param {Compiler | MultiCompiler} compiler compiler
+ * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @returns {API<RequestInternal, ResponseInternal>} webpack dev middleware
+ */
+function plugin(compiler, options = {}) {
+  const instance = wdm(compiler, options);
+  // Mark that wdm is used as webpack plugin (to use logger instead of console.log)
+  instance.context.isPlugin = true;
+  return instance;
+}
+
+wdm.plugin = plugin;
 
 module.exports = wdm;
