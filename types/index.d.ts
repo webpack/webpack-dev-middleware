@@ -63,6 +63,7 @@ export = wdm;
  * @property {Watching | MultiWatching | undefined} watching watching
  * @property {Logger} logger logger
  * @property {OutputFileSystem} outputFileSystem output file system
+ * @property {boolean} isPlugin whether wdm is used as webpack plugin
  */
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
@@ -212,20 +213,6 @@ declare namespace wdm {
     HapiOptions,
   };
 }
-/**
- * @template S
- * @template O
- * @typedef {object} HapiPluginBase
- * @property {(server: S, options: O) => void | Promise<void>} register register
- */
-/**
- * @template S
- * @template O
- * @typedef {HapiPluginBase<S, O> & { pkg: { name: string }, multiple: boolean }} HapiPlugin
- */
-/**
- * @typedef {Options & { compiler: Compiler | MultiCompiler }} HapiOptions
- */
 /**
  * @template HapiServer
  * @template {HapiOptions} HapiOptionsInternal
@@ -403,6 +390,10 @@ type Context<
    * output file system
    */
   outputFileSystem: OutputFileSystem;
+  /**
+   * whether wdm is used as webpack plugin
+   */
+  isPlugin: boolean;
 };
 type FilledContext<
   RequestInternal extends IncomingMessage = import("http").IncomingMessage,
