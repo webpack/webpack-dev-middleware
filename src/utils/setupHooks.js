@@ -138,8 +138,13 @@ function setupHooks(context) {
 
       // Avoid extra empty line when `stats: 'none'`
       if (printedStats) {
-        // eslint-disable-next-line no-console
-        console.log(printedStats);
+        if (context.isPlugin) {
+          // Use logger when used as webpack plugin
+          logger.log(printedStats);
+        } else {
+          // eslint-disable-next-line no-console
+          console.log(printedStats);
+        }
       }
 
       context.callbacks = [];
