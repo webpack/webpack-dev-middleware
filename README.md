@@ -477,6 +477,37 @@ instance.waitUntilValid(() => {
 });
 ```
 
+### `plugin(compiler, options)`
+
+Creates middleware instance in plugin mode.
+
+In plugin mode, stats output is written through webpack infrastructure logger
+(`compiler.getInfrastructureLogger`) instead of `console.log`.
+
+```js
+const webpack = require("webpack");
+const middleware = require("webpack-dev-middleware");
+
+const compiler = webpack({
+  /* Webpack configuration */
+});
+
+const instance = middleware.plugin(compiler, {
+  /* webpack-dev-middleware options */
+});
+```
+
+### Plugin wrappers
+
+The following wrappers enable plugin mode for framework integrations:
+
+- `middleware.koaPluginWrapper(compiler, options)`
+- `middleware.hapiPluginWrapper()`
+- `middleware.honoPluginWrapper(compiler, options)`
+
+They are equivalent to `koaWrapper`/`hapiWrapper`/`honoWrapper`, but use plugin
+mode logging behavior.
+
 ### `forwardError`
 
 Type: `boolean`
@@ -721,9 +752,15 @@ const devMiddlewareOptions = {
 };
 const app = new Koa();
 
-app.use(middleware.koaWrapper(compiler, devMiddlewareOptions));
+app.use(middleware.koaPluginWrapper(compiler, devMiddlewareOptions));
 
 app.listen(3000);
+```
+
+Non-plugin variant:
+
+```js
+app.use(middleware.koaWrapper(compiler, devMiddlewareOptions));
 ```
 
 ### Hapi
@@ -740,7 +777,7 @@ const devMiddlewareOptions = {};
 const server = Hapi.server({ port: 3000, host: "localhost" });
 
 await server.register({
-  plugin: devMiddleware.hapiPlugin(),
+  plugin: devMiddleware.hapiPluginWrapper(),
   options: {
     // The `compiler` option is required
     compiler,
@@ -755,6 +792,19 @@ console.log("Server running on %s", server.info.uri);
 process.on("unhandledRejection", (err) => {
   console.log(err);
   process.exit(1);
+});
+```
+
+Non-plugin variant:
+
+```js
+await server.register({
+  plugin: devMiddleware.hapiWrapper(),
+  options: {
+    // The `compiler` option is required
+    compiler,
+    ...devMiddlewareOptions,
+  },
 });
 ```
 
@@ -794,9 +844,15 @@ const devMiddlewareOptions = {
 
 const app = new Hono();
 
-app.use(devMiddleware.honoWrapper(compiler, devMiddlewareOptions));
+app.use(devMiddleware.honoPluginWrapper(compiler, devMiddlewareOptions));
 
 serve(app);
+```
+
+Non-plugin variant:
+
+```js
+app.use(devMiddleware.honoWrapper(compiler, devMiddlewareOptions));
 ```
 
 ## Contributing
