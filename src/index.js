@@ -229,7 +229,7 @@ function wdm(compiler, options = {}) {
 
   setupHooks(context);
 
-  if (options.writeToDisk) {
+  if (typeof options.writeToDisk === "function") {
     setupWriteToDisk(context);
   }
 
