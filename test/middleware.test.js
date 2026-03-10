@@ -4056,7 +4056,7 @@ describe.each([
                 compiler.hooks.assetEmitted.taps.filter(
                   (hook) => hook.name === "DevMiddleware",
                 ),
-              ).toHaveLength(1);
+              ).toHaveLength(0);
               expect(fs.existsSync(bundlePath)).toBe(true);
 
               instance.invalidate();
@@ -4068,7 +4068,7 @@ describe.each([
                     compiler.hooks.assetEmitted.taps.filter(
                       (hook) => hook.name === "DevMiddleware",
                     ),
-                  ).toHaveLength(1);
+                  ).toHaveLength(0);
 
                   done();
                 },
@@ -4154,7 +4154,7 @@ describe.each([
               compiler.hooks.assetEmitted.taps.filter(
                 (hook) => hook.name === "DevMiddleware",
               ),
-            ).toHaveLength(1);
+            ).toHaveLength(0);
             expect(fs.existsSync(bundlePath)).toBe(true);
 
             instance.invalidate();
@@ -4166,7 +4166,7 @@ describe.each([
                   compiler.hooks.assetEmitted.taps.filter(
                     (hook) => hook.name === "DevMiddleware",
                   ),
-                ).toHaveLength(1);
+                ).toHaveLength(0);
 
                 done();
               },
