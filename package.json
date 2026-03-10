@@ -73,7 +73,7 @@
     "cspell": "^9.6.2",
     "deepmerge": "^4.2.2",
     "del-cli": "^6.0.0",
-    "eslint": "^9.28.0",
+    "eslint": "^10.0.3",
     "eslint-config-webpack": "^4.5.0",
     "execa": "^5.1.1",
     "express-4": "npm:express@^4",
