@@ -65,9 +65,20 @@ function stderrToSnapshot(stderr) {
 
 const runner = path.resolve(__dirname, "./helpers/runner.js");
 
-describe("logging", () => {
+const scenarios = [
+  {
+    name: "standalone",
+    args: [],
+  },
+  {
+    name: "plugin",
+    args: ["--plugin"],
+  },
+];
+
+describe.each(scenarios)("logging $name", ({ args }) => {
   it("should logging on successfully build", (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.config",
