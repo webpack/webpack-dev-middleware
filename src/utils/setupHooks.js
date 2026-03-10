@@ -56,17 +56,17 @@ function setupHooks(context) {
     context.state = true;
     context.stats = stats;
 
-    // For plugin support we should print nothing, because webpack/webpack-cli/webpack-dev-server will print them on using `stats.toString()`
-    if (!context.isPlugin) {
-      // Do the stuff in nextTick, because bundle may be invalidated if a change happened while compiling
-      process.nextTick(() => {
-        const { compiler, logger, options, state, callbacks } = context;
+    // Do the stuff in nextTick, because bundle may be invalidated if a change happened while compiling
+    process.nextTick(() => {
+      const { compiler, logger, options, state, callbacks } = context;
 
-        // Check if still in valid state
-        if (!state) {
-          return;
-        }
+      // Check if still in valid state
+      if (!state) {
+        return;
+      }
 
+      // For plugin support we should print nothing, because webpack/webpack-cli/webpack-dev-server will print them on using `stats.toString()`
+      if (!context.isPlugin) {
         logger.log("Compilation finished");
 
         const isMultiCompilerMode = Boolean(
@@ -144,15 +144,15 @@ function setupHooks(context) {
           // eslint-disable-next-line no-console
           console.log(printedStats);
         }
+      }
 
-        context.callbacks = [];
+      context.callbacks = [];
 
-        // Execute callback that are delayed
-        for (const callback of callbacks) {
-          callback(stats);
-        }
-      });
-    }
+      // Execute callback that are delayed
+      for (const callback of callbacks) {
+        callback(stats);
+      }
+    });
   }
 
   // eslint-disable-next-line prefer-destructuring
