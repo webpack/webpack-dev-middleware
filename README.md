@@ -481,7 +481,7 @@ instance.waitUntilValid(() => {
 
 Creates middleware instance in plugin mode.
 
-In plugin mode, stats output is written through webpack infrastructure logger
+In plugin mode, stats output is written through custom code (i.e. in callback for `watch` or where you are calling `stats.toString(options)`)
 (`compiler.getInfrastructureLogger`) instead of `console.log`.
 
 ```js
@@ -489,11 +489,25 @@ const webpack = require("webpack");
 const middleware = require("webpack-dev-middleware");
 
 const compiler = webpack({
+  plugins: [
+    {
+      apply(compiler) {
+        const devMiddleware = middleware.plugin(compiler, {
+          /* webpack-dev-middleware options */
+        });
+      },
+    },
+  ],
   /* Webpack configuration */
 });
 
-const instance = middleware.plugin(compiler, {
-  /* webpack-dev-middleware options */
+compiler.watch((err, stats) => {
+  if (err) {
+    console.error(err);
+    return;
+  }
+
+  console.log(stats.toString());
 });
 ```
 
@@ -752,15 +766,11 @@ const devMiddlewareOptions = {
 };
 const app = new Koa();
 
-app.use(middleware.koaPluginWrapper(compiler, devMiddlewareOptions));
+app.use(middleware.koaWrapper(compiler, devMiddlewareOptions));
+// Alternative usage (when you want to use as a plugin, i.e. all stats will be printed by other code):
+// app.use(middleware.koaPluginWrapper(compiler, devMiddlewareOptions));
 
 app.listen(3000);
-```
-
-Non-plugin variant:
-
-```js
-app.use(middleware.koaWrapper(compiler, devMiddlewareOptions));
 ```
 
 ### Hapi
@@ -777,13 +787,23 @@ const devMiddlewareOptions = {};
 const server = Hapi.server({ port: 3000, host: "localhost" });
 
 await server.register({
-  plugin: devMiddleware.hapiPluginWrapper(),
+  plugin: devMiddleware.hapiWrapper(),
   options: {
     // The `compiler` option is required
     compiler,
     ...devMiddlewareOptions,
   },
 });
+
+// Alternative usage (when you want to use as a plugin, i.e. all stats will be printed by other code):
+// await server.register({
+//   plugin: devMiddleware.hapiPluginWrapper(),
+//   options: {
+//     // The `compiler` option is required
+//     compiler,
+//     ...devMiddlewareOptions,
+//   },
+// });
 
 await server.start();
 
@@ -792,19 +812,6 @@ console.log("Server running on %s", server.info.uri);
 process.on("unhandledRejection", (err) => {
   console.log(err);
   process.exit(1);
-});
-```
-
-Non-plugin variant:
-
-```js
-await server.register({
-  plugin: devMiddleware.hapiWrapper(),
-  options: {
-    // The `compiler` option is required
-    compiler,
-    ...devMiddlewareOptions,
-  },
 });
 ```
 
@@ -844,15 +851,12 @@ const devMiddlewareOptions = {
 
 const app = new Hono();
 
-app.use(devMiddleware.honoPluginWrapper(compiler, devMiddlewareOptions));
+app.use(devMiddleware.honoWrapper(compiler, devMiddlewareOptions));
+
+// Alternative usage (when you want to use as a plugin, i.e. all stats will be printed by other code):
+// const honoDevMiddleware = devMiddleware.honoPluginWrapper(compiler, devMiddlewareOptions)
 
 serve(app);
-```
-
-Non-plugin variant:
-
-```js
-app.use(devMiddleware.honoWrapper(compiler, devMiddlewareOptions));
 ```
 
 ## Contributing

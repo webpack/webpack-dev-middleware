@@ -196,9 +196,10 @@ const noop = () => {};
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @param {boolean} isPlugin true when will use as a plugin, otherwise false
  * @returns {API<RequestInternal, ResponseInternal>} webpack dev middleware
  */
-function wdm(compiler, options = {}) {
+function wdm(compiler, options = {}, isPlugin = false) {
   validate(/** @type {Schema} */ (schema), options, {
     name: "Dev Middleware",
     baseDataPath: "options",
@@ -220,7 +221,6 @@ function wdm(compiler, options = {}) {
    */
   const context = {
     state: false,
-
     stats: undefined,
     callbacks: [],
     options,
@@ -238,36 +238,38 @@ function wdm(compiler, options = {}) {
   setupOutputFileSystem(context);
 
   // Start watching
-  if (/** @type {Compiler} */ (context.compiler).watching) {
-    context.watching = /** @type {Compiler} */ (context.compiler).watching;
-  } else {
-    /**
-     * @param {Error | null | undefined} error error
-     */
-    const errorHandler = (error) => {
-      if (error) {
-        // TODO: improve that in future
-        // For example - `writeToDisk` can throw an error and right now it is ends watching.
-        // We can improve that and keep watching active, but it is require API on webpack side.
-        // Let's implement that in webpack@5 because it is rare case.
-        context.logger.error(error);
-      }
-    };
-
-    if (
-      Array.isArray(/** @type {MultiCompiler} */ (context.compiler).compilers)
-    ) {
-      const compilers = /** @type {MultiCompiler} */ (context.compiler);
-      const watchOptions = compilers.compilers.map(
-        (childCompiler) => childCompiler.options.watchOptions || {},
-      );
-
-      context.watching = compiler.watch(watchOptions, errorHandler);
+  if (!isPlugin) {
+    if (/** @type {Compiler} */ (context.compiler).watching) {
+      context.watching = /** @type {Compiler} */ (context.compiler).watching;
     } else {
-      const oneCompiler = /** @type {Compiler} */ (context.compiler);
-      const watchOptions = oneCompiler.options.watchOptions || {};
+      /**
+       * @param {Error | null | undefined} error error
+       */
+      const errorHandler = (error) => {
+        if (error) {
+          // TODO: improve that in future
+          // For example - `writeToDisk` can throw an error and right now it is ends watching.
+          // We can improve that and keep watching active, but it is require API on webpack side.
+          // Let's implement that in webpack@5 because it is rare case.
+          context.logger.error(error);
+        }
+      };
 
-      context.watching = compiler.watch(watchOptions, errorHandler);
+      if (
+        Array.isArray(/** @type {MultiCompiler} */ (context.compiler).compilers)
+      ) {
+        const compilers = /** @type {MultiCompiler} */ (context.compiler);
+        const watchOptions = compilers.compilers.map(
+          (childCompiler) => childCompiler.options.watchOptions || {},
+        );
+
+        context.watching = compiler.watch(watchOptions, errorHandler);
+      } else {
+        const oneCompiler = /** @type {Compiler} */ (context.compiler);
+        const watchOptions = oneCompiler.options.watchOptions || {};
+
+        context.watching = compiler.watch(watchOptions, errorHandler);
+      }
     }
   }
 
@@ -338,7 +340,7 @@ function createHapiWrapper(usePlugin = false) {
         throw new Error("The compiler options is required.");
       }
 
-      const devMiddleware = wdm(compiler, rest);
+      const devMiddleware = wdm(compiler, rest, usePlugin);
 
       if (usePlugin) {
         // Use logger when used as webpack plugin
@@ -425,7 +427,7 @@ wdm.hapiPluginWrapper = hapiPluginWrapper;
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow wrapper
  */
 function createKoaWrapper(compiler, options, usePlugin = false) {
-  const devMiddleware = wdm(compiler, options);
+  const devMiddleware = wdm(compiler, options, usePlugin);
 
   if (usePlugin) {
     devMiddleware.context.isPlugin = true;
@@ -574,11 +576,7 @@ wdm.koaPluginWrapper = koaPluginWrapper;
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono wrapper
  */
 function createHonoWrapper(compiler, options, usePlugin = false) {
-  const devMiddleware = wdm(compiler, options);
-
-  if (usePlugin) {
-    devMiddleware.context.isPlugin = true;
-  }
+  const devMiddleware = wdm(compiler, options, usePlugin);
 
   /**
    * @param {{ env: EXPECTED_ANY, body: EXPECTED_ANY, json: EXPECTED_ANY, status: EXPECTED_ANY, set: EXPECTED_ANY, req: RequestInternal & import("./utils/compatibleAPI").ExpectedIncomingMessage & { header: (name: string) => string }, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse & { headers: EXPECTED_ANY, status: EXPECTED_ANY } }} context context
@@ -778,10 +776,7 @@ wdm.honoPluginWrapper = honoPluginWrapper;
  * @returns {API<RequestInternal, ResponseInternal>} webpack dev middleware
  */
 function plugin(compiler, options = {}) {
-  const instance = wdm(compiler, options);
-  // Mark that wdm is used as webpack plugin (to use logger instead of console.log)
-  instance.context.isPlugin = true;
-  return instance;
+  return wdm(compiler, options, true);
 }
 
 wdm.plugin = plugin;
