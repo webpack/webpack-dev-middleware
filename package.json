@@ -66,7 +66,7 @@
     "@types/connect": "^3.4.35",
     "@types/express": "^5.0.2",
     "@types/mime-types": "^3.0.1",
-    "@types/node": "^22.3.0",
+    "@types/node": "^25.4.0",
     "@types/on-finished": "^2.3.4",
     "babel-jest": "^30.1.2",
     "connect": "^3.7.0",
