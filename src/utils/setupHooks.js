@@ -54,106 +54,105 @@ function setupHooks(context) {
     // We are now on valid state
 
     context.state = true;
-
     context.stats = stats;
 
-    // Do the stuff in nextTick, because bundle may be invalidated if a change happened while compiling
-    process.nextTick(() => {
-      const { compiler, logger, options, state, callbacks } = context;
+    // For plugin support we should print nothing, because webpack/webpack-cli/webpack-dev-server will print them on using `stats.toString()`
+    if (!context.isPlugin) {
+      // Do the stuff in nextTick, because bundle may be invalidated if a change happened while compiling
+      process.nextTick(() => {
+        const { compiler, logger, options, state, callbacks } = context;
 
-      // Check if still in valid state
-      if (!state) {
-        return;
-      }
+        // Check if still in valid state
+        if (!state) {
+          return;
+        }
 
-      logger.log("Compilation finished");
+        logger.log("Compilation finished");
 
-      const isMultiCompilerMode = Boolean(
-        /** @type {MultiCompiler} */
-        (compiler).compilers,
-      );
-
-      /**
-       * @type {StatsOptions | MultiStatsOptions | undefined}
-       */
-      let statsOptions;
-
-      if (typeof options.stats !== "undefined") {
-        statsOptions = isMultiCompilerMode
-          ? {
-              children:
-                /** @type {MultiCompiler} */
-                (compiler).compilers.map(() => options.stats),
-            }
-          : options.stats;
-      } else {
-        statsOptions = isMultiCompilerMode
-          ? {
-              children:
-                /** @type {MultiCompiler} */
-                (compiler).compilers.map((child) => child.options.stats),
-            }
-          : /** @type {Compiler} */ (compiler).options.stats;
-      }
-
-      if (isMultiCompilerMode) {
-        /** @type {MultiStatsOptions} */
-        (statsOptions).children =
-          /** @type {MultiStatsOptions} */
-          (statsOptions).children.map(
-            /**
-             * @param {StatsOptions} childStatsOptions child stats options
-             * @returns {StatsObjectOptions} object child stats options
-             */
-            (childStatsOptions) => {
-              childStatsOptions = normalizeStatsOptions(childStatsOptions);
-
-              if (typeof childStatsOptions.colors === "undefined") {
-                const [firstCompiler] =
-                  /** @type {MultiCompiler} */
-                  (compiler).compilers;
-
-                childStatsOptions.colors =
-                  firstCompiler.webpack.cli.isColorSupported();
-              }
-
-              return childStatsOptions;
-            },
-          );
-      } else {
-        statsOptions = normalizeStatsOptions(
-          /** @type {StatsOptions} */ (statsOptions),
+        const isMultiCompilerMode = Boolean(
+          /** @type {MultiCompiler} */
+          (compiler).compilers,
         );
 
-        if (typeof statsOptions.colors === "undefined") {
-          const { compiler } = /** @type {{ compiler: Compiler }} */ (context);
-          statsOptions.colors = compiler.webpack.cli.isColorSupported();
-        }
-      }
+        /**
+         * @type {StatsOptions | MultiStatsOptions | undefined}
+         */
+        let statsOptions;
 
-      const printedStats = stats.toString(
-        /** @type {StatsObjectOptions} */
-        (statsOptions),
-      );
-
-      // Avoid extra empty line when `stats: 'none'`
-      if (printedStats) {
-        if (context.isPlugin) {
-          // Use logger when used as webpack plugin
-          logger.log(printedStats);
+        if (typeof options.stats !== "undefined") {
+          statsOptions = isMultiCompilerMode
+            ? {
+                children:
+                  /** @type {MultiCompiler} */
+                  (compiler).compilers.map(() => options.stats),
+              }
+            : options.stats;
         } else {
+          statsOptions = isMultiCompilerMode
+            ? {
+                children:
+                  /** @type {MultiCompiler} */
+                  (compiler).compilers.map((child) => child.options.stats),
+              }
+            : /** @type {Compiler} */ (compiler).options.stats;
+        }
+
+        if (isMultiCompilerMode) {
+          /** @type {MultiStatsOptions} */
+          (statsOptions).children =
+            /** @type {MultiStatsOptions} */
+            (statsOptions).children.map(
+              /**
+               * @param {StatsOptions} childStatsOptions child stats options
+               * @returns {StatsObjectOptions} object child stats options
+               */
+              (childStatsOptions) => {
+                childStatsOptions = normalizeStatsOptions(childStatsOptions);
+
+                if (typeof childStatsOptions.colors === "undefined") {
+                  const [firstCompiler] =
+                    /** @type {MultiCompiler} */
+                    (compiler).compilers;
+
+                  childStatsOptions.colors =
+                    firstCompiler.webpack.cli.isColorSupported();
+                }
+
+                return childStatsOptions;
+              },
+            );
+        } else {
+          statsOptions = normalizeStatsOptions(
+            /** @type {StatsOptions} */ (statsOptions),
+          );
+
+          if (typeof statsOptions.colors === "undefined") {
+            const { compiler } = /** @type {{ compiler: Compiler }} */ (
+              context
+            );
+            statsOptions.colors = compiler.webpack.cli.isColorSupported();
+          }
+        }
+
+        const printedStats = stats.toString(
+          /** @type {StatsObjectOptions} */
+          (statsOptions),
+        );
+
+        // Avoid extra empty line when `stats: 'none'`
+        if (printedStats) {
           // eslint-disable-next-line no-console
           console.log(printedStats);
         }
-      }
 
-      context.callbacks = [];
+        context.callbacks = [];
 
-      // Execute callback that are delayed
-      for (const callback of callbacks) {
-        callback(stats);
-      }
-    });
+        // Execute callback that are delayed
+        for (const callback of callbacks) {
+          callback(stats);
+        }
+      });
+    }
   }
 
   // eslint-disable-next-line prefer-destructuring
