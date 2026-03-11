@@ -4278,23 +4278,23 @@ describe.each([
               "./outputs/write-to-disk-true/bundle.js",
             );
 
-              expect(
-                compiler.hooks.assetEmitted.taps.filter(
-                  (hook) => hook.name === "DevMiddleware",
-                ),
-              ).toHaveLength(0);
-              expect(fs.existsSync(bundlePath)).toBe(true);
+            expect(
+              compiler.hooks.assetEmitted.taps.filter(
+                (hook) => hook.name === "DevMiddleware",
+              ),
+            ).toHaveLength(0);
+            expect(fs.existsSync(bundlePath)).toBe(true);
 
             instance.invalidate();
 
-              return compiler.hooks.done.tap(
-                "DevMiddlewareWriteToDiskTest",
-                () => {
-                  expect(
-                    compiler.hooks.assetEmitted.taps.filter(
-                      (hook) => hook.name === "DevMiddleware",
-                    ),
-                  ).toHaveLength(0);
+            return compiler.hooks.done.tap(
+              "DevMiddlewareWriteToDiskTest",
+              () => {
+                expect(
+                  compiler.hooks.assetEmitted.taps.filter(
+                    (hook) => hook.name === "DevMiddleware",
+                  ),
+                ).toHaveLength(0);
 
                 done();
               },
