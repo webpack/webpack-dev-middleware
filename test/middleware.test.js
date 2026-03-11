@@ -1450,19 +1450,20 @@ describe.each([
           await close(server, instance);
         });
 
-        it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
+        it('should return "404" code for GET request to the bundle file for the first compiler', async () => {
           const bundlePath = path.resolve(
             __dirname,
-            "./outputs/dev-server-false/js4/",
-          );
-
-          expect(fs.existsSync(path.resolve(bundlePath, "bundle.js"))).toBe(
-            false,
+            "./outputs/dev-server-false/js3/",
           );
 
           const response = await req.get("/static-one/bundle.js");
 
-          expect(response.statusCode).toBe(200);
+          expect(response.statusCode).toBe(404);
+
+          // Stored in the real fs
+          expect(fs.existsSync(path.resolve(bundlePath, "bundle.js"))).toBe(
+            true,
+          );
         });
 
         it('should return "404" code for GET request to a non existing file for the first compiler', async () => {
@@ -1471,37 +1472,32 @@ describe.each([
           expect(response.statusCode).toBe(404);
         });
 
-        it('should return "200" code for GET request to the "public" path for the first compiler', async () => {
+        it('should return "404" code for GET request to the "public" path for the first compiler', async () => {
           const response = await req.get("/static-one/");
 
-          expect(response.statusCode).toBe(200);
-          expect(response.headers["content-type"]).toBe(
-            "text/html; charset=utf-8",
-          );
+          expect(response.statusCode).toBe(404);
         });
 
-        it('should return "200" code for GET request to the "index" option for the first compiler', async () => {
+        it('should return "404" code for GET request to the "index" option for the first compiler', async () => {
           const response = await req.get("/static-one/index.html");
 
-          expect(response.statusCode).toBe(200);
-          expect(response.headers["content-type"]).toBe(
-            "text/html; charset=utf-8",
-          );
+          expect(response.statusCode).toBe(404);
         });
 
         it('should return "200" code for GET request for the bundle file for the second compiler', async () => {
           const bundlePath = path.resolve(
             __dirname,
-            "./outputs/dev-server-false/js3/",
-          );
-
-          expect(fs.existsSync(path.resolve(bundlePath, "bundle.js"))).toBe(
-            true,
+            "./outputs/dev-server-false/js4/",
           );
 
           const response = await req.get("/static-two/bundle.js");
 
-          expect(response.statusCode).toBe(404);
+          expect(response.statusCode).toBe(200);
+
+          // stored in memory
+          expect(fs.existsSync(path.resolve(bundlePath, "bundle.js"))).toBe(
+            false,
+          );
         });
 
         it('should return "404" code for GET request to a non existing file for the second compiler', async () => {
@@ -1510,16 +1506,22 @@ describe.each([
           expect(response.statusCode).toBe(404);
         });
 
-        it('should return "404" code for GET request to the "public" path for the second compiler', async () => {
+        it('should return "200" code for GET request to the "public" path for the second compiler', async () => {
           const response = await req.get("/static-two/");
 
-          expect(response.statusCode).toBe(404);
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["content-type"]).toBe(
+            "text/html; charset=utf-8",
+          );
         });
 
-        it('should return "404" code for GET request to the "index" option for the second compiler', async () => {
+        it('should return "200" code for GET request to the "index" option for the second compiler', async () => {
           const response = await req.get("/static-two/index.html");
 
-          expect(response.statusCode).toBe(404);
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["content-type"]).toBe(
+            "text/html; charset=utf-8",
+          );
         });
 
         it('should return "404" code for GET request to the non-public path', async () => {

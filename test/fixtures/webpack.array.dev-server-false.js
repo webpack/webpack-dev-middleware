@@ -10,7 +10,7 @@ module.exports = [
     output: {
       filename: 'bundle.js',
       path: path.resolve(__dirname, '../outputs/dev-server-false/js3'),
-      publicPath: '/static-two/',
+      publicPath: '/static-one/',
     },
     infrastructureLogging: {
       level: 'none'
@@ -25,7 +25,7 @@ module.exports = [
     output: {
       filename: 'bundle.js',
       path: path.resolve(__dirname, '../outputs/dev-server-false/js4'),
-      publicPath: '/static-one/',
+      publicPath: '/static-two/',
     },
     module: {
       rules: [

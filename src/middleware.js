@@ -876,6 +876,7 @@ function wrapper(context) {
       // Error handling
       /** @type {import("fs").ReadStream} */
       (bufferOrStream).on("error", (error) => {
+        context.logger.error("Stream error:", error);
         // clean up stream early
         cleanup();
         errorHandler(error);
