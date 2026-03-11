@@ -639,10 +639,34 @@ function honoWrapper(compiler, options, usePlugin) {
            * @param {import("fs").ReadStream} stream readable stream
            */
           res.stream = (stream) => {
-            body = stream;
+            let isResolved = false;
 
-            isFinished = true;
-            resolve();
+            /**
+             * @param {Error=} err err
+             */
+            const done = (err) => {
+              if (isResolved) return;
+              isResolved = true;
+
+              stream.removeListener("error", done);
+              stream.removeListener("readable", done);
+              stream.removeListener("end", done);
+
+              if (err) {
+                stream.destroy();
+                reject(err);
+                return;
+              }
+
+              body = stream;
+              isFinished = true;
+              resolve();
+            };
+
+            stream.once("error", done);
+            stream.once("readable", done);
+            // Empty stream
+            stream.once("end", done);
           };
 
           /**
