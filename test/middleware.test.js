@@ -3771,8 +3771,8 @@ describe.each([
 
           expect(response.statusCode).toBe(500);
 
-          // hapi and hono don't support passthrough errors
-          if (name === "hapi" || name === "hono") {
+          // hapi doesn't support passthrough errors?
+          if (name === "hapi") {
             expect(nextWasCalled).toBe(false);
           } else {
             expect(nextWasCalled).toBe(true);
