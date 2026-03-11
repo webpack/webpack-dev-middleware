@@ -72,13 +72,14 @@ See [below](#other-servers) for an example of use with fastify.
 |               **[`etag`](#tag)**                |   `boolean\| "weak"\| "strong"`   |                  `undefined`                  | Enable or disable etag generation.                                                                                   |
 |       **[`lastModified`](#lastmodified)**       |             `boolean`             |                  `undefined`                  | Enable or disable `Last-Modified` header. Uses the file system's last modified value.                                |
 |       **[`cacheControl`](#cachecontrol)**       | `boolean\|number\|string\|Object` |                  `undefined`                  | Enable or disable setting `Cache-Control` response header.                                                           |
-|     **[`cacheImmutable`](#cacheimmutable)**     |            `boolean\`             |                  `undefined`                  | Enable or disable setting `Cache-Control: public, max-age=31536000, immutable` response header for immutable assets. |
+|     **[`cacheImmutable`](#cacheimmutable)**     |             `boolean`             |                  `undefined`                  | Enable or disable setting `Cache-Control: public, max-age=31536000, immutable` response header for immutable assets. |
 |         **[`publicPath`](#publicpath)**         |             `string`              |                  `undefined`                  | The public path that the middleware is bound to.                                                                     |
 |              **[`stats`](#stats)**              |     `boolean\|string\|Object`     |        `stats` (from a configuration)         | Stats options object or preset name.                                                                                 |
 |   **[`serverSideRender`](#serversiderender)**   |             `boolean`             |                  `undefined`                  | Instructs the module to enable or disable the server-side rendering mode.                                            |
 |        **[`writeToDisk`](#writetodisk)**        |        `boolean\|Function`        |                    `false`                    | Instructs the module to write files to the configured location on disk as specified in your `webpack` configuration. |
 |   **[`outputFileSystem`](#outputfilesystem)**   |             `Object`              | [`memfs`](https://github.com/streamich/memfs) | Set the default file system which will be used by webpack as primary destination of generated files.                 |
 | **[`modifyResponseData`](#modifyresponsedata)** |            `Function`             |                  `undefined`                  | Allows to set up a callback to change the response data.                                                             |
+|       **[`forwardError`](#forwarderror)**       |             `boolean`             |                    `false`                    | Enable or disable forwarding errors to the next middleware.                                                          |
 
 The middleware accepts an `options` Object. The following is a property reference for the Object.
 
@@ -459,9 +460,101 @@ const app = new express();
 app.use(instance);
 
 instance.waitUntilValid(() => {
-  const filename = instance.getFilenameFromUrl("/bundle.js");
+  let resolver;
+
+  try {
+    resolved = instance.getFilenameFromUrl("/bundle.js");
+  } catch (err) {
+    console.log(`Error: ${err}`);
+  }
+
+  if (!resolved) {
+    console.log("Not found");
+    return;
+  }
 
   console.log(`Filename is ${filename}`);
+});
+```
+
+### `plugin(compiler, options)`
+
+Creates middleware instance in plugin mode.
+
+In plugin mode, stats output is written through custom code (i.e. in callback for `watch` or where you are calling `stats.toString(options)`) instead of `console.log`.
+In this case, the `stats` option is not supported because `webpack-dev-middleware` does not have access to the code where the stats will be output.
+You will also need to manually run the `watch` method.
+
+Why do you need this mode? In some cases, you may want to have multiple dev servers or run only one dev server when you have multiple configurations, and this is suitable for you.
+
+```js
+const webpack = require("webpack");
+const middleware = require("webpack-dev-middleware");
+
+const compiler = webpack({
+  plugins: [
+    {
+      apply(compiler) {
+        const devMiddleware = middleware(
+          compiler,
+          {
+            /* webpack-dev-middleware options */
+          },
+          true,
+        );
+      },
+    },
+  ],
+  /* Webpack configuration */
+});
+
+compiler.watch((err, stats) => {
+  if (err) {
+    console.error(err);
+    return;
+  }
+
+  console.log(stats.toString());
+});
+```
+
+### Plugin wrappers
+
+The following wrappers enable plugin mode for framework integrations:
+
+- `middleware(compiler, options, true)` (connect/express like middleware)
+- `middleware.koaWrapper(compiler, options, true)`
+- `middleware.hapiWrapper(true)`
+- `middleware.honoWrapper(compiler, options, true)`
+
+They are equivalent to `koaWrapper`/`hapiWrapper`/`honoWrapper`, but use plugin mode logging behavior.
+
+### `forwardError`
+
+Type: `boolean`
+Default: `false`
+
+Enable or disable forwarding errors to the next middleware. If `true`, errors will be forwarded to the next middleware, otherwise, they will be handled by `webpack-dev-middleware` and a response will be handled case by case.
+
+This option don't work with hono, koa and hapi, because of the differences in error handling between these frameworks and express.
+
+```js
+const express = require("express");
+const webpack = require("webpack");
+const middleware = require("webpack-dev-middleware");
+
+const compiler = webpack({
+  /* Webpack configuration */
+});
+
+const instance = middleware(compiler, { forwardError: true });
+
+const app = express();
+app.use(instance);
+
+app.use((err, req, res, next) => {
+  console.log(`Error: ${err}`);
+  res.status(500).send("Something broke!");
 });
 ```
 
@@ -681,6 +774,8 @@ const devMiddlewareOptions = {
 const app = new Koa();
 
 app.use(middleware.koaWrapper(compiler, devMiddlewareOptions));
+// Alternative usage (when you want to use as a plugin, i.e. all stats will be printed by other code):
+// app.use(middleware.koaWrapper(compiler, devMiddlewareOptions, true));
 
 app.listen(3000);
 ```
@@ -699,13 +794,23 @@ const devMiddlewareOptions = {};
 const server = Hapi.server({ port: 3000, host: "localhost" });
 
 await server.register({
-  plugin: devMiddleware.hapiPlugin(),
+  plugin: devMiddleware.hapiWrapper(),
   options: {
     // The `compiler` option is required
     compiler,
     ...devMiddlewareOptions,
   },
 });
+
+// Alternative usage (when you want to use as a plugin, i.e. all stats will be printed by other code):
+// await server.register({
+//   plugin: devMiddleware.hapiWrapper(true),
+//   options: {
+//     // The `compiler` option is required
+//     compiler,
+//     ...devMiddlewareOptions,
+//   },
+// });
 
 await server.start();
 
@@ -754,6 +859,9 @@ const devMiddlewareOptions = {
 const app = new Hono();
 
 app.use(devMiddleware.honoWrapper(compiler, devMiddlewareOptions));
+
+// Alternative usage (when you want to use as a plugin, i.e. all stats will be printed by other code):
+// const honoDevMiddleware = devMiddleware.honoWrapper(compiler, devMiddlewareOptions, true)
 
 serve(app);
 ```

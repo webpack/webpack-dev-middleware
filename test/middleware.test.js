@@ -146,7 +146,6 @@ async function frameworkFactory(
           app.use(item);
         }
       }
-
       return [server, req, instance.devMiddleware];
     }
     default: {
@@ -573,16 +572,16 @@ describe.each([
 
           it("should work", (done) => {
             instance.waitUntilValid(() => {
-              expect(instance.getFilenameFromUrl("/bundle.js")).toBe(
+              expect(instance.getFilenameFromUrl("/bundle.js").filename).toBe(
                 path.join(webpackConfig.output.path, "/bundle.js"),
               );
-              expect(instance.getFilenameFromUrl("/")).toBe(
+              expect(instance.getFilenameFromUrl("/").filename).toBe(
                 path.join(webpackConfig.output.path, "/index.html"),
               );
-              expect(instance.getFilenameFromUrl("/index.html")).toBe(
+              expect(instance.getFilenameFromUrl("/index.html").filename).toBe(
                 path.join(webpackConfig.output.path, "/index.html"),
               );
-              expect(instance.getFilenameFromUrl("/svg.svg")).toBe(
+              expect(instance.getFilenameFromUrl("/svg.svg").filename).toBe(
                 path.join(webpackConfig.output.path, "/svg.svg"),
               );
               expect(
@@ -617,15 +616,15 @@ describe.each([
 
           it("should work", (done) => {
             instance.waitUntilValid(() => {
-              expect(instance.getFilenameFromUrl("/bundle.js")).toBe(
+              expect(instance.getFilenameFromUrl("/bundle.js").filename).toBe(
                 path.join(webpackConfig.output.path, "/bundle.js"),
               );
 
               expect(instance.getFilenameFromUrl("/")).toBeUndefined();
-              expect(instance.getFilenameFromUrl("/index.html")).toBe(
+              expect(instance.getFilenameFromUrl("/index.html").filename).toBe(
                 path.join(webpackConfig.output.path, "/index.html"),
               );
-              expect(instance.getFilenameFromUrl("/svg.svg")).toBe(
+              expect(instance.getFilenameFromUrl("/svg.svg").filename).toBe(
                 path.join(webpackConfig.output.path, "/svg.svg"),
               );
               expect(
@@ -658,19 +657,23 @@ describe.each([
           it("should work", (done) => {
             instance.waitUntilValid(() => {
               expect(
-                instance.getFilenameFromUrl("/public/path/bundle.js"),
+                instance.getFilenameFromUrl("/public/path/bundle.js").filename,
               ).toBe(
                 path.join(webpackPublicPathConfig.output.path, "/bundle.js"),
               );
-              expect(instance.getFilenameFromUrl("/public/path/")).toBe(
-                path.join(webpackPublicPathConfig.output.path, "/index.html"),
-              );
               expect(
-                instance.getFilenameFromUrl("/public/path/index.html"),
+                instance.getFilenameFromUrl("/public/path/").filename,
               ).toBe(
                 path.join(webpackPublicPathConfig.output.path, "/index.html"),
               );
-              expect(instance.getFilenameFromUrl("/public/path/svg.svg")).toBe(
+              expect(
+                instance.getFilenameFromUrl("/public/path/index.html").filename,
+              ).toBe(
+                path.join(webpackPublicPathConfig.output.path, "/index.html"),
+              );
+              expect(
+                instance.getFilenameFromUrl("/public/path/svg.svg").filename,
+              ).toBe(
                 path.join(webpackPublicPathConfig.output.path, "/svg.svg"),
               );
 
@@ -704,20 +707,22 @@ describe.each([
 
           it("should work", (done) => {
             instance.waitUntilValid(() => {
-              expect(instance.getFilenameFromUrl("/static-one/bundle.js")).toBe(
+              expect(
+                instance.getFilenameFromUrl("/static-one/bundle.js").filename,
+              ).toBe(
                 path.join(webpackMultiConfig[0].output.path, "/bundle.js"),
               );
-              expect(instance.getFilenameFromUrl("/static-one/")).toBe(
+              expect(instance.getFilenameFromUrl("/static-one/").filename).toBe(
                 path.join(webpackMultiConfig[0].output.path, "/index.html"),
               );
               expect(
-                instance.getFilenameFromUrl("/static-one/index.html"),
+                instance.getFilenameFromUrl("/static-one/index.html").filename,
               ).toBe(
                 path.join(webpackMultiConfig[0].output.path, "/index.html"),
               );
-              expect(instance.getFilenameFromUrl("/static-one/svg.svg")).toBe(
-                path.join(webpackMultiConfig[0].output.path, "/svg.svg"),
-              );
+              expect(
+                instance.getFilenameFromUrl("/static-one/svg.svg").filename,
+              ).toBe(path.join(webpackMultiConfig[0].output.path, "/svg.svg"));
               expect(
                 instance.getFilenameFromUrl("/static-one/unknown.unknown"),
               ).toBeUndefined();
@@ -727,7 +732,9 @@ describe.each([
                 ),
               ).toBeUndefined();
 
-              expect(instance.getFilenameFromUrl("/static-two/bundle.js")).toBe(
+              expect(
+                instance.getFilenameFromUrl("/static-two/bundle.js").filename,
+              ).toBe(
                 path.join(webpackMultiConfig[1].output.path, "/bundle.js"),
               );
               expect(
@@ -1244,13 +1251,8 @@ describe.each([
 
           expect(response.statusCode).toBe(200);
 
-          // todo bug on node.js@22 and memfs
-          const [major] = process.versions.node.split(".").map(Number);
-
-          if (major < 22) {
-            expect(response.text).toBe("\u00BD + \u00BC = \u00BE");
-            expect(response.headers["content-length"]).toBe("12");
-          }
+          expect(response.text).toBe("\u00BD + \u00BC = \u00BE");
+          expect(response.headers["content-length"]).toBe("12");
 
           expect(response.headers["content-type"]).toBe(
             "text/html; charset=utf-8",
@@ -1294,7 +1296,7 @@ describe.each([
         });
       });
 
-      describe('should not work with the broken "publicPath" option', () => {
+      describe('should work with the broken "publicPath" option (malformed URI parsed as "/")', () => {
         let compiler;
 
         const outputPath = path.resolve(__dirname, "./outputs/basic");
@@ -1305,7 +1307,7 @@ describe.each([
             output: {
               filename: "bundle.js",
               path: outputPath,
-              publicPath: "https://test:malfor%5Med@test.example.com",
+              publicPath: "http/s://test:malformed%5Med@test.example.com",
             },
           });
 
@@ -1448,19 +1450,20 @@ describe.each([
           await close(server, instance);
         });
 
-        it('should return "200" code for GET request to the bundle file for the first compiler', async () => {
+        it('should return "404" code for GET request to the bundle file for the first compiler', async () => {
           const bundlePath = path.resolve(
             __dirname,
-            "./outputs/dev-server-false/js4/",
-          );
-
-          expect(fs.existsSync(path.resolve(bundlePath, "bundle.js"))).toBe(
-            false,
+            "./outputs/dev-server-false/js3/",
           );
 
           const response = await req.get("/static-one/bundle.js");
 
-          expect(response.statusCode).toBe(200);
+          expect(response.statusCode).toBe(404);
+
+          // Stored in the real fs
+          expect(fs.existsSync(path.resolve(bundlePath, "bundle.js"))).toBe(
+            true,
+          );
         });
 
         it('should return "404" code for GET request to a non existing file for the first compiler', async () => {
@@ -1469,37 +1472,32 @@ describe.each([
           expect(response.statusCode).toBe(404);
         });
 
-        it('should return "200" code for GET request to the "public" path for the first compiler', async () => {
+        it('should return "404" code for GET request to the "public" path for the first compiler', async () => {
           const response = await req.get("/static-one/");
 
-          expect(response.statusCode).toBe(200);
-          expect(response.headers["content-type"]).toBe(
-            "text/html; charset=utf-8",
-          );
+          expect(response.statusCode).toBe(404);
         });
 
-        it('should return "200" code for GET request to the "index" option for the first compiler', async () => {
+        it('should return "404" code for GET request to the "index" option for the first compiler', async () => {
           const response = await req.get("/static-one/index.html");
 
-          expect(response.statusCode).toBe(200);
-          expect(response.headers["content-type"]).toBe(
-            "text/html; charset=utf-8",
-          );
+          expect(response.statusCode).toBe(404);
         });
 
         it('should return "200" code for GET request for the bundle file for the second compiler', async () => {
           const bundlePath = path.resolve(
             __dirname,
-            "./outputs/dev-server-false/js3/",
-          );
-
-          expect(fs.existsSync(path.resolve(bundlePath, "bundle.js"))).toBe(
-            true,
+            "./outputs/dev-server-false/js4/",
           );
 
           const response = await req.get("/static-two/bundle.js");
 
-          expect(response.statusCode).toBe(404);
+          expect(response.statusCode).toBe(200);
+
+          // stored in memory
+          expect(fs.existsSync(path.resolve(bundlePath, "bundle.js"))).toBe(
+            false,
+          );
         });
 
         it('should return "404" code for GET request to a non existing file for the second compiler', async () => {
@@ -1508,16 +1506,22 @@ describe.each([
           expect(response.statusCode).toBe(404);
         });
 
-        it('should return "404" code for GET request to the "public" path for the second compiler', async () => {
+        it('should return "200" code for GET request to the "public" path for the second compiler', async () => {
           const response = await req.get("/static-two/");
 
-          expect(response.statusCode).toBe(404);
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["content-type"]).toBe(
+            "text/html; charset=utf-8",
+          );
         });
 
-        it('should return "404" code for GET request to the "index" option for the second compiler', async () => {
+        it('should return "200" code for GET request to the "index" option for the second compiler', async () => {
           const response = await req.get("/static-two/index.html");
 
-          expect(response.statusCode).toBe(404);
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["content-type"]).toBe(
+            "text/html; charset=utf-8",
+          );
         });
 
         it('should return "404" code for GET request to the non-public path', async () => {
@@ -3607,6 +3611,230 @@ describe.each([
         });
       });
 
+      describe("should call the next middleware for finished or errored requests when forwardError is enabled", () => {
+        let compiler;
+
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/basic-test-errors-headers-sent",
+        );
+
+        let nextWasCalled = false;
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              etag: "weak",
+              lastModified: true,
+              forwardError: true,
+            },
+            {
+              setupMiddlewares: (middlewares) => {
+                if (name === "hapi") {
+                  // There's no such thing as "the next route handler" in hapi. One request is matched to one or no route handlers.
+                } else if (name === "koa") {
+                  middlewares.push(async (ctx) => {
+                    nextWasCalled = true;
+                    ctx.status = 500;
+                    ctx.body = "error";
+                  });
+                } else if (name === "hono") {
+                  middlewares.push(async (ctx) => {
+                    nextWasCalled = true;
+                    ctx.status(500);
+                    return ctx.text("error");
+                  });
+                } else {
+                  middlewares.push((_error, _req, res, _next) => {
+                    nextWasCalled = true;
+                    res.statusCode = 500;
+                    res.end("error");
+                  });
+                }
+
+                return middlewares;
+              },
+            },
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "index.html"),
+            "HTML",
+          );
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "image.svg"),
+            "svg image",
+          );
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "file.text"),
+            "text",
+          );
+
+          const originalMethod =
+            instance.context.outputFileSystem.createReadStream;
+
+          instance.context.outputFileSystem.createReadStream =
+            function createReadStream(...args) {
+              if (args[0].endsWith("image.svg")) {
+                const brokenStream = new this.ReadStream(...args);
+
+                brokenStream._read = function _read() {
+                  const error = new Error("test");
+                  error.code = "ENAMETOOLONG";
+                  this.emit("error", error);
+                  this.end();
+                  this.destroy();
+                };
+
+                return brokenStream;
+              }
+
+              return originalMethod(...args);
+            };
+        });
+
+        beforeEach(() => {
+          nextWasCalled = false;
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it("should work with piping stream", async () => {
+          const response1 = await req.get("/file.text");
+
+          expect(response1.statusCode).toBe(200);
+          expect(nextWasCalled).toBe(false);
+        });
+
+        it('should return the "500" code for requests above root', async () => {
+          const response = await req.get("/public/..%2f../middleware.test.js");
+
+          expect(response.statusCode).toBe(500);
+          if (name !== "hapi") {
+            expect(response.text).toBe("error");
+            expect(nextWasCalled).toBe(true);
+          } else {
+            expect(nextWasCalled).toBe(false);
+          }
+        });
+
+        it('should return the "500" code for the "GET" request to the bundle file with etag and wrong "if-match" header', async () => {
+          const response1 = await req.get("/file.text");
+
+          expect(response1.statusCode).toBe(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
+
+          const response2 = await req.get("/file.text").set("if-match", "test");
+
+          expect(response2.statusCode).toBe(500);
+          if (name !== "hapi") {
+            expect(response2.text).toBe("error");
+            expect(nextWasCalled).toBe(true);
+          } else {
+            expect(nextWasCalled).toBe(false);
+          }
+        });
+
+        it('should return the "500" code for the "GET" request with the invalid range header', async () => {
+          const response = await req
+            .get("/file.text")
+            .set("Range", "bytes=9999999-");
+
+          expect(response.statusCode).toBe(500);
+          if (name !== "hapi") {
+            expect(response.text).toBe("error");
+            expect(nextWasCalled).toBe(true);
+          } else {
+            expect(nextWasCalled).toBe(false);
+          }
+        });
+
+        it('should return the "500" code for the "GET" request to the "image.svg" file when it throws a reading error', async () => {
+          const response = await req.get("/image.svg");
+
+          expect(response.statusCode).toBe(500);
+
+          // hapi doesn't support passthrough errors?
+          if (name === "hapi") {
+            expect(nextWasCalled).toBe(false);
+          } else {
+            expect(nextWasCalled).toBe(true);
+          }
+        });
+
+        it('should return the "200" code for the "HEAD" request to the bundle file', async () => {
+          const response = await req.head("/file.text");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.text).toBeUndefined();
+          expect(nextWasCalled).toBe(false);
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file with etag and "if-none-match"', async () => {
+          const response1 = await req.get("/file.text");
+
+          expect(response1.statusCode).toBe(200);
+          expect(response1.headers.etag).toBeDefined();
+          expect(response1.headers.etag.startsWith("W/")).toBe(true);
+
+          const response2 = await req
+            .get("/file.text")
+            .set("if-none-match", response1.headers.etag);
+
+          expect(response2.statusCode).toBe(304);
+          expect(response2.headers.etag).toBeDefined();
+          expect(response2.headers.etag.startsWith("W/")).toBe(true);
+
+          const response3 = await req
+            .get("/file.text")
+            .set("if-none-match", response1.headers.etag);
+
+          expect(response3.statusCode).toBe(304);
+          expect(response3.headers.etag).toBeDefined();
+          expect(response3.headers.etag.startsWith("W/")).toBe(true);
+          expect(nextWasCalled).toBe(false);
+        });
+
+        it('should return the "304" code for the "GET" request to the bundle file with lastModified and "if-modified-since" header', async () => {
+          const response1 = await req.get("/file.text");
+
+          expect(response1.statusCode).toBe(200);
+          expect(response1.headers["last-modified"]).toBeDefined();
+
+          const response2 = await req
+            .get("/file.text")
+            .set("if-modified-since", response1.headers["last-modified"]);
+
+          expect(response2.statusCode).toBe(304);
+          expect(response2.headers["last-modified"]).toBeDefined();
+
+          const response3 = await req
+            .get("/file.text")
+            .set("if-modified-since", response2.headers["last-modified"]);
+
+          expect(response3.statusCode).toBe(304);
+          expect(response3.headers["last-modified"]).toBeDefined();
+          expect(nextWasCalled).toBe(false);
+        });
+      });
+
       describe("should fallthrough for not found files", () => {
         let compiler;
 
@@ -4005,87 +4233,83 @@ describe.each([
     });
 
     describe("writeToDisk option", () => {
-      (name === "hono" ? describe.skip : describe)(
-        'should work with "true" value',
-        () => {
-          let compiler;
+      describe('should work with "true" value', () => {
+        let compiler;
 
-          const outputPath = path.resolve(
-            __dirname,
-            "./outputs/write-to-disk-true",
+        const outputPath = path.resolve(
+          __dirname,
+          "./outputs/write-to-disk-true",
+        );
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+              publicPath: "/public/",
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { writeToDisk: true },
           );
+        });
 
-          beforeAll(async () => {
-            compiler = getCompiler({
-              ...webpackConfig,
-              output: {
-                filename: "bundle.js",
-                path: outputPath,
-                publicPath: "/public/",
+        afterAll(async () => {
+          await fs.promises.rm(outputPath, {
+            recursive: true,
+            force: true,
+          });
+          await close(server, instance);
+        });
+
+        it("should find the bundle file on disk", (done) => {
+          req.get("/public/bundle.js").expect(200, (error) => {
+            if (error) {
+              return done(error);
+            }
+
+            const bundlePath = path.resolve(
+              __dirname,
+              "./outputs/write-to-disk-true/bundle.js",
+            );
+
+            expect(
+              compiler.hooks.assetEmitted.taps.filter(
+                (hook) => hook.name === "DevMiddleware",
+              ),
+            ).toHaveLength(0);
+            expect(fs.existsSync(bundlePath)).toBe(true);
+
+            instance.invalidate();
+
+            return compiler.hooks.done.tap(
+              "DevMiddlewareWriteToDiskTest",
+              () => {
+                expect(
+                  compiler.hooks.assetEmitted.taps.filter(
+                    (hook) => hook.name === "DevMiddleware",
+                  ),
+                ).toHaveLength(0);
+
+                done();
               },
-            });
-
-            [server, req, instance] = await frameworkFactory(
-              name,
-              framework,
-              compiler,
-              { writeToDisk: true },
             );
           });
+        });
 
-          afterAll(async () => {
-            await fs.promises.rm(outputPath, {
-              recursive: true,
-              force: true,
-            });
-            await close(server, instance);
-          });
+        it("should not allow to get files above root", async () => {
+          const response = await req.get("/public/..%2f../middleware.test.js");
 
-          it("should find the bundle file on disk", (done) => {
-            req.get("/public/bundle.js").expect(200, (error) => {
-              if (error) {
-                return done(error);
-              }
-
-              const bundlePath = path.resolve(
-                __dirname,
-                "./outputs/write-to-disk-true/bundle.js",
-              );
-
-              expect(
-                compiler.hooks.assetEmitted.taps.filter(
-                  (hook) => hook.name === "DevMiddleware",
-                ),
-              ).toHaveLength(0);
-              expect(fs.existsSync(bundlePath)).toBe(true);
-
-              instance.invalidate();
-
-              return compiler.hooks.done.tap(
-                "DevMiddlewareWriteToDiskTest",
-                () => {
-                  expect(
-                    compiler.hooks.assetEmitted.taps.filter(
-                      (hook) => hook.name === "DevMiddleware",
-                    ),
-                  ).toHaveLength(0);
-
-                  done();
-                },
-              );
-            });
-          });
-
-          it("should not allow to get files above root", async () => {
-            const response = await req.get(
-              "/public/..%2f../middleware.test.js",
-            );
-
-            expect(response.statusCode).toBe(403);
-            expect(response.headers["content-type"]).toBe(
-              "text/html; charset=utf-8",
-            );
-            expect(response.text).toBe(`<!DOCTYPE html>
+          expect(response.statusCode).toBe(403);
+          expect(response.headers["content-type"]).toBe(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toBe(`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -4095,9 +4319,8 @@ describe.each([
 <pre>Forbidden</pre>
 </body>
 </html>`);
-          });
-        },
-      );
+        });
+      });
 
       describe('should work with "true" value when the `output.clean` is `true`', () => {
         const outputPath = path.resolve(
@@ -5964,7 +6187,7 @@ describe.each([
           await close(server, instance);
         });
 
-        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header', async () => {
           const response = await req.get("/bundle.js");
 
           expect(response.statusCode).toBe(200);
@@ -6129,7 +6352,6 @@ describe.each([
             name,
             framework,
             compiler,
-            { cacheImmutable: true },
           );
         });
 
@@ -6232,6 +6454,332 @@ describe.each([
           expect(response.headers["cache-control"]).toBeDefined();
           expect(response.headers["cache-control"]).toBe(
             "public, max-age=31536000, immutable",
+          );
+        });
+      });
+
+      describe("should not generate `Cache-Control` header for immutable assets when cacheImmutable is false", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler({
+            ...webpackConfigImmutable,
+            output: {
+              path: path.resolve(__dirname, "./outputs/basic"),
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheImmutable: false },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and don\'t generate `Cache-Control` header', async () => {
+          const response = await req.get("/main.js");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeUndefined();
+        });
+
+        it('should return the "200" code for the "GET" request to the immutable asset and don\'t generate `Cache-Control` header', async () => {
+          const response = await req.get("/6076fc274f403ebb2d09.svg");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeUndefined();
+        });
+      });
+
+      describe("should use cacheControl option when cacheImmutable is false even for immutable assets", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler({
+            ...webpackConfigImmutable,
+            output: {
+              path: path.resolve(__dirname, "./outputs/basic"),
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheImmutable: false, cacheControl: 1000000 },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header from cacheControl option', async () => {
+          const response = await req.get("/main.js");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=1000",
+          );
+        });
+
+        it('should return the "200" code for the "GET" request to the immutable asset and generate `Cache-Control` header from cacheControl option (not immutable)', async () => {
+          const response = await req.get("/6076fc274f403ebb2d09.svg");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=1000",
+          );
+        });
+      });
+
+      describe("should use cacheControl string option when cacheImmutable is false", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler({
+            ...webpackConfigImmutable,
+            output: {
+              path: path.resolve(__dirname, "./outputs/basic"),
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheImmutable: false, cacheControl: "max-age=500" },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header from cacheControl string option without immutable', async () => {
+          const response = await req.get("/main.js");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe("max-age=500");
+        });
+
+        it('should return the "200" code for the "GET" request to the immutable asset and generate `Cache-Control` header from cacheControl string option without immutable', async () => {
+          const response = await req.get("/6076fc274f403ebb2d09.svg");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe("max-age=500");
+        });
+      });
+
+      describe("should use cacheControl object option when cacheImmutable is false", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler({
+            ...webpackConfigImmutable,
+            output: {
+              path: path.resolve(__dirname, "./outputs/basic"),
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheImmutable: false, cacheControl: { maxAge: 2000000 } },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header from cacheControl object option without immutable', async () => {
+          const response = await req.get("/main.js");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=2000",
+          );
+        });
+
+        it('should return the "200" code for the "GET" request to the immutable asset and generate `Cache-Control` header from cacheControl object option without immutable', async () => {
+          const response = await req.get("/6076fc274f403ebb2d09.svg");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=2000",
+          );
+        });
+      });
+
+      describe("should use cacheControl object option (with only immutable: true) when cacheImmutable is false, and add 'immutable' to Cache-Control header", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler({
+            ...webpackConfigImmutable,
+            output: {
+              path: path.resolve(__dirname, "./outputs/basic"),
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheImmutable: false, cacheControl: { immutable: true } },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header from cacheControl object option without immutable', async () => {
+          const response = await req.get("/main.js");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000, immutable",
+          );
+        });
+
+        it('should return the "200" code for the "GET" request to the immutable asset and generate `Cache-Control` header from cacheControl object option without immutable', async () => {
+          const response = await req.get("/6076fc274f403ebb2d09.svg");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000, immutable",
+          );
+        });
+      });
+
+      describe("should use cacheControl object option with explicit immutable false", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler({
+            ...webpackConfigImmutable,
+            output: {
+              path: path.resolve(__dirname, "./outputs/basic"),
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheControl: { maxAge: 3000000, immutable: false } },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header without immutable when explicitly set to false', async () => {
+          const response = await req.get("/main.js");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=3000",
+          );
+        });
+
+        it('should return the "200" code for the "GET" request to the immutable asset and generate `Cache-Control` header without immutable when explicitly set to false', async () => {
+          const response = await req.get("/6076fc274f403ebb2d09.svg");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000, immutable",
+          );
+        });
+      });
+
+      describe("should use cacheControl boolean option when cacheImmutable is false", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler({
+            ...webpackConfigImmutable,
+            output: {
+              path: path.resolve(__dirname, "./outputs/basic"),
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheImmutable: false, cacheControl: true },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header from cacheControl boolean option without immutable', async () => {
+          const response = await req.get("/main.js");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000",
+          );
+        });
+
+        it('should return the "200" code for the "GET" request to the immutable asset and generate `Cache-Control` header from cacheControl boolean option without immutable', async () => {
+          const response = await req.get("/6076fc274f403ebb2d09.svg");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=31536000",
+          );
+        });
+      });
+
+      describe("should use cacheControl number option when cacheImmutable is false without immutable", () => {
+        beforeEach(async () => {
+          const compiler = getCompiler({
+            ...webpackConfigImmutable,
+            output: {
+              path: path.resolve(__dirname, "./outputs/basic"),
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            { cacheImmutable: false, cacheControl: 5000000 },
+          );
+        });
+
+        afterEach(async () => {
+          await close(server, instance);
+        });
+
+        it('should return the "200" code for the "GET" request to the bundle file and generate `Cache-Control` header from cacheControl number option without immutable', async () => {
+          const response = await req.get("/main.js");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=5000",
+          );
+        });
+
+        it('should return the "200" code for the "GET" request to the immutable asset and generate `Cache-Control` header from cacheControl number option without immutable', async () => {
+          const response = await req.get("/6076fc274f403ebb2d09.svg");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBeDefined();
+          expect(response.headers["cache-control"]).toBe(
+            "public, max-age=5000",
           );
         });
       });

@@ -13,6 +13,7 @@ export = setupHooks;
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
  * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context context
+ * @param {boolean=} isPlugin true when it is a plugin usage, otherwise false
  */
 declare function setupHooks<
   Request extends IncomingMessage,
@@ -22,6 +23,7 @@ declare function setupHooks<
     import("../index.js").Context<Request, Response>,
     "watching" | "outputFileSystem"
   >,
+  isPlugin?: boolean | undefined,
 ): void;
 declare namespace setupHooks {
   export {

@@ -172,6 +172,11 @@
       "description": "Enable or disable setting `Cache-Control: public, max-age=31536000, immutable` response header for immutable assets (i.e. asset with a hash in file name like `image.a4c12bde.jpg`).",
       "link": "https://github.com/webpack/webpack-dev-middleware#cacheimmutable",
       "type": "boolean"
+    },
+    "forwardError": {
+      "description": "Enable or disable forwarding errors to next middleware.",
+      "link": "https://github.com/webpack/webpack-dev-middleware#forwarderrors",
+      "type": "boolean"
     }
   },
   "additionalProperties": false

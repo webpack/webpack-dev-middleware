@@ -31,6 +31,8 @@ const ready = require("./utils/ready");
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index.js").ServerResponse} ServerResponse */
 /** @typedef {import("./index.js").NormalizedHeaders} NormalizedHeaders */
+/** @typedef {import("./utils/getFilenameFromUrl.js").FilenameError} FilenameError */
+/** @typedef {import("./utils/getFilenameFromUrl.js").Extra} Extra */
 /** @typedef {import("fs").ReadStream} ReadStream */
 
 const BYTES_RANGE_REGEXP = /^ *bytes/i;
@@ -159,8 +161,6 @@ function wrapper(context) {
     }
 
     const acceptedMethods = context.options.methods || ["GET", "HEAD"];
-    // TODO do we need an option here?
-    const forwardError = false;
 
     initState(res);
 
@@ -178,13 +178,24 @@ function wrapper(context) {
      * @returns {Promise<void>}
      */
     async function sendError(message, status, options) {
-      if (forwardError) {
+      if (context.options.forwardError) {
+        if (!getHeadersSent(res)) {
+          const headers = getResponseHeaders(res);
+
+          for (let i = 0; i < headers.length; i++) {
+            removeResponseHeader(res, headers[i]);
+          }
+        }
+
         const error =
           /** @type {Error & { statusCode: number }} */
           (new Error(message));
         error.statusCode = status;
 
         await goNext(error);
+
+        // need the return for prevent to execute the code below and override the status and body set by user in the next middleware
+        return;
       }
 
       const escapeHtml = getEscapeHtml();
@@ -498,22 +509,29 @@ function wrapper(context) {
      */
     async function processRequest() {
       // Pipe and SendFile
-      /** @type {import("./utils/getFilenameFromUrl").Extra} */
-      const extra = {};
-      const filename = getFilenameFromUrl(
-        context,
-        /** @type {string} */ (getRequestURL(req)),
-        extra,
-      );
+      /** @type {{ filename: string, extra: Extra } | undefined} */
+      let resolved;
 
-      if (extra.errorCode) {
-        if (extra.errorCode === 403) {
-          context.logger.error(`Malicious path "${filename}".`);
+      const requestUrl = /** @type {string} */ (getRequestURL(req));
+
+      try {
+        resolved = getFilenameFromUrl(context, requestUrl);
+      } catch (err) {
+        // Fallback to 403 for unknown errors
+        const errorCode =
+          typeof err === "object" &&
+          err !== null &&
+          typeof (/** @type {FilenameError} */ (err).code) !== "undefined"
+            ? /** @type {FilenameError} */ (err).code
+            : 403;
+
+        if (errorCode === 403) {
+          context.logger.error(`Malicious path "${requestUrl}".`);
         }
 
         await sendError(
-          extra.errorCode === 400 ? "Bad Request" : "Forbidden",
-          extra.errorCode,
+          errorCode === 400 ? "Bad Request" : "Forbidden",
+          errorCode,
           {
             modifyResponseData: context.options.modifyResponseData,
           },
@@ -521,7 +539,7 @@ function wrapper(context) {
         return;
       }
 
-      if (!filename) {
+      if (!resolved) {
         await goNext();
         return;
       }
@@ -531,7 +549,8 @@ function wrapper(context) {
         return;
       }
 
-      const { size } = /** @type {import("fs").Stats} */ (extra.stats);
+      const { extra, filename } = resolved;
+      const { size } = extra.stats;
 
       let len = size;
       let offset = 0;
@@ -571,40 +590,36 @@ function wrapper(context) {
       }
 
       if (!getResponseHeader(res, "Cache-Control")) {
-        // TODO enable the `cacheImmutable` by default for the next major release
-        const cacheControl =
-          context.options.cacheImmutable && extra.immutable
-            ? { immutable: true }
-            : context.options.cacheControl;
+        const { cacheControl, cacheImmutable } = context.options;
 
-        if (cacheControl) {
-          let cacheControlValue;
+        let cacheControlValue;
 
-          if (typeof cacheControl === "boolean") {
-            cacheControlValue = "public, max-age=31536000";
-          } else if (typeof cacheControl === "number") {
-            const maxAge = Math.floor(
-              Math.min(Math.max(0, cacheControl), MAX_MAX_AGE) / 1000,
-            );
+        if (
+          (cacheImmutable === undefined || cacheImmutable) &&
+          extra.immutable
+        ) {
+          cacheControlValue = `public, max-age=${Math.floor(MAX_MAX_AGE / 1000)}, immutable`;
+        } else if (typeof cacheControl === "boolean") {
+          cacheControlValue = `public, max-age=${Math.floor(MAX_MAX_AGE / 1000)}`;
+        } else if (typeof cacheControl === "number") {
+          const maxAge = Math.min(Math.max(0, cacheControl), MAX_MAX_AGE);
+          cacheControlValue = `public, max-age=${Math.floor(maxAge / 1000)}`;
+        } else if (typeof cacheControl === "string") {
+          cacheControlValue = cacheControl;
+        } else if (cacheControl) {
+          const maxAge =
+            cacheControl.maxAge !== undefined
+              ? Math.min(Math.max(0, cacheControl.maxAge), MAX_MAX_AGE)
+              : MAX_MAX_AGE;
 
-            cacheControlValue = `public, max-age=${maxAge}`;
-          } else if (typeof cacheControl === "string") {
-            cacheControlValue = cacheControl;
-          } else {
-            const maxAge = cacheControl.maxAge
-              ? Math.floor(
-                  Math.min(Math.max(0, cacheControl.maxAge), MAX_MAX_AGE) /
-                    1000,
-                )
-              : MAX_MAX_AGE / 1000;
+          cacheControlValue = `public, max-age=${Math.floor(maxAge / 1000)}`;
 
-            cacheControlValue = `public, max-age=${maxAge}`;
-
-            if (cacheControl.immutable) {
-              cacheControlValue += ", immutable";
-            }
+          if (cacheControl.immutable) {
+            cacheControlValue += ", immutable";
           }
+        }
 
+        if (cacheControlValue) {
           setResponseHeader(res, "Cache-Control", cacheControlValue);
         }
       }
@@ -613,9 +628,7 @@ function wrapper(context) {
         context.options.lastModified &&
         !getResponseHeader(res, "Last-Modified")
       ) {
-        const modified =
-          /** @type {import("fs").Stats} */
-          (extra.stats).mtime.toUTCString();
+        const modified = extra.stats.mtime.toUTCString();
 
         setResponseHeader(res, "Last-Modified", modified);
       }
@@ -671,7 +684,7 @@ function wrapper(context) {
         const result = await getETag()(
           isStrongETag
             ? /** @type {Buffer | ReadStream} */ (bufferOrStream)
-            : /** @type {import("fs").Stats} */ (extra.stats),
+            : extra.stats,
         );
 
         // Because we already read stream, we can cache buffer to avoid extra read from fs
@@ -863,6 +876,7 @@ function wrapper(context) {
       // Error handling
       /** @type {import("fs").ReadStream} */
       (bufferOrStream).on("error", (error) => {
+        context.logger.error("Stream error:", error);
         // clean up stream early
         cleanup();
         errorHandler(error);

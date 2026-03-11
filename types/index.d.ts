@@ -94,22 +94,22 @@ export = wdm;
  * @property {boolean=} lastModified options to generate last modified header
  * @property {(boolean | number | string | { maxAge?: number, immutable?: boolean })=} cacheControl options to generate cache headers
  * @property {boolean=} cacheImmutable is cache immutable
+ * @property {boolean=} forwardError forward error to next middleware
  */
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @callback Middleware
- * @param {RequestInternal} req
- * @param {ResponseInternal} res
- * @param {NextFunction} next
+ * @param {RequestInternal} req request
+ * @param {ResponseInternal} res response
+ * @param {NextFunction} next next function
  * @returns {Promise<void>}
  */
 /** @typedef {import("./utils/getFilenameFromUrl").Extra} Extra */
 /**
  * @callback GetFilenameFromUrl
- * @param {string} url
- * @param {Extra=} extra
- * @returns {string | undefined}
+ * @param {string} url request URL
+ * @returns {{ filename: string, extra: Extra } | undefined} a filename with additional information, or `undefined` if nothing is found
  */
 /**
  * @callback WaitUntilValid
@@ -153,6 +153,7 @@ export = wdm;
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @param {boolean} isPlugin true when will use as a plugin, otherwise false
  * @returns {API<RequestInternal, ResponseInternal>} webpack dev middleware
  */
 declare function wdm<
@@ -161,6 +162,7 @@ declare function wdm<
 >(
   compiler: Compiler | MultiCompiler,
   options?: Options<RequestInternal, ResponseInternal> | undefined,
+  isPlugin?: boolean,
 ): API<RequestInternal, ResponseInternal>;
 declare namespace wdm {
   export {
@@ -225,17 +227,19 @@ declare namespace wdm {
 /**
  * @template HapiServer
  * @template {HapiOptions} HapiOptionsInternal
+ * @param {boolean=} usePlugin true when need to use as a plugin, otherwise false
  * @returns {HapiPlugin<HapiServer, HapiOptionsInternal>} hapi wrapper
  */
 declare function hapiWrapper<
   HapiServer,
   HapiOptionsInternal extends HapiOptions,
->(): HapiPlugin<HapiServer, HapiOptionsInternal>;
+>(usePlugin?: boolean | undefined): HapiPlugin<HapiServer, HapiOptionsInternal>;
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @param {boolean=} usePlugin whether to use as webpack plugin
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow wrapper
  */
 declare function koaWrapper<
@@ -244,12 +248,14 @@ declare function koaWrapper<
 >(
   compiler: Compiler | MultiCompiler,
   options?: Options<RequestInternal, ResponseInternal> | undefined,
+  usePlugin?: boolean | undefined,
 ): (ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void;
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @param {boolean=} usePlugin true when need to use as a plugin, otherwise false
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono wrapper
  */
 declare function honoWrapper<
@@ -258,6 +264,7 @@ declare function honoWrapper<
 >(
   compiler: Compiler | MultiCompiler,
   options?: Options<RequestInternal, ResponseInternal> | undefined,
+  usePlugin?: boolean | undefined,
 ): (ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void;
 type Schema = import("schema-utils/declarations/validate").Schema;
 type Compiler = import("webpack").Compiler;
@@ -450,6 +457,10 @@ type Options<
    * is cache immutable
    */
   cacheImmutable?: boolean | undefined;
+  /**
+   * forward error to next middleware
+   */
+  forwardError?: boolean | undefined;
 };
 type Middleware<
   RequestInternal extends IncomingMessage = import("http").IncomingMessage,
@@ -460,10 +471,12 @@ type Middleware<
   next: NextFunction,
 ) => Promise<void>;
 type Extra = import("./utils/getFilenameFromUrl").Extra;
-type GetFilenameFromUrl = (
-  url: string,
-  extra?: Extra | undefined,
-) => string | undefined;
+type GetFilenameFromUrl = (url: string) =>
+  | {
+      filename: string;
+      extra: Extra;
+    }
+  | undefined;
 type WaitUntilValid = (callback: Callback) => any;
 type Invalidate = (callback: Callback) => any;
 type Close = (callback: (err: Error | null | undefined) => void) => any;

@@ -1,8 +1,29 @@
 export = getFilenameFromUrl;
 /**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {import("../index.js").FilledContext<Request, Response>} context context
+ * @param {string} url url
+ * @returns {{ filename: string, extra: Extra } | undefined} result of get filename from url
+ */
+declare function getFilenameFromUrl<
+  Request extends IncomingMessage,
+  Response extends ServerResponse,
+>(
+  context: import("../index.js").FilledContext<Request, Response>,
+  url: string,
+):
+  | {
+      filename: string;
+      extra: Extra;
+    }
+  | undefined;
+declare namespace getFilenameFromUrl {
+  export { FilenameError, IncomingMessage, ServerResponse, Extra };
+}
+/**
  * @typedef {object} Extra
- * @property {import("fs").Stats=} stats stats
- * @property {number=} errorCode error code
+ * @property {import("fs").Stats} stats stats
  * @property {boolean=} immutable true when immutable, otherwise false
  */
 /**
@@ -12,24 +33,13 @@ export = getFilenameFromUrl;
  * @param {string} input
  * @returns {string}
  */
-/**
- * @template {IncomingMessage} Request
- * @template {ServerResponse} Response
- * @param {import("../index.js").FilledContext<Request, Response>} context context
- * @param {string} url url
- * @param {Extra=} extra extra
- * @returns {string | undefined} filename
- */
-declare function getFilenameFromUrl<
-  Request extends IncomingMessage,
-  Response extends ServerResponse,
->(
-  context: import("../index.js").FilledContext<Request, Response>,
-  url: string,
-  extra?: Extra | undefined,
-): string | undefined;
-declare namespace getFilenameFromUrl {
-  export { IncomingMessage, ServerResponse, Extra };
+declare class FilenameError extends Error {
+  /**
+   * @param {string} message message
+   * @param {number=} code error code
+   */
+  constructor(message: string, code?: number | undefined);
+  code: number | undefined;
 }
 type IncomingMessage = import("../index.js").IncomingMessage;
 type ServerResponse = import("../index.js").ServerResponse;
@@ -37,11 +47,7 @@ type Extra = {
   /**
    * stats
    */
-  stats?: import("fs").Stats | undefined;
-  /**
-   * error code
-   */
-  errorCode?: number | undefined;
+  stats: import("fs").Stats;
   /**
    * true when immutable, otherwise false
    */

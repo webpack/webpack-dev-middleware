@@ -3,7 +3,6 @@
   "language": "en,en-gb",
   "words": [
     "memfs",
-    "colorette",
     "noextension",
     "fullhash",
     "execa",
@@ -24,7 +23,8 @@
     "cachable",
     "finalhandler",
     "hono",
-    "rspack"
+    "rspack",
+    "malformed"
   ],
   "ignorePaths": [
     "CHANGELOG.md",
