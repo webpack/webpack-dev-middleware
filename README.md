@@ -477,6 +477,58 @@ instance.waitUntilValid(() => {
 });
 ```
 
+### `plugin(compiler, options)`
+
+Creates middleware instance in plugin mode.
+
+In plugin mode, stats output is written through custom code (i.e. in callback for `watch` or where you are calling `stats.toString(options)`) instead of `console.log`.
+In this case, the `stats` option is not supported because `webpack-dev-middleware` does not have access to the code where the stats will be output.
+You will also need to manually run the `watch` method.
+
+Why do you need this mode? In some cases, you may want to have multiple dev servers or run only one dev server when you have multiple configurations, and this is suitable for you.
+
+```js
+const webpack = require("webpack");
+const middleware = require("webpack-dev-middleware");
+
+const compiler = webpack({
+  plugins: [
+    {
+      apply(compiler) {
+        const devMiddleware = middleware(
+          compiler,
+          {
+            /* webpack-dev-middleware options */
+          },
+          true,
+        );
+      },
+    },
+  ],
+  /* Webpack configuration */
+});
+
+compiler.watch((err, stats) => {
+  if (err) {
+    console.error(err);
+    return;
+  }
+
+  console.log(stats.toString());
+});
+```
+
+### Plugin wrappers
+
+The following wrappers enable plugin mode for framework integrations:
+
+- `middleware(compiler, options, true)` (connect/express like middleware)
+- `middleware.koaWrapper(compiler, options, true)`
+- `middleware.hapiWrapper(true)`
+- `middleware.honoWrapper(compiler, options, true)`
+
+They are equivalent to `koaWrapper`/`hapiWrapper`/`honoWrapper`, but use plugin mode logging behavior.
+
 ### `forwardError`
 
 Type: `boolean`
@@ -722,6 +774,8 @@ const devMiddlewareOptions = {
 const app = new Koa();
 
 app.use(middleware.koaWrapper(compiler, devMiddlewareOptions));
+// Alternative usage (when you want to use as a plugin, i.e. all stats will be printed by other code):
+// app.use(middleware.koaWrapper(compiler, devMiddlewareOptions, true));
 
 app.listen(3000);
 ```
@@ -740,13 +794,23 @@ const devMiddlewareOptions = {};
 const server = Hapi.server({ port: 3000, host: "localhost" });
 
 await server.register({
-  plugin: devMiddleware.hapiPlugin(),
+  plugin: devMiddleware.hapiWrapper(),
   options: {
     // The `compiler` option is required
     compiler,
     ...devMiddlewareOptions,
   },
 });
+
+// Alternative usage (when you want to use as a plugin, i.e. all stats will be printed by other code):
+// await server.register({
+//   plugin: devMiddleware.hapiWrapper(true),
+//   options: {
+//     // The `compiler` option is required
+//     compiler,
+//     ...devMiddlewareOptions,
+//   },
+// });
 
 await server.start();
 
@@ -795,6 +859,9 @@ const devMiddlewareOptions = {
 const app = new Hono();
 
 app.use(devMiddleware.honoWrapper(compiler, devMiddlewareOptions));
+
+// Alternative usage (when you want to use as a plugin, i.e. all stats will be printed by other code):
+// const honoDevMiddleware = devMiddleware.honoWrapper(compiler, devMiddlewareOptions, true)
 
 serve(app);
 ```
