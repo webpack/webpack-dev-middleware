@@ -156,7 +156,7 @@ if (isPlugin) {
       let app;
 
       compiler.hooks.done.tap("webpack-dev-middleware-test", () => {
-        const instance = middleware(compiler, configMiddleware);
+        const instance = middleware(compiler, configMiddleware, true);
 
         app = express();
         app.use(instance);

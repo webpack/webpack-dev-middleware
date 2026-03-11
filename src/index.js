@@ -323,10 +323,10 @@ function wdm(compiler, options = {}, isPlugin = false) {
 /**
  * @template HapiServer
  * @template {HapiOptions} HapiOptionsInternal
- * @param {boolean} usePlugin whether to use as webpack plugin
+ * @param {boolean=} usePlugin true when need to use as a plugin, otherwise false
  * @returns {HapiPlugin<HapiServer, HapiOptionsInternal>} hapi wrapper
  */
-function createHapiWrapper(usePlugin = false) {
+function hapiWrapper(usePlugin = false) {
   return {
     pkg: {
       name: "webpack-dev-middleware",
@@ -397,36 +397,17 @@ function createHapiWrapper(usePlugin = false) {
   };
 }
 
-/**
- * @template HapiServer
- * @template {HapiOptions} HapiOptionsInternal
- * @returns {HapiPlugin<HapiServer, HapiOptionsInternal>} hapi wrapper
- */
-function hapiWrapper() {
-  return createHapiWrapper(false);
-}
-
-/**
- * @template HapiServer
- * @template {HapiOptions} HapiOptionsInternal
- * @returns {HapiPlugin<HapiServer, HapiOptionsInternal>} hapi plugin wrapper
- */
-function hapiPluginWrapper() {
-  return createHapiWrapper(true);
-}
-
 wdm.hapiWrapper = hapiWrapper;
-wdm.hapiPluginWrapper = hapiPluginWrapper;
 
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
- * @param {boolean} usePlugin whether to use as webpack plugin
+ * @param {boolean=} usePlugin whether to use as webpack plugin
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow wrapper
  */
-function createKoaWrapper(compiler, options, usePlugin = false) {
+function koaWrapper(compiler, options, usePlugin) {
   const devMiddleware = wdm(compiler, options, usePlugin);
 
   if (usePlugin) {
@@ -542,40 +523,17 @@ function createKoaWrapper(compiler, options, usePlugin = false) {
   return webpackDevMiddleware;
 }
 
-/**
- * @template {IncomingMessage} [RequestInternal=IncomingMessage]
- * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @param {Compiler | MultiCompiler} compiler compiler
- * @param {Options<RequestInternal, ResponseInternal>=} options options
- * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow wrapper
- */
-function koaWrapper(compiler, options) {
-  return createKoaWrapper(compiler, options, false);
-}
-
-/**
- * @template {IncomingMessage} [RequestInternal=IncomingMessage]
- * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @param {Compiler | MultiCompiler} compiler compiler
- * @param {Options<RequestInternal, ResponseInternal>=} options options
- * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow plugin wrapper
- */
-function koaPluginWrapper(compiler, options) {
-  return createKoaWrapper(compiler, options, true);
-}
-
 wdm.koaWrapper = koaWrapper;
-wdm.koaPluginWrapper = koaPluginWrapper;
 
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
- * @param {boolean} usePlugin whether to use as webpack plugin
+ * @param {boolean=} usePlugin true when need to use as a plugin, otherwise false
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono wrapper
  */
-function createHonoWrapper(compiler, options, usePlugin = false) {
+function honoWrapper(compiler, options, usePlugin) {
   const devMiddleware = wdm(compiler, options, usePlugin);
 
   /**
@@ -743,42 +701,6 @@ function createHonoWrapper(compiler, options, usePlugin = false) {
   return webpackDevMiddleware;
 }
 
-/**
- * @template {IncomingMessage} [RequestInternal=IncomingMessage]
- * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @param {Compiler | MultiCompiler} compiler compiler
- * @param {Options<RequestInternal, ResponseInternal>=} options options
- * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono wrapper
- */
-function honoWrapper(compiler, options) {
-  return createHonoWrapper(compiler, options, false);
-}
-
-/**
- * @template {IncomingMessage} [RequestInternal=IncomingMessage]
- * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @param {Compiler | MultiCompiler} compiler compiler
- * @param {Options<RequestInternal, ResponseInternal>=} options options
- * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono plugin wrapper
- */
-function honoPluginWrapper(compiler, options) {
-  return createHonoWrapper(compiler, options, true);
-}
-
 wdm.honoWrapper = honoWrapper;
-wdm.honoPluginWrapper = honoPluginWrapper;
-
-/**
- * @template {IncomingMessage} [RequestInternal=IncomingMessage]
- * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @param {Compiler | MultiCompiler} compiler compiler
- * @param {Options<RequestInternal, ResponseInternal>=} options options
- * @returns {API<RequestInternal, ResponseInternal>} webpack dev middleware
- */
-function plugin(compiler, options = {}) {
-  return wdm(compiler, options, true);
-}
-
-wdm.plugin = plugin;
 
 module.exports = wdm;
