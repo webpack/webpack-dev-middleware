@@ -14,8 +14,9 @@
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
  * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context context
+ * @param {boolean=} isPlugin true when it is a plugin usage, otherwise false
  */
-function setupHooks(context) {
+function setupHooks(context, isPlugin) {
   /**
    * @returns {void}
    */
@@ -66,7 +67,7 @@ function setupHooks(context) {
       }
 
       // For plugin support we should print nothing, because webpack/webpack-cli/webpack-dev-server will print them on using `stats.toString()`
-      if (!context.isPlugin) {
+      if (!isPlugin) {
         logger.log("Compilation finished");
 
         const isMultiCompilerMode = Boolean(

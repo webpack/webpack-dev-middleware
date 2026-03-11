@@ -492,9 +492,13 @@ const compiler = webpack({
   plugins: [
     {
       apply(compiler) {
-        const devMiddleware = middleware.plugin(compiler, {
-          /* webpack-dev-middleware options */
-        });
+        const devMiddleware = middleware(
+          compiler,
+          {
+            /* webpack-dev-middleware options */
+          },
+          true,
+        );
       },
     },
   ],
@@ -515,12 +519,12 @@ compiler.watch((err, stats) => {
 
 The following wrappers enable plugin mode for framework integrations:
 
-- `middleware.koaPluginWrapper(compiler, options)`
-- `middleware.hapiPluginWrapper()`
-- `middleware.honoPluginWrapper(compiler, options)`
+- `middleware(compiler, options, true)` (connect/express like middleware)
+- `middleware.koaWrapper(compiler, options, true)`
+- `middleware.hapiWrapper(true)`
+- `middleware.honoWrapper(compiler, options, true)`
 
-They are equivalent to `koaWrapper`/`hapiWrapper`/`honoWrapper`, but use plugin
-mode logging behavior.
+They are equivalent to `koaWrapper`/`hapiWrapper`/`honoWrapper`, but use plugin mode logging behavior.
 
 ### `forwardError`
 
@@ -768,7 +772,7 @@ const app = new Koa();
 
 app.use(middleware.koaWrapper(compiler, devMiddlewareOptions));
 // Alternative usage (when you want to use as a plugin, i.e. all stats will be printed by other code):
-// app.use(middleware.koaPluginWrapper(compiler, devMiddlewareOptions));
+// app.use(middleware.koaWrapper(compiler, devMiddlewareOptions, true));
 
 app.listen(3000);
 ```
@@ -797,7 +801,7 @@ await server.register({
 
 // Alternative usage (when you want to use as a plugin, i.e. all stats will be printed by other code):
 // await server.register({
-//   plugin: devMiddleware.hapiPluginWrapper(),
+//   plugin: devMiddleware.hapiWrapper(true),
 //   options: {
 //     // The `compiler` option is required
 //     compiler,
@@ -854,7 +858,7 @@ const app = new Hono();
 app.use(devMiddleware.honoWrapper(compiler, devMiddlewareOptions));
 
 // Alternative usage (when you want to use as a plugin, i.e. all stats will be printed by other code):
-// const honoDevMiddleware = devMiddleware.honoPluginWrapper(compiler, devMiddlewareOptions)
+// const honoDevMiddleware = devMiddleware.honoWrapper(compiler, devMiddlewareOptions, true)
 
 serve(app);
 ```

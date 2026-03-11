@@ -116,7 +116,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it("should logging on successfully build and respect colors", (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.stats-colors-true.config.js",
@@ -154,7 +154,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it("should logging on successfully build and respect colors #2", (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.stats-colors-false.config.js",
@@ -192,7 +192,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it("should logging on successfully build when the 'stats' doesn't exist", (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.no-stats.config.js",
@@ -230,7 +230,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully build and respect the "stats" option from configuration with the "none" value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.stats-none.config.js",
@@ -266,7 +266,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully build and respect the "stats" option from configuration with the "minimal" value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.stats-minimal.config",
@@ -304,7 +304,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully build and respect the "stats" option from configuration with the "verbose" value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.stats-verbose.config",
@@ -342,7 +342,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully build and respect the "stats" option from configuration with the "true" value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.stats-true.config",
@@ -380,7 +380,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully build and respect the "stats" option from configuration with the "false" value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.stats-false.config",
@@ -416,7 +416,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully build and respect the "stats" option from configuration with custom object value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.stats-object.config",
@@ -454,7 +454,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it("should logging on successfully build in multi-compiler mode", (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.array.config",
@@ -492,7 +492,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it("should logging on unsuccessful build", (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.error.config",
@@ -530,7 +530,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it("should logging on unsuccessful build in multi-compiler", (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.array.error.config",
@@ -568,7 +568,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it("should logging an warning", (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.warning.config",
@@ -606,7 +606,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it("should logging warnings in multi-compiler mode", (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.array.warning.config",
@@ -644,7 +644,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging in multi-compiler and respect the "stats" option from configuration', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.array.one-error-one-warning-one-success",
@@ -682,7 +682,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging in multi-compiler and respect the "stats" option from configuration #2', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG:
@@ -721,7 +721,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging in multi-compiler and respect the "stats" option from configuration #3', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.array.one-error-one-warning-one-no",
@@ -759,7 +759,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging in multi-compiler and respect the "stats" option from configuration #4', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.array.one-error-one-warning-one-object",
@@ -797,7 +797,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging in multi-compiler and respect the "stats" option from configuration #5', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.array.dev-server-false",
@@ -835,7 +835,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging an error in "watch" method', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_BREAK_WATCH: true,
@@ -870,7 +870,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       fs.mkdirSync(outputDir, { recursive: true });
       fs.chmodSync(outputDir, 0o400);
 
-      const proc = execa(runner, [], {
+      const proc = execa(runner, args, {
         stdio: "pipe",
         env: {
           WEBPACK_CONFIG: "webpack.simple.config",
@@ -904,7 +904,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   }
 
   it('should logging on successfully build using the "stats" option for middleware with the "true" value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.config",
@@ -943,7 +943,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully build using the "stats" option for middleware with the "false" value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.config",
@@ -981,7 +981,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully build using the "stats" option for middleware with the "none" value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.config",
@@ -1019,7 +1019,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully build using the "stats" option for middleware with the "normal" value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.config",
@@ -1058,7 +1058,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully build using the "stats" option for middleware with the "verbose" value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.config",
@@ -1097,7 +1097,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully build using the "stats" option for middleware with object value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.config",
@@ -1136,7 +1136,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully build using the "stats" option for middleware with the object value and colors', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.config",
@@ -1175,7 +1175,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully build using the "stats" option for middleware with object value and no colors', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.config",
@@ -1214,7 +1214,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully multi-compiler build using the "stats" option for middleware with the "true" value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.array.config",
@@ -1253,7 +1253,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully multi-compiler build using the "stats" option for middleware with the "false" value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.array.config",
@@ -1291,7 +1291,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully multi-compiler build using the "stats" option for middleware with the "normal" value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.array.config",
@@ -1330,7 +1330,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully multi-compiler build using the "stats" option for middleware with the object value', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.array.config",
@@ -1369,7 +1369,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully multi-compiler build using the "stats" option for middleware with object value and colors', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.array.config",
@@ -1408,7 +1408,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully multi-compiler build using the "stats" option for middleware with object value and no colors', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.array.config",
@@ -1447,7 +1447,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   it('should logging on successfully build and respect the "NO_COLOR" env', (done) => {
-    const proc = execa(runner, [], {
+    const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
         WEBPACK_CONFIG: "webpack.config",

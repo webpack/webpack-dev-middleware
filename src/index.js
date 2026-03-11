@@ -90,7 +90,6 @@ const noop = () => {};
  * @property {Watching | MultiWatching | undefined} watching watching
  * @property {Logger} logger logger
  * @property {OutputFileSystem} outputFileSystem output file system
- * @property {boolean} isPlugin whether wdm is used as webpack plugin
  */
 
 /**
@@ -226,10 +225,9 @@ function wdm(compiler, options = {}, isPlugin = false) {
     options,
     compiler,
     logger: compiler.getInfrastructureLogger("webpack-dev-middleware"),
-    isPlugin: false,
   };
 
-  setupHooks(context);
+  setupHooks(context, isPlugin);
 
   if (options.writeToDisk) {
     setupWriteToDisk(context);
@@ -342,11 +340,6 @@ function hapiWrapper(usePlugin = false) {
 
       const devMiddleware = wdm(compiler, rest, usePlugin);
 
-      if (usePlugin) {
-        // Use logger when used as webpack plugin
-        devMiddleware.context.isPlugin = true;
-      }
-
       // @ts-expect-error
       if (!server.decorations.server.includes("webpackDevMiddleware")) {
         // @ts-expect-error
@@ -409,10 +402,6 @@ wdm.hapiWrapper = hapiWrapper;
  */
 function koaWrapper(compiler, options, usePlugin) {
   const devMiddleware = wdm(compiler, options, usePlugin);
-
-  if (usePlugin) {
-    devMiddleware.context.isPlugin = true;
-  }
 
   /**
    * @param {{ req: RequestInternal, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse, status: number, body: string | Buffer | import("fs").ReadStream | { message: string }, state: object }} ctx context
