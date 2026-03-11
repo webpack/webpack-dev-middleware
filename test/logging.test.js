@@ -457,7 +457,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
-        WEBPACK_CONFIG: "webpack.array.config",
+        WEBPACK_CONFIG: "webpack.array.logging.config.js",
         FORCE_COLOR: true,
       },
     });
@@ -800,7 +800,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
-        WEBPACK_CONFIG: "webpack.array.dev-server-false",
+        WEBPACK_CONFIG: "webpack.array.dev-server-false-logging",
         FORCE_COLOR: true,
       },
     });
@@ -1217,7 +1217,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
-        WEBPACK_CONFIG: "webpack.array.config",
+        WEBPACK_CONFIG: "webpack.array.logging.config.js",
         WMC_stats: true,
         FORCE_COLOR: true,
       },
@@ -1256,7 +1256,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
-        WEBPACK_CONFIG: "webpack.array.config",
+        WEBPACK_CONFIG: "webpack.array.logging.config.js",
         WMC_stats: false,
         FORCE_COLOR: true,
       },
@@ -1294,7 +1294,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
-        WEBPACK_CONFIG: "webpack.array.config",
+        WEBPACK_CONFIG: "webpack.array.logging.config.js",
         WMC_stats: "normal",
         FORCE_COLOR: true,
       },
@@ -1333,7 +1333,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
-        WEBPACK_CONFIG: "webpack.array.config",
+        WEBPACK_CONFIG: "webpack.array.logging.config.js",
         WEBPACK_DEV_MIDDLEWARE_STATS: "object",
         FORCE_COLOR: true,
       },
@@ -1372,7 +1372,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
-        WEBPACK_CONFIG: "webpack.array.config",
+        WEBPACK_CONFIG: "webpack.array.logging.config.js",
         WEBPACK_DEV_MIDDLEWARE_STATS: "object_colors_true",
         FORCE_COLOR: true,
       },
@@ -1411,7 +1411,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
-        WEBPACK_CONFIG: "webpack.array.config",
+        WEBPACK_CONFIG: "webpack.array.logging.config.js",
         WEBPACK_DEV_MIDDLEWARE_STATS: "object_colors_false",
         FORCE_COLOR: true,
       },

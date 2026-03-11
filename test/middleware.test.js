@@ -3766,23 +3766,17 @@ describe.each([
           }
         });
 
-        // TODO: why koa and hono don't catch for their error handling when stream emit error?
-        (name === "koa" || name === "hono" ? it.skip : it)(
-          'should return the "500" code for the "GET" request to the "image.svg" file when it throws a reading error',
-          async () => {
-            const response = await req.get("/image.svg");
+        it('should return the "500" code for the "GET" request to the "image.svg" file when it throws a reading error', async () => {
+          const response = await req.get("/image.svg");
 
-            // eslint-disable-next-line jest/no-standalone-expect
-            expect(response.statusCode).toBe(500);
-            if (name !== "hapi") {
-              // eslint-disable-next-line jest/no-standalone-expect
-              expect(nextWasCalled).toBe(true);
-            } else {
-              // eslint-disable-next-line jest/no-standalone-expect
-              expect(nextWasCalled).toBe(false);
-            }
-          },
-        );
+          expect(response.statusCode).toBe(500);
+
+          if (name !== "hapi") {
+            expect(nextWasCalled).toBe(true);
+          } else {
+            expect(nextWasCalled).toBe(false);
+          }
+        });
 
         it('should return the "200" code for the "HEAD" request to the bundle file', async () => {
           const response = await req.head("/file.text");
