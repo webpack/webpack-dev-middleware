@@ -10,6 +10,8 @@ const defaultConfig = require("../fixtures/webpack.config");
 const configEntries = [];
 const configMiddlewareEntries = [];
 
+const isPlugin = process.argv.includes("--plugin");
+
 /**
  * @param {string} NSKey NSKey
  * @param {string[]} accumulator accumulator
@@ -89,21 +91,6 @@ if (Array.isArray(config)) {
   config.parallelism = 1;
 }
 
-const compiler = webpack(config);
-
-if (process.env.WEBPACK_BREAK_WATCH) {
-  compiler.watch = function watch() {
-    const error = new Error("Watch error");
-    error.code = "watch error";
-
-    throw error;
-  };
-}
-
-compiler.hooks.done.tap("plugin-test", () => {
-  process.stdout.write("compiled-for-tests");
-});
-
 switch (process.env.WEBPACK_DEV_MIDDLEWARE_STATS) {
   case "object":
     configMiddleware.stats = { all: false, assets: true };
@@ -118,39 +105,148 @@ switch (process.env.WEBPACK_DEV_MIDDLEWARE_STATS) {
   // Nothing
 }
 
-const instance = middleware(compiler, configMiddleware);
-const app = express();
+let commands = [];
+let incompleteCommand = "";
 
-app.use(instance);
-app.listen((error) => {
-  if (error) {
-    throw error;
+const handleStdin = (chunk) => {
+  const entries = chunk.toString().split("|");
+
+  incompleteCommand += entries.shift();
+  commands.push(incompleteCommand);
+  incompleteCommand = entries.pop();
+  commands = [...commands, ...entries];
+
+  while (commands.length > 0) {
+    switch (commands.shift()) {
+      // case 'invalidate':
+      //   stdinInput = '';
+      //   instance.waitUntilValid(() => {
+      //     instance.invalidate();
+      //   });
+      //   break;
+      case "exit":
+        // eslint-disable-next-line n/no-process-exit
+        process.exit();
+        break;
+    }
+  }
+};
+
+/**
+ * @param {import("webpack").Compiler} compiler compiler
+ * @param {import("webpack").StatsOptions} statsOptions stats options
+ * @returns {{ preset: string }} normalized stats
+ */
+function normalizeStatsOptions(compiler, statsOptions) {
+  if (typeof statsOptions === "undefined") {
+    statsOptions = { preset: "normal" };
+  } else if (typeof statsOptions === "boolean") {
+    statsOptions = statsOptions ? { preset: "normal" } : { preset: "none" };
+  } else if (typeof statsOptions === "string") {
+    statsOptions = { preset: statsOptions };
   }
 
-  let commands = [];
-  let incompleteCommand = "";
+  if (typeof statsOptions.colors === "undefined") {
+    statsOptions.colors = compiler.webpack.cli.isColorSupported();
+  }
 
-  process.stdin.on("data", (chunk) => {
-    const entries = chunk.toString().split("|");
+  // Just for test, in the real world webpack-dev-middleware doesn't support stats options as a plugin
+  switch (process.env.WEBPACK_DEV_MIDDLEWARE_STATS) {
+    case "object_colors_true":
+      statsOptions.colors = true;
+      break;
+    case "object_colors_false":
+      statsOptions.colors = false;
+      break;
+  }
 
-    incompleteCommand += entries.shift();
-    commands.push(incompleteCommand);
-    incompleteCommand = entries.pop();
-    commands = [...commands, ...entries];
+  return statsOptions;
+}
 
-    while (commands.length > 0) {
-      switch (commands.shift()) {
-        // case 'invalidate':
-        //   stdinInput = '';
-        //   instance.waitUntilValid(() => {
-        //     instance.invalidate();
-        //   });
-        //   break;
-        case "exit":
-          // eslint-disable-next-line n/no-process-exit
-          process.exit();
-          break;
-      }
-    }
+/**
+ * @param {import("webpack").Configuration} config configuration
+ * @returns {import("webpack").Configuration} configuration with the test plugin
+ */
+function addPlugin(config) {
+  if (!config.plugins) config.plugins = [];
+
+  config.plugins.push({
+    apply(compiler) {
+      let app;
+
+      compiler.hooks.done.tap("webpack-dev-middleware-test", () => {
+        const instance = middleware(compiler, configMiddleware, true);
+
+        app = express();
+        app.use(instance);
+        app.listen((error) => {
+          if (error) {
+            throw error;
+          }
+
+          process.stdin.on("data", handleStdin);
+        });
+      });
+    },
   });
-});
+
+  return config;
+}
+
+if (isPlugin) {
+  const isMultiCompiler = Array.isArray(config);
+
+  const compiler = webpack(
+    isMultiCompiler ? config.map((item) => addPlugin(item)) : addPlugin(config),
+  );
+
+  compiler.watch({}, (err, stats) => {
+    if (err) {
+      throw err;
+    }
+
+    if (process.env.WEBPACK_BREAK_WATCH) {
+      const error = new Error("Watch error");
+      error.code = "watch error";
+
+      throw error;
+    }
+
+    const statsOptions = isMultiCompiler
+      ? {
+          children: config.map((config, idx) =>
+            normalizeStatsOptions(compiler.compilers[idx], config.stats),
+          ),
+        }
+      : normalizeStatsOptions(compiler, config.stats);
+
+    process.stdout.write("compiled-for-tests");
+    process.stdout.write(stats.toString(statsOptions));
+  });
+} else {
+  const compiler = webpack(config);
+
+  if (process.env.WEBPACK_BREAK_WATCH) {
+    compiler.watch = function watch() {
+      const error = new Error("Watch error");
+      error.code = "watch error";
+
+      throw error;
+    };
+  }
+
+  compiler.hooks.done.tap("plugin-test", () => {
+    process.stdout.write("compiled-for-tests");
+  });
+  const instance = middleware(compiler, configMiddleware);
+  const app = express();
+
+  app.use(instance);
+  app.listen((error) => {
+    if (error) {
+      throw error;
+    }
+
+    process.stdin.on("data", handleStdin);
+  });
+}

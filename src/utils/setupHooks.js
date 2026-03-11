@@ -14,8 +14,9 @@
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
  * @param {import("../index.js").WithOptional<import("../index.js").Context<Request, Response>, "watching" | "outputFileSystem">} context context
+ * @param {boolean=} isPlugin true when it is a plugin usage, otherwise false
  */
-function setupHooks(context) {
+function setupHooks(context, isPlugin) {
   /**
    * @returns {void}
    */
@@ -54,7 +55,6 @@ function setupHooks(context) {
     // We are now on valid state
 
     context.state = true;
-
     context.stats = stats;
 
     // Do the stuff in nextTick, because bundle may be invalidated if a change happened while compiling
@@ -66,80 +66,85 @@ function setupHooks(context) {
         return;
       }
 
-      logger.log("Compilation finished");
+      // For plugin support we should print nothing, because webpack/webpack-cli/webpack-dev-server will print them on using `stats.toString()`
+      if (!isPlugin) {
+        logger.log("Compilation finished");
 
-      const isMultiCompilerMode = Boolean(
-        /** @type {MultiCompiler} */
-        (compiler).compilers,
-      );
-
-      /**
-       * @type {StatsOptions | MultiStatsOptions | undefined}
-       */
-      let statsOptions;
-
-      if (typeof options.stats !== "undefined") {
-        statsOptions = isMultiCompilerMode
-          ? {
-              children:
-                /** @type {MultiCompiler} */
-                (compiler).compilers.map(() => options.stats),
-            }
-          : options.stats;
-      } else {
-        statsOptions = isMultiCompilerMode
-          ? {
-              children:
-                /** @type {MultiCompiler} */
-                (compiler).compilers.map((child) => child.options.stats),
-            }
-          : /** @type {Compiler} */ (compiler).options.stats;
-      }
-
-      if (isMultiCompilerMode) {
-        /** @type {MultiStatsOptions} */
-        (statsOptions).children =
-          /** @type {MultiStatsOptions} */
-          (statsOptions).children.map(
-            /**
-             * @param {StatsOptions} childStatsOptions child stats options
-             * @returns {StatsObjectOptions} object child stats options
-             */
-            (childStatsOptions) => {
-              childStatsOptions = normalizeStatsOptions(childStatsOptions);
-
-              if (typeof childStatsOptions.colors === "undefined") {
-                const [firstCompiler] =
-                  /** @type {MultiCompiler} */
-                  (compiler).compilers;
-
-                childStatsOptions.colors =
-                  firstCompiler.webpack.cli.isColorSupported();
-              }
-
-              return childStatsOptions;
-            },
-          );
-      } else {
-        statsOptions = normalizeStatsOptions(
-          /** @type {StatsOptions} */ (statsOptions),
+        const isMultiCompilerMode = Boolean(
+          /** @type {MultiCompiler} */
+          (compiler).compilers,
         );
 
-        if (typeof statsOptions.colors === "undefined") {
-          const { compiler } = /** @type {{ compiler: Compiler }} */ (context);
-          statsOptions.colors = compiler.webpack.cli.isColorSupported();
+        /**
+         * @type {StatsOptions | MultiStatsOptions | undefined}
+         */
+        let statsOptions;
+
+        if (typeof options.stats !== "undefined") {
+          statsOptions = isMultiCompilerMode
+            ? {
+                children:
+                  /** @type {MultiCompiler} */
+                  (compiler).compilers.map(() => options.stats),
+              }
+            : options.stats;
+        } else {
+          statsOptions = isMultiCompilerMode
+            ? {
+                children:
+                  /** @type {MultiCompiler} */
+                  (compiler).compilers.map((child) => child.options.stats),
+              }
+            : /** @type {Compiler} */ (compiler).options.stats;
         }
-      }
 
-      const printedStats = stats.toString(
-        /** @type {StatsObjectOptions} */
-        (statsOptions),
-      );
+        if (isMultiCompilerMode) {
+          /** @type {MultiStatsOptions} */
+          (statsOptions).children =
+            /** @type {MultiStatsOptions} */
+            (statsOptions).children.map(
+              /**
+               * @param {StatsOptions} childStatsOptions child stats options
+               * @returns {StatsObjectOptions} object child stats options
+               */
+              (childStatsOptions) => {
+                childStatsOptions = normalizeStatsOptions(childStatsOptions);
 
-      // Avoid extra empty line when `stats: 'none'`
-      if (printedStats) {
-        // eslint-disable-next-line no-console
-        console.log(printedStats);
+                if (typeof childStatsOptions.colors === "undefined") {
+                  const [firstCompiler] =
+                    /** @type {MultiCompiler} */
+                    (compiler).compilers;
+
+                  childStatsOptions.colors =
+                    firstCompiler.webpack.cli.isColorSupported();
+                }
+
+                return childStatsOptions;
+              },
+            );
+        } else {
+          statsOptions = normalizeStatsOptions(
+            /** @type {StatsOptions} */ (statsOptions),
+          );
+
+          if (typeof statsOptions.colors === "undefined") {
+            const { compiler } = /** @type {{ compiler: Compiler }} */ (
+              context
+            );
+            statsOptions.colors = compiler.webpack.cli.isColorSupported();
+          }
+        }
+
+        const printedStats = stats.toString(
+          /** @type {StatsObjectOptions} */
+          (statsOptions),
+        );
+
+        // Avoid extra empty line when `stats: 'none'`
+        if (printedStats) {
+          // eslint-disable-next-line no-console
+          console.log(printedStats);
+        }
       }
 
       context.callbacks = [];

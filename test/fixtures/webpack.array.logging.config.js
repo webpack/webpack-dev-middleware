@@ -6,26 +6,11 @@ module.exports = [
   {
     mode: 'development',
     context: path.resolve(__dirname),
-    entry: './bar.js',
-    output: {
-      filename: 'bundle.js',
-      path: path.resolve(__dirname, '../outputs/dev-server-false/js3'),
-      publicPath: '/static-one/',
-    },
-    infrastructureLogging: {
-      level: 'none'
-    },
-    stats: 'normal',
-    devServer: false,
-  },
-  {
-    mode: 'development',
-    context: path.resolve(__dirname),
     entry: './foo.js',
     output: {
       filename: 'bundle.js',
-      path: path.resolve(__dirname, '../outputs/dev-server-false/js4'),
-      publicPath: '/static-two/',
+      path: path.resolve(__dirname, '../outputs/array-logging/js1'),
+      publicPath: '/static-one/',
     },
     module: {
       rules: [
@@ -40,5 +25,19 @@ module.exports = [
       level: 'none'
     },
     stats: 'normal'
-  }
+  },
+  {
+    mode: 'development',
+    context: path.resolve(__dirname),
+    entry: './bar.js',
+    output: {
+      filename: 'bundle.js',
+      path: path.resolve(__dirname, '../outputs/array-logging/js2'),
+      publicPath: '/static-two/',
+    },
+    infrastructureLogging: {
+      level: 'none'
+    },
+    stats: 'normal'
+  },
 ];

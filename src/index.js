@@ -195,9 +195,10 @@ const noop = () => {};
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @param {boolean} isPlugin true when will use as a plugin, otherwise false
  * @returns {API<RequestInternal, ResponseInternal>} webpack dev middleware
  */
-function wdm(compiler, options = {}) {
+function wdm(compiler, options = {}, isPlugin = false) {
   validate(/** @type {Schema} */ (schema), options, {
     name: "Dev Middleware",
     baseDataPath: "options",
@@ -219,7 +220,6 @@ function wdm(compiler, options = {}) {
    */
   const context = {
     state: false,
-
     stats: undefined,
     callbacks: [],
     options,
@@ -227,7 +227,7 @@ function wdm(compiler, options = {}) {
     logger: compiler.getInfrastructureLogger("webpack-dev-middleware"),
   };
 
-  setupHooks(context);
+  setupHooks(context, isPlugin);
 
   if (typeof options.writeToDisk === "function") {
     setupWriteToDisk(context);
@@ -236,36 +236,38 @@ function wdm(compiler, options = {}) {
   setupOutputFileSystem(context);
 
   // Start watching
-  if (/** @type {Compiler} */ (context.compiler).watching) {
-    context.watching = /** @type {Compiler} */ (context.compiler).watching;
-  } else {
-    /**
-     * @param {Error | null | undefined} error error
-     */
-    const errorHandler = (error) => {
-      if (error) {
-        // TODO: improve that in future
-        // For example - `writeToDisk` can throw an error and right now it is ends watching.
-        // We can improve that and keep watching active, but it is require API on webpack side.
-        // Let's implement that in webpack@5 because it is rare case.
-        context.logger.error(error);
-      }
-    };
-
-    if (
-      Array.isArray(/** @type {MultiCompiler} */ (context.compiler).compilers)
-    ) {
-      const compilers = /** @type {MultiCompiler} */ (context.compiler);
-      const watchOptions = compilers.compilers.map(
-        (childCompiler) => childCompiler.options.watchOptions || {},
-      );
-
-      context.watching = compiler.watch(watchOptions, errorHandler);
+  if (!isPlugin) {
+    if (/** @type {Compiler} */ (context.compiler).watching) {
+      context.watching = /** @type {Compiler} */ (context.compiler).watching;
     } else {
-      const oneCompiler = /** @type {Compiler} */ (context.compiler);
-      const watchOptions = oneCompiler.options.watchOptions || {};
+      /**
+       * @param {Error | null | undefined} error error
+       */
+      const errorHandler = (error) => {
+        if (error) {
+          // TODO: improve that in future
+          // For example - `writeToDisk` can throw an error and right now it is ends watching.
+          // We can improve that and keep watching active, but it is require API on webpack side.
+          // Let's implement that in webpack@5 because it is rare case.
+          context.logger.error(error);
+        }
+      };
 
-      context.watching = compiler.watch(watchOptions, errorHandler);
+      if (
+        Array.isArray(/** @type {MultiCompiler} */ (context.compiler).compilers)
+      ) {
+        const compilers = /** @type {MultiCompiler} */ (context.compiler);
+        const watchOptions = compilers.compilers.map(
+          (childCompiler) => childCompiler.options.watchOptions || {},
+        );
+
+        context.watching = compiler.watch(watchOptions, errorHandler);
+      } else {
+        const oneCompiler = /** @type {Compiler} */ (context.compiler);
+        const watchOptions = oneCompiler.options.watchOptions || {};
+
+        context.watching = compiler.watch(watchOptions, errorHandler);
+      }
     }
   }
 
@@ -319,9 +321,10 @@ function wdm(compiler, options = {}) {
 /**
  * @template HapiServer
  * @template {HapiOptions} HapiOptionsInternal
+ * @param {boolean=} usePlugin true when need to use as a plugin, otherwise false
  * @returns {HapiPlugin<HapiServer, HapiOptionsInternal>} hapi wrapper
  */
-function hapiWrapper() {
+function hapiWrapper(usePlugin = false) {
   return {
     pkg: {
       name: "webpack-dev-middleware",
@@ -335,7 +338,7 @@ function hapiWrapper() {
         throw new Error("The compiler options is required.");
       }
 
-      const devMiddleware = wdm(compiler, rest);
+      const devMiddleware = wdm(compiler, rest, usePlugin);
 
       // @ts-expect-error
       if (!server.decorations.server.includes("webpackDevMiddleware")) {
@@ -394,10 +397,11 @@ wdm.hapiWrapper = hapiWrapper;
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @param {boolean=} usePlugin whether to use as webpack plugin
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow wrapper
  */
-function koaWrapper(compiler, options) {
-  const devMiddleware = wdm(compiler, options);
+function koaWrapper(compiler, options, usePlugin) {
+  const devMiddleware = wdm(compiler, options, usePlugin);
 
   /**
    * @param {{ req: RequestInternal, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse, status: number, body: string | Buffer | import("fs").ReadStream | { message: string }, state: object }} ctx context
@@ -439,11 +443,32 @@ function koaWrapper(compiler, options) {
            * @param {import("fs").ReadStream} stream readable stream
            */
           res.stream = (stream) => {
-            ctx.body = stream;
+            let resolved = false;
 
-            isFinished = true;
+            /**
+             * @param {Error=} err error
+             */
+            const onEvent = (err) => {
+              if (resolved) return;
+              resolved = true;
 
-            resolve();
+              stream.removeListener("error", onEvent);
+              stream.removeListener("readable", onEvent);
+
+              if (err) {
+                reject(err);
+                return;
+              }
+
+              ctx.body = stream;
+              isFinished = true;
+              resolve();
+            };
+
+            stream.once("error", onEvent);
+            stream.once("readable", onEvent);
+            // Empty stream
+            stream.once("end", onEvent);
           };
           /**
            * @param {string | Buffer} data data
@@ -515,10 +540,11 @@ wdm.koaWrapper = koaWrapper;
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @param {boolean=} usePlugin true when need to use as a plugin, otherwise false
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono wrapper
  */
-function honoWrapper(compiler, options) {
-  const devMiddleware = wdm(compiler, options);
+function honoWrapper(compiler, options, usePlugin) {
+  const devMiddleware = wdm(compiler, options, usePlugin);
 
   /**
    * @param {{ env: EXPECTED_ANY, body: EXPECTED_ANY, json: EXPECTED_ANY, status: EXPECTED_ANY, set: EXPECTED_ANY, req: RequestInternal & import("./utils/compatibleAPI").ExpectedIncomingMessage & { header: (name: string) => string }, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse & { headers: EXPECTED_ANY, status: EXPECTED_ANY } }} context context
