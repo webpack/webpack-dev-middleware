@@ -644,13 +644,13 @@ function honoWrapper(compiler, options, usePlugin) {
             /**
              * @param {Error=} err err
              */
-            const done = (err) => {
+            const onEvent = (err) => {
               if (isResolved) return;
               isResolved = true;
 
-              stream.removeListener("error", done);
-              stream.removeListener("readable", done);
-              stream.removeListener("end", done);
+              stream.removeListener("error", onEvent);
+              stream.removeListener("readable", onEvent);
+              stream.removeListener("end", onEvent);
 
               if (err) {
                 stream.destroy();
@@ -663,10 +663,14 @@ function honoWrapper(compiler, options, usePlugin) {
               resolve();
             };
 
-            stream.once("error", done);
-            stream.once("readable", done);
+            stream.once("error", onEvent);
+            stream.once("readable", onEvent);
             // Empty stream
-            stream.once("end", done);
+            stream.once("end", onEvent);
+
+            if (stream.pending === false) {
+              onEvent();
+            }
           };
 
           /**
