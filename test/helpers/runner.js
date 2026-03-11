@@ -133,10 +133,11 @@ const handleStdin = (chunk) => {
 };
 
 /**
+ * @param {import("webpack").Compiler} compiler compiler
  * @param {import("webpack").StatsOptions} statsOptions stats options
  * @returns {{ preset: string }} normalized stats
  */
-function normalizeStatsOptions(statsOptions) {
+function normalizeStatsOptions(compiler, statsOptions) {
   if (typeof statsOptions === "undefined") {
     statsOptions = { preset: "normal" };
   } else if (typeof statsOptions === "boolean") {
@@ -145,10 +146,28 @@ function normalizeStatsOptions(statsOptions) {
     statsOptions = { preset: statsOptions };
   }
 
+  if (typeof statsOptions.colors === "undefined") {
+    statsOptions.colors = compiler.webpack.cli.isColorSupported();
+  }
+
+  // Just for test, in the real world webpack-dev-middleware doesn't support stats options as a plugin
+  switch (process.env.WEBPACK_DEV_MIDDLEWARE_STATS) {
+    case "object_colors_true":
+      statsOptions.colors = true;
+      break;
+    case "object_colors_false":
+      statsOptions.colors = false;
+      break;
+  }
+
   return statsOptions;
 }
 
-if (isPlugin) {
+/**
+ * @param {import("webpack").Configuration} config configuration
+ * @returns {import("webpack").Configuration} configuration with the test plugin
+ */
+function addPlugin(config) {
   if (!config.plugins) config.plugins = [];
 
   config.plugins.push({
@@ -171,18 +190,35 @@ if (isPlugin) {
     },
   });
 
-  const compiler = webpack(config);
+  return config;
+}
+
+if (isPlugin) {
+  const isMultiCompiler = Array.isArray(config);
+
+  const compiler = webpack(
+    isMultiCompiler ? config.map((item) => addPlugin(item)) : addPlugin(config),
+  );
 
   compiler.watch({}, (err, stats) => {
     if (err) {
       throw err;
     }
 
-    const statsOptions = normalizeStatsOptions(config.stats);
+    if (process.env.WEBPACK_BREAK_WATCH) {
+      const error = new Error("Watch error");
+      error.code = "watch error";
 
-    if (typeof statsOptions.colors === "undefined") {
-      statsOptions.colors = compiler.webpack.cli.isColorSupported();
+      throw error;
     }
+
+    const statsOptions = isMultiCompiler
+      ? {
+          children: config.map((config, idx) =>
+            normalizeStatsOptions(compiler.compilers[idx], config.stats),
+          ),
+        }
+      : normalizeStatsOptions(compiler, config.stats);
 
     process.stdout.write("compiled-for-tests");
     process.stdout.write(stats.toString(statsOptions));

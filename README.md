@@ -481,8 +481,11 @@ instance.waitUntilValid(() => {
 
 Creates middleware instance in plugin mode.
 
-In plugin mode, stats output is written through custom code (i.e. in callback for `watch` or where you are calling `stats.toString(options)`)
-(`compiler.getInfrastructureLogger`) instead of `console.log`.
+In plugin mode, stats output is written through custom code (i.e. in callback for `watch` or where you are calling `stats.toString(options)`) instead of `console.log`.
+In this case, the `stats` option is not supported because `webpack-dev-middleware` does not have access to the code where the stats will be output.
+You will also need to manually run the `watch` method.
+
+Why do you need this mode? In some cases, you may want to have multiple dev servers or run only one dev server when you have multiple configurations, and this is suitable for you.
 
 ```js
 const webpack = require("webpack");
