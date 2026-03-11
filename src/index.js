@@ -401,6 +401,8 @@ wdm.hapiWrapper = hapiWrapper;
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow wrapper
  */
 function koaWrapper(compiler, options, usePlugin) {
+  const { finished } = require("node:stream");
+
   const devMiddleware = wdm(compiler, options, usePlugin);
 
   /**
@@ -445,9 +447,15 @@ function koaWrapper(compiler, options, usePlugin) {
           res.stream = (stream) => {
             ctx.body = stream;
 
-            isFinished = true;
+            finished(stream, (err) => {
+              isFinished = true;
 
-            resolve();
+              if (err) {
+                reject(err);
+              } else {
+                resolve();
+              }
+            });
           };
           /**
            * @param {string | Buffer} data data
