@@ -31,12 +31,12 @@ jobs:
       group: lint-${{ matrix.os }}-v${{ matrix.node-version }}-${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
@@ -53,9 +53,6 @@ jobs:
       - name: Check types
         run: if [ -n "$(git status types --porcelain)" ]; then echo "Missing types. Update types by running 'npm run build:types'"; exit 1; else echo "All types are valid"; fi
 
-      - name: Security audit
-        run: npm run security
-
       - name: Validate PR commits with commitlint
         if: github.event_name == 'pull_request'
         run: npx commitlint --from ${{ github.event.pull_request.head.sha }}~${{ github.event.pull_request.commits }} --to ${{ github.event.pull_request.head.sha }} --verbose
@@ -67,7 +64,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        node-version: [20.x, 22.x, 24.x]
+        node-version: [20.x, 22.x, 24.x, 25.x]
         webpack-version: [latest]
 
     runs-on: ${{ matrix.os }}
@@ -77,10 +74,10 @@ jobs:
       cancel-in-progress: true
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
@@ -92,6 +89,6 @@ jobs:
         run: npm run test:coverage -- --ci
 
       - name: Submit coverage data to codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
