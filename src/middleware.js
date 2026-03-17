@@ -4,6 +4,7 @@ const mime = require("mime-types");
 
 const onFinishedStream = require("on-finished");
 
+const { escapeHtml, etag, memorize, parseTokenList } = require("./utils");
 const {
   createReadStreamOrReadFileSync,
   finish,
@@ -24,7 +25,6 @@ const {
   setStatusCode,
 } = require("./utils/compatibleAPI");
 const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
-const memorize = require("./utils/memorize");
 const ready = require("./utils/ready");
 
 /** @typedef {import("./index.js").NextFunction} NextFunction */
@@ -117,10 +117,6 @@ const parseRangeHeaders = memorize(
   },
 );
 
-const getETag = memorize(() => require("./utils/etag"));
-const getEscapeHtml = memorize(() => require("./utils/escapeHtml"));
-const getParseTokenList = memorize(() => require("./utils/parseTokenList"));
-
 const MAX_MAX_AGE = 31536000000;
 
 /**
@@ -197,8 +193,6 @@ function wrapper(context) {
         // need the return for prevent to execute the code below and override the status and body set by user in the next middleware
         return;
       }
-
-      const escapeHtml = getEscapeHtml();
 
       const content = statuses[status] || String(status);
       let document = Buffer.from(
@@ -305,7 +299,7 @@ function wrapper(context) {
         return (
           !etag ||
           (ifMatch !== "*" &&
-            getParseTokenList()(ifMatch).every(
+            parseTokenList(ifMatch).every(
               (match) =>
                 match !== etag &&
                 match !== `W/${etag}` &&
@@ -383,7 +377,7 @@ function wrapper(context) {
           return false;
         }
 
-        const matches = getParseTokenList()(noneMatch);
+        const matches = parseTokenList(noneMatch);
 
         let etagStale = true;
 
@@ -681,7 +675,7 @@ function wrapper(context) {
           }
         }
 
-        const result = await getETag()(
+        const result = await etag(
           isStrongETag
             ? /** @type {Buffer | ReadStream} */ (bufferOrStream)
             : extra.stats,
