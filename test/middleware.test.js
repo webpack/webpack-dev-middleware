@@ -4255,7 +4255,7 @@ describe.each([
             name,
             framework,
             compiler,
-            { writeToDisk: true },
+            { writeToDisk: true, debug: true },
           );
         });
 
