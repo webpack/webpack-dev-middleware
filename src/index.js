@@ -400,7 +400,7 @@ wdm.hapiWrapper = hapiWrapper;
  * @param {boolean=} usePlugin whether to use as webpack plugin
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow wrapper
  */
-function koaWrapper(compiler, options, usePlugin) {
+function koaWrapper(compiler, options = {}, usePlugin = false) {
   const devMiddleware = wdm(compiler, options, usePlugin);
 
   /**
@@ -543,7 +543,7 @@ wdm.koaWrapper = koaWrapper;
  * @param {boolean=} usePlugin true when need to use as a plugin, otherwise false
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono wrapper
  */
-function honoWrapper(compiler, options, usePlugin) {
+function honoWrapper(compiler, options = {}, usePlugin = false) {
   const devMiddleware = wdm(compiler, options, usePlugin);
 
   /**
@@ -639,12 +639,20 @@ function honoWrapper(compiler, options, usePlugin) {
            * @param {import("fs").ReadStream} stream readable stream
            */
           res.stream = (stream) => {
+            if (options.writeToDisk === true) {
+              console.error(stream);
+            }
+
             let isResolved = false;
 
             /**
              * @param {Error=} err err
              */
             const onEvent = (err) => {
+              if (options.writeToDisk === true) {
+                console.error("onEvent", err);
+              }
+
               if (isResolved) return;
               isResolved = true;
 
@@ -660,6 +668,11 @@ function honoWrapper(compiler, options, usePlugin) {
 
               body = stream;
               isFinished = true;
+
+              if (options.writeToDisk === true) {
+                console.error("resolve", isFinished);
+              }
+
               resolve();
             };
 
@@ -716,6 +729,10 @@ function honoWrapper(compiler, options, usePlugin) {
         },
       );
     } catch (err) {
+      if (options.writeToDisk === true) {
+        console.error("catch", err);
+      }
+
       if (options?.forwardError) {
         await next();
 
@@ -727,8 +744,16 @@ function honoWrapper(compiler, options, usePlugin) {
       return context.json({ message: /** @type {Error} */ (err).message });
     }
 
+    if (options.writeToDisk === true) {
+      console.error("body", body);
+    }
+
     if (typeof body !== "undefined") {
       return context.body(body, status);
+    }
+
+    if (options.writeToDisk === true) {
+      console.error("next");
     }
 
     await next();
