@@ -1,11 +1,11 @@
+const fs = require("node:fs");
+const path = require("node:path");
+const memfs = require("memfs");
 const mime = require("mime-types");
 
 const middleware = require("./middleware");
 const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
 const ready = require("./utils/ready");
-const setupHooks = require("./utils/setupHooks");
-const setupOutputFileSystem = require("./utils/setupOutputFileSystem");
-const setupWriteToDisk = require("./utils/setupWriteToDisk");
 
 const noop = () => {};
 
@@ -197,9 +197,11 @@ const noop = () => {};
 const internalValidate = (compiler, options) => {
   const schema = require("./options.json");
 
-  const firstCompiler = Array.isArray(compiler)
-    ? compiler[0]
-    : /** @type {Compiler} */ compiler;
+  const firstCompiler = /** @type {Compiler & { validate: EXPECTED_ANY }} */ (
+    Array.isArray(/** @type {MultiCompiler} */ (compiler).compilers)
+      ? /** @type {MultiCompiler} */ (compiler).compilers[0]
+      : /** @type {Compiler} */ compiler
+  );
 
   if (typeof firstCompiler.validate === "function") {
     firstCompiler.validate(schema, options, {
@@ -217,6 +219,166 @@ const internalValidate = (compiler, options) => {
     baseDataPath: "options",
   });
 };
+
+/** @typedef {Configuration["stats"]} StatsOptions */
+/** @typedef {{ children: Configuration["stats"][] }} MultiStatsOptions */
+/** @typedef {Exclude<Configuration["stats"], boolean | string | undefined>} StatsObjectOptions */
+
+/**
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {WithOptional<Context<Request, Response>, "watching" | "outputFileSystem">} context context
+ * @param {boolean=} isPlugin true when it is a plugin usage, otherwise false
+ */
+function setupHooks(context, isPlugin) {
+  /**
+   * @returns {void}
+   */
+  function invalid() {
+    if (context.state) {
+      context.logger.log("Compilation starting...");
+    }
+
+    // We are now in invalid state
+
+    context.state = false;
+
+    context.stats = undefined;
+  }
+
+  /**
+   * @param {StatsOptions} statsOptions stats options
+   * @returns {StatsObjectOptions} object stats options
+   */
+  function normalizeStatsOptions(statsOptions) {
+    if (typeof statsOptions === "undefined") {
+      statsOptions = { preset: "normal" };
+    } else if (typeof statsOptions === "boolean") {
+      statsOptions = statsOptions ? { preset: "normal" } : { preset: "none" };
+    } else if (typeof statsOptions === "string") {
+      statsOptions = { preset: statsOptions };
+    }
+
+    return statsOptions;
+  }
+
+  /**
+   * @param {Stats | MultiStats} stats stats
+   */
+  function done(stats) {
+    // We are now on valid state
+
+    context.state = true;
+    context.stats = stats;
+
+    // Do the stuff in nextTick, because bundle may be invalidated if a change happened while compiling
+    process.nextTick(() => {
+      const { compiler, logger, options, state, callbacks } = context;
+
+      // Check if still in valid state
+      if (!state) {
+        return;
+      }
+
+      // For plugin support we should print nothing, because webpack/webpack-cli/webpack-dev-server will print them on using `stats.toString()`
+      if (!isPlugin) {
+        logger.log("Compilation finished");
+
+        const isMultiCompilerMode = Boolean(
+          /** @type {MultiCompiler} */
+          (compiler).compilers,
+        );
+
+        /**
+         * @type {StatsOptions | MultiStatsOptions | undefined}
+         */
+        let statsOptions;
+
+        if (typeof options.stats !== "undefined") {
+          statsOptions = isMultiCompilerMode
+            ? {
+                children:
+                  /** @type {MultiCompiler} */
+                  (compiler).compilers.map(() => options.stats),
+              }
+            : options.stats;
+        } else {
+          statsOptions = isMultiCompilerMode
+            ? {
+                children:
+                  /** @type {MultiCompiler} */
+                  (compiler).compilers.map((child) => child.options.stats),
+              }
+            : /** @type {Compiler} */ (compiler).options.stats;
+        }
+
+        if (isMultiCompilerMode) {
+          /** @type {MultiStatsOptions} */
+          (statsOptions).children =
+            /** @type {MultiStatsOptions} */
+            (statsOptions).children.map(
+              /**
+               * @param {StatsOptions} childStatsOptions child stats options
+               * @returns {StatsObjectOptions} object child stats options
+               */
+              (childStatsOptions) => {
+                childStatsOptions = normalizeStatsOptions(childStatsOptions);
+
+                if (typeof childStatsOptions.colors === "undefined") {
+                  const [firstCompiler] =
+                    /** @type {MultiCompiler} */
+                    (compiler).compilers;
+
+                  childStatsOptions.colors =
+                    firstCompiler.webpack.cli.isColorSupported();
+                }
+
+                return childStatsOptions;
+              },
+            );
+        } else {
+          statsOptions = normalizeStatsOptions(
+            /** @type {StatsOptions} */ (statsOptions),
+          );
+
+          if (typeof statsOptions.colors === "undefined") {
+            const { compiler } = /** @type {{ compiler: Compiler }} */ (
+              context
+            );
+            statsOptions.colors = compiler.webpack.cli.isColorSupported();
+          }
+        }
+
+        const printedStats = stats.toString(
+          /** @type {StatsObjectOptions} */
+          (statsOptions),
+        );
+
+        // Avoid extra empty line when `stats: 'none'`
+        if (printedStats) {
+          // eslint-disable-next-line no-console
+          console.log(printedStats);
+        }
+      }
+
+      context.callbacks = [];
+
+      // Execute callback that are delayed
+      for (const callback of callbacks) {
+        callback(stats);
+      }
+    });
+  }
+
+  // eslint-disable-next-line prefer-destructuring
+  const compiler =
+    /** @type {Context<Request, Response>} */
+    (context).compiler;
+
+  compiler.hooks.watchRun.tap("webpack-dev-middleware", invalid);
+  compiler.hooks.invalid.tap("webpack-dev-middleware", invalid);
+  compiler.hooks.done.tap("webpack-dev-middleware", done);
+}
 
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
@@ -255,10 +417,126 @@ function wdm(compiler, options = {}, isPlugin = false) {
   setupHooks(context, isPlugin);
 
   if (typeof options.writeToDisk === "function") {
-    setupWriteToDisk(context);
+    /**
+     * @type {Compiler[]}
+     */
+    const compilers =
+      /** @type {MultiCompiler} */
+      (context.compiler).compilers || [context.compiler];
+
+    for (const compiler of compilers) {
+      if (compiler.options.devServer === false) {
+        continue;
+      }
+
+      compiler.hooks.emit.tap("DevMiddleware", () => {
+        // @ts-expect-error
+        if (compiler.hasWebpackDevMiddlewareAssetEmittedCallback) {
+          return;
+        }
+
+        compiler.hooks.assetEmitted.tapAsync(
+          "DevMiddleware",
+          (file, info, callback) => {
+            const { targetPath, content } = info;
+            const { writeToDisk: filter } = context.options;
+            const allowWrite =
+              filter && typeof filter === "function"
+                ? filter(targetPath)
+                : true;
+
+            if (!allowWrite) {
+              return callback();
+            }
+
+            const dir = path.dirname(targetPath);
+            const name = compiler.options.name
+              ? `Child "${compiler.options.name}": `
+              : "";
+
+            return fs.mkdir(dir, { recursive: true }, (mkdirError) => {
+              if (mkdirError) {
+                context.logger.error(
+                  `${name}Unable to write "${dir}" directory to disk:\n${mkdirError}`,
+                );
+
+                return callback(mkdirError);
+              }
+
+              return fs.writeFile(targetPath, content, (writeFileError) => {
+                if (writeFileError) {
+                  context.logger.error(
+                    `${name}Unable to write "${targetPath}" asset to disk:\n${writeFileError}`,
+                  );
+
+                  return callback(writeFileError);
+                }
+
+                context.logger.log(
+                  `${name}Asset written to disk: "${targetPath}"`,
+                );
+
+                return callback();
+              });
+            });
+          },
+        );
+
+        // @ts-expect-error
+        compiler.hasWebpackDevMiddlewareAssetEmittedCallback = true;
+      });
+    }
   }
 
-  setupOutputFileSystem(context);
+  let outputFileSystem;
+
+  if (context.options.outputFileSystem) {
+    const { outputFileSystem: outputFileSystemFromOptions } = context.options;
+
+    outputFileSystem = outputFileSystemFromOptions;
+  }
+  // Don't use `memfs` when developer wants to write everything to a disk, because it doesn't make sense.
+  else if (context.options.writeToDisk !== true) {
+    outputFileSystem = memfs.createFsFromVolume(new memfs.Volume());
+  } else {
+    const isMultiCompiler =
+      /** @type {MultiCompiler} */
+      (context.compiler).compilers;
+
+    if (isMultiCompiler) {
+      // Prefer compiler with `devServer` option or fallback on the first
+      const compiler =
+        /** @type {MultiCompiler} */
+        (context.compiler).compilers.find(
+          (item) =>
+            Object.hasOwn(item.options, "devServer") &&
+            item.options.devServer !== false,
+        );
+
+      ({ outputFileSystem } =
+        compiler ||
+        /** @type {MultiCompiler} */
+        (context.compiler).compilers[0]);
+    } else {
+      ({ outputFileSystem } = context.compiler);
+    }
+  }
+
+  const compilers =
+    /** @type {MultiCompiler} */
+    (context.compiler).compilers || [context.compiler];
+
+  for (const compiler of compilers) {
+    if (compiler.options.devServer === false) {
+      continue;
+    }
+
+    // @ts-expect-error
+    compiler.outputFileSystem = outputFileSystem;
+  }
+
+  // @ts-expect-error
+  context.outputFileSystem = outputFileSystem;
 
   // Start watching
   if (!isPlugin) {

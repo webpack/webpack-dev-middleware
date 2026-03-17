@@ -1,7 +1,6 @@
 const path = require("node:path");
 
 const mime = require("mime-types");
-
 const onFinishedStream = require("on-finished");
 
 const { escapeHtml, etag, memorize, parseTokenList } = require("./utils");
