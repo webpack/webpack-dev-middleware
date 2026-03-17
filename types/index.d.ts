@@ -1,153 +1,4 @@
 export = wdm;
-/** @typedef {import("schema-utils/declarations/validate").Schema} Schema */
-/** @typedef {import("webpack").Compiler} Compiler */
-/** @typedef {import("webpack").MultiCompiler} MultiCompiler */
-/** @typedef {import("webpack").Configuration} Configuration */
-/** @typedef {import("webpack").Stats} Stats */
-/** @typedef {import("webpack").MultiStats} MultiStats */
-/** @typedef {import("fs").ReadStream} ReadStream */
-/**
- * @typedef {object} ExtendedServerResponse
- * @property {{ webpack?: { devMiddleware?: Context<IncomingMessage, ServerResponse> } }=} locals locals
- */
-/** @typedef {import("http").IncomingMessage} IncomingMessage */
-/** @typedef {import("http").ServerResponse & ExtendedServerResponse} ServerResponse */
-/** @typedef {any} EXPECTED_ANY */
-/** @typedef {Function} EXPECTED_FUNCTION */
-/**
- * @callback NextFunction
- * @param {EXPECTED_ANY=} err error
- * @returns {void}
- */
-/**
- * @typedef {NonNullable<Configuration["watchOptions"]>} WatchOptions
- */
-/**
- * @typedef {Compiler["watching"]} Watching
- */
-/**
- * @typedef {ReturnType<MultiCompiler["watch"]>} MultiWatching
- */
-/**
- * @typedef {import("webpack").OutputFileSystem & { createReadStream?: import("fs").createReadStream, statSync: import("fs").statSync, readFileSync: import("fs").readFileSync }} OutputFileSystem
- */
-/** @typedef {ReturnType<Compiler["getInfrastructureLogger"]>} Logger */
-/**
- * @callback Callback
- * @param {(Stats | MultiStats)=} stats
- */
-/**
- * @typedef {object} ResponseData
- * @property {Buffer | ReadStream} data data
- * @property {number} byteLength byte length
- */
-/**
- * @template {IncomingMessage} [RequestInternal=IncomingMessage]
- * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @callback ModifyResponseData
- * @param {RequestInternal} req req
- * @param {ResponseInternal} res res
- * @param {Buffer | ReadStream} data data
- * @param {number} byteLength byte length
- * @returns {ResponseData}
- */
-/**
- * @template {IncomingMessage} [RequestInternal=IncomingMessage]
- * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @typedef {object} Context
- * @property {boolean} state state
- * @property {Stats | MultiStats | undefined} stats stats
- * @property {Callback[]} callbacks callbacks
- * @property {Options<RequestInternal, ResponseInternal>} options options
- * @property {Compiler | MultiCompiler} compiler compiler
- * @property {Watching | MultiWatching | undefined} watching watching
- * @property {Logger} logger logger
- * @property {OutputFileSystem} outputFileSystem output file system
- */
-/**
- * @template {IncomingMessage} [RequestInternal=IncomingMessage]
- * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @typedef {WithoutUndefined<Context<RequestInternal, ResponseInternal>, "watching">} FilledContext
- */
-/** @typedef {Record<string, string | number> | { key: string, value: number | string }[]} NormalizedHeaders */
-/**
- * @template {IncomingMessage} [RequestInternal=IncomingMessage]
- * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @typedef {NormalizedHeaders | ((req: RequestInternal, res: ResponseInternal, context: Context<RequestInternal, ResponseInternal>) => void | undefined | NormalizedHeaders) | undefined} Headers
- */
-/**
- * @template {IncomingMessage} [RequestInternal = IncomingMessage]
- * @template {ServerResponse} [ResponseInternal = ServerResponse]
- * @typedef {object} Options
- * @property {{ [key: string]: string }=} mimeTypes mime types
- * @property {(string | undefined)=} mimeTypeDefault mime type default
- * @property {(boolean | ((targetPath: string) => boolean))=} writeToDisk write to disk
- * @property {string[]=} methods methods
- * @property {Headers<RequestInternal, ResponseInternal>=} headers headers
- * @property {NonNullable<Configuration["output"]>["publicPath"]=} publicPath public path
- * @property {Configuration["stats"]=} stats stats
- * @property {boolean=} serverSideRender is server side render
- * @property {OutputFileSystem=} outputFileSystem output file system
- * @property {(boolean | string)=} index index
- * @property {ModifyResponseData<RequestInternal, ResponseInternal>=} modifyResponseData modify response data
- * @property {"weak" | "strong"=} etag options to generate etag header
- * @property {boolean=} lastModified options to generate last modified header
- * @property {(boolean | number | string | { maxAge?: number, immutable?: boolean })=} cacheControl options to generate cache headers
- * @property {boolean=} cacheImmutable is cache immutable
- * @property {boolean=} forwardError forward error to next middleware
- */
-/**
- * @template {IncomingMessage} [RequestInternal=IncomingMessage]
- * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @callback Middleware
- * @param {RequestInternal} req request
- * @param {ResponseInternal} res response
- * @param {NextFunction} next next function
- * @returns {Promise<void>}
- */
-/** @typedef {import("./utils/getFilenameFromUrl").Extra} Extra */
-/**
- * @callback GetFilenameFromUrl
- * @param {string} url request URL
- * @returns {{ filename: string, extra: Extra } | undefined} a filename with additional information, or `undefined` if nothing is found
- */
-/**
- * @callback WaitUntilValid
- * @param {Callback} callback
- */
-/**
- * @callback Invalidate
- * @param {Callback} callback
- */
-/**
- * @callback Close
- * @param {(err: Error | null | undefined) => void} callback
- */
-/**
- * @template {IncomingMessage} RequestInternal
- * @template {ServerResponse} ResponseInternal
- * @typedef {object} AdditionalMethods
- * @property {GetFilenameFromUrl} getFilenameFromUrl get filename from url
- * @property {WaitUntilValid} waitUntilValid wait until valid
- * @property {Invalidate} invalidate invalidate
- * @property {Close} close close
- * @property {Context<RequestInternal, ResponseInternal>} context context
- */
-/**
- * @template {IncomingMessage} [RequestInternal=IncomingMessage]
- * @template {ServerResponse} [ResponseInternal=ServerResponse]
- * @typedef {Middleware<RequestInternal, ResponseInternal> & AdditionalMethods<RequestInternal, ResponseInternal>} API
- */
-/**
- * @template T
- * @template {keyof T} K
- * @typedef {Omit<T, K> & Partial<T>} WithOptional
- */
-/**
- * @template T
- * @template {keyof T} K
- * @typedef {T & { [P in K]: NonNullable<T[P]> }} WithoutUndefined
- */
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
@@ -169,6 +20,9 @@ declare namespace wdm {
     hapiWrapper,
     koaWrapper,
     honoWrapper,
+    HapiPluginBase,
+    HapiPlugin,
+    HapiOptions,
     Schema,
     Compiler,
     MultiCompiler,
@@ -205,9 +59,6 @@ declare namespace wdm {
     API,
     WithOptional,
     WithoutUndefined,
-    HapiPluginBase,
-    HapiPlugin,
-    HapiOptions,
   };
 }
 /**
@@ -266,6 +117,21 @@ declare function honoWrapper<
   options?: Options<RequestInternal, ResponseInternal> | undefined,
   usePlugin?: boolean | undefined,
 ): (ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void;
+type HapiPluginBase<S, O> = {
+  /**
+   * register
+   */
+  register: (server: S, options: O) => void | Promise<void>;
+};
+type HapiPlugin<S, O> = HapiPluginBase<S, O> & {
+  pkg: {
+    name: string;
+  };
+  multiple: boolean;
+};
+type HapiOptions = Options & {
+  compiler: Compiler | MultiCompiler;
+};
 type Schema = import("schema-utils/declarations/validate").Schema;
 type Compiler = import("webpack").Compiler;
 type MultiCompiler = import("webpack").MultiCompiler;
@@ -513,19 +379,4 @@ type API<
 type WithOptional<T, K extends keyof T> = Omit<T, K> & Partial<T>;
 type WithoutUndefined<T, K extends keyof T> = T & {
   [P in K]: NonNullable<T[P]>;
-};
-type HapiPluginBase<S, O> = {
-  /**
-   * register
-   */
-  register: (server: S, options: O) => void | Promise<void>;
-};
-type HapiPlugin<S, O> = HapiPluginBase<S, O> & {
-  pkg: {
-    name: string;
-  };
-  multiple: boolean;
-};
-type HapiOptions = Options & {
-  compiler: Compiler | MultiCompiler;
 };

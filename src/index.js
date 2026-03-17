@@ -1,8 +1,6 @@
 const mime = require("mime-types");
-const { validate } = require("schema-utils");
 
 const middleware = require("./middleware");
-const schema = require("./options.json");
 const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
 const ready = require("./utils/ready");
 const setupHooks = require("./utils/setupHooks");
@@ -194,15 +192,42 @@ const noop = () => {};
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
+ * @param {Options<RequestInternal, ResponseInternal>} options options
+ */
+const internalValidate = (compiler, options) => {
+  const schema = require("./options.json");
+
+  const firstCompiler = Array.isArray(compiler)
+    ? compiler[0]
+    : /** @type {Compiler} */ compiler;
+
+  if (typeof firstCompiler.validate === "function") {
+    firstCompiler.validate(schema, options, {
+      name: "Dev Middleware",
+      baseDataPath: "options",
+    });
+    return;
+  }
+
+  // TODO bump minimum supported webpack version and remove it in favor of `compiler.validate` (above)
+  const { validate } = require("schema-utils");
+
+  validate(/** @type {Schema} */ (schema), options, {
+    name: "Dev Middleware",
+    baseDataPath: "options",
+  });
+};
+
+/**
+ * @template {IncomingMessage} [RequestInternal=IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal=ServerResponse]
+ * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
  * @param {boolean} isPlugin true when will use as a plugin, otherwise false
  * @returns {API<RequestInternal, ResponseInternal>} webpack dev middleware
  */
 function wdm(compiler, options = {}, isPlugin = false) {
-  validate(/** @type {Schema} */ (schema), options, {
-    name: "Dev Middleware",
-    baseDataPath: "options",
-  });
+  internalValidate(compiler, options);
 
   const { mimeTypes } = options;
 
