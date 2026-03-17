@@ -20,12 +20,6 @@ declare namespace wdm {
     hapiWrapper,
     koaWrapper,
     honoWrapper,
-    StatsOptions,
-    MultiStatsOptions,
-    StatsObjectOptions,
-    HapiPluginBase,
-    HapiPlugin,
-    HapiOptions,
     Schema,
     Compiler,
     MultiCompiler,
@@ -62,6 +56,12 @@ declare namespace wdm {
     API,
     WithOptional,
     WithoutUndefined,
+    StatsOptions,
+    MultiStatsOptions,
+    StatsObjectOptions,
+    HapiPluginBase,
+    HapiPlugin,
+    HapiOptions,
   };
 }
 /**
@@ -120,29 +120,6 @@ declare function honoWrapper<
   options?: Options<RequestInternal, ResponseInternal> | undefined,
   usePlugin?: boolean | undefined,
 ): (ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void;
-type StatsOptions = Configuration["stats"];
-type MultiStatsOptions = {
-  children: Configuration["stats"][];
-};
-type StatsObjectOptions = Exclude<
-  Configuration["stats"],
-  boolean | string | undefined
->;
-type HapiPluginBase<S, O> = {
-  /**
-   * register
-   */
-  register: (server: S, options: O) => void | Promise<void>;
-};
-type HapiPlugin<S, O> = HapiPluginBase<S, O> & {
-  pkg: {
-    name: string;
-  };
-  multiple: boolean;
-};
-type HapiOptions = Options & {
-  compiler: Compiler | MultiCompiler;
-};
 type Schema = import("schema-utils/declarations/validate").Schema;
 type Compiler = import("webpack").Compiler;
 type MultiCompiler = import("webpack").MultiCompiler;
@@ -224,7 +201,7 @@ type Context<
   /**
    * watching
    */
-  watching: Watching | MultiWatching | undefined;
+  watching: Watching | MultiWatching;
   /**
    * logger
    */
@@ -390,5 +367,28 @@ type API<
 type WithOptional<T, K extends keyof T> = Omit<T, K> & Partial<T>;
 type WithoutUndefined<T, K extends keyof T> = T & {
   [P in K]: NonNullable<T[P]>;
+};
+type StatsOptions = Configuration["stats"];
+type MultiStatsOptions = {
+  children: Configuration["stats"][];
+};
+type StatsObjectOptions = Exclude<
+  Configuration["stats"],
+  boolean | string | undefined
+>;
+type HapiPluginBase<S, O> = {
+  /**
+   * register
+   */
+  register: (server: S, options: O) => void | Promise<void>;
+};
+type HapiPlugin<S, O> = HapiPluginBase<S, O> & {
+  pkg: {
+    name: string;
+  };
+  multiple: boolean;
+};
+type HapiOptions = Options & {
+  compiler: Compiler | MultiCompiler;
 };
 import fs = require("node:fs");
