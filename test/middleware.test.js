@@ -4255,7 +4255,7 @@ describe.each([
             name,
             framework,
             compiler,
-            { writeToDisk: true, debug: true },
+            { writeToDisk: true },
           );
         });
 
@@ -4283,22 +4283,20 @@ describe.each([
                 (hook) => hook.name === "DevMiddleware",
               ),
             ).toHaveLength(0);
+
             expect(fs.existsSync(bundlePath)).toBe(true);
 
-            instance.invalidate();
+            compiler.hooks.done.tap("DevMiddlewareWriteToDiskTest", () => {
+              expect(
+                compiler.hooks.assetEmitted.taps.filter(
+                  (hook) => hook.name === "DevMiddleware",
+                ),
+              ).toHaveLength(0);
+            });
 
-            return compiler.hooks.done.tap(
-              "DevMiddlewareWriteToDiskTest",
-              () => {
-                expect(
-                  compiler.hooks.assetEmitted.taps.filter(
-                    (hook) => hook.name === "DevMiddleware",
-                  ),
-                ).toHaveLength(0);
-
-                done();
-              },
-            );
+            instance.invalidate(() => {
+              done();
+            });
           });
         });
 
@@ -4380,20 +4378,19 @@ describe.each([
             ).toHaveLength(0);
             expect(fs.existsSync(bundlePath)).toBe(true);
 
-            instance.invalidate();
+            compiler.hooks.done.tap("DevMiddlewareWriteToDiskTest", () => {
+              expect(
+                compiler.hooks.assetEmitted.taps.filter(
+                  (hook) => hook.name === "DevMiddleware",
+                ),
+              ).toHaveLength(0);
 
-            return compiler.hooks.done.tap(
-              "DevMiddlewareWriteToDiskTest",
-              () => {
-                expect(
-                  compiler.hooks.assetEmitted.taps.filter(
-                    (hook) => hook.name === "DevMiddleware",
-                  ),
-                ).toHaveLength(0);
+              done();
+            });
 
-                done();
-              },
-            );
+            instance.invalidate(() => {
+              done();
+            });
           });
         });
       });
@@ -4440,20 +4437,19 @@ describe.each([
             ).toHaveLength(0);
             expect(fs.existsSync(bundlePath)).toBe(false);
 
-            instance.invalidate();
+            compiler.hooks.done.tap("DevMiddlewareWriteToDiskTest", () => {
+              expect(
+                compiler.hooks.assetEmitted.taps.filter(
+                  (hook) => hook.name === "DevMiddleware",
+                ),
+              ).toHaveLength(0);
 
-            return compiler.hooks.done.tap(
-              "DevMiddlewareWriteToDiskTest",
-              () => {
-                expect(
-                  compiler.hooks.assetEmitted.taps.filter(
-                    (hook) => hook.name === "DevMiddleware",
-                  ),
-                ).toHaveLength(0);
+              done();
+            });
 
-                done();
-              },
-            );
+            instance.invalidate(() => {
+              done();
+            });
           });
         });
       });
