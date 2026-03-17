@@ -1,4 +1,4 @@
-import ready from "../../src/utils/ready";
+import middleware from "../../src/middleware.js";
 
 describe("ready", () => {
   it("should call callback if state is true", () => {
@@ -7,7 +7,7 @@ describe("ready", () => {
       state: true,
       stats: "stats",
     };
-    ready(context, cb);
+    middleware.ready(context, cb);
 
     expect(cb).toHaveBeenCalledTimes(1);
     expect(cb.mock.calls[0]).toEqual(["stats"]);
@@ -26,7 +26,7 @@ describe("ready", () => {
     const req = {
       url: "url",
     };
-    ready(context, cb, req);
+    middleware.ready(context, cb, req);
 
     expect(cb).not.toHaveBeenCalled();
     expect(context.logger.info).toHaveBeenCalledTimes(1);
@@ -46,7 +46,7 @@ describe("ready", () => {
       },
       callbacks: [],
     };
-    ready(context, cb);
+    middleware.ready(context, cb);
 
     expect(cb).not.toHaveBeenCalled();
     expect(context.logger.info).toHaveBeenCalledTimes(1);
