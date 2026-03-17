@@ -1,7 +1,6 @@
-export type IncomingMessage = import("../index").IncomingMessage;
-export type ServerResponse = import("../index").ServerResponse;
-export type OutputFileSystem = import("../index").OutputFileSystem;
-export type EXPECTED_ANY = import("../index").EXPECTED_ANY;
+export type Stats = import("fs").Stats;
+export type ReadStream = import("fs").ReadStream;
+export type FunctionReturning<T> = (...args: EXPECTED_ANY) => T;
 export type ExpectedIncomingMessage = {
   /**
    * get header extra method
@@ -75,6 +74,10 @@ export type ExpectedServerResponse = {
    */
   setState?: ((name: string, value: EXPECTED_ANY) => void) | undefined;
 };
+export type IncomingMessage = import("./index").IncomingMessage;
+export type ServerResponse = import("./index").ServerResponse;
+export type OutputFileSystem = import("./index").OutputFileSystem;
+export type EXPECTED_ANY = import("./index").EXPECTED_ANY;
 /**
  * @param {string} filename filename
  * @param {OutputFileSystem} outputFileSystem output file system
@@ -91,6 +94,20 @@ export function createReadStreamOrReadFileSync(
   bufferOrStream: Buffer | import("fs").ReadStream;
   byteLength: number;
 };
+/**
+ * @param {string} string raw HTML
+ * @returns {string} escaped HTML
+ */
+export function escapeHtml(string: string): string;
+/**
+ * Create a simple ETag.
+ * @param {Buffer | ReadStream | Stats} entity entity
+ * @returns {Promise<{ hash: string, buffer?: Buffer }>} etag
+ */
+export function etag(entity: Buffer | ReadStream | Stats): Promise<{
+  hash: string;
+  buffer?: Buffer;
+}>;
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res
@@ -115,10 +132,6 @@ export function getHeadersSent<
 export function getOutgoing<
   Response extends ServerResponse & ExpectedServerResponse,
 >(res: Response): Response;
-/** @typedef {import("../index").IncomingMessage} IncomingMessage */
-/** @typedef {import("../index").ServerResponse} ServerResponse */
-/** @typedef {import("../index").OutputFileSystem} OutputFileSystem */
-/** @typedef {import("../index").EXPECTED_ANY} EXPECTED_ANY */
 /**
  * @typedef {object} ExpectedIncomingMessage
  * @property {((name: string) => string | string[] | undefined)=} getHeader get header extra method
@@ -198,6 +211,42 @@ export function getStatusCode<
 export function initState<
   Response extends ServerResponse & ExpectedServerResponse,
 >(res: Response): void;
+/**
+ * @template T
+ * @typedef {(...args: EXPECTED_ANY) => T} FunctionReturning
+ */
+/**
+ * @template T
+ * @param {FunctionReturning<T>} fn memorized function
+ * @param {({ cache?: Map<string, { data: T }> } | undefined)=} cache cache
+ * @param {((value: T) => T)=} callback callback
+ * @returns {FunctionReturning<T>} new function
+ */
+export function memorize<T>(
+  fn: FunctionReturning<T>,
+  {
+    cache,
+  }?:
+    | (
+        | {
+            cache?: Map<
+              string,
+              {
+                data: T;
+              }
+            >;
+          }
+        | undefined
+      )
+    | undefined,
+  callback?: ((value: T) => T) | undefined,
+): FunctionReturning<T>;
+/**
+ * Parse a HTTP token list.
+ * @param {string} str str
+ * @returns {string[]} tokens
+ */
+export function parseTokenList(str: string): string[];
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res

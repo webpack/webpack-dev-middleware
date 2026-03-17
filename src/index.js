@@ -4,8 +4,6 @@ const memfs = require("memfs");
 const mime = require("mime-types");
 
 const middleware = require("./middleware");
-const getFilenameFromUrl = require("./utils/getFilenameFromUrl");
-const ready = require("./utils/ready");
 
 const noop = () => {};
 
@@ -16,6 +14,12 @@ const noop = () => {};
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
 /** @typedef {import("fs").ReadStream} ReadStream */
+/** @typedef {import("./middleware").Extra} Extra */
+
+// eslint-disable-next-line jsdoc/reject-any-type
+/** @typedef {any} EXPECTED_ANY */
+// eslint-disable-next-line jsdoc/reject-function-type
+/** @typedef {Function} EXPECTED_FUNCTION */
 
 /**
  * @typedef {object} ExtendedServerResponse
@@ -25,33 +29,16 @@ const noop = () => {};
 /** @typedef {import("http").IncomingMessage} IncomingMessage */
 /** @typedef {import("http").ServerResponse & ExtendedServerResponse} ServerResponse */
 
-// eslint-disable-next-line jsdoc/reject-any-type
-/** @typedef {any} EXPECTED_ANY */
-// eslint-disable-next-line jsdoc/reject-function-type
-/** @typedef {Function} EXPECTED_FUNCTION */
-
 /**
  * @callback NextFunction
  * @param {EXPECTED_ANY=} err error
  * @returns {void}
  */
 
-/**
- * @typedef {NonNullable<Configuration["watchOptions"]>} WatchOptions
- */
-
-/**
- * @typedef {Compiler["watching"]} Watching
- */
-
-/**
- * @typedef {ReturnType<MultiCompiler["watch"]>} MultiWatching
- */
-
-/**
- * @typedef {import("webpack").OutputFileSystem & { createReadStream?: import("fs").createReadStream, statSync: import("fs").statSync, readFileSync: import("fs").readFileSync }} OutputFileSystem
- */
-
+/** @typedef {NonNullable<Configuration["watchOptions"]>} WatchOptions */
+/** @typedef {Compiler["watching"]} Watching */
+/** @typedef {ReturnType<MultiCompiler["watch"]>} MultiWatching */
+/** @typedef {import("webpack").OutputFileSystem & { createReadStream?: import("fs").createReadStream, statSync: import("fs").statSync, readFileSync: import("fs").readFileSync }} OutputFileSystem */
 /** @typedef {ReturnType<Compiler["getInfrastructureLogger"]>} Logger */
 
 /**
@@ -135,8 +122,6 @@ const noop = () => {};
  * @param {NextFunction} next next function
  * @returns {Promise<void>}
  */
-
-/** @typedef {import("./utils/getFilenameFromUrl").Extra} Extra */
 
 /**
  * @callback GetFilenameFromUrl
@@ -583,14 +568,15 @@ function wdm(compiler, options = {}, isPlugin = false) {
     (middleware(filledContext));
 
   // API
-  instance.getFilenameFromUrl = (url) => getFilenameFromUrl(filledContext, url);
+  instance.getFilenameFromUrl = (url) =>
+    middleware.getFilenameFromUrl(filledContext, url);
 
   instance.waitUntilValid = (callback = noop) => {
-    ready(filledContext, callback);
+    middleware.ready(filledContext, callback);
   };
 
   instance.invalidate = (callback = noop) => {
-    ready(filledContext, callback);
+    middleware.ready(filledContext, callback);
 
     filledContext.watching.invalidate();
   };
@@ -707,7 +693,7 @@ function koaWrapper(compiler, options = {}, usePlugin = false) {
   const devMiddleware = wdm(compiler, options, usePlugin);
 
   /**
-   * @param {{ req: RequestInternal, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse, status: number, body: string | Buffer | import("fs").ReadStream | { message: string }, state: object }} ctx context
+   * @param {{ req: RequestInternal, res: ResponseInternal & import("./utils").ExpectedServerResponse, status: number, body: string | Buffer | import("fs").ReadStream | { message: string }, state: object }} ctx context
    * @param {EXPECTED_FUNCTION} next next
    * @returns {Promise<void>}
    */
@@ -850,7 +836,7 @@ function honoWrapper(compiler, options = {}, usePlugin = false) {
   const devMiddleware = wdm(compiler, options, usePlugin);
 
   /**
-   * @param {{ env: EXPECTED_ANY, body: EXPECTED_ANY, json: EXPECTED_ANY, status: EXPECTED_ANY, set: EXPECTED_ANY, req: RequestInternal & import("./utils/compatibleAPI").ExpectedIncomingMessage & { header: (name: string) => string }, res: ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse & { headers: EXPECTED_ANY, status: EXPECTED_ANY } }} context context
+   * @param {{ env: EXPECTED_ANY, body: EXPECTED_ANY, json: EXPECTED_ANY, status: EXPECTED_ANY, set: EXPECTED_ANY, req: RequestInternal & import("./utils").ExpectedIncomingMessage & { header: (name: string) => string }, res: ResponseInternal & import("./utils").ExpectedServerResponse & { headers: EXPECTED_ANY, status: EXPECTED_ANY } }} context context
    * @param {EXPECTED_FUNCTION} next next function
    * @returns {Promise<void>}
    */
@@ -898,7 +884,7 @@ function honoWrapper(compiler, options = {}, usePlugin = false) {
     /**
      * @param {string} name header name
      * @param {string | number | Readonly<string[]>} value value
-     * @returns {ResponseInternal & import("./utils/compatibleAPI").ExpectedServerResponse & { headers: EXPECTED_ANY, status: EXPECTED_ANY }} response
+     * @returns {ResponseInternal & import("./utils").ExpectedServerResponse & { headers: EXPECTED_ANY, status: EXPECTED_ANY }} response
      */
     res.setHeader = (name, value) => {
       context.res.headers.append(name, value);

@@ -20,6 +20,9 @@ declare namespace wdm {
     hapiWrapper,
     koaWrapper,
     honoWrapper,
+    StatsOptions,
+    MultiStatsOptions,
+    StatsObjectOptions,
     HapiPluginBase,
     HapiPlugin,
     HapiOptions,
@@ -30,11 +33,12 @@ declare namespace wdm {
     Stats,
     MultiStats,
     ReadStream,
+    Extra,
+    EXPECTED_ANY,
+    EXPECTED_FUNCTION,
     ExtendedServerResponse,
     IncomingMessage,
     ServerResponse,
-    EXPECTED_ANY,
-    EXPECTED_FUNCTION,
     NextFunction,
     WatchOptions,
     Watching,
@@ -50,7 +54,6 @@ declare namespace wdm {
     Headers,
     Options,
     Middleware,
-    Extra,
     GetFilenameFromUrl,
     WaitUntilValid,
     Invalidate,
@@ -117,6 +120,14 @@ declare function honoWrapper<
   options?: Options<RequestInternal, ResponseInternal> | undefined,
   usePlugin?: boolean | undefined,
 ): (ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void;
+type StatsOptions = Configuration["stats"];
+type MultiStatsOptions = {
+  children: Configuration["stats"][];
+};
+type StatsObjectOptions = Exclude<
+  Configuration["stats"],
+  boolean | string | undefined
+>;
 type HapiPluginBase<S, O> = {
   /**
    * register
@@ -139,6 +150,9 @@ type Configuration = import("webpack").Configuration;
 type Stats = import("webpack").Stats;
 type MultiStats = import("webpack").MultiStats;
 type ReadStream = import("fs").ReadStream;
+type Extra = import("./middleware").Extra;
+type EXPECTED_ANY = any;
+type EXPECTED_FUNCTION = Function;
 type ExtendedServerResponse = {
   /**
    * locals
@@ -153,16 +167,14 @@ type ExtendedServerResponse = {
 };
 type IncomingMessage = import("http").IncomingMessage;
 type ServerResponse = import("http").ServerResponse & ExtendedServerResponse;
-type EXPECTED_ANY = any;
-type EXPECTED_FUNCTION = Function;
 type NextFunction = (err?: EXPECTED_ANY | undefined) => void;
 type WatchOptions = NonNullable<Configuration["watchOptions"]>;
 type Watching = Compiler["watching"];
 type MultiWatching = ReturnType<MultiCompiler["watch"]>;
 type OutputFileSystem = import("webpack").OutputFileSystem & {
-  createReadStream?: typeof import("fs").createReadStream;
-  statSync: import("fs").StatSyncFn;
-  readFileSync: typeof import("fs").readFileSync;
+  createReadStream?: typeof fs.createReadStream;
+  statSync: fs.StatSyncFn;
+  readFileSync: typeof fs.readFileSync;
 };
 type Logger = ReturnType<Compiler["getInfrastructureLogger"]>;
 type Callback = (stats?: (Stats | MultiStats) | undefined) => any;
@@ -336,7 +348,6 @@ type Middleware<
   res: ResponseInternal,
   next: NextFunction,
 ) => Promise<void>;
-type Extra = import("./utils/getFilenameFromUrl").Extra;
 type GetFilenameFromUrl = (url: string) =>
   | {
       filename: string;
@@ -380,3 +391,4 @@ type WithOptional<T, K extends keyof T> = Omit<T, K> & Partial<T>;
 type WithoutUndefined<T, K extends keyof T> = T & {
   [P in K]: NonNullable<T[P]>;
 };
+import fs = require("node:fs");
