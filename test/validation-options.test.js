@@ -13,8 +13,7 @@ const configuredFs = createFsFromVolume(new Volume());
 
 configuredFs.join = path.join.bind(path);
 
-// eslint-disable-next-line jest/no-disabled-tests
-describe.skip("validation", () => {
+describe("validation", () => {
   const cases = {
     mimeTypes: {
       success: [{ phtml: ["text/html"] }],
