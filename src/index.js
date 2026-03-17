@@ -199,10 +199,10 @@ const noop = () => {};
  * @returns {API<RequestInternal, ResponseInternal>} webpack dev middleware
  */
 function wdm(compiler, options = {}, isPlugin = false) {
-  validate(/** @type {Schema} */ (schema), options, {
-    name: "Dev Middleware",
-    baseDataPath: "options",
-  });
+  // validate(/** @type {Schema} */ (schema), options, {
+  //   name: "Dev Middleware",
+  //   baseDataPath: "options",
+  // });
 
   const { mimeTypes } = options;
 
@@ -539,7 +539,7 @@ wdm.koaWrapper = koaWrapper;
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
- * @param {Options<RequestInternal, ResponseInternal>=} options options
+ * @param {Options<RequestInternal, ResponseInternal> & { debug?: boolean }=} options options
  * @param {boolean=} usePlugin true when need to use as a plugin, otherwise false
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono wrapper
  */
@@ -639,7 +639,7 @@ function honoWrapper(compiler, options = {}, usePlugin = false) {
            * @param {import("fs").ReadStream} stream readable stream
            */
           res.stream = (stream) => {
-            if (options.writeToDisk === true) {
+            if (options.writeToDisk === true && options.debug) {
               console.error(stream);
             }
 
@@ -649,7 +649,7 @@ function honoWrapper(compiler, options = {}, usePlugin = false) {
              * @param {Error=} err err
              */
             const onEvent = (err) => {
-              if (options.writeToDisk === true) {
+              if (options.writeToDisk === true && options.debug) {
                 console.error("onEvent", err);
               }
 
@@ -669,7 +669,7 @@ function honoWrapper(compiler, options = {}, usePlugin = false) {
               body = stream;
               isFinished = true;
 
-              if (options.writeToDisk === true) {
+              if (options.writeToDisk === true && options.debug) {
                 console.error("resolve", isFinished);
               }
 
@@ -729,7 +729,7 @@ function honoWrapper(compiler, options = {}, usePlugin = false) {
         },
       );
     } catch (err) {
-      if (options.writeToDisk === true) {
+      if (options.writeToDisk === true && options.debug) {
         console.error("catch", err);
       }
 
@@ -744,7 +744,7 @@ function honoWrapper(compiler, options = {}, usePlugin = false) {
       return context.json({ message: /** @type {Error} */ (err).message });
     }
 
-    if (options.writeToDisk === true) {
+    if (options.writeToDisk === true && options.debug) {
       console.error("body", body);
     }
 
@@ -752,7 +752,7 @@ function honoWrapper(compiler, options = {}, usePlugin = false) {
       return context.body(body, status);
     }
 
-    if (options.writeToDisk === true) {
+    if (options.writeToDisk === true && options.debug) {
       console.error("next");
     }
 
