@@ -23,8 +23,6 @@
     "types"
   ],
   "scripts": {
-    "commitlint": "commitlint --from=main",
-    "security": "npm audit --production",
     "lint:prettier": "prettier --cache --list-different .",
     "lint:code": "eslint --cache .",
     "lint:spelling": "cspell --cache --no-must-find-files --quiet \"**/*.*\"",
@@ -44,7 +42,8 @@
     "pretest": "npm run lint",
     "test": "npm run test:coverage",
     "prepare": "husky && npm run build",
-    "release": "standard-version"
+    "version": "changeset version",
+    "release": "npm run build && changeset publish"
   },
   "dependencies": {
     "memfs": "^4.56.10",
@@ -57,8 +56,8 @@
     "@babel/cli": "^7.16.7",
     "@babel/core": "^7.16.7",
     "@babel/preset-env": "^7.16.7",
-    "@commitlint/cli": "^20.2.0",
-    "@commitlint/config-conventional": "^20.2.0",
+    "@changesets/cli": "^2.30.0",
+    "@changesets/get-github-info": "^0.8.0",
     "@fastify/express": "^4.0.2",
     "@hapi/hapi": "^21.3.7",
     "@hono/node-server": "^1.12.0",
@@ -75,8 +74,8 @@
     "eslint": "^9.28.0",
     "eslint-config-webpack": "^4.5.0",
     "execa": "^5.1.1",
-    "express-4": "npm:express@^4",
     "express": "^5.1.0",
+    "express-4": "npm:express@^4",
     "fastify": "^5.2.1",
     "file-loader": "^6.2.0",
     "finalhandler": "^2.1.0",
@@ -88,7 +87,6 @@
     "npm-run-all": "^4.1.5",
     "prettier": "^3.6.0",
     "router": "^2.2.0",
-    "standard-version": "^9.3.0",
     "supertest": "^7.0.0",
     "typescript": "^5.3.3",
     "webpack": "^5.101.0"
