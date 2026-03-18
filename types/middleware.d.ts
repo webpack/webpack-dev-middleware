@@ -15,6 +15,7 @@ declare namespace wrapper {
   export {
     getFilenameFromUrl,
     ready,
+    FilenameWithExtra,
     SendErrorOptions,
     ReadStream,
     Compiler,
@@ -25,15 +26,17 @@ declare namespace wrapper {
     IncomingMessage,
     ServerResponse,
     NormalizedHeaders,
+    OutputFileSystem,
     Extra,
   };
 }
+/** @typedef {{ filename: string, extra: Extra }} FilenameWithExtra */
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
  * @param {import("./index.js").FilledContext<Request, Response>} context context
  * @param {string} url url
- * @returns {{ filename: string, extra: Extra } | undefined} result of get filename from url
+ * @returns {FilenameWithExtra | undefined} result of get filename from url
  */
 declare function getFilenameFromUrl<
   Request extends IncomingMessage,
@@ -41,12 +44,7 @@ declare function getFilenameFromUrl<
 >(
   context: import("./index.js").FilledContext<Request, Response>,
   url: string,
-):
-  | {
-      filename: string;
-      extra: Extra;
-    }
-  | undefined;
+): FilenameWithExtra | undefined;
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
@@ -70,6 +68,10 @@ declare function ready<
   callback: import("./index.js").Callback,
   req?: Request | undefined,
 ): void;
+type FilenameWithExtra = {
+  filename: string;
+  extra: Extra;
+};
 /**
  * send error options
  */
@@ -97,6 +99,7 @@ type NextFunction = import("./index.js").NextFunction;
 type IncomingMessage = import("./index.js").IncomingMessage;
 type ServerResponse = import("./index.js").ServerResponse;
 type NormalizedHeaders = import("./index.js").NormalizedHeaders;
+type OutputFileSystem = import("./index.js").OutputFileSystem;
 type Extra = {
   /**
    * stats
@@ -106,4 +109,8 @@ type Extra = {
    * true when immutable, otherwise false
    */
   immutable?: boolean | undefined;
+  /**
+   * outputFileSystem
+   */
+  outputFileSystem: OutputFileSystem;
 };

@@ -259,26 +259,11 @@ const CACHE_CONTROL_NO_CACHE_REGEXP = /(?:^|,)\s*?no-cache\s*?(?:,|$)/;
  * @returns {void}
  */
 function destroyStream(stream, suppress) {
-  if (typeof stream.destroy === "function") {
-    stream.destroy();
+  if (stream.destroyed) {
+    return;
   }
 
-  if (typeof stream.close === "function") {
-    // Node.js core bug workaround
-    stream.on(
-      "open",
-      /**
-       * @this {import("fs").ReadStream}
-       */
-      function onOpenClose() {
-        // @ts-expect-error
-        if (typeof this.fd === "number") {
-          // actually close down the fd
-          this.close();
-        }
-      },
-    );
-  }
+  stream.destroy();
 
   if (typeof stream.addListener === "function" && suppress) {
     stream.removeAllListeners("error");
