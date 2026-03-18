@@ -37,6 +37,7 @@ const {
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index.js").ServerResponse} ServerResponse */
 /** @typedef {import("./index.js").NormalizedHeaders} NormalizedHeaders */
+/** @typedef {import("./index.js").OutputFileSystem} OutputFileSystem */
 
 const BYTES_RANGE_REGEXP = /^ *bytes/i;
 
@@ -61,6 +62,7 @@ const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
  * @typedef {object} Extra
  * @property {import("fs").Stats} stats stats
  * @property {boolean=} immutable true when immutable, otherwise false
+ * @property {OutputFileSystem} outputFileSystem outputFileSystem
  */
 
 /**
@@ -83,13 +85,15 @@ class FilenameError extends Error {
   }
 }
 
+/** @typedef {{ filename: string, extra: Extra }} FilenameWithExtra */
+
 // TODO fix redirect logic when `/` at the end, like https://github.com/pillarjs/send/blob/master/index.js#L586
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
  * @param {import("./index.js").FilledContext<Request, Response>} context context
  * @param {string} url url
- * @returns {{ filename: string, extra: Extra } | undefined} result of get filename from url
+ * @returns {FilenameWithExtra | undefined} result of get filename from url
  */
 function getFilenameFromUrl(context, url) {
   /** @type {URL} */
@@ -168,8 +172,12 @@ function getFilenameFromUrl(context, url) {
         pathname.slice(publicPathPathname.length),
       );
 
+      const { outputFileSystem } =
+        /** @type {Compiler & { outputFileSystem: OutputFileSystem }} */
+        (compilation.compiler);
+
       try {
-        extra.stats = context.outputFileSystem.statSync(filename);
+        extra.stats = outputFileSystem.statSync(filename);
       } catch {
         continue;
       }
@@ -188,6 +196,8 @@ function getFilenameFromUrl(context, url) {
           extra.immutable = assetInfo ? assetInfo.immutable : false;
         }
 
+        extra.outputFileSystem = outputFileSystem;
+
         break;
       } else if (
         extra.stats.isDirectory() &&
@@ -202,13 +212,14 @@ function getFilenameFromUrl(context, url) {
         filename = path.join(filename, indexValue);
 
         try {
-          extra.stats = context.outputFileSystem.statSync(filename);
+          extra.stats = outputFileSystem.statSync(filename);
         } catch {
           continue;
         }
 
         if (extra.stats.isFile()) {
           foundFilename = filename;
+          extra.outputFileSystem = outputFileSystem;
 
           break;
         }
@@ -710,7 +721,7 @@ function wrapper(context) {
      */
     async function processRequest() {
       // Pipe and SendFile
-      /** @type {{ filename: string, extra: Extra } | undefined} */
+      /** @type {FilenameWithExtra | undefined} */
       let resolved;
 
       const requestUrl = /** @type {string} */ (getRequestURL(req));
@@ -870,7 +881,7 @@ function wrapper(context) {
           try {
             const result = createReadStreamOrReadFileSync(
               filename,
-              context.outputFileSystem,
+              extra.outputFileSystem,
               start,
               end,
             );
@@ -1015,7 +1026,7 @@ function wrapper(context) {
         try {
           ({ bufferOrStream, byteLength } = createReadStreamOrReadFileSync(
             filename,
-            context.outputFileSystem,
+            extra.outputFileSystem,
             start,
             end,
           ));
