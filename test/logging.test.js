@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 
@@ -864,48 +865,49 @@ describe.each(scenarios)("logging $name", ({ args }) => {
     });
   });
 
-  it('should logging an error from the fs error when the "writeToDisk" option is "true"', (done) => {
-    const outputDir = path.resolve(
-      __dirname,
-      "./outputs/write-to-disk-mkdir-error",
-    );
+  if (os.platform() !== "win32") {
+    it('should logging an error from the fs error when the "writeToDisk" option is "true"', (done) => {
+      const outputDir = path.resolve(
+        __dirname,
+        "./outputs/write-to-disk-mkdir-error",
+      );
 
-    fs.mkdirSync(outputDir, { recursive: true });
-    fs.chmodSync(outputDir, 0o400);
+      fs.mkdirSync(outputDir, { recursive: true });
+      fs.chmodSync(outputDir, 0o400);
 
-    const proc = execa(runner, args, {
-      reject: false,
-      stdio: "pipe",
-      env: {
-        WEBPACK_CONFIG: "webpack.simple.config",
-        WCF_output_filename: "bundle.js",
-        WCF_output_path: outputDir,
-        WCF_infrastructureLogging_level: "log",
-        WMC_writeToDisk: true,
-      },
+      const proc = execa(runner, args, {
+        reject: false,
+        stdio: "pipe",
+        env: {
+          WEBPACK_CONFIG: "webpack.simple.config",
+          WCF_output_filename: "bundle.js",
+          WCF_output_path: outputDir,
+          WCF_infrastructureLogging_level: "log",
+          WMC_writeToDisk: true,
+        },
+      });
+
+      let stderr = "";
+
+      proc.stderr.on("data", (chunk) => {
+        stderr += chunk.toString();
+        proc.stdin.write("|exit|");
+      });
+
+      proc.on("error", (error) => {
+        done(error);
+      });
+
+      proc.on("exit", () => {
+        expect(extractErrorEntry(stderr)).toMatch("Error: EACCES");
+
+        fs.chmodSync(outputDir, 0o700);
+        fs.rmSync(outputDir, { recursive: true, force: true });
+
+        done();
+      });
     });
-
-    let stderr = "";
-
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-      proc.stdin.write("|exit|");
-    });
-
-    proc.on("error", (error) => {
-      done(error);
-    });
-
-    proc.on("exit", () => {
-      console.warn(stderr);
-      expect(extractErrorEntry(stderr)).toMatch("Error: EACCES");
-
-      fs.chmodSync(outputDir, 0o700);
-      fs.rmSync(outputDir, { recursive: true, force: true });
-
-      done();
-    });
-  });
+  }
 
   it('should logging on successfully build using the "stats" option for middleware with the "true" value', (done) => {
     const proc = execa(runner, args, {
