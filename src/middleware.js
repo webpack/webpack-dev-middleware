@@ -58,9 +58,11 @@ const memoizedParse = memorize((url) => {
 
 const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
 
+/** @typedef {import("fs").Stats} FSStats */
+
 /**
  * @typedef {object} Extra
- * @property {import("fs").Stats} stats stats
+ * @property {FSStats} stats stats
  * @property {boolean=} immutable true when immutable, otherwise false
  * @property {OutputFileSystem} outputFileSystem outputFileSystem
  */
@@ -81,13 +83,27 @@ class FilenameError extends Error {
   constructor(message, code) {
     super(message);
     this.name = "FilenameError";
-    this.code = code;
+    this.statusCode = code;
   }
 }
 
 /** @typedef {{ filename: string, extra: Extra }} FilenameWithExtra */
 
-// TODO fix redirect logic when `/` at the end, like https://github.com/pillarjs/send/blob/master/index.js#L586
+/**
+ * @param {unknown} error error
+ * @returns {boolean} true when error is like not found, otherwise false
+ */
+function isNotFoundError(error) {
+  switch (/** @type {NodeJS.ErrnoException} */ (error).code) {
+    case "ENAMETOOLONG":
+    case "ENOENT":
+    case "ENOTDIR":
+      return true;
+    default:
+      return false;
+  }
+}
+
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
@@ -99,9 +115,6 @@ function getFilenameFromUrl(context, url) {
   /** @type {URL} */
   let urlObject;
 
-  /** @type {string | undefined} */
-  let foundFilename;
-
   try {
     // The `url` property of the `request` is contains only  `pathname`, `search` and `hash`
     urlObject = memoizedParse(url);
@@ -110,13 +123,18 @@ function getFilenameFromUrl(context, url) {
   }
 
   const { options, stats } = context;
-  /** @type {Extra} */
-  const extra = {};
 
   /** @type {Stats[]} */
   const allStats =
     /** @type {MultiStats} */
     (stats).stats || [/** @type {Stats} */ (stats)];
+
+  const index =
+    options.index === false
+      ? /** @type {string[]} */ ([])
+      : typeof options.index === "undefined" || options.index === true
+        ? ["index.html"]
+        : [options.index];
 
   for (const { compilation } of allStats) {
     if (compilation.options.devServer === false) {
@@ -158,6 +176,7 @@ function getFilenameFromUrl(context, url) {
         throw new FilenameError("Forbidden", 403);
       }
 
+      // send file logic
       // The `output.path` is always present and always absolute
       const outputPath = compilation.getPath(
         compilation.outputOptions.path || "",
@@ -172,61 +191,100 @@ function getFilenameFromUrl(context, url) {
         pathname.slice(publicPathPathname.length),
       );
 
+      const { assetsInfo } = compilation;
       const { outputFileSystem } =
         /** @type {Compiler & { outputFileSystem: OutputFileSystem }} */
         (compilation.compiler);
 
-      try {
-        extra.stats = outputFileSystem.statSync(filename);
-      } catch {
-        continue;
-      }
+      /**
+       * @param {string} filename filename
+       * @returns {FilenameWithExtra | undefined} filename when found, otherwise undefined
+       */
+      const resolveIndex = (filename) => {
+        filename = path.join(filename, index[0]);
 
-      const { assetsInfo } = compilation;
-
-      if (extra.stats.isFile()) {
-        foundFilename = filename;
-
-        // Rspack does not yet support `assetsInfo`, so we need to check if `assetsInfo` exists here
-        extra.immutable = assetsInfo
-          ? assetsInfo.get(pathname.slice(publicPathPathname.length))?.immutable
-          : false;
-        extra.outputFileSystem = outputFileSystem;
-
-        break;
-      } else if (
-        extra.stats.isDirectory() &&
-        (typeof options.index === "undefined" || options.index)
-      ) {
-        const indexValue =
-          typeof options.index === "undefined" ||
-          typeof options.index === "boolean"
-            ? "index.html"
-            : options.index;
-
-        filename = path.join(filename, indexValue);
+        let stats;
 
         try {
-          extra.stats = outputFileSystem.statSync(filename);
-        } catch {
+          stats = outputFileSystem.statSync(filename);
+        } catch (err) {
+          if (isNotFoundError(err)) return;
+          throw err;
+        }
+
+        if (/** @type {FSStats} */ (stats).isDirectory()) {
+          return resolveIndex(filename);
+        }
+
+        const extra = {
+          immutable: assetsInfo
+            ? assetsInfo.get(pathname.slice(publicPathPathname.length))
+                ?.immutable
+            : false,
+          outputFileSystem,
+          stats: /** @type {FSStats} */ (stats),
+        };
+
+        return { filename, extra };
+      };
+
+      /**
+       * @param {string} filename filename
+       * @returns {FilenameWithExtra | undefined} filename when found, otherwise undefined
+       */
+      const resolveFile = (filename) => {
+        let stats;
+
+        try {
+          stats = outputFileSystem.statSync(filename);
+        } catch (err) {
+          if (isNotFoundError(err)) return;
+          throw err;
+        }
+
+        if (/** @type {FSStats} */ (stats).isDirectory()) {
+          // Different between `send` and our logic is here, `send` makes a redirect, we just return a file.
+          return resolveIndex(filename);
+        }
+
+        if (filename.endsWith(path.sep)) {
+          return;
+        }
+
+        /** @type {Extra} */
+        const extra = {
+          immutable: assetsInfo
+            ? assetsInfo.get(pathname.slice(publicPathPathname.length))
+                ?.immutable
+            : false,
+          outputFileSystem,
+          stats: /** @type {FSStats} */ (stats),
+        };
+
+        return { filename, extra };
+      };
+
+      // send index logic
+      if (index.length > 0 && pathname.endsWith("/")) {
+        const result = resolveIndex(filename);
+
+        if (!result) {
           continue;
         }
 
-        if (extra.stats.isFile()) {
-          foundFilename = filename;
-          extra.outputFileSystem = outputFileSystem;
-
-          break;
-        }
+        return result;
       }
+
+      // send file logic
+      const result = resolveFile(filename);
+
+      if (!result) {
+        continue;
+      }
+
+      return result;
     }
   }
-
-  if (!foundFilename) {
-    return;
-  }
-
-  return { filename: foundFilename, extra };
 }
 
 /**
@@ -448,9 +506,11 @@ function wrapper(context) {
 
     /**
      * @param {NodeJS.ErrnoException} error error
+     * @param {string=} message override message
+     * @param {number=} code override code
      * @returns {Promise<void>}
      */
-    async function errorHandler(error) {
+    async function errorHandler(error, message, code) {
       switch (error.code) {
         case "ENAMETOOLONG":
         case "ENOENT":
@@ -460,7 +520,7 @@ function wrapper(context) {
           });
           break;
         default:
-          await sendError(error.message, 500, {
+          await sendError(message || error.message, code || 500, {
             modifyResponseData: context.options.modifyResponseData,
           });
           break;
@@ -713,20 +773,22 @@ function wrapper(context) {
         const errorCode =
           typeof err === "object" &&
           err !== null &&
-          typeof (/** @type {FilenameError} */ (err).code) !== "undefined"
-            ? /** @type {FilenameError} */ (err).code
-            : 403;
+          typeof (/** @type {FilenameError} */ (err).statusCode) !== "undefined"
+            ? /** @type {FilenameError} */ (err).statusCode
+            : undefined;
 
         if (errorCode === 403) {
           context.logger.error(`Malicious path "${requestUrl}".`);
         }
 
-        await sendError(
-          errorCode === 400 ? "Bad Request" : "Forbidden",
+        await errorHandler(
+          /** @type {NodeJS.ErrnoException} */ (err),
+          errorCode === 400
+            ? "Bad Request"
+            : errorCode === 403
+              ? "Forbidden"
+              : undefined,
           errorCode,
-          {
-            modifyResponseData: context.options.modifyResponseData,
-          },
         );
         return;
       }
