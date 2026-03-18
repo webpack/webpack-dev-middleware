@@ -41,49 +41,6 @@ const {
 const BYTES_RANGE_REGEXP = /^ *bytes/i;
 
 /**
- * @template {IncomingMessage} Request
- * @template {ServerResponse} Response
- * @param {import("./index.js").FilledContext<Request, Response>} context context
- * @returns {{ outputPath: string, publicPath: string, assetsInfo: Asset["info"] }[]} paths
- */
-function getPaths(context) {
-  const { stats, options } = context;
-  /* eslint-disable unicorn/prefer-logical-operator-over-ternary */
-  /** @type {Stats[]} */
-  const childStats =
-    /** @type {MultiStats} */
-    (stats).stats
-      ? /** @type {MultiStats} */ (stats).stats
-      : [/** @type {Stats} */ (stats)];
-  /** @type {{ outputPath: string, publicPath: string, assetsInfo: Asset["info"] }[]} */
-  const publicPaths = [];
-
-  for (const { compilation } of childStats) {
-    if (compilation.options.devServer === false) {
-      continue;
-    }
-
-    // The `output.path` is always present and always absolute
-    const outputPath = compilation.getPath(
-      compilation.outputOptions.path || "",
-    );
-    const publicPath = options.publicPath
-      ? compilation.getPath(options.publicPath)
-      : compilation.outputOptions.publicPath
-        ? compilation.getPath(compilation.outputOptions.publicPath)
-        : "";
-
-    publicPaths.push({
-      outputPath,
-      publicPath,
-      assetsInfo: compilation.assetsInfo,
-    });
-  }
-
-  return publicPaths;
-}
-
-/**
  * @param {string} input input
  * @returns {string} unescape input
  */
@@ -148,21 +105,29 @@ function getFilenameFromUrl(context, url) {
     return;
   }
 
-  const { options } = context;
-  const paths = getPaths(context);
-
+  const { options, stats } = context;
   /** @type {Extra} */
   const extra = {};
 
-  for (const { publicPath, outputPath, assetsInfo } of paths) {
-    /** @type {string | undefined} */
-    let filename;
+  /** @type {Stats[]} */
+  const allStats =
+    /** @type {MultiStats} */
+    (stats).stats || [/** @type {Stats} */ (stats)];
+
+  for (const { compilation } of allStats) {
+    if (compilation.options.devServer === false) {
+      continue;
+    }
+
     /** @type {URL} */
     let publicPathObject;
 
+    const publicPath =
+      options.publicPath || compilation.options.output.publicPath || "";
+
     try {
       publicPathObject = memoizedParse(
-        publicPath !== "auto" && publicPath ? publicPath : "/",
+        publicPath === "auto" ? "/" : compilation.getPath(publicPath),
       );
     } catch {
       continue;
@@ -170,6 +135,9 @@ function getFilenameFromUrl(context, url) {
 
     const { pathname } = urlObject;
     const { pathname: publicPathPathname } = publicPathObject;
+
+    /** @type {string | undefined} */
+    let filename;
 
     if (
       pathname &&
@@ -186,6 +154,11 @@ function getFilenameFromUrl(context, url) {
         throw new FilenameError("Forbidden", 403);
       }
 
+      // The `output.path` is always present and always absolute
+      const outputPath = compilation.getPath(
+        compilation.outputOptions.path || "",
+      );
+
       // Strip the `pathname` property from the `publicPath` option from the start of requested url
       // `/complex/foo.js` => `foo.js`
       // and add outputPath
@@ -200,6 +173,8 @@ function getFilenameFromUrl(context, url) {
       } catch {
         continue;
       }
+
+      const { assetsInfo } = compilation;
 
       if (extra.stats.isFile()) {
         foundFilename = filename;
