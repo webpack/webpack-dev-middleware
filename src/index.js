@@ -474,6 +474,7 @@ function wdm(compiler, options = {}, isPlugin = false) {
   }
 
   // Modify output file system
+  /** @type {OutputFileSystem} */
   let outputFileSystem;
 
   if (context.options.outputFileSystem) {
@@ -482,22 +483,24 @@ function wdm(compiler, options = {}, isPlugin = false) {
     outputFileSystem = outputFileSystemFromOptions;
   }
   // Don't use `memfs` when developer wants to write everything to a disk, because it doesn't make sense.
-  else if (context.options.writeToDisk !== true) {
-    outputFileSystem = memfs.createFsFromVolume(new memfs.Volume());
-  } else if (isMultipleCompiler(compiler)) {
-    // TODO refactor me, when true we should not do something, we already have the right output file system
-    // Prefer compiler with `devServer` option or fallback on the first
-    const [foundCompiler] = compilersToModify;
-
-    ({ outputFileSystem } = foundCompiler || compiler.compilers[0]);
+  else if (context.options.writeToDisk === true) {
+    // Prefer compiler with `devServer` option or fallback to the first one
+    ({ outputFileSystem } =
+      /** @type {Compiler & { outputFileSystem: OutputFileSystem }} */
+      (
+        isMultipleCompiler(compiler)
+          ? compilersToModify[0] || compiler.compilers[0]
+          : compiler
+      ));
   } else {
-    ({ outputFileSystem } = context.compiler);
+    outputFileSystem =
+      /** @type {OutputFileSystem} */
+      (/** @type {unknown} */ (memfs.createFsFromVolume(new memfs.Volume())));
   }
 
-  context.outputFileSystem = /** @type {OutputFileSystem} */ (outputFileSystem);
+  context.outputFileSystem = outputFileSystem;
 
   for (const compiler of compilersToModify) {
-    // @ts-expect-error wrong ts types
     compiler.outputFileSystem = outputFileSystem;
   }
 
