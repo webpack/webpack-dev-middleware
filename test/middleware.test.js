@@ -4233,81 +4233,86 @@ describe.each([
     });
 
     describe("writeToDisk option", () => {
-      describe('should work with "true" value', () => {
-        let compiler;
+      // TODO https://github.com/honojs/node-server/issues/233
+      (name === "hono" ? describe.skip : describe)(
+        'should work with "true" value',
+        () => {
+          let compiler;
 
-        const outputPath = path.resolve(
-          __dirname,
-          "./outputs/write-to-disk-true",
-        );
-
-        beforeAll(async () => {
-          compiler = getCompiler({
-            ...webpackConfig,
-            output: {
-              filename: "bundle.js",
-              path: outputPath,
-              publicPath: "/public/",
-            },
-          });
-
-          [server, req, instance] = await frameworkFactory(
-            name,
-            framework,
-            compiler,
-            { writeToDisk: true },
+          const outputPath = path.resolve(
+            __dirname,
+            "./outputs/write-to-disk-true",
           );
-        });
 
-        afterAll(async () => {
-          await fs.promises.rm(outputPath, {
-            recursive: true,
-            force: true,
-          });
-          await close(server, instance);
-        });
+          beforeAll(async () => {
+            compiler = getCompiler({
+              ...webpackConfig,
+              output: {
+                filename: "bundle.js",
+                path: outputPath,
+                publicPath: "/public/",
+              },
+            });
 
-        it("should find the bundle file on disk", (done) => {
-          req.get("/public/bundle.js").expect(200, (error) => {
-            if (error) {
-              return done(error);
-            }
-
-            const bundlePath = path.resolve(
-              __dirname,
-              "./outputs/write-to-disk-true/bundle.js",
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+              { writeToDisk: true },
             );
+          });
 
-            expect(
-              compiler.hooks.assetEmitted.taps.filter(
-                (hook) => hook.name === "DevMiddleware",
-              ),
-            ).toHaveLength(0);
+          afterAll(async () => {
+            await fs.promises.rm(outputPath, {
+              recursive: true,
+              force: true,
+            });
+            await close(server, instance);
+          });
 
-            expect(fs.existsSync(bundlePath)).toBe(true);
+          it("should find the bundle file on disk", (done) => {
+            req.get("/public/bundle.js").expect(200, (error) => {
+              if (error) {
+                return done(error);
+              }
 
-            compiler.hooks.done.tap("DevMiddlewareWriteToDiskTest", () => {
+              const bundlePath = path.resolve(
+                __dirname,
+                "./outputs/write-to-disk-true/bundle.js",
+              );
+
               expect(
                 compiler.hooks.assetEmitted.taps.filter(
                   (hook) => hook.name === "DevMiddleware",
                 ),
               ).toHaveLength(0);
-            });
 
-            instance.invalidate(() => {
-              done();
+              expect(fs.existsSync(bundlePath)).toBe(true);
+
+              compiler.hooks.done.tap("DevMiddlewareWriteToDiskTest", () => {
+                expect(
+                  compiler.hooks.assetEmitted.taps.filter(
+                    (hook) => hook.name === "DevMiddleware",
+                  ),
+                ).toHaveLength(0);
+              });
+
+              instance.invalidate(() => {
+                done();
+              });
             });
           });
-        });
 
-        it("should not allow to get files above root", async () => {
-          const response = await req.get("/public/..%2f../middleware.test.js");
+          it("should not allow to get files above root", async () => {
+            const response = await req.get(
+              "/public/..%2f../middleware.test.js",
+            );
 
-          expect(response.statusCode).toBe(403);
-          expect(response.headers["content-type"]).toBe(
-            "text/html; charset=utf-8",
-          );
-          expect(response.text).toBe(`<!DOCTYPE html>
+            expect(response.statusCode).toBe(403);
+            expect(response.headers["content-type"]).toBe(
+              "text/html; charset=utf-8",
+            );
+            expect(response.text).toBe(`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -4317,8 +4322,9 @@ describe.each([
 <pre>Forbidden</pre>
 </body>
 </html>`);
-        });
-      });
+          });
+        },
+      );
 
       describe('should work with "true" value when the `output.clean` is `true`', () => {
         const outputPath = path.resolve(
@@ -4599,79 +4605,85 @@ describe.each([
         });
       });
 
-      describe("should work in multi-compiler mode", () => {
-        let compiler;
+      // TODO https://github.com/honojs/node-server/issues/233
+      (name === "hono" ? describe.skip : describe)(
+        "should work in multi-compiler mode",
+        () => {
+          let compiler;
 
-        const outputPath = path.resolve(
-          __dirname,
-          "./outputs/write-to-disk-multi-compiler/",
-        );
-
-        beforeAll(async () => {
-          compiler = getCompiler([
-            {
-              ...webpackMultiWatchOptionsConfig[0],
-              output: {
-                filename: "bundle.js",
-                path: path.resolve(
-                  __dirname,
-                  "./outputs/write-to-disk-multi-compiler/static-one",
-                ),
-                publicPath: "/static-one/",
-              },
-            },
-            {
-              ...webpackMultiWatchOptionsConfig[1],
-              output: {
-                filename: "bundle.js",
-                path: path.resolve(
-                  __dirname,
-                  "./outputs/write-to-disk-multi-compiler/static-two",
-                ),
-                publicPath: "/static-two/",
-              },
-            },
-          ]);
-
-          [server, req, instance] = await frameworkFactory(
-            name,
-            framework,
-            compiler,
-            { writeToDisk: true },
+          const outputPath = path.resolve(
+            __dirname,
+            "./outputs/write-to-disk-multi-compiler/",
           );
-        });
 
-        afterAll(async () => {
-          await fs.promises.rm(outputPath, {
-            recursive: true,
-            force: true,
+          // eslint-disable-next-line jest/no-duplicate-hooks
+          beforeAll(async () => {
+            compiler = getCompiler([
+              {
+                ...webpackMultiWatchOptionsConfig[0],
+                output: {
+                  filename: "bundle.js",
+                  path: path.resolve(
+                    __dirname,
+                    "./outputs/write-to-disk-multi-compiler/static-one",
+                  ),
+                  publicPath: "/static-one/",
+                },
+              },
+              {
+                ...webpackMultiWatchOptionsConfig[1],
+                output: {
+                  filename: "bundle.js",
+                  path: path.resolve(
+                    __dirname,
+                    "./outputs/write-to-disk-multi-compiler/static-two",
+                  ),
+                  publicPath: "/static-two/",
+                },
+              },
+            ]);
+
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+              { writeToDisk: true },
+            );
           });
-          await close(server, instance);
-        });
 
-        it("should find the bundle files on disk", async () => {
-          const response1 = await req.get("/static-one/bundle.js");
+          // eslint-disable-next-line jest/no-duplicate-hooks
+          afterAll(async () => {
+            await fs.promises.rm(outputPath, {
+              recursive: true,
+              force: true,
+            });
+            await close(server, instance);
+          });
 
-          expect(response1.statusCode).toBe(200);
+          it("should find the bundle files on disk", async () => {
+            const response1 = await req.get("/static-one/bundle.js");
 
-          const response2 = await req.get("/static-two/bundle.js");
+            expect(response1.statusCode).toBe(200);
 
-          expect(response2.statusCode).toBe(200);
+            const response2 = await req.get("/static-two/bundle.js");
 
-          const bundleFiles = [
-            "./outputs/write-to-disk-multi-compiler/static-one/bundle.js",
-            "./outputs/write-to-disk-multi-compiler/static-one/index.html",
-            "./outputs/write-to-disk-multi-compiler/static-one/svg.svg",
-            "./outputs/write-to-disk-multi-compiler/static-two/bundle.js",
-          ];
+            expect(response2.statusCode).toBe(200);
 
-          for (const bundleFile of bundleFiles) {
-            const bundlePath = path.resolve(__dirname, bundleFile);
+            const bundleFiles = [
+              "./outputs/write-to-disk-multi-compiler/static-one/bundle.js",
+              "./outputs/write-to-disk-multi-compiler/static-one/index.html",
+              "./outputs/write-to-disk-multi-compiler/static-one/svg.svg",
+              "./outputs/write-to-disk-multi-compiler/static-two/bundle.js",
+            ];
 
-            expect(fs.existsSync(bundlePath)).toBe(true);
-          }
-        });
-      });
+            for (const bundleFile of bundleFiles) {
+              const bundlePath = path.resolve(__dirname, bundleFile);
+
+              expect(fs.existsSync(bundlePath)).toBe(true);
+            }
+          });
+        },
+      );
 
       describe('should work with "[hash]"/"[fullhash]" in the "output.path" and "output.publicPath" option', () => {
         let compiler;

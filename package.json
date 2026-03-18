@@ -38,7 +38,7 @@
     "build:types": "tsc --declaration --emitDeclarationOnly --outDir types && prettier \"types/**/*.ts\" --write",
     "build:code": "babel src -d dist --copy-files",
     "build": "npm-run-all -p \"build:**\"",
-    "test:only": "node --trace-deprecation node_modules/.bin/jest",
+    "test:only": "jest",
     "test:watch": "npm run test:only -- --watch",
     "test:coverage": "npm run test:only -- --collectCoverageFrom=\"src/**/*.js\" --coverage",
     "pretest": "npm run lint",
