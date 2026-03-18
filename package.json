@@ -73,7 +73,7 @@
     "del-cli": "^7.0.0",
     "eslint": "^9.28.0",
     "eslint-config-webpack": "^4.5.0",
-    "execa": "^5.1.1",
+    "execa": "^9.6.1",
     "express": "^5.1.0",
     "express-4": "npm:express@^4",
     "fastify": "^5.2.1",
