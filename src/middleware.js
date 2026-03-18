@@ -188,14 +188,9 @@ function getFilenameFromUrl(context, url) {
         foundFilename = filename;
 
         // Rspack does not yet support `assetsInfo`, so we need to check if `assetsInfo` exists here
-        if (assetsInfo) {
-          const assetInfo = assetsInfo.get(
-            pathname.slice(publicPathPathname.length),
-          );
-
-          extra.immutable = assetInfo ? assetInfo.immutable : false;
-        }
-
+        extra.immutable = assetsInfo
+          ? assetsInfo.get(pathname.slice(publicPathPathname.length))?.immutable
+          : false;
         extra.outputFileSystem = outputFileSystem;
 
         break;
@@ -1077,20 +1072,15 @@ function wrapper(context) {
         return;
       }
 
-      // Cleanup
-      const cleanup = () => {
-        destroyStream(
-          /** @type {import("fs").ReadStream} */ (bufferOrStream),
-          true,
-        );
-      };
-
       // Error handling
       /** @type {import("fs").ReadStream} */
       (bufferOrStream).on("error", (error) => {
         context.logger.error("Stream error:", error);
         // clean up stream early
-        cleanup();
+        destroyStream(
+          /** @type {import("fs").ReadStream} */ (bufferOrStream),
+          true,
+        );
         errorHandler(error);
       });
 
@@ -1100,7 +1090,16 @@ function wrapper(context) {
 
       if (outgoing) {
         // Response finished, cleanup
-        onFinishedStream(outgoing, cleanup);
+        onFinishedStream(outgoing, (err) => {
+          if (err) {
+            context.logger.error("Stream error:", err);
+          }
+
+          destroyStream(
+            /** @type {import("fs").ReadStream} */ (bufferOrStream),
+            true,
+          );
+        });
       }
     }
 
