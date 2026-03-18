@@ -462,10 +462,12 @@ app.use(instance);
 instance.waitUntilValid(() => {
   instance
     .getFilenameFromUrl("/bundle.js")
-    .then(() => {
-      if (filename) {
-        console.log(`Filename is ${filename}`);
+    .then((filename) => {
+      if (!filename) {
+        return;
       }
+
+      console.log(`Filename is ${filename}`);
     })
     .catch((err) => {
       console.log(`Error: ${err}`);
