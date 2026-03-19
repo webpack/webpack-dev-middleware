@@ -6,6 +6,7 @@ const onFinishedStream = require("on-finished");
 
 const {
   createReadStreamOrReadFile,
+  destroyStream,
   escapeHtml,
   etag,
   finish,
@@ -17,8 +18,10 @@ const {
   getResponseHeader,
   getResponseHeaders,
   getStatusCode,
+  getValueContentRangeHeader,
   initState,
   memorize,
+  parseHttpDate,
   parseTokenList,
   pipe,
   removeResponseHeader,
@@ -309,47 +312,7 @@ async function getFilenameFromUrl(context, url) {
   }
 }
 
-/**
- * @param {"bytes"} type type
- * @param {number} size size
- * @param {import("range-parser").Range=} range range
- * @returns {string} value of content range header
- */
-function getValueContentRangeHeader(type, size, range) {
-  return `${type} ${range ? `${range.start}-${range.end}` : "*"}/${size}`;
-}
-
-/**
- * Parse an HTTP Date into a number.
- * @param {string} date date
- * @returns {number} timestamp
- */
-function parseHttpDate(date) {
-  const timestamp = date && Date.parse(date);
-
-  // istanbul ignore next: guard against date.js Date.parse patching
-  return typeof timestamp === "number" ? timestamp : Number.NaN;
-}
-
 const CACHE_CONTROL_NO_CACHE_REGEXP = /(?:^|,)\s*?no-cache\s*?(?:,|$)/;
-
-/**
- * @param {import("fs").ReadStream} stream stream
- * @param {boolean} suppress do need suppress?
- * @returns {void}
- */
-function destroyStream(stream, suppress) {
-  if (stream.destroyed) {
-    return;
-  }
-
-  stream.destroy();
-
-  if (typeof stream.addListener === "function" && suppress) {
-    stream.removeAllListeners("error");
-    stream.addListener("error", () => {});
-  }
-}
 
 /** @type {Record<number, string>} */
 const statuses = {
@@ -943,7 +906,7 @@ function wrapper(context) {
           [start, end] = calcStartAndEnd(offset, len);
 
           try {
-            const result = await createReadStreamOrReadFile(
+            const result = createReadStreamOrReadFile(
               filename,
               extra.outputFileSystem,
               start,
@@ -1088,7 +1051,7 @@ function wrapper(context) {
         [start, end] = calcStartAndEnd(offset, len);
 
         try {
-          ({ bufferOrStream, byteLength } = await createReadStreamOrReadFile(
+          ({ bufferOrStream, byteLength } = createReadStreamOrReadFile(
             filename,
             extra.outputFileSystem,
             start,

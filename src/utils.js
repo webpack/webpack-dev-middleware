@@ -67,6 +67,28 @@ function escapeHtml(string) {
 /** @typedef {import("fs").ReadStream} ReadStream */
 
 /**
+ * Parse an HTTP Date into a number.
+ * @param {string} date date
+ * @returns {number} timestamp
+ */
+function parseHttpDate(date) {
+  const timestamp = date && Date.parse(date);
+
+  // istanbul ignore next: guard against date.js Date.parse patching
+  return typeof timestamp === "number" ? timestamp : Number.NaN;
+}
+
+/**
+ * @param {"bytes"} type type
+ * @param {number} size size
+ * @param {import("range-parser").Range=} range range
+ * @returns {string} value of content range header
+ */
+function getValueContentRangeHeader(type, size, range) {
+  return `${type} ${range ? `${range.start}-${range.end}` : "*"}/${size}`;
+}
+
+/**
  * Generate a tag for a stat.
  * @param {Stats} stats stats
  * @returns {{ hash: string, buffer?: Buffer }} etag
@@ -447,14 +469,9 @@ function finish(res, data) {
  * @param {OutputFileSystem} outputFileSystem output file system
  * @param {number} start start
  * @param {number} end end
- * @returns {Promise<{ bufferOrStream: (Buffer | import("fs").ReadStream), byteLength: number }>} result with buffer or stream and byte length
+ * @returns {{ bufferOrStream: (Buffer | import("fs").ReadStream), byteLength: number }} result with buffer or stream and byte length
  */
-async function createReadStreamOrReadFile(
-  filename,
-  outputFileSystem,
-  start,
-  end,
-) {
+function createReadStreamOrReadFile(filename, outputFileSystem, start, end) {
   /** @type {string | Buffer | import("fs").ReadStream} */
   let bufferOrStream;
   /** @type {number} */
@@ -474,27 +491,31 @@ async function createReadStreamOrReadFile(
 
     byteLength = end === 0 ? 0 : end - start + 1;
   } else {
-    bufferOrStream = await new Promise(
-      /**
-       * @param {(value: Buffer) => void} resolve resolve
-       * @param {(reason: Error) => void} reject reject
-       */
-      (resolve, reject) => {
-        outputFileSystem.readFile(filename, (err, data) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-
-          resolve(/** @type {Buffer} */ (data));
-        });
-      },
-    );
+    bufferOrStream = outputFileSystem.readFileSync(filename);
+    ({ byteLength } = bufferOrStream);
 
     byteLength = bufferOrStream.byteLength;
   }
 
   return { bufferOrStream, byteLength };
+}
+
+/**
+ * @param {import("fs").ReadStream} stream stream
+ * @param {boolean} suppress do need suppress?
+ * @returns {void}
+ */
+function destroyStream(stream, suppress) {
+  if (stream.destroyed) {
+    return;
+  }
+
+  stream.destroy();
+
+  if (typeof stream.addListener === "function" && suppress) {
+    stream.removeAllListeners("error");
+    stream.addListener("error", () => {});
+  }
 }
 
 /**
@@ -544,6 +565,7 @@ function setState(res, name, value) {
 
 module.exports = {
   createReadStreamOrReadFile,
+  destroyStream,
   escapeHtml,
   etag,
   finish,
@@ -555,8 +577,10 @@ module.exports = {
   getResponseHeader,
   getResponseHeaders,
   getStatusCode,
+  getValueContentRangeHeader,
   initState,
   memorize,
+  parseHttpDate,
   parseTokenList,
   pipe,
   removeResponseHeader,
