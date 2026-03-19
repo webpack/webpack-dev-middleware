@@ -81,7 +81,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
     ({ execa } = await import("execa"));
   });
 
-  it("should logging on successfully build", (done) => {
+  it("should logging on successfully build", async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -90,36 +90,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it("should logging on successfully build and respect colors", (done) => {
+  it("should logging on successfully build and respect colors", async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -128,36 +120,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it("should logging on successfully build and respect colors #2", (done) => {
+  it("should logging on successfully build and respect colors #2", async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -166,36 +150,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).not.toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).not.toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it("should logging on successfully build when the 'stats' doesn't exist", (done) => {
+  it("should logging on successfully build when the 'stats' doesn't exist", async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -204,36 +180,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully build and respect the "stats" option from configuration with the "none" value', (done) => {
+  it('should logging on successfully build and respect the "stats" option from configuration with the "none" value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -241,35 +209,27 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully build and respect the "stats" option from configuration with the "minimal" value', (done) => {
+  it('should logging on successfully build and respect the "stats" option from configuration with the "minimal" value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -278,36 +238,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      // expect(stdout).toContain('\u001b[1m');
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully build and respect the "stats" option from configuration with the "verbose" value', (done) => {
+  it('should logging on successfully build and respect the "stats" option from configuration with the "verbose" value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -316,36 +268,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully build and respect the "stats" option from configuration with the "true" value', (done) => {
+  it('should logging on successfully build and respect the "stats" option from configuration with the "true" value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -354,36 +298,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully build and respect the "stats" option from configuration with the "false" value', (done) => {
+  it('should logging on successfully build and respect the "stats" option from configuration with the "false" value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -391,35 +327,27 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully build and respect the "stats" option from configuration with custom object value', (done) => {
+  it('should logging on successfully build and respect the "stats" option from configuration with custom object value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -428,36 +356,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it("should logging on successfully build in multi-compiler mode", (done) => {
+  it("should logging on successfully build in multi-compiler mode", async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -466,36 +386,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it("should logging on unsuccessful build", (done) => {
+  it("should logging on unsuccessful build", async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -504,36 +416,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it("should logging on unsuccessful build in multi-compiler", (done) => {
+  it("should logging on unsuccessful build in multi-compiler", async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -542,36 +446,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it("should logging an warning", (done) => {
+  it("should logging an warning", async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -580,36 +476,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it("should logging warnings in multi-compiler mode", (done) => {
+  it("should logging warnings in multi-compiler mode", async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -618,36 +506,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging in multi-compiler and respect the "stats" option from configuration', (done) => {
+  it('should logging in multi-compiler and respect the "stats" option from configuration', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -656,36 +536,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging in multi-compiler and respect the "stats" option from configuration #2', (done) => {
+  it('should logging in multi-compiler and respect the "stats" option from configuration #2', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -695,36 +567,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging in multi-compiler and respect the "stats" option from configuration #3', (done) => {
+  it('should logging in multi-compiler and respect the "stats" option from configuration #3', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -733,36 +597,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging in multi-compiler and respect the "stats" option from configuration #4', (done) => {
+  it('should logging in multi-compiler and respect the "stats" option from configuration #4', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -771,36 +627,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging in multi-compiler and respect the "stats" option from configuration #5', (done) => {
+  it('should logging in multi-compiler and respect the "stats" option from configuration #5', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -809,33 +657,25 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
   it('should logging an error in "watch" method', async () => {
@@ -892,7 +732,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
     });
   }
 
-  it('should logging on successfully build using the "stats" option for middleware with the "true" value', (done) => {
+  it('should logging on successfully build using the "stats" option for middleware with the "true" value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -902,36 +742,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully build using the "stats" option for middleware with the "false" value', (done) => {
+  it('should logging on successfully build using the "stats" option for middleware with the "false" value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -941,35 +773,27 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully build using the "stats" option for middleware with the "none" value', (done) => {
+  it('should logging on successfully build using the "stats" option for middleware with the "none" value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -979,35 +803,27 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully build using the "stats" option for middleware with the "normal" value', (done) => {
+  it('should logging on successfully build using the "stats" option for middleware with the "normal" value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -1017,36 +833,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully build using the "stats" option for middleware with the "verbose" value', (done) => {
+  it('should logging on successfully build using the "stats" option for middleware with the "verbose" value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -1056,36 +864,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully build using the "stats" option for middleware with object value', (done) => {
+  it('should logging on successfully build using the "stats" option for middleware with object value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -1095,36 +895,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully build using the "stats" option for middleware with the object value and colors', (done) => {
+  it('should logging on successfully build using the "stats" option for middleware with the object value and colors', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -1134,36 +926,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully build using the "stats" option for middleware with object value and no colors', (done) => {
+  it('should logging on successfully build using the "stats" option for middleware with object value and no colors', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -1173,36 +957,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).not.toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).not.toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully multi-compiler build using the "stats" option for middleware with the "true" value', (done) => {
+  it('should logging on successfully multi-compiler build using the "stats" option for middleware with the "true" value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -1212,36 +988,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully multi-compiler build using the "stats" option for middleware with the "false" value', (done) => {
+  it('should logging on successfully multi-compiler build using the "stats" option for middleware with the "false" value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -1251,35 +1019,27 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully multi-compiler build using the "stats" option for middleware with the "normal" value', (done) => {
+  it('should logging on successfully multi-compiler build using the "stats" option for middleware with the "normal" value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -1289,36 +1049,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully multi-compiler build using the "stats" option for middleware with the object value', (done) => {
+  it('should logging on successfully multi-compiler build using the "stats" option for middleware with the object value', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -1328,36 +1080,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully multi-compiler build using the "stats" option for middleware with object value and colors', (done) => {
+  it('should logging on successfully multi-compiler build using the "stats" option for middleware with object value and colors', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -1367,36 +1111,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully multi-compiler build using the "stats" option for middleware with object value and no colors', (done) => {
+  it('should logging on successfully multi-compiler build using the "stats" option for middleware with object value and no colors', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -1406,36 +1142,28 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).not.toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).not.toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 
-  it('should logging on successfully build and respect the "NO_COLOR" env', (done) => {
+  it('should logging on successfully build and respect the "NO_COLOR" env', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       env: {
@@ -1445,32 +1173,24 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stdout = "";
-    let stderr = "";
+    let data = "";
 
     proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      data += chunk.toString();
 
-      if (/compiled-for-tests/gi.test(stdout)) {
+      if (/compiled-for-tests/gi.test(data)) {
         proc.stdin.write("|exit|");
       }
     });
 
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const { stdout, stderr } = await proc;
 
-    proc.on("exit", () => {
-      expect(stdout).not.toContain("\u001B[1m");
-      expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stdout).not.toContain("\u001B[1m");
+    expect(stdoutToSnapshot(stdout)).toMatchSnapshot("stdout");
+    expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
   });
 });
