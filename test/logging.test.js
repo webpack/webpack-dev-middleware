@@ -866,7 +866,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
   });
 
   if (os.platform() !== "win32") {
-    it('should logging an error from the fs error when the "writeToDisk" option is "true"', (done) => {
+    it('should logging an error from the fs error when the "writeToDisk" option is "true"', async () => {
       const outputDir = path.resolve(
         __dirname,
         "./outputs/write-to-disk-mkdir-error",
@@ -876,6 +876,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       fs.chmodSync(outputDir, 0o400);
 
       const proc = execa(runner, args, {
+        all: true,
         reject: false,
         stdio: "pipe",
         env: {
@@ -887,25 +888,16 @@ describe.each(scenarios)("logging $name", ({ args }) => {
         },
       });
 
-      let stderr = "";
-
-      proc.stderr.on("data", (chunk) => {
-        stderr += chunk.toString();
+      proc.stderr.on("data", () => {
         proc.stdin.write("|exit|");
       });
 
-      proc.on("error", (error) => {
-        done(error);
-      });
+      const { all } = await proc;
 
-      proc.on("close", () => {
-        expect(extractErrorEntry(stderr)).toMatch("Error: EACCES");
+      expect(extractErrorEntry(all)).toMatch("Error: EACCES");
 
-        fs.chmodSync(outputDir, 0o700);
-        fs.rmSync(outputDir, { recursive: true, force: true });
-
-        done();
-      });
+      fs.chmodSync(outputDir, 0o700);
+      fs.rmSync(outputDir, { recursive: true, force: true });
     });
   }
 
