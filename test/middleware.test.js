@@ -323,6 +323,9 @@ describe.each([
   ["hapi", Hapi],
   ["hono", Hono],
 ])("%s framework:", (name, framework) => {
+  // TODO remove this when `hono` fix this problem - https://github.com/honojs/node-server/issues/233
+  jest.retryTimes(3, { logErrorsBeforeRetry: true });
+
   describe("middleware", () => {
     let instance;
     let server;
@@ -4325,9 +4328,6 @@ describe.each([
     });
 
     describe("writeToDisk option", () => {
-      // TODO remove this when `hono` fix this problem - https://github.com/honojs/node-server/issues/233
-      jest.retryTimes(3, { logErrorsBeforeRetry: true });
-
       describe('should work with "true" value', () => {
         let compiler;
 
