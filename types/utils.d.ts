@@ -85,7 +85,7 @@ export type EXPECTED_ANY = import("./index").EXPECTED_ANY;
  * @param {number} end end
  * @returns {{ bufferOrStream: (Buffer | import("fs").ReadStream), byteLength: number }} result with buffer or stream and byte length
  */
-export function createReadStreamOrReadFileSync(
+export function createReadStreamOrReadFile(
   filename: string,
   outputFileSystem: OutputFileSystem,
   start: number,
@@ -94,6 +94,15 @@ export function createReadStreamOrReadFileSync(
   bufferOrStream: Buffer | import("fs").ReadStream;
   byteLength: number;
 };
+/**
+ * @param {import("fs").ReadStream} stream stream
+ * @param {boolean} suppress do need suppress?
+ * @returns {void}
+ */
+export function destroyStream(
+  stream: import("fs").ReadStream,
+  suppress: boolean,
+): void;
 /**
  * @param {string} string raw HTML
  * @returns {string} escaped HTML
@@ -205,6 +214,17 @@ export function getStatusCode<
   Response extends ServerResponse & ExpectedServerResponse,
 >(res: Response): number;
 /**
+ * @param {"bytes"} type type
+ * @param {number} size size
+ * @param {import("range-parser").Range=} range range
+ * @returns {string} value of content range header
+ */
+export function getValueContentRangeHeader(
+  type: "bytes",
+  size: number,
+  range?: import("range-parser").Range | undefined,
+): string;
+/**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res
  */
@@ -241,6 +261,14 @@ export function memorize<T>(
     | undefined,
   callback?: ((value: T) => T) | undefined,
 ): FunctionReturning<T>;
+/** @typedef {import("fs").Stats} Stats */
+/** @typedef {import("fs").ReadStream} ReadStream */
+/**
+ * Parse an HTTP Date into a number.
+ * @param {string} date date
+ * @returns {number} timestamp
+ */
+export function parseHttpDate(date: string): number;
 /**
  * Parse a HTTP token list.
  * @param {string} str str
