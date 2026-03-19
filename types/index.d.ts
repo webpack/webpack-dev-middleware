@@ -27,7 +27,7 @@ declare namespace wdm {
     Stats,
     MultiStats,
     ReadStream,
-    Extra,
+    FilenameWithExtra,
     EXPECTED_ANY,
     EXPECTED_FUNCTION,
     ExtendedServerResponse,
@@ -127,7 +127,7 @@ type Configuration = import("webpack").Configuration;
 type Stats = import("webpack").Stats;
 type MultiStats = import("webpack").MultiStats;
 type ReadStream = import("fs").ReadStream;
-type Extra = import("./middleware").Extra;
+type FilenameWithExtra = import("./middleware").FilenameWithExtra;
 type EXPECTED_ANY = any;
 type EXPECTED_FUNCTION = Function;
 type ExtendedServerResponse = {
@@ -325,12 +325,9 @@ type Middleware<
   res: ResponseInternal,
   next: NextFunction,
 ) => Promise<void>;
-type GetFilenameFromUrl = (url: string) =>
-  | {
-      filename: string;
-      extra: Extra;
-    }
-  | undefined;
+type GetFilenameFromUrl = (
+  url: string,
+) => Promise<FilenameWithExtra | undefined>;
 type WaitUntilValid = (callback: Callback) => any;
 type Invalidate = (callback: Callback) => any;
 type Close = (callback: (err: Error | null | undefined) => void) => any;

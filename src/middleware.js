@@ -109,9 +109,9 @@ function isNotFoundError(error) {
  * @template {ServerResponse} Response
  * @param {import("./index.js").FilledContext<Request, Response>} context context
  * @param {string} url url
- * @returns {FilenameWithExtra | undefined} result of get filename from url
+ * @returns {Promise<FilenameWithExtra | undefined>} result of get filename from url
  */
-function getFilenameFromUrl(context, url) {
+async function getFilenameFromUrl(context, url) {
   /** @type {URL} */
   let urlObject;
 
@@ -198,9 +198,9 @@ function getFilenameFromUrl(context, url) {
 
       /**
        * @param {string} filename filename
-       * @returns {FilenameWithExtra | undefined} filename when found, otherwise undefined
+       * @returns {Promise<FilenameWithExtra | undefined>} filename when found, otherwise undefined
        */
-      const resolveIndex = (filename) => {
+      const resolveIndex = async (filename) => {
         if (index.length === 0) {
           return;
         }
@@ -234,9 +234,9 @@ function getFilenameFromUrl(context, url) {
 
       /**
        * @param {string} filename filename
-       * @returns {FilenameWithExtra | undefined} filename when found, otherwise undefined
+       * @returns {Promise<FilenameWithExtra | undefined>} filename when found, otherwise undefined
        */
-      const resolveFile = (filename) => {
+      const resolveFile = async (filename) => {
         let stats;
 
         try {
@@ -270,7 +270,7 @@ function getFilenameFromUrl(context, url) {
 
       // send index logic
       if (index.length > 0 && pathname.endsWith("/")) {
-        const result = resolveIndex(filename);
+        const result = await resolveIndex(filename);
 
         if (!result) {
           continue;
@@ -280,7 +280,7 @@ function getFilenameFromUrl(context, url) {
       }
 
       // send file logic
-      const result = resolveFile(filename);
+      const result = await resolveFile(filename);
 
       if (!result) {
         continue;
@@ -771,7 +771,7 @@ function wrapper(context) {
       const requestUrl = /** @type {string} */ (getRequestURL(req));
 
       try {
-        resolved = getFilenameFromUrl(context, requestUrl);
+        resolved = await getFilenameFromUrl(context, requestUrl);
       } catch (err) {
         // Fallback to 403 for unknown errors
         const errorCode =

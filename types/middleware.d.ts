@@ -27,16 +27,16 @@ declare namespace wrapper {
     ServerResponse,
     NormalizedHeaders,
     OutputFileSystem,
+    FSStats,
     Extra,
   };
 }
-/** @typedef {{ filename: string, extra: Extra }} FilenameWithExtra */
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
  * @param {import("./index.js").FilledContext<Request, Response>} context context
  * @param {string} url url
- * @returns {FilenameWithExtra | undefined} result of get filename from url
+ * @returns {Promise<FilenameWithExtra | undefined>} result of get filename from url
  */
 declare function getFilenameFromUrl<
   Request extends IncomingMessage,
@@ -44,7 +44,7 @@ declare function getFilenameFromUrl<
 >(
   context: import("./index.js").FilledContext<Request, Response>,
   url: string,
-): FilenameWithExtra | undefined;
+): Promise<FilenameWithExtra | undefined>;
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
@@ -100,11 +100,12 @@ type IncomingMessage = import("./index.js").IncomingMessage;
 type ServerResponse = import("./index.js").ServerResponse;
 type NormalizedHeaders = import("./index.js").NormalizedHeaders;
 type OutputFileSystem = import("./index.js").OutputFileSystem;
+type FSStats = import("fs").Stats;
 type Extra = {
   /**
    * stats
    */
-  stats: import("fs").Stats;
+  stats: FSStats;
   /**
    * true when immutable, otherwise false
    */
