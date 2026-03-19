@@ -447,9 +447,9 @@ function finish(res, data) {
  * @param {OutputFileSystem} outputFileSystem output file system
  * @param {number} start start
  * @param {number} end end
- * @returns {{ bufferOrStream: (Buffer | import("fs").ReadStream), byteLength: number }} result with buffer or stream and byte length
+ * @returns {Promise<{ bufferOrStream: (Buffer | import("fs").ReadStream), byteLength: number }>} result with buffer or stream and byte length
  */
-function createReadStreamOrReadFileSync(
+async function createReadStreamOrReadFile(
   filename,
   outputFileSystem,
   start,
@@ -472,11 +472,26 @@ function createReadStreamOrReadFileSync(
         end,
       });
 
-    // Handle files with zero bytes
     byteLength = end === 0 ? 0 : end - start + 1;
   } else {
-    bufferOrStream = outputFileSystem.readFileSync(filename);
-    ({ byteLength } = bufferOrStream);
+    bufferOrStream = await new Promise(
+      /**
+       * @param {(value: Buffer) => void} resolve resolve
+       * @param {(reason: Error) => void} reject reject
+       */
+      (resolve, reject) => {
+        outputFileSystem.readFile(filename, (err, data) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+
+          resolve(/** @type {Buffer} */ (data));
+        });
+      },
+    );
+
+    byteLength = bufferOrStream.byteLength;
   }
 
   return { bufferOrStream, byteLength };
@@ -528,7 +543,7 @@ function setState(res, name, value) {
 }
 
 module.exports = {
-  createReadStreamOrReadFileSync,
+  createReadStreamOrReadFile,
   escapeHtml,
   etag,
   finish,
