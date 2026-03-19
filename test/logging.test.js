@@ -3,8 +3,6 @@ import os from "node:os";
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 
-jest.useFakeTimers({ doNotFake: ["process", "nextTick"] });
-
 function extractErrorEntry(string) {
   const matches = string.match(/error:\s\D[^:||\n||\r]+/gim);
 
