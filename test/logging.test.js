@@ -838,7 +838,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
     });
   });
 
-  it('should logging an error in "watch" method', (done) => {
+  it('should logging an error in "watch" method', async () => {
     const proc = execa(runner, args, {
       stdio: "pipe",
       reject: false,
@@ -847,22 +847,13 @@ describe.each(scenarios)("logging $name", ({ args }) => {
       },
     });
 
-    let stderr = "";
-
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+    proc.stderr.on("data", () => {
       proc.stdin.write("|exit|");
     });
 
-    proc.on("error", (error) => {
-      done(error);
-    });
+    const result = await proc;
 
-    proc.on("exit", () => {
-      expect(stderrToSnapshot(stderr)).toMatchSnapshot("stderr");
-
-      done();
-    });
+    expect(stderrToSnapshot(result.stderr)).toMatchSnapshot("stderr");
   });
 
   if (os.platform() !== "win32") {
