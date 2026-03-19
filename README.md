@@ -460,20 +460,16 @@ const app = new express();
 app.use(instance);
 
 instance.waitUntilValid(() => {
-  let resolver;
-
-  try {
-    resolved = instance.getFilenameFromUrl("/bundle.js");
-  } catch (err) {
-    console.log(`Error: ${err}`);
-  }
-
-  if (!resolved) {
-    console.log("Not found");
-    return;
-  }
-
-  console.log(`Filename is ${filename}`);
+  instance
+    .getFilenameFromUrl("/bundle.js")
+    .then(() => {
+      if (filename) {
+        console.log(`Filename is ${filename}`);
+      }
+    })
+    .catch((err) => {
+      console.log(`Error: ${err}`);
+    });
 });
 ```
 

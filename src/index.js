@@ -14,7 +14,7 @@ const noop = () => {};
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
 /** @typedef {import("fs").ReadStream} ReadStream */
-/** @typedef {import("./middleware").Extra} Extra */
+/** @typedef {import("./middleware").FilenameWithExtra} FilenameWithExtra */
 
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_ANY */
@@ -126,7 +126,7 @@ const noop = () => {};
 /**
  * @callback GetFilenameFromUrl
  * @param {string} url request URL
- * @returns {{ filename: string, extra: Extra } | undefined} a filename with additional information, or `undefined` if nothing is found
+ * @returns {Promise<FilenameWithExtra | undefined>} a filename with additional information, or `undefined` if nothing is found
  */
 
 /**
