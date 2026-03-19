@@ -5,7 +5,7 @@ const mime = require("mime-types");
 const onFinishedStream = require("on-finished");
 
 const {
-  createReadStreamOrReadFileSync,
+  createReadStreamOrReadFile,
   escapeHtml,
   etag,
   finish,
@@ -210,7 +210,16 @@ async function getFilenameFromUrl(context, url) {
         let stats;
 
         try {
-          stats = outputFileSystem.statSync(filename);
+          stats = await new Promise((resolve, reject) => {
+            outputFileSystem.stat(filename, (err, res) => {
+              if (err) {
+                reject(err);
+                return;
+              }
+
+              resolve(res);
+            });
+          });
         } catch (err) {
           if (isNotFoundError(err)) return;
           throw err;
@@ -240,7 +249,16 @@ async function getFilenameFromUrl(context, url) {
         let stats;
 
         try {
-          stats = outputFileSystem.statSync(filename);
+          stats = await new Promise((resolve, reject) => {
+            outputFileSystem.stat(filename, (err, res) => {
+              if (err) {
+                reject(err);
+                return;
+              }
+
+              resolve(res);
+            });
+          });
         } catch (err) {
           if (isNotFoundError(err)) return;
           throw err;
@@ -925,7 +943,7 @@ function wrapper(context) {
           [start, end] = calcStartAndEnd(offset, len);
 
           try {
-            const result = createReadStreamOrReadFileSync(
+            const result = await createReadStreamOrReadFile(
               filename,
               extra.outputFileSystem,
               start,
@@ -1070,7 +1088,7 @@ function wrapper(context) {
         [start, end] = calcStartAndEnd(offset, len);
 
         try {
-          ({ bufferOrStream, byteLength } = createReadStreamOrReadFileSync(
+          ({ bufferOrStream, byteLength } = await createReadStreamOrReadFile(
             filename,
             extra.outputFileSystem,
             start,
