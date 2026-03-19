@@ -201,6 +201,10 @@ function getFilenameFromUrl(context, url) {
        * @returns {FilenameWithExtra | undefined} filename when found, otherwise undefined
        */
       const resolveIndex = (filename) => {
+        if (index.length === 0) {
+          return;
+        }
+
         filename = path.join(filename, index[0]);
 
         let stats;
