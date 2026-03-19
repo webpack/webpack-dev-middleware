@@ -7,6 +7,4 @@ module.exports = {
   setupFilesAfterEnv: ["<rootDir>/setupTest.js"],
   globalSetup: "./test/helpers/globalSetup.js",
   snapshotResolver: "./test/helpers/snapshotResolver.js",
-  // TODO remove this when `hono` fix this problem - https://github.com/honojs/node-server/issues/233
-  retryTimes: 3,
 };
