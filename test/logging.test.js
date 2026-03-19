@@ -898,7 +898,7 @@ describe.each(scenarios)("logging $name", ({ args }) => {
         done(error);
       });
 
-      proc.on("exit", () => {
+      proc.on("close", () => {
         expect(extractErrorEntry(stderr)).toMatch("Error: EACCES");
 
         fs.chmodSync(outputDir, 0o700);
