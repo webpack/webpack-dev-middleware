@@ -233,6 +233,37 @@ function normalizeStatsOptions(statsOptions) {
   return statsOptions;
 }
 
+// Compatibility with rspack
+/**
+ * @returns {boolean} true when color supported, otherwise false
+ */
+function isColorSupported() {
+  const {
+    env = {},
+    argv = [],
+    platform = "",
+  } = typeof process === "undefined" ? {} : process;
+
+  const isDisabled = "NO_COLOR" in env || argv.includes("--no-color");
+  const isForced = "FORCE_COLOR" in env || argv.includes("--color");
+  const isWindows = platform === "win32";
+  const isDumbTerminal = env.TERM === "dumb";
+
+  const tty = require("node:tty");
+
+  const isCompatibleTerminal =
+    tty && tty.isatty && tty.isatty(1) && env.TERM && !isDumbTerminal;
+
+  const isCI =
+    "CI" in env &&
+    ("GITHUB_ACTIONS" in env || "GITLAB_CI" in env || "CIRCLECI" in env);
+
+  return (
+    !isDisabled &&
+    (isForced || (isWindows && !isDumbTerminal) || isCompatibleTerminal || isCI)
+  );
+}
+
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
@@ -287,7 +318,9 @@ function printStats(stats, context) {
               (compiler).compilers;
 
             childStatsOptions.colors =
-              firstCompiler.webpack.cli.isColorSupported();
+              typeof firstCompiler.webpack.cli.isColorSupported === "function"
+                ? firstCompiler.webpack.cli.isColorSupported()
+                : isColorSupported();
           }
 
           return childStatsOptions;
@@ -300,7 +333,10 @@ function printStats(stats, context) {
 
     if (typeof statsOptions.colors === "undefined") {
       const { compiler } = /** @type {{ compiler: Compiler }} */ (context);
-      statsOptions.colors = compiler.webpack.cli.isColorSupported();
+      statsOptions.colors =
+        typeof compiler.webpack.cli.isColorSupported === "function"
+          ? compiler.webpack.cli.isColorSupported()
+          : isColorSupported();
     }
   }
 
