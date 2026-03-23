@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.0.1
+
+### Patch Changes
+
+- Fixed compatibility with rspack. (by [@alexander-akait](https://github.com/alexander-akait) in [`0b40cfd`](https://github.com/webpack/webpack-dev-middleware/commit/0b40cfd61b7ede0a3ce489295f3bef683e2c3ca3))
+
 ## 8.0.0
 
 ### Major Changes
