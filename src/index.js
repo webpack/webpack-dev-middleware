@@ -318,6 +318,8 @@ function printStats(stats, context) {
               (compiler).compilers;
 
             childStatsOptions.colors =
+              // rspack compatibility
+              firstCompiler.webpack.cli &&
               typeof firstCompiler.webpack.cli.isColorSupported === "function"
                 ? firstCompiler.webpack.cli.isColorSupported()
                 : isColorSupported();
@@ -334,6 +336,8 @@ function printStats(stats, context) {
     if (typeof statsOptions.colors === "undefined") {
       const { compiler } = /** @type {{ compiler: Compiler }} */ (context);
       statsOptions.colors =
+        // rspack compatibility
+        compiler.webpack.cli &&
         typeof compiler.webpack.cli.isColorSupported === "function"
           ? compiler.webpack.cli.isColorSupported()
           : isColorSupported();
