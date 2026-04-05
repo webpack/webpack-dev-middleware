@@ -3539,6 +3539,7 @@ describe.each([
             expect(response.headers["content-type"]).toBe(
               "text/html; charset=utf-8",
             );
+            expect(response.text).toBe("HTML with spaces");
           });
         });
       }
