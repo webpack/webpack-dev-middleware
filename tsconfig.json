@@ -1,13 +1,26 @@
 {
   "compilerOptions": {
     "target": "esnext",
-    "moduleResolution": "node",
+    "module": "nodenext",
+
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "rewriteRelativeImportExtensions": true,
+
+    "types": ["node"],
+
+    "rootDir": "./src",
+    "outDir": "./types",
+
     "allowJs": true,
     "checkJs": true,
     "strict": true,
-    "types": ["node"],
-    "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true
+
+    "declaration": true,
+    "emitDeclarationOnly": true
   },
   "include": ["./src/**/*"]
 }
