@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.0.3
+
+### Patch Changes
+
+- Respect `req.url` when modified by middleware such as `connect-history-api-fallback`. (by [@bjohansebas](https://github.com/bjohansebas) in [#2304](https://github.com/webpack/webpack-dev-middleware/pull/2304))
+
 ## 8.0.2
 
 ### Patch Changes
