@@ -255,6 +255,7 @@ function parseTokenList(str) {
  * @property {(() => string | undefined)=} getMethod get method extra method
  * @property {(() => string | undefined)=} getURL get URL extra method
  * @property {string=} originalUrl an extra option for `fastify` (and `@fastify/express`) to get original URL
+ * @property {string=} id an extra option for `fastify` (and `@fastify/express`) to get ID of request
  */
 
 /**
@@ -312,9 +313,17 @@ function getRequestURL(req) {
   if (typeof req.getURL === "function") {
     return req.getURL();
   }
-  // Fastify decodes URI by default, Our logic is based on encoded URI
-  else if (typeof req.originalUrl !== "undefined") {
-    return req.originalUrl;
+  // Fastify decodes URI by default, our logic is based on encoded URI.
+  // `req.url` may be modified by middleware (e.g. connect-history-api-fallback), in which case we use req.url instead.
+  // `req.id` is a special property of `fastify`
+  else if (req.id && req.originalUrl) {
+    try {
+      if (req.url === decodeURI(req.originalUrl)) {
+        return req.originalUrl;
+      }
+    } catch {
+      // decodeURI can throw on malformed sequences, fall through
+    }
   }
 
   return req.url;

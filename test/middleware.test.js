@@ -3473,6 +3473,77 @@ describe.each([
         });
       });
 
+      if (!["hapi", "hono"].includes(name)) {
+        describe("should work when req.url is modified by middleware to a file with encoded characters", () => {
+          let compiler;
+
+          const outputPath = path.resolve(
+            __dirname,
+            "./outputs/basic-test-modified-url-encoded",
+          );
+
+          beforeAll(async () => {
+            compiler = getCompiler({
+              ...webpackConfig,
+              output: {
+                filename: "bundle.js",
+                path: outputPath,
+              },
+            });
+
+            [server, req, instance] = await frameworkFactory(
+              name,
+              framework,
+              compiler,
+              {},
+              {
+                setupMiddlewares: (middlewares) => {
+                  if (name === "koa") {
+                    middlewares.unshift(async (ctx, next) => {
+                      ctx.url = "/file with spaces.html";
+
+                      await next();
+                    });
+                  } else {
+                    middlewares.unshift({
+                      route: "/",
+                      fn: (oldReq, res, next) => {
+                        oldReq.url = "/file with spaces.html";
+                        next();
+                      },
+                    });
+                  }
+
+                  return middlewares;
+                },
+              },
+            );
+
+            instance.context.outputFileSystem.mkdirSync(outputPath, {
+              recursive: true,
+            });
+            instance.context.outputFileSystem.writeFileSync(
+              path.resolve(outputPath, "file with spaces.html"),
+              "HTML with spaces",
+            );
+          });
+
+          afterAll(async () => {
+            await close(server, instance);
+          });
+
+          it('should return the "200" code for the "GET" request when req.url is rewritten to a path with spaces', async () => {
+            const response = await req.get("/any-path");
+
+            expect(response.statusCode).toBe(200);
+            expect(response.headers["content-type"]).toBe(
+              "text/html; charset=utf-8",
+            );
+            expect(response.text).toBe("HTML with spaces");
+          });
+        });
+      }
+
       describe("should work and don't call the next middleware for finished or errored requests by default", () => {
         let compiler;
 
