@@ -578,6 +578,10 @@ function setState(res, name, value) {
 // `Readable.toWeb` adapter, which races on late `error`/`close` events from
 // `fs.ReadStream` and throws "Invalid state: ReadableStream already closed"
 // (notably on Windows + Node 20). All controller transitions are guarded.
+// TODO remove this helper (and its use in honoWrapper) when the upstream race
+// is fixed and the minimum supported Node version no longer reproduces it:
+//   - https://github.com/honojs/node-server/issues/233
+//   - https://github.com/honojs/node-server/pull/299
 /**
  * @param {import("fs").ReadStream} stream node readable stream
  * @returns {ReadableStream<Uint8Array>} web readable stream
