@@ -572,6 +572,103 @@ function setState(res, name, value) {
   (res.locals)[name] = value;
 }
 
+// Convert a Node.js `Readable` into a Web `ReadableStream` ourselves so we can
+// hand it to Hono in a form `@hono/node-server` fast-paths through
+// `responseViaCache` -> `writeFromReadableStream`. Avoids Node's internal
+// `Readable.toWeb` adapter, which races on late `error`/`close` events from
+// `fs.ReadStream` and throws "Invalid state: ReadableStream already closed"
+// (notably on Windows + Node 20). All controller transitions are guarded.
+// TODO remove this helper (and its use in honoWrapper) when the upstream race
+// is fixed and the minimum supported Node version no longer reproduces it:
+//   - https://github.com/honojs/node-server/issues/233
+//   - https://github.com/honojs/node-server/pull/299
+/**
+ * @param {import("fs").ReadStream} stream node readable stream
+ * @returns {ReadableStream<Uint8Array>} web readable stream
+ */
+function nodeReadableToWebStream(stream) {
+  // ReadableStream has been a global since Node 16.5 and is stable in practice
+  // since Node 18; eslint-plugin-n flags it as experimental.
+  // eslint-disable-next-line n/no-unsupported-features/node-builtins
+  return new ReadableStream({
+    start(controller) {
+      let closed = false;
+      /** @type {() => void} */
+      let cleanup;
+
+      /**
+       * @param {Buffer | string} chunk chunk
+       */
+      const onData = (chunk) => {
+        if (closed) return;
+        try {
+          controller.enqueue(
+            chunk instanceof Uint8Array ? chunk : Buffer.from(chunk),
+          );
+        } catch {
+          // Controller already closed/errored; nothing to do.
+        }
+        if (controller.desiredSize !== null && controller.desiredSize <= 0) {
+          stream.pause();
+        }
+      };
+      const onEnd = () => {
+        if (closed) return;
+        closed = true;
+        cleanup();
+        try {
+          controller.close();
+        } catch {
+          // Already closed.
+        }
+      };
+      /**
+       * @param {Error} err err
+       */
+      const onError = (err) => {
+        if (closed) return;
+        closed = true;
+        cleanup();
+        try {
+          controller.error(err);
+        } catch {
+          // Already closed/errored.
+        }
+      };
+      cleanup = () => {
+        stream.off("data", onData);
+        stream.off("end", onEnd);
+        stream.off("error", onError);
+      };
+
+      // Stream may have already finished by the time we wrap it (empty file
+      // path resolved on the `end` event in `res.stream`).
+      if (stream.readableEnded || stream.destroyed) {
+        try {
+          controller.close();
+        } catch {
+          // Already closed.
+        }
+        return;
+      }
+
+      stream.on("data", onData);
+      stream.once("end", onEnd);
+      stream.once("error", onError);
+    },
+    pull() {
+      if (typeof stream.resume === "function") {
+        stream.resume();
+      }
+    },
+    cancel(reason) {
+      if (typeof stream.destroy === "function") {
+        stream.destroy(reason instanceof Error ? reason : undefined);
+      }
+    },
+  });
+}
+
 module.exports = {
   createReadStreamOrReadFile,
   destroyStream,
@@ -589,6 +686,7 @@ module.exports = {
   getValueContentRangeHeader,
   initState,
   memorize,
+  nodeReadableToWebStream,
   parseHttpDate,
   parseTokenList,
   pipe,

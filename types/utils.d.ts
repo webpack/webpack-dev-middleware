@@ -266,6 +266,13 @@ export function memorize<T>(
     | undefined,
   callback?: ((value: T) => T) | undefined,
 ): FunctionReturning<T>;
+/**
+ * @param {import("fs").ReadStream} stream node readable stream
+ * @returns {ReadableStream<Uint8Array>} web readable stream
+ */
+export function nodeReadableToWebStream(
+  stream: import("fs").ReadStream,
+): ReadableStream<Uint8Array>;
 /** @typedef {import("fs").Stats} Stats */
 /** @typedef {import("fs").ReadStream} ReadStream */
 /**

@@ -4,6 +4,7 @@ const memfs = require("memfs");
 const mime = require("mime-types");
 
 const middleware = require("./middleware");
+const { nodeReadableToWebStream } = require("./utils");
 
 const noop = () => {};
 
@@ -964,7 +965,10 @@ function honoWrapper(compiler, options = {}, usePlugin = false) {
                 return;
               }
 
-              body = stream;
+              // Wrap as a Web ReadableStream so `@hono/node-server` takes its
+              // fast path and Node's internal `Readable.toWeb` adapter is not
+              // involved (it races on late `error`/`close` from fs streams).
+              body = nodeReadableToWebStream(stream);
               isFinished = true;
 
               resolve();
