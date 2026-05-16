@@ -5,6 +5,9 @@
 const stripAnsi = require("strip-ansi");
 
 const processUpdate = require("./process-update");
+const { log, setLogLevel } = require("./utils/log");
+
+/** @typedef {import("./utils/log").LogLevel} LogLevel */
 
 /**
  * @typedef {object} ClientOptions
@@ -12,8 +15,7 @@ const processUpdate = require("./process-update");
  * @property {number} timeout reconnection timeout in milliseconds
  * @property {boolean} overlay enable the in-page error overlay
  * @property {boolean} reload reload the page when HMR cannot apply the update
- * @property {boolean} log emit informational logs to the console
- * @property {boolean} warn emit warnings to the console
+ * @property {LogLevel} logging logger level
  * @property {string} name limit updates to this compilation name
  * @property {boolean} autoConnect connect immediately when the entry runs
  * @property {Record<string, string | number>} overlayStyles overrides for the overlay container CSS
@@ -27,14 +29,15 @@ const options = {
   timeout: 20 * 1000,
   overlay: true,
   reload: false,
-  log: true,
-  warn: true,
+  logging: "info",
   name: "",
   autoConnect: true,
   overlayStyles: {},
   overlayWarnings: false,
   ansiColors: {},
 };
+
+setLogLevel(options.logging);
 
 /**
  * @param {Record<string, string>} overrides parsed query-string overrides
@@ -47,15 +50,11 @@ function setOverrides(overrides) {
   if (overrides.timeout) options.timeout = Number(overrides.timeout);
   if (overrides.overlay) options.overlay = overrides.overlay !== "false";
   if (overrides.reload) options.reload = overrides.reload !== "false";
-  if (overrides.noInfo && overrides.noInfo !== "false") {
-    options.log = false;
+  if (overrides.logging) {
+    options.logging = /** @type {LogLevel} */ (overrides.logging);
   }
   if (overrides.name) {
     options.name = overrides.name;
-  }
-  if (overrides.quiet && overrides.quiet !== "false") {
-    options.log = false;
-    options.warn = false;
   }
 
   if (overrides.dynamicPublicPath) {
@@ -72,6 +71,8 @@ function setOverrides(overrides) {
   if (overrides.overlayWarnings) {
     options.overlayWarnings = overrides.overlayWarnings === "true";
   }
+
+  setLogLevel(options.logging);
 }
 
 /**
@@ -91,7 +92,7 @@ function createEventSourceWrapper() {
   let timer;
 
   const handleOnline = () => {
-    if (options.log) console.log("[HMR] connected");
+    log.info("connected");
     lastActivity = Date.now();
   };
 
@@ -167,9 +168,7 @@ function connect() {
     try {
       processMessage(JSON.parse(event.data));
     } catch (err) {
-      if (options.warn) {
-        console.warn(`Invalid HMR message: ${event.data}\n${err}`);
-      }
+      log.warn(`Invalid HMR message: ${event.data}\n${err}`);
     }
   });
 }
@@ -205,11 +204,6 @@ function createReporter() {
     });
   }
 
-  /** @type {Record<string, string>} */
-  const styles = {
-    errors: "color: #ff0000;",
-    warnings: "color: #999933;",
-  };
   /** @type {string | null} */
   let previousProblems = null;
 
@@ -217,28 +211,21 @@ function createReporter() {
    * @param {"errors" | "warnings"} type problem type
    * @param {HMRPayload} obj payload
    */
-  const log = (type, obj) => {
+  const logProblems = (type, obj) => {
     const newProblems = obj[type].map(stripAnsi).join("\n");
     if (previousProblems === newProblems) {
       return;
     }
     previousProblems = newProblems;
 
-    const style = styles[type];
     const name = obj.name ? `'${obj.name}' ` : "";
-    const title = `[HMR] bundle ${name}has ${obj[type].length} ${type}`;
-    // NOTE: console.warn / console.error print the stack trace which is noise
-    // for us; using console.log to keep the message clean.
-    if (console.group && console.groupEnd) {
-      console.group(`%c${title}`, style);
-      console.log(`%c${newProblems}`, style);
-      console.groupEnd();
+    const title = `bundle ${name}has ${obj[type].length} ${type}`;
+    if (type === "errors") {
+      log.error(title);
+      log.error(newProblems);
     } else {
-      console.log(
-        `%c${title}\n\t%c${newProblems.replaceAll("\n", "\n\t")}`,
-        `${style}font-weight: bold;`,
-        `${style}font-weight: normal;`,
-      );
+      log.warn(title);
+      log.warn(newProblems);
     }
   };
 
@@ -247,9 +234,7 @@ function createReporter() {
       previousProblems = null;
     },
     problems(type, obj) {
-      if (options.warn) {
-        log(type, obj);
-      }
+      logProblems(type, obj);
       if (overlay) {
         if (options.overlayWarnings || type === "errors") {
           overlay.showProblems(type, obj[type]);
@@ -285,18 +270,14 @@ let subscribeAllHandler;
 function processMessage(obj) {
   switch (obj.action) {
     case "building": {
-      if (options.log) {
-        console.log(
-          `[HMR] bundle ${obj.name ? `'${obj.name}' ` : ""}rebuilding`,
-        );
-      }
+      log.info(`bundle ${obj.name ? `'${obj.name}' ` : ""}rebuilding`);
       break;
     }
     case "built":
     case "sync": {
-      if (obj.action === "built" && options.log) {
-        console.log(
-          `[HMR] bundle ${obj.name ? `'${obj.name}' ` : ""}rebuilt in ${obj.time}ms`,
+      if (obj.action === "built") {
+        log.info(
+          `bundle ${obj.name ? `'${obj.name}' ` : ""}rebuilt in ${obj.time}ms`,
         );
       }
       if (obj.name && options.name && obj.name !== options.name) {
@@ -349,7 +330,7 @@ if (typeof window !== "undefined") {
   reporter = window[REPORTER_KEY];
 
   if (typeof window.EventSource === "undefined") {
-    console.warn(
+    log.warn(
       "webpack-dev-middleware's hot client requires EventSource to work. " +
         "Include a polyfill if you want to support this browser: " +
         "https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events#Tools",

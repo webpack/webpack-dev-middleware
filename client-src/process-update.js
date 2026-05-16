@@ -2,6 +2,8 @@
 
 /* global __webpack_hash__ */
 
+const { log } = require("./utils/log");
+
 // `module.exports = function (...)` below narrows TS's view of `module` to
 // `{ exports: ... }`, hiding the webpack-augmented `hot` property. Alias it
 // through `NodeJS.Module` so type-checking still finds `hot`.
@@ -28,18 +30,18 @@ const applyOptions = {
   ignoreDeclined: true,
   ignoreErrored: true,
   onUnaccepted(event) {
-    console.warn(
+    log.warn(
       `Ignored an update to unaccepted module ${event.chain.join(" -> ")}`,
     );
   },
   onDeclined(event) {
-    console.warn(
+    log.warn(
       `Ignored an update to declined module ${event.chain.join(" -> ")}`,
     );
   },
   onErrored(event) {
-    console.error(event.error);
-    console.warn(
+    log.error(event.error);
+    log.warn(
       `Ignored an error while updating module ${event.moduleId} (${event.type})`,
     );
   },
@@ -57,7 +59,7 @@ function upToDate(hash) {
 /**
  * @param {string} hash latest hash from the SSE payload
  * @param {Record<string, string> | undefined} moduleMap module id → name map
- * @param {{ reload?: boolean, log?: boolean, warn?: boolean }} options client options
+ * @param {{ reload?: boolean }} options client options
  */
 module.exports = function applyUpdate(hash, moduleMap, options) {
   const { reload } = options;
@@ -67,7 +69,7 @@ module.exports = function applyUpdate(hash, moduleMap, options) {
    */
   function performReload() {
     if (reload) {
-      if (options.warn) console.warn("[HMR] Reloading page");
+      log.warn("Reloading page");
       window.location.reload();
     }
   }
@@ -77,16 +79,12 @@ module.exports = function applyUpdate(hash, moduleMap, options) {
    */
   function handleError(err) {
     if ($module.hot.status() in failureStatuses) {
-      if (options.warn) {
-        console.warn("[HMR] Cannot check for update (Full reload needed)");
-        console.warn(`[HMR] ${err.stack || err.message}`);
-      }
+      log.warn("Cannot check for update (Full reload needed)");
+      log.warn(err.stack || err.message);
       performReload();
       return;
     }
-    if (options.warn) {
-      console.warn(`[HMR] Update check failed: ${err.stack || err.message}`);
-    }
+    log.warn(`Update check failed: ${err.stack || err.message}`);
   }
 
   /**
@@ -99,39 +97,31 @@ module.exports = function applyUpdate(hash, moduleMap, options) {
     );
 
     if (unacceptedModules.length > 0) {
-      if (options.warn) {
-        console.warn(
-          "[HMR] The following modules couldn't be hot updated: " +
-            "(Full reload needed)\n" +
-            "This is usually because the modules which have changed " +
-            "(and their parents) do not know how to hot reload themselves. " +
-            `See ${HMR_DOCS_URL} for more details.`,
-        );
-        for (const moduleId of unacceptedModules) {
-          console.warn(
-            `[HMR]  - ${(moduleMap && moduleMap[moduleId]) || moduleId}`,
-          );
-        }
+      log.warn(
+        "The following modules couldn't be hot updated: " +
+          "(Full reload needed)\n" +
+          "This is usually because the modules which have changed " +
+          "(and their parents) do not know how to hot reload themselves. " +
+          `See ${HMR_DOCS_URL} for more details.`,
+      );
+      for (const moduleId of unacceptedModules) {
+        log.warn(` - ${(moduleMap && moduleMap[moduleId]) || moduleId}`);
       }
       performReload();
       return;
     }
 
-    if (options.log) {
-      if (!renewedModules || renewedModules.length === 0) {
-        console.log("[HMR] Nothing hot updated.");
-      } else {
-        console.log("[HMR] Updated modules:");
-        for (const moduleId of renewedModules) {
-          console.log(
-            `[HMR]  - ${(moduleMap && moduleMap[moduleId]) || moduleId}`,
-          );
-        }
+    if (!renewedModules || renewedModules.length === 0) {
+      log.info("Nothing hot updated.");
+    } else {
+      log.info("Updated modules:");
+      for (const moduleId of renewedModules) {
+        log.info(` - ${(moduleMap && moduleMap[moduleId]) || moduleId}`);
       }
+    }
 
-      if (upToDate()) {
-        console.log("[HMR] App is up to date.");
-      }
+    if (upToDate()) {
+      log.info("App is up to date.");
     }
   }
 
@@ -143,10 +133,8 @@ module.exports = function applyUpdate(hash, moduleMap, options) {
       .check(false)
       .then((updatedModules) => {
         if (!updatedModules) {
-          if (options.warn) {
-            console.warn("[HMR] Cannot find update (Full reload needed)");
-            console.warn("[HMR] (Probably because of restarting the server)");
-          }
+          log.warn("Cannot find update (Full reload needed)");
+          log.warn("(Probably because of restarting the server)");
           performReload();
           return undefined;
         }
@@ -160,7 +148,7 @@ module.exports = function applyUpdate(hash, moduleMap, options) {
   }
 
   if (!upToDate(hash) && $module.hot.status() === "idle") {
-    if (options.log) console.log("[HMR] Checking for updates on the server...");
+    log.info("Checking for updates on the server...");
     check();
   }
 };

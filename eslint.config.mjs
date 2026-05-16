@@ -20,8 +20,6 @@ export default defineConfig([
       ecmaVersion: "latest",
     },
     rules: {
-      // The HMR client legitimately reports build status to the browser console.
-      "no-console": "off",
       // Function declarations are hoisted; allow referencing them ahead of
       // their definition for readability.
       "no-use-before-define": ["error", { functions: false }],

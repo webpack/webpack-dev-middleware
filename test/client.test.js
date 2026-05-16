@@ -541,6 +541,115 @@ describe("client", () => {
     });
   });
 
+  describe("with logging option", () => {
+    let EventSourceStub;
+
+    beforeEach(() => {
+      EventSourceStub = makeEventSourceStub();
+      globalThis.EventSource = EventSourceStub;
+      jest.spyOn(console, "info").mockImplementation(() => {});
+      jest.spyOn(console, "warn").mockImplementation(() => {});
+      jest.spyOn(console, "error").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("emits info-level logs by default", () => {
+      loadClient();
+      EventSourceStub.lastInstance().onmessage(
+        makeMessage({
+          action: "built",
+          time: 100,
+          hash: "1234567890abcdef",
+          errors: [],
+          warnings: [],
+          modules: [],
+        }),
+      );
+      expect(
+        console.info.mock.calls.some(([msg]) => /rebuilt/.test(String(msg))),
+      ).toBe(true);
+    });
+
+    it("prefixes log output with [webpack-dev-middleware]", () => {
+      loadClient();
+      EventSourceStub.lastInstance().onmessage(
+        makeMessage({
+          action: "built",
+          time: 100,
+          hash: "1234567890abcdef",
+          errors: [],
+          warnings: [],
+          modules: [],
+        }),
+      );
+      expect(
+        console.info.mock.calls.some(([msg]) =>
+          /\[webpack-dev-middleware\]/.test(String(msg)),
+        ),
+      ).toBe(true);
+    });
+
+    it("logging=none silences every level", () => {
+      loadClient("?logging=none");
+      EventSourceStub.lastInstance().onmessage(
+        makeMessage({
+          action: "built",
+          time: 100,
+          hash: "1234567890abcdef",
+          errors: ["boom"],
+          warnings: [],
+          modules: [],
+        }),
+      );
+      expect(console.info).not.toHaveBeenCalled();
+      expect(console.warn).not.toHaveBeenCalled();
+      expect(console.error).not.toHaveBeenCalled();
+    });
+
+    it("logging=warn silences info but keeps warn and error", () => {
+      loadClient("?logging=warn&overlayWarnings=true");
+      const es = EventSourceStub.lastInstance();
+      es.onmessage(
+        makeMessage({
+          action: "built",
+          time: 100,
+          hash: "1234567890abcdef",
+          errors: [],
+          warnings: ["something"],
+          modules: [],
+        }),
+      );
+      expect(
+        console.info.mock.calls.some(([msg]) => /rebuilt/.test(String(msg))),
+      ).toBe(false);
+      expect(
+        console.warn.mock.calls.some(([msg]) => /something/.test(String(msg))),
+      ).toBe(true);
+    });
+
+    it("logging=error silences info and warn", () => {
+      loadClient("?logging=error");
+      EventSourceStub.lastInstance().onmessage(
+        makeMessage({
+          action: "built",
+          time: 100,
+          hash: "1234567890abcdef",
+          errors: ["boom"],
+          warnings: [],
+          modules: [],
+        }),
+      );
+      expect(console.info).not.toHaveBeenCalled();
+      expect(console.warn).not.toHaveBeenCalled();
+      expect(
+        console.error.mock.calls.some(([msg]) => /boom/.test(String(msg))),
+      ).toBe(true);
+    });
+  });
+
   describe("with no EventSource", () => {
     beforeEach(() => {
       delete globalThis.EventSource;
