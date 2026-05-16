@@ -15,5 +15,18 @@ module.exports = (api) => {
         },
       ],
     ],
+    overrides: [
+      {
+        test: /client-src[\\/]/,
+        presets: [
+          [
+            "@babel/preset-env",
+            {
+              targets: "defaults",
+            },
+          ],
+        ],
+      },
+    ],
   };
 };
