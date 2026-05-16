@@ -1,3 +1,5 @@
+"use strict";
+
 /* global __resourceQuery, __webpack_public_path__ */
 
 const stripAnsi = require("strip-ansi");
@@ -79,7 +81,7 @@ function setOverrides(overrides) {
 /**
  * @returns {{ addMessageListener: (fn: MessageListener) => void }} event source wrapper
  */
-function EventSourceWrapper() {
+function createEventSourceWrapper() {
   /** @type {EventSource} */
   let source;
   let lastActivity = Date.now();
@@ -110,7 +112,7 @@ function EventSourceWrapper() {
   };
 
   /**
-   *
+   * Open the EventSource connection.
    */
   function init() {
     source = new window.EventSource(/** @type {string} */ (options.path));
@@ -139,7 +141,7 @@ function EventSourceWrapper() {
 const WRAPPER_KEY = "__wdmEventSourceWrapper";
 
 /**
- * @returns {ReturnType<typeof EventSourceWrapper>} cached event source wrapper for this path
+ * @returns {ReturnType<typeof createEventSourceWrapper>} cached event source wrapper for this path
  */
 function getEventSourceWrapper() {
   const path = /** @type {string} */ (options.path);
@@ -149,13 +151,13 @@ function getEventSourceWrapper() {
   if (!window[WRAPPER_KEY][path]) {
     // Cache the wrapper so multiple entries on the same page sharing the same
     // `options.path` reuse a single SSE connection.
-    window[WRAPPER_KEY][path] = EventSourceWrapper();
+    window[WRAPPER_KEY][path] = createEventSourceWrapper();
   }
   return window[WRAPPER_KEY][path];
 }
 
 /**
- *
+ * Subscribe the message handler to the shared event source wrapper.
  */
 function connect() {
   getEventSourceWrapper().addMessageListener((event) => {

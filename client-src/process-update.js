@@ -1,3 +1,5 @@
+"use strict";
+
 /* global __webpack_hash__ */
 
 // `module.exports = function (...)` below narrows TS's view of `module` to
@@ -57,8 +59,18 @@ function upToDate(hash) {
  * @param {Record<string, string> | undefined} moduleMap module id → name map
  * @param {{ reload?: boolean, log?: boolean, warn?: boolean }} options client options
  */
-module.exports = function (hash, moduleMap, options) {
+module.exports = function applyUpdate(hash, moduleMap, options) {
   const { reload } = options;
+
+  /**
+   * Trigger a full page reload when HMR cannot apply the update.
+   */
+  function performReload() {
+    if (reload) {
+      if (options.warn) console.warn("[HMR] Reloading page");
+      window.location.reload();
+    }
+  }
 
   /**
    * @param {Error} err error
@@ -74,16 +86,6 @@ module.exports = function (hash, moduleMap, options) {
     }
     if (options.warn) {
       console.warn(`[HMR] Update check failed: ${err.stack || err.message}`);
-    }
-  }
-
-  /**
-   *
-   */
-  function performReload() {
-    if (reload) {
-      if (options.warn) console.warn("[HMR] Reloading page");
-      window.location.reload();
     }
   }
 
@@ -134,7 +136,7 @@ module.exports = function (hash, moduleMap, options) {
   }
 
   /**
-   *
+   * Ask webpack for the next chunk of HMR updates and apply them.
    */
   function check() {
     $module.hot

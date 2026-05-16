@@ -1,3 +1,5 @@
+"use strict";
+
 const ansiHTML = require("ansi-html-community");
 const htmlEntities = require("html-entities");
 
@@ -75,7 +77,7 @@ function showProblems(type, lines) {
 }
 
 /**
- *
+ * Remove the overlay container from the DOM.
  */
 function clear() {
   if (document.body && clientOverlay.parentNode) {
@@ -87,7 +89,7 @@ function clear() {
  * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number> }} options options
  * @returns {{ showProblems: typeof showProblems, clear: typeof clear }} overlay api
  */
-module.exports = function (options) {
+module.exports = function configureOverlay(options) {
   if (options.ansiColors) {
     for (const color of Object.keys(options.ansiColors)) {
       if (color in colors) {

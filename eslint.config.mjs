@@ -1,12 +1,11 @@
-import { defineConfig } from "eslint/config";
+import { defineConfig, globalIgnores } from "eslint/config";
 import configs from "eslint-config-webpack/configs.js";
 
 export default defineConfig([
-  {
-    ignores: ["client/**"],
-  },
+  globalIgnores(["client/**/*"]),
   {
     extends: [configs["recommended-dirty"]],
+    ignores: ["client-src/**/*"],
   },
   {
     files: ["test/helpers/runner.js"],
@@ -15,33 +14,17 @@ export default defineConfig([
     },
   },
   {
-    files: ["client-src/**/*.js"],
+    files: ["client-src/**/*"],
+    extends: [configs["browser-outdated-recommended-commonjs"]],
     languageOptions: {
-      globals: {
-        window: "readonly",
-        document: "readonly",
-        console: "readonly",
-        URLSearchParams: "readonly",
-        EventSource: "readonly",
-        setInterval: "readonly",
-        clearInterval: "readonly",
-        setTimeout: "readonly",
-        module: "readonly",
-      },
+      ecmaVersion: "latest",
     },
     rules: {
+      // The HMR client legitimately reports build status to the browser console.
       "no-console": "off",
-      "no-use-before-define": "off",
-      "unicorn/prefer-global-this": "off",
-      "n/no-unsupported-features/node-builtins": "off",
-      "func-names": "off",
-      "new-cap": "off",
-      "jsdoc/require-jsdoc": "off",
-      "jsdoc/no-blank-blocks": "off",
-      "jsdoc/require-returns": "off",
-      "jsdoc/escape-inline-tags": "off",
-      "jsdoc/no-restricted-syntax": "off",
-      "prefer-destructuring": "off",
+      // Function declarations are hoisted; allow referencing them ahead of
+      // their definition for readability.
+      "no-use-before-define": ["error", { functions: false }],
     },
   },
 ]);
