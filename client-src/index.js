@@ -4,7 +4,20 @@ const stripAnsi = require("strip-ansi");
 
 const processUpdate = require("./process-update");
 
-/** @typedef {Record<string, string | boolean | number | object>} ClientOptions */
+/**
+ * @typedef {object} ClientOptions
+ * @property {string} path SSE endpoint path
+ * @property {number} timeout reconnection timeout in milliseconds
+ * @property {boolean} overlay enable the in-page error overlay
+ * @property {boolean} reload reload the page when HMR cannot apply the update
+ * @property {boolean} log emit informational logs to the console
+ * @property {boolean} warn emit warnings to the console
+ * @property {string} name limit updates to this compilation name
+ * @property {boolean} autoConnect connect immediately when the entry runs
+ * @property {Record<string, string | number>} overlayStyles overrides for the overlay container CSS
+ * @property {boolean} overlayWarnings show warnings in the overlay too
+ * @property {Record<string, string | string[]>} ansiColors overrides for ANSI → HTML color mapping
+ */
 
 /** @type {ClientOptions} */
 const options = {
@@ -345,12 +358,21 @@ if (typeof window !== "undefined") {
 }
 
 module.exports = {
+  /**
+   * @param {(obj: HMRPayload) => void} handler called for every incoming HMR message
+   */
   subscribeAll(handler) {
     subscribeAllHandler = handler;
   },
+  /**
+   * @param {(obj: HMRPayload) => void} handler called for messages whose `action` is not recognized
+   */
   subscribe(handler) {
     customHandler = handler;
   },
+  /**
+   * @param {EXPECTED_ANY} customOverlay replacement for the default error overlay
+   */
   useCustomOverlay(customOverlay) {
     if (reporter) reporter.useCustomOverlay(customOverlay);
   },

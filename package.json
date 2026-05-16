@@ -36,6 +36,7 @@
     "lint:code": "eslint --cache .",
     "lint:spelling": "cspell --cache --no-must-find-files --quiet --config cspell.config.json \"**/*.*\"",
     "lint:types": "tsc --pretty --noEmit",
+    "lint:types-client": "tsc -p tsconfig.client.json --pretty",
     "lint": "npm-run-all -l -p \"lint:**\"",
     "fix:js": "npm run lint:code -- --fix",
     "fix:prettier": "npm run lint:prettier -- --write",

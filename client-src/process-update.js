@@ -1,8 +1,17 @@
 /* global __webpack_hash__ */
 
-if (!module.hot) {
+// `module.exports = function (...)` below narrows TS's view of `module` to
+// `{ exports: ... }`, hiding the webpack-augmented `hot` property. Alias it
+// through `NodeJS.Module` so type-checking still finds `hot`.
+/** @type {NodeJS.Module} */
+const $module = /** @type {EXPECTED_ANY} */ (module);
+
+if (!$module.hot) {
   throw new Error("[HMR] Hot Module Replacement is disabled.");
 }
+
+// eslint-disable-next-line jsdoc/reject-any-type
+/** @typedef {any} EXPECTED_ANY */
 
 const HMR_DOCS_URL = "https://webpack.js.org/concepts/hot-module-replacement/";
 
@@ -11,33 +20,25 @@ let lastHash;
 /** @type {Record<string, number>} */
 const failureStatuses = { abort: 1, fail: 1 };
 
+/** @type {webpack.ApplyOptions} */
 const applyOptions = {
   ignoreUnaccepted: true,
   ignoreDeclined: true,
   ignoreErrored: true,
-  /**
-   * @param {{ chain: string[] }} data data
-   */
-  onUnaccepted(data) {
+  onUnaccepted(event) {
     console.warn(
-      `Ignored an update to unaccepted module ${data.chain.join(" -> ")}`,
+      `Ignored an update to unaccepted module ${event.chain.join(" -> ")}`,
     );
   },
-  /**
-   * @param {{ chain: string[] }} data data
-   */
-  onDeclined(data) {
+  onDeclined(event) {
     console.warn(
-      `Ignored an update to declined module ${data.chain.join(" -> ")}`,
+      `Ignored an update to declined module ${event.chain.join(" -> ")}`,
     );
   },
-  /**
-   * @param {{ error: Error, moduleId: string, type: string }} data data
-   */
-  onErrored(data) {
-    console.error(data.error);
+  onErrored(event) {
+    console.error(event.error);
     console.warn(
-      `Ignored an error while updating module ${data.moduleId} (${data.type})`,
+      `Ignored an error while updating module ${event.moduleId} (${event.type})`,
     );
   },
 };
@@ -63,7 +64,7 @@ module.exports = function (hash, moduleMap, options) {
    * @param {Error} err error
    */
   function handleError(err) {
-    if (module.hot.status() in failureStatuses) {
+    if ($module.hot.status() in failureStatuses) {
       if (options.warn) {
         console.warn("[HMR] Cannot check for update (Full reload needed)");
         console.warn(`[HMR] ${err.stack || err.message}`);
@@ -87,8 +88,8 @@ module.exports = function (hash, moduleMap, options) {
   }
 
   /**
-   * @param {string[]} updatedModules ids of modules that were attempted to update
-   * @param {string[] | undefined} renewedModules ids of modules that were successfully renewed
+   * @param {(string | number)[]} updatedModules ids of modules that were attempted to update
+   * @param {(string | number)[] | null | undefined} renewedModules ids of modules that were successfully renewed
    */
   function logUpdates(updatedModules, renewedModules) {
     const unacceptedModules = updatedModules.filter(
@@ -136,7 +137,7 @@ module.exports = function (hash, moduleMap, options) {
    *
    */
   function check() {
-    module.hot
+    $module.hot
       .check(false)
       .then((updatedModules) => {
         if (!updatedModules) {
@@ -148,7 +149,7 @@ module.exports = function (hash, moduleMap, options) {
           return undefined;
         }
 
-        return module.hot.apply(applyOptions).then((renewedModules) => {
+        return $module.hot.apply(applyOptions).then((renewedModules) => {
           if (!upToDate()) check();
           logUpdates(updatedModules, renewedModules);
         });
@@ -156,7 +157,7 @@ module.exports = function (hash, moduleMap, options) {
       .catch(handleError);
   }
 
-  if (!upToDate(hash) && module.hot.status() === "idle") {
+  if (!upToDate(hash) && $module.hot.status() === "idle") {
     if (options.log) console.log("[HMR] Checking for updates on the server...");
     check();
   }
