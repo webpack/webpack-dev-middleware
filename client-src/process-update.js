@@ -136,52 +136,24 @@ module.exports = function (hash, moduleMap, options) {
    *
    */
   function check() {
-    /**
-     * @param {Error | null} err err
-     * @param {string[] | null=} updatedModules updated module ids
-     */
-    const cb = (err, updatedModules) => {
-      if (err) return handleError(err);
-
-      if (!updatedModules) {
-        if (options.warn) {
-          console.warn("[HMR] Cannot find update (Full reload needed)");
-          console.warn("[HMR] (Probably because of restarting the server)");
+    module.hot
+      .check(false)
+      .then((updatedModules) => {
+        if (!updatedModules) {
+          if (options.warn) {
+            console.warn("[HMR] Cannot find update (Full reload needed)");
+            console.warn("[HMR] (Probably because of restarting the server)");
+          }
+          performReload();
+          return undefined;
         }
-        performReload();
-        return;
-      }
 
-      /**
-       * @param {Error | null} applyErr apply error
-       * @param {string[] | undefined} renewedModules renewed module ids
-       */
-      const applyCallback = (applyErr, renewedModules) => {
-        if (applyErr) return handleError(applyErr);
-
-        if (!upToDate()) check();
-
-        logUpdates(updatedModules, renewedModules);
-      };
-
-      const applyResult = module.hot.apply(applyOptions, applyCallback);
-      // webpack 2 promise
-      if (applyResult && applyResult.then) {
-        applyResult.then((outdatedModules) => {
-          applyCallback(null, outdatedModules);
+        return module.hot.apply(applyOptions).then((renewedModules) => {
+          if (!upToDate()) check();
+          logUpdates(updatedModules, renewedModules);
         });
-        applyResult.catch(applyCallback);
-      }
-    };
-
-    const result = module.hot.check(false, cb);
-    // webpack 2 promise
-    if (result && result.then) {
-      result.then((updatedModules) => {
-        cb(null, updatedModules);
-      });
-      result.catch(cb);
-    }
+      })
+      .catch(handleError);
   }
 
   if (!upToDate(hash) && module.hot.status() === "idle") {
