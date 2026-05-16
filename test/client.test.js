@@ -98,10 +98,10 @@ describe("client", () => {
     beforeEach(() => {
       EventSourceStub = makeEventSourceStub();
       globalThis.EventSource = EventSourceStub;
+      jest.spyOn(console, "info").mockImplementation(() => {});
       jest.spyOn(console, "log").mockImplementation(() => {});
       jest.spyOn(console, "warn").mockImplementation(() => {});
-      jest.spyOn(console, "group").mockImplementation(() => {});
-      jest.spyOn(console, "groupEnd").mockImplementation(() => {});
+      jest.spyOn(console, "error").mockImplementation(() => {});
       client = loadClient();
     });
 
@@ -212,6 +212,7 @@ describe("client", () => {
         "Something broke",
         "Actually, 2 things broke",
       ]);
+      expect(console.error.mock.calls).toMatchSnapshot();
     });
 
     it("hides overlay after errored build is fixed", () => {
@@ -292,6 +293,8 @@ describe("client", () => {
         }),
       );
       expect(clientOverlay.showProblems).not.toHaveBeenCalled();
+      // Warnings still surface through the logger even when the overlay stays hidden.
+      expect(console.warn.mock.calls).toMatchSnapshot();
     });
 
     it("shows overlay after warning build becomes an error", () => {
@@ -326,10 +329,10 @@ describe("client", () => {
     beforeEach(() => {
       EventSourceStub = makeEventSourceStub();
       globalThis.EventSource = EventSourceStub;
+      jest.spyOn(console, "info").mockImplementation(() => {});
       jest.spyOn(console, "log").mockImplementation(() => {});
       jest.spyOn(console, "warn").mockImplementation(() => {});
-      jest.spyOn(console, "group").mockImplementation(() => {});
-      jest.spyOn(console, "groupEnd").mockImplementation(() => {});
+      jest.spyOn(console, "error").mockImplementation(() => {});
       loadClient("?overlayWarnings=true");
     });
 
@@ -353,6 +356,7 @@ describe("client", () => {
         "Something broke",
         "Actually, 2 things broke",
       ]);
+      expect(console.error.mock.calls).toMatchSnapshot();
     });
 
     it("shows overlay on warning builds", () => {
@@ -438,7 +442,9 @@ describe("client", () => {
     beforeEach(() => {
       EventSourceStub = makeEventSourceStub();
       globalThis.EventSource = EventSourceStub;
+      jest.spyOn(console, "info").mockImplementation(() => {});
       jest.spyOn(console, "log").mockImplementation(() => {});
+      jest.spyOn(console, "warn").mockImplementation(() => {});
       loadClient("?name=test");
     });
 
@@ -484,6 +490,7 @@ describe("client", () => {
     beforeEach(() => {
       EventSourceStub = makeEventSourceStub();
       globalThis.EventSource = EventSourceStub;
+      jest.spyOn(console, "info").mockImplementation(() => {});
       jest.spyOn(console, "log").mockImplementation(() => {});
       jest.spyOn(console, "warn").mockImplementation(() => {});
       client = loadClient();
@@ -556,7 +563,7 @@ describe("client", () => {
       jest.restoreAllMocks();
     });
 
-    it("emits info-level logs by default", () => {
+    it("emits info-level logs (including the [webpack-dev-middleware] prefix) by default", () => {
       loadClient();
       EventSourceStub.lastInstance().onmessage(
         makeMessage({
@@ -568,28 +575,7 @@ describe("client", () => {
           modules: [],
         }),
       );
-      expect(
-        console.info.mock.calls.some(([msg]) => /rebuilt/.test(String(msg))),
-      ).toBe(true);
-    });
-
-    it("prefixes log output with [webpack-dev-middleware]", () => {
-      loadClient();
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: [],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(
-        console.info.mock.calls.some(([msg]) =>
-          /\[webpack-dev-middleware\]/.test(String(msg)),
-        ),
-      ).toBe(true);
+      expect(console.info.mock.calls).toMatchSnapshot();
     });
 
     it("logging=none silences every level", () => {
@@ -609,10 +595,9 @@ describe("client", () => {
       expect(console.error).not.toHaveBeenCalled();
     });
 
-    it("logging=warn silences info but keeps warn and error", () => {
+    it("logging=warn silences info but keeps warn", () => {
       loadClient("?logging=warn&overlayWarnings=true");
-      const es = EventSourceStub.lastInstance();
-      es.onmessage(
+      EventSourceStub.lastInstance().onmessage(
         makeMessage({
           action: "built",
           time: 100,
@@ -622,15 +607,11 @@ describe("client", () => {
           modules: [],
         }),
       );
-      expect(
-        console.info.mock.calls.some(([msg]) => /rebuilt/.test(String(msg))),
-      ).toBe(false);
-      expect(
-        console.warn.mock.calls.some(([msg]) => /something/.test(String(msg))),
-      ).toBe(true);
+      expect(console.info).not.toHaveBeenCalled();
+      expect(console.warn.mock.calls).toMatchSnapshot();
     });
 
-    it("logging=error silences info and warn", () => {
+    it("logging=error silences info and warn but keeps error", () => {
       loadClient("?logging=error");
       EventSourceStub.lastInstance().onmessage(
         makeMessage({
@@ -644,9 +625,7 @@ describe("client", () => {
       );
       expect(console.info).not.toHaveBeenCalled();
       expect(console.warn).not.toHaveBeenCalled();
-      expect(
-        console.error.mock.calls.some(([msg]) => /boom/.test(String(msg))),
-      ).toBe(true);
+      expect(console.error.mock.calls).toMatchSnapshot();
     });
   });
 
