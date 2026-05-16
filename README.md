@@ -79,6 +79,7 @@ See [below](#other-servers) for an example of use with fastify.
 |        **[`writeToDisk`](#writetodisk)**        |        `boolean\|Function`        |                    `false`                    | Instructs the module to write files to the configured location on disk as specified in your `webpack` configuration. |
 |   **[`outputFileSystem`](#outputfilesystem)**   |             `Object`              | [`memfs`](https://github.com/streamich/memfs) | Set the default file system which will be used by webpack as primary destination of generated files.                 |
 | **[`modifyResponseData`](#modifyresponsedata)** |            `Function`             |                  `undefined`                  | Allows to set up a callback to change the response data.                                                             |
+|                **[`hot`](#hot)**                |         `boolean\|Object`         |                  `undefined`                  | Enables a Server-Sent Events endpoint that drives the browser HMR client.                                            |
 |       **[`forwardError`](#forwarderror)**       |             `boolean`             |                    `false`                    | Enable or disable forwarding errors to the next middleware.                                                          |
 
 The middleware accepts an `options` Object. The following is a property reference for the Object.
