@@ -312,6 +312,79 @@ middleware(compiler, {
 });
 ```
 
+## Hot Module Replacement client
+
+When the server is configured to serve the hot module replacement endpoint, the bundled application needs a small runtime that subscribes to that stream and applies the updates. `webpack-dev-middleware` ships that runtime under the `./client` subpath. Add it as a webpack entry next to your application code and enable `HotModuleReplacementPlugin`:
+
+```js
+const webpack = require("webpack");
+
+module.exports = {
+  entry: ["webpack-dev-middleware/client", "./src/app.js"],
+  plugins: [new webpack.HotModuleReplacementPlugin()],
+};
+```
+
+The runtime connects to `/__webpack_hmr` by default. Any of the options below can be set by adding a query string to the entry path:
+
+```js
+entry: [
+  "webpack-dev-middleware/client?reload=true&overlay=false",
+  "./src/app.js",
+];
+```
+
+### Client options
+
+|        Name         |   Type    |     Default      | Description                                                                                       |
+| :-----------------: | :-------: | :--------------: | :------------------------------------------------------------------------------------------------ |
+|       `path`        | `string`  | `/__webpack_hmr` | Path the SSE endpoint is served at. Must match the server `hot.path`.                             |
+|      `timeout`      | `number`  |     `20000`      | Reconnection / heartbeat watchdog timeout in milliseconds.                                        |
+|      `overlay`      | `boolean` |      `true`      | Show compile-time errors in an in-page overlay.                                                   |
+|  `overlayWarnings`  | `boolean` |     `false`      | Also show compile-time warnings in the overlay.                                                   |
+|   `overlayStyles`   | `Object`  |       `{}`       | JSON object of CSS overrides for the overlay container. Pass JSON-encoded value via query string. |
+|    `ansiColors`     | `Object`  |       `{}`       | JSON object overriding the ANSI → HTML color map used by the overlay.                             |
+|      `reload`       | `boolean` |     `false`      | Reload the page when an update cannot be applied through HMR.                                     |
+|        `log`        | `boolean` |      `true`      | Emit informational logs to the console.                                                           |
+|      `noInfo`       | `boolean` |     `false`      | Disable informational logs (alias for `log=false`).                                               |
+|       `quiet`       | `boolean` |     `false`      | Disable both logs and warnings.                                                                   |
+|       `name`        | `string`  |       `""`       | Restrict updates to a specific compilation name (useful with multi-compiler).                     |
+|    `autoConnect`    | `boolean` |      `true`      | Connect on load; set to `false` and call `setOptionsAndConnect()` manually.                       |
+| `dynamicPublicPath` | `boolean` |     `false`      | Prefix `path` with `__webpack_public_path__` at runtime.                                          |
+
+### Programmatic API
+
+`webpack-dev-middleware/client` also exports a few functions for advanced cases:
+
+```js
+const hotClient = require("webpack-dev-middleware/client");
+
+// Receive every HMR payload (building / built / sync / custom).
+hotClient.subscribeAll((payload) => {
+  console.log("hot event", payload);
+});
+
+// Receive payloads whose `action` is not recognised by the client (i.e. custom
+// payloads published via the server's `instance.context.hot.publish(...)`).
+hotClient.subscribe((payload) => {
+  // do something
+});
+
+// Replace the default error overlay with your own implementation.
+hotClient.useCustomOverlay({
+  showProblems(type, lines) {
+    /* ... */
+  },
+  clear() {
+    /* ... */
+  },
+});
+
+// Connect manually when `autoConnect=false`. Accepts the same option keys as
+// the query-string API above.
+hotClient.setOptionsAndConnect({ path: "/__hmr" });
+```
+
 ## API
 
 `webpack-dev-middleware` also provides convenience methods that can be use to
