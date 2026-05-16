@@ -1,5 +1,10 @@
 const fs = require("node:fs");
 const path = require("node:path");
+// `stream/web` is flagged experimental by the n/eslint plugin until Node 21,
+// but `ReadableStream` is stable in practice on Node 20.9+ (our minimum) and
+// already pulled in by hono/web frameworks we integrate with.
+// eslint-disable-next-line n/no-unsupported-features/node-builtins
+const { ReadableStream } = require("node:stream/web");
 const memfs = require("memfs");
 const mime = require("mime-types");
 
@@ -957,6 +962,33 @@ function honoWrapper(compiler, options = {}, usePlugin = false) {
     let body;
     let isFinished = false;
 
+    // Hot middleware writes raw chunks via `res.writeHead` / `res.write` / `res.end`.
+    // Hono's response object is Web API-style, so we shim those methods on top of a
+    // Web ReadableStream that hono streams back to the client.
+    /** @type {ReadableStreamDefaultController | undefined} */
+    let sseController;
+    let sseClosed = false;
+    /** @type {(() => void)[]} */
+    const closeHandlers = [];
+
+    /**
+     * @param {string} event event name
+     * @param {() => void} handler handler
+     * @returns {EXPECTED_ANY} req
+     */
+    const reqOn = (event, handler) => {
+      if (event === "close") {
+        closeHandlers.push(handler);
+        if (sseClosed) handler();
+      }
+      return req;
+    };
+
+    if (typeof (/** @type {EXPECTED_ANY} */ (req).on) !== "function") {
+      /** @type {EXPECTED_ANY} */
+      (req).on = reqOn;
+    }
+
     try {
       await new Promise(
         /**
@@ -964,6 +996,72 @@ function honoWrapper(compiler, options = {}, usePlugin = false) {
          * @param {(reason?: Error) => void} reject reject
          */
         (resolve, reject) => {
+          /** @type {EXPECTED_ANY} */
+          (res).writeHead =
+            /**
+             * @param {number} statusCode status code
+             * @param {Record<string, string | number | string[]>=} headers headers
+             */
+            (statusCode, headers) => {
+              status = statusCode;
+
+              if (headers) {
+                for (const name of Object.keys(headers)) {
+                  context.res.headers.append(name, String(headers[name]));
+                }
+              }
+
+              body = new ReadableStream({
+                start(controller) {
+                  sseController = controller;
+                },
+                cancel() {
+                  sseClosed = true;
+                  for (const fn of closeHandlers) fn();
+                },
+              });
+              isFinished = true;
+              resolve();
+            };
+
+          /** @type {EXPECTED_ANY} */
+          (res).write =
+            /**
+             * @param {string | Buffer} chunk chunk to write
+             * @returns {boolean} true when written
+             */
+            (chunk) => {
+              if (!sseController || sseClosed) return false;
+              try {
+                sseController.enqueue(
+                  typeof chunk === "string"
+                    ? new TextEncoder().encode(chunk)
+                    : chunk,
+                );
+              } catch {
+                return false;
+              }
+              return true;
+            };
+
+          /** @type {EXPECTED_ANY} */
+          (res).end = () => {
+            if (!sseController || sseClosed) return;
+            sseClosed = true;
+            try {
+              sseController.close();
+            } catch {
+              // already closed
+            }
+          };
+
+          Object.defineProperty(res, "writableEnded", {
+            configurable: true,
+            get() {
+              return sseClosed;
+            },
+          });
+
           /**
            * @param {import("fs").ReadStream} stream readable stream
            */
