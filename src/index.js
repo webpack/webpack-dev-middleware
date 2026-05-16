@@ -3,6 +3,7 @@ const path = require("node:path");
 const memfs = require("memfs");
 const mime = require("mime-types");
 
+const { createHot } = require("./hot");
 const middleware = require("./middleware");
 const { nodeReadableToWebStream } = require("./utils");
 
@@ -16,6 +17,8 @@ const noop = () => {};
 /** @typedef {import("webpack").MultiStats} MultiStats */
 /** @typedef {import("fs").ReadStream} ReadStream */
 /** @typedef {import("./middleware").FilenameWithExtra} FilenameWithExtra */
+/** @typedef {import("./hot").HotOptions} HotOptions */
+/** @typedef {import("./hot").HotInstance} HotInstance */
 
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_ANY */
@@ -76,6 +79,7 @@ const noop = () => {};
  * @property {Watching | MultiWatching} watching watching
  * @property {Logger} logger logger
  * @property {OutputFileSystem} outputFileSystem output file system
+ * @property {HotInstance=} hot hot module replacement instance
  */
 
 /**
@@ -112,6 +116,7 @@ const noop = () => {};
  * @property {(boolean | number | string | { maxAge?: number, immutable?: boolean })=} cacheControl options to generate cache headers
  * @property {boolean=} cacheImmutable is cache immutable
  * @property {boolean=} forwardError forward error to next middleware
+ * @property {(boolean | HotOptions)=} hot enable hot module replacement
  */
 
 /**
@@ -504,6 +509,20 @@ function wdm(compiler, options = {}, isPlugin = false) {
   compiler.hooks.invalid.tap(PLUGIN_NAME, invalid);
   compiler.hooks.done.tap(PLUGIN_NAME, done);
 
+  if (options.hot) {
+    const hotUserOptions = options.hot === true ? {} : options.hot;
+    const userLog = hotUserOptions.log;
+    context.hot = createHot(compiler, {
+      ...hotUserOptions,
+      log:
+        userLog === undefined
+          ? /** @param {string} message message */ (message) => {
+              context.logger.log(message);
+            }
+          : userLog,
+    });
+  }
+
   const compilersToModify = isMultipleCompiler(compiler)
     ? compiler.compilers.filter((item) => item.options.devServer !== false)
     : [compiler];
@@ -600,6 +619,9 @@ function wdm(compiler, options = {}, isPlugin = false) {
   };
 
   instance.close = (callback = noop) => {
+    if (filledContext.hot) {
+      filledContext.hot.close();
+    }
     filledContext.watching.close(callback);
   };
 
