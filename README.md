@@ -312,6 +312,51 @@ middleware(compiler, {
 });
 ```
 
+### hot
+
+Type: `Boolean | Object`
+Default: `undefined`
+
+Enables hot module replacement by serving a [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) endpoint that publishes the webpack compiler's `building`, `built` and `sync` events to connected clients. When `true`, defaults are used; pass an object to customise. Use this option together with the browser runtime shipped as `webpack-dev-middleware/client`.
+
+```js
+const webpack = require("webpack");
+
+const compiler = webpack({
+  /* Webpack configuration with HotModuleReplacementPlugin and the client entry */
+});
+
+middleware(compiler, { hot: true });
+```
+
+#### `hot.path`
+
+Type: `String`
+Default: `'/__webpack_hmr'`
+
+Path the SSE endpoint is served at. Must match the `path` option used by the client.
+
+#### `hot.heartbeat`
+
+Type: `Number`
+Default: `10000`
+
+Heartbeat interval (in milliseconds) used to keep the SSE connection alive when no compilation events are produced.
+
+#### `hot.log`
+
+Type: `Function | false`
+Default: the dev middleware's infrastructure logger
+
+Logger used to print build status (`webpack building...`, `webpack built <hash> in <ms>`). Pass `false` to disable logging from the hot middleware.
+
+#### `hot.statsOptions`
+
+Type: `Boolean | Object`
+Default: `undefined`
+
+Webpack stats options used when serializing compilation results for the SSE payload. Forwarded to `stats.toJson(...)`.
+
 ## Hot Module Replacement client
 
 When the server is configured to serve the hot module replacement endpoint, the bundled application needs a small runtime that subscribes to that stream and applies the updates. `webpack-dev-middleware` ships that runtime under the `./client` subpath. Add it as a webpack entry next to your application code and enable `HotModuleReplacementPlugin`:
