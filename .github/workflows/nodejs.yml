@@ -5,10 +5,12 @@ on:
     branches:
       - main
       - next
+      - hot-middleware
   pull_request:
     branches:
       - main
       - next
+      - hot-middleware
 
 permissions:
   contents: read
