@@ -1,0 +1,13 @@
+{
+  "ignorePaths": [
+    "/client/**",
+    "/dist/**",
+    "/node_modules/**",
+    "/coverage/**",
+    "/test/outputs/**",
+    "/test/fixtures/**",
+    "CHANGELOG.md",
+    "cspell.config.json"
+  ],
+  "words": ["Consolas", "cspellcache", "darkgrey", "eslintcache", "esmodules"]
+}
