@@ -1,7 +1,5 @@
-"use strict";
-
-const ansiHTML = require("ansi-html-community");
-const htmlEntities = require("html-entities");
+import ansiHTML from "ansi-html-community";
+import { encode as encodeHtmlEntity } from "html-entities";
 
 const clientOverlay = document.createElement("div");
 clientOverlay.id = "webpack-dev-middleware-hot-overlay";
@@ -62,26 +60,26 @@ function problemType(type) {
  * @param {"errors" | "warnings"} type problem type
  * @param {string[]} lines messages to render
  */
-function showProblems(type, lines) {
+export function showProblems(type, lines) {
   clientOverlay.innerHTML = "";
   for (const line of lines) {
-    const msg = ansiHTML(htmlEntities.encode(line));
+    const msg = ansiHTML(encodeHtmlEntity(line));
     const div = document.createElement("div");
     div.style.marginBottom = "26px";
     div.innerHTML = `${problemType(type)} in ${msg}`;
-    clientOverlay.appendChild(div);
+    clientOverlay.append(div);
   }
   if (document.body) {
-    document.body.appendChild(clientOverlay);
+    document.body.append(clientOverlay);
   }
 }
 
 /**
  * Remove the overlay container from the DOM.
  */
-function clear() {
-  if (document.body && clientOverlay.parentNode) {
-    document.body.removeChild(clientOverlay);
+export function clear() {
+  if (clientOverlay.parentNode) {
+    clientOverlay.remove();
   }
 }
 
@@ -89,7 +87,7 @@ function clear() {
  * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number> }} options options
  * @returns {{ showProblems: typeof showProblems, clear: typeof clear }} overlay api
  */
-module.exports = function configureOverlay(options) {
+export default function configureOverlay(options) {
   if (options.ansiColors) {
     for (const color of Object.keys(options.ansiColors)) {
       if (color in colors) {
@@ -114,10 +112,7 @@ module.exports = function configureOverlay(options) {
     showProblems,
     clear,
   };
-};
-
-module.exports.clear = clear;
-module.exports.showProblems = showProblems;
+}
 
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_ANY */

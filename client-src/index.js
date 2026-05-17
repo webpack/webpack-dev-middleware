@@ -1,13 +1,12 @@
-"use strict";
-
 /* global __resourceQuery, __webpack_public_path__ */
 
-const stripAnsi = require("strip-ansi");
+import stripAnsi from "strip-ansi";
 
-const processUpdate = require("./process-update");
-const { log, setLogLevel } = require("./utils/log");
+import configureOverlay from "./overlay.js";
+import applyUpdate from "./process-update.js";
+import { log, setLogLevel } from "./utils/log.js";
 
-/** @typedef {import("./utils/log").LogLevel} LogLevel */
+/** @typedef {import("./utils/log.js").LogLevel} LogLevel */
 
 /**
  * @typedef {object} ClientOptions
@@ -176,7 +175,7 @@ function connect() {
 /**
  * @param {Record<string, string>} overrides overrides
  */
-function setOptionsAndConnect(overrides) {
+export function setOptionsAndConnect(overrides) {
   setOverrides(overrides);
   connect();
 }
@@ -198,7 +197,7 @@ function createReporter() {
   /** @type {EXPECTED_ANY} */
   let overlay;
   if (typeof document !== "undefined" && options.overlay) {
-    overlay = require("./overlay")({
+    overlay = configureOverlay({
       ansiColors: options.ansiColors,
       overlayStyles: options.overlayStyles,
     });
@@ -283,20 +282,20 @@ function processMessage(obj) {
       if (obj.name && options.name && obj.name !== options.name) {
         return;
       }
-      let applyUpdate = true;
+      let shouldApply = true;
       if (obj.errors.length > 0) {
         if (reporter) reporter.problems("errors", obj);
-        applyUpdate = false;
+        shouldApply = false;
       } else if (obj.warnings.length > 0) {
         if (reporter) {
-          applyUpdate = reporter.problems("warnings", obj);
+          shouldApply = reporter.problems("warnings", obj);
         }
       } else if (reporter) {
         reporter.cleanProblemsCache();
         reporter.success();
       }
-      if (applyUpdate) {
-        processUpdate(obj.hash, obj.modules, options);
+      if (shouldApply) {
+        applyUpdate(obj.hash, obj.modules, options);
       }
       break;
     }
@@ -340,24 +339,23 @@ if (typeof window !== "undefined") {
   }
 }
 
-module.exports = {
-  /**
-   * @param {(obj: HMRPayload) => void} handler called for every incoming HMR message
-   */
-  subscribeAll(handler) {
-    subscribeAllHandler = handler;
-  },
-  /**
-   * @param {(obj: HMRPayload) => void} handler called for messages whose `action` is not recognized
-   */
-  subscribe(handler) {
-    customHandler = handler;
-  },
-  /**
-   * @param {EXPECTED_ANY} customOverlay replacement for the default error overlay
-   */
-  useCustomOverlay(customOverlay) {
-    if (reporter) reporter.useCustomOverlay(customOverlay);
-  },
-  setOptionsAndConnect,
-};
+/**
+ * @param {(obj: HMRPayload) => void} handler called for every incoming HMR message
+ */
+export function subscribeAll(handler) {
+  subscribeAllHandler = handler;
+}
+
+/**
+ * @param {(obj: HMRPayload) => void} handler called for messages whose `action` is not recognized
+ */
+export function subscribe(handler) {
+  customHandler = handler;
+}
+
+/**
+ * @param {EXPECTED_ANY} customOverlay replacement for the default error overlay
+ */
+export function useCustomOverlay(customOverlay) {
+  if (reporter) reporter.useCustomOverlay(customOverlay);
+}

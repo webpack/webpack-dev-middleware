@@ -1,21 +1,12 @@
-"use strict";
-
 /* global __webpack_hash__ */
 
-const { log } = require("./utils/log");
+import { log } from "./utils/log.js";
 
-// `module.exports = function (...)` below narrows TS's view of `module` to
-// `{ exports: ... }`, hiding the webpack-augmented `hot` property. Alias it
-// through `NodeJS.Module` so type-checking still finds `hot`.
-/** @type {NodeJS.Module} */
-const $module = /** @type {EXPECTED_ANY} */ (module);
+const hot = import.meta.webpackHot;
 
-if (!$module.hot) {
+if (!hot) {
   throw new Error("[HMR] Hot Module Replacement is disabled.");
 }
-
-// eslint-disable-next-line jsdoc/reject-any-type
-/** @typedef {any} EXPECTED_ANY */
 
 const HMR_DOCS_URL = "https://webpack.js.org/concepts/hot-module-replacement/";
 
@@ -61,7 +52,7 @@ function upToDate(hash) {
  * @param {Record<string, string> | undefined} moduleMap module id → name map
  * @param {{ reload?: boolean }} options client options
  */
-module.exports = function applyUpdate(hash, moduleMap, options) {
+export default function applyUpdate(hash, moduleMap, options) {
   const { reload } = options;
 
   /**
@@ -78,7 +69,7 @@ module.exports = function applyUpdate(hash, moduleMap, options) {
    * @param {Error} err error
    */
   function handleError(err) {
-    if ($module.hot.status() in failureStatuses) {
+    if (hot.status() in failureStatuses) {
       log.warn("Cannot check for update (Full reload needed)");
       log.warn(err.stack || err.message);
       performReload();
@@ -129,7 +120,7 @@ module.exports = function applyUpdate(hash, moduleMap, options) {
    * Ask webpack for the next chunk of HMR updates and apply them.
    */
   function check() {
-    $module.hot
+    hot
       .check(false)
       .then((updatedModules) => {
         if (!updatedModules) {
@@ -139,7 +130,7 @@ module.exports = function applyUpdate(hash, moduleMap, options) {
           return undefined;
         }
 
-        return $module.hot.apply(applyOptions).then((renewedModules) => {
+        return hot.apply(applyOptions).then((renewedModules) => {
           if (!upToDate()) check();
           logUpdates(updatedModules, renewedModules);
         });
@@ -147,8 +138,8 @@ module.exports = function applyUpdate(hash, moduleMap, options) {
       .catch(handleError);
   }
 
-  if (!upToDate(hash) && $module.hot.status() === "idle") {
+  if (!upToDate(hash) && hot.status() === "idle") {
     log.info("Checking for updates on the server...");
     check();
   }
-};
+}

@@ -9,5 +9,5 @@
     "CHANGELOG.md",
     "cspell.config.json"
   ],
-  "words": ["Consolas", "cspellcache", "darkgrey", "eslintcache"]
+  "words": ["Consolas", "cspellcache", "darkgrey", "eslintcache", "esmodules"]
 }

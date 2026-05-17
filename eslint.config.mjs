@@ -15,14 +15,7 @@ export default defineConfig([
   },
   {
     files: ["client-src/**/*"],
-    extends: [configs["browser-outdated-recommended-commonjs"]],
-    languageOptions: {
-      // The preset bundles `javascript/es5` (parser locked to ES5) which
-      // rejects `const`. The module variant of the same preset overrides
-      // this to "latest" upstream; we replicate that for the commonjs one
-      // until eslint-config-webpack does it itself.
-      ecmaVersion: "latest",
-    },
+    extends: [configs["browser-outdated-recommended-module"]],
     rules: {
       // Function declarations are hoisted; allow referencing them ahead of
       // their definition for readability.

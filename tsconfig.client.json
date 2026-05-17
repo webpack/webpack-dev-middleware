@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "esnext",
-    "lib": ["es2022", "dom", "webworker"],
+    "lib": ["es5", "dom", "webworker", "es2022.error"],
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "allowJs": true,

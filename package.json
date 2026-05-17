@@ -69,6 +69,7 @@
   "devDependencies": {
     "@babel/cli": "^7.16.7",
     "@babel/core": "^7.16.7",
+    "@babel/plugin-transform-runtime": "^7.29.0",
     "@babel/preset-env": "^7.16.7",
     "@changesets/cli": "^2.30.0",
     "@changesets/get-github-info": "^0.8.0",
@@ -86,7 +87,7 @@
     "deepmerge": "^4.2.2",
     "del-cli": "^7.0.0",
     "eslint": "^9.28.0",
-    "eslint-config-webpack": "^4.9.5",
+    "eslint-config-webpack": "^4.9.6",
     "execa": "^9.6.1",
     "express": "^5.1.0",
     "express-4": "npm:express@^4",

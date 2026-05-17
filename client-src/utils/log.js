@@ -1,7 +1,5 @@
-"use strict";
-
 // @ts-expect-error -- no published types for this entry point
-const logger = require("webpack/lib/logging/runtime");
+import logger from "webpack/lib/logging/runtime.js";
 
 const LOGGER_NAME = "webpack-dev-middleware";
 const DEFAULT_LEVEL = "info";
@@ -11,12 +9,10 @@ const DEFAULT_LEVEL = "info";
 /**
  * @param {LogLevel} level log level (or `false` for off, `true` for default)
  */
-function setLogLevel(level) {
+export function setLogLevel(level) {
   logger.configureDefaultLogger({ level });
 }
 
 setLogLevel(DEFAULT_LEVEL);
 
-const log = logger.getLogger(LOGGER_NAME);
-
-module.exports = { log, setLogLevel };
+export const log = logger.getLogger(LOGGER_NAME);

@@ -1,7 +1,4 @@
-const MIN_BABEL_VERSION = 7;
-
 module.exports = (api) => {
-  api.assertVersion(MIN_BABEL_VERSION);
   api.cache(true);
 
   return {
@@ -9,24 +6,28 @@ module.exports = (api) => {
       [
         "@babel/preset-env",
         {
+          modules: false,
           targets: {
-            node: "20.9.0",
+            esmodules: true,
+            node: "0.12",
           },
         },
       ],
     ],
-    overrides: [
-      {
-        test: /client-src[\\/]/,
+    env: {
+      test: {
         presets: [
           [
             "@babel/preset-env",
             {
-              targets: "defaults",
+              targets: {
+                node: "18.12.0",
+              },
             },
           ],
         ],
+        plugins: ["@babel/plugin-transform-runtime"],
       },
-    ],
+    },
   };
 };
