@@ -30,9 +30,12 @@ declare namespace createHot {
     MultiCompiler,
     Stats,
     MultiStats,
+    StatsCompilation,
+    StatsError,
+    StatsModule,
     IncomingMessage,
     ServerResponse,
-    EXPECTED_ANY,
+    StatsOptions,
     HotOptions,
     Payload,
     EventStream,
@@ -43,15 +46,18 @@ declare const HOT_DEFAULT_HEARTBEAT: number;
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
+/** @typedef {import("webpack").StatsCompilation} StatsCompilation */
+/** @typedef {import("webpack").StatsError} StatsError */
+/** @typedef {import("webpack").StatsModule} StatsModule */
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index.js").ServerResponse} ServerResponse */
-/** @typedef {any} EXPECTED_ANY */
+/** @typedef {NonNullable<import("webpack").Configuration["stats"]>} StatsOptions */
 /**
  * @typedef {object} HotOptions
  * @property {string=} path the path the SSE endpoint is served at
  * @property {number=} heartbeat heartbeat interval in milliseconds
  * @property {((message: string) => void) | false=} log logger
- * @property {EXPECTED_ANY=} statsOptions webpack stats options used when serializing compilation results
+ * @property {StatsOptions=} statsOptions webpack stats options used when serializing compilation results
  */
 /**
  * @typedef {object} Payload
@@ -71,22 +77,20 @@ declare const HOT_DEFAULT_HEARTBEAT: number;
  */
 declare const HOT_DEFAULT_PATH: "/__webpack_hmr";
 /**
- * @param {EXPECTED_ANY[]} modules modules
+ * @param {StatsModule[]} modules modules
  * @returns {Record<string, string>} module id to name map
  */
-declare function buildModuleMap(
-  modules: EXPECTED_ANY[],
-): Record<string, string>;
+declare function buildModuleMap(modules: StatsModule[]): Record<string, string>;
 /**
  * @param {number} heartbeat heartbeat interval in milliseconds
  * @returns {EventStream} event stream
  */
 declare function createEventStream(heartbeat: number): EventStream;
 /**
- * @param {EXPECTED_ANY[]} errors errors or warnings
+ * @param {(string | StatsError)[]} errors errors or warnings
  * @returns {string[]} flat strings
  */
-declare function formatErrors(errors: EXPECTED_ANY[]): string[];
+declare function formatErrors(errors: (string | StatsError)[]): string[];
 /**
  * @param {string | undefined} url url
  * @param {string} expected expected pathname
@@ -98,14 +102,14 @@ declare function pathMatch(url: string | undefined, expected: string): boolean;
  * @param {Stats | MultiStats} statsResult stats result
  * @param {EventStream} eventStream event stream
  * @param {((message: string) => void) | false} log logger or false to disable
- * @param {EXPECTED_ANY} statsOptions stats options
+ * @param {StatsOptions | undefined} statsOptions stats options
  */
 declare function publishStats(
   action: string,
   statsResult: Stats | MultiStats,
   eventStream: EventStream,
   log: ((message: string) => void) | false,
-  statsOptions: EXPECTED_ANY,
+  statsOptions: StatsOptions | undefined,
 ): void;
 type HotInstance = {
   /**
@@ -135,9 +139,12 @@ type Compiler = import("webpack").Compiler;
 type MultiCompiler = import("webpack").MultiCompiler;
 type Stats = import("webpack").Stats;
 type MultiStats = import("webpack").MultiStats;
+type StatsCompilation = import("webpack").StatsCompilation;
+type StatsError = import("webpack").StatsError;
+type StatsModule = import("webpack").StatsModule;
 type IncomingMessage = import("./index.js").IncomingMessage;
 type ServerResponse = import("./index.js").ServerResponse;
-type EXPECTED_ANY = any;
+type StatsOptions = NonNullable<import("webpack").Configuration["stats"]>;
 type HotOptions = {
   /**
    * the path the SSE endpoint is served at
@@ -154,7 +161,7 @@ type HotOptions = {
   /**
    * webpack stats options used when serializing compilation results
    */
-  statsOptions?: EXPECTED_ANY | undefined;
+  statsOptions?: StatsOptions | undefined;
 };
 type Payload = {
   /**
