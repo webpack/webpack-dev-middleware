@@ -2,18 +2,20 @@
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
+/** @typedef {import("webpack").StatsCompilation} StatsCompilation */
+/** @typedef {import("webpack").StatsError} StatsError */
+/** @typedef {import("webpack").StatsModule} StatsModule */
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index.js").ServerResponse} ServerResponse */
 
-// eslint-disable-next-line jsdoc/reject-any-type
-/** @typedef {any} EXPECTED_ANY */
+/** @typedef {NonNullable<import("webpack").Configuration["stats"]>} StatsOptions */
 
 /**
  * @typedef {object} HotOptions
  * @property {string=} path the path the SSE endpoint is served at
  * @property {number=} heartbeat heartbeat interval in milliseconds
  * @property {((message: string) => void) | false=} log logger
- * @property {EXPECTED_ANY=} statsOptions webpack stats options used when serializing compilation results
+ * @property {StatsOptions=} statsOptions webpack stats options used when serializing compilation results
  */
 
 /**
@@ -78,16 +80,15 @@ function createEventStream(heartbeat) {
   }, heartbeat);
 
   // Don't block process exit on the heartbeat timer.
-  if (typeof (/** @type {EXPECTED_ANY} */ (interval).unref) === "function") {
-    /** @type {EXPECTED_ANY} */
-    (interval).unref();
+  if (typeof interval.unref === "function") {
+    interval.unref();
   }
 
   return {
     close() {
       clearInterval(interval);
       everyClient((client) => {
-        if (!(/** @type {EXPECTED_ANY} */ (client).writableEnded)) {
+        if (!client.writableEnded) {
           client.end();
         }
       });
@@ -104,7 +105,7 @@ function createEventStream(heartbeat) {
         "X-Accel-Buffering": "no",
       };
 
-      const { httpVersion, socket } = /** @type {EXPECTED_ANY} */ (req);
+      const { httpVersion, socket } = req;
       const isHttp1 = !(Number.parseInt(httpVersion, 10) >= 2);
 
       if (isHttp1) {
@@ -121,7 +122,7 @@ function createEventStream(heartbeat) {
       clients.set(id, res);
 
       req.on("close", () => {
-        if (!(/** @type {EXPECTED_ANY} */ (res).writableEnded)) {
+        if (!res.writableEnded) {
           res.end();
         }
         clients.delete(id);
@@ -136,7 +137,7 @@ function createEventStream(heartbeat) {
 }
 
 /**
- * @param {EXPECTED_ANY[]} errors errors or warnings
+ * @param {(string | StatsError)[]} errors errors or warnings
  * @returns {string[]} flat strings
  */
 function formatErrors(errors) {
@@ -148,7 +149,7 @@ function formatErrors(errors) {
     return /** @type {string[]} */ (errors);
   }
 
-  return errors.map((error) => {
+  return /** @type {StatsError[]} */ (errors).map((error) => {
     const moduleName = error.moduleName || "";
     const loc = error.loc || "";
 
@@ -157,9 +158,9 @@ function formatErrors(errors) {
 }
 
 /**
- * @param {EXPECTED_ANY} stats stats
- * @param {EXPECTED_ANY} statsOptions stats options
- * @returns {EXPECTED_ANY} json stats with compilation reference attached
+ * @param {Stats} stats stats
+ * @param {StatsOptions} statsOptions stats options
+ * @returns {StatsCompilation} json stats with compilation reference attached
  */
 function normalizeStats(stats, statsOptions) {
   const statsJson = stats.toJson(statsOptions);
@@ -172,8 +173,8 @@ function normalizeStats(stats, statsOptions) {
 }
 
 /**
- * @param {EXPECTED_ANY} stats normalized stats
- * @returns {EXPECTED_ANY[]} extracted bundles
+ * @param {StatsCompilation} stats normalized stats
+ * @returns {StatsCompilation[]} extracted bundles
  */
 function extractBundles(stats) {
   if (stats.modules) {
@@ -188,7 +189,7 @@ function extractBundles(stats) {
 }
 
 /**
- * @param {EXPECTED_ANY[]} modules modules
+ * @param {StatsModule[]} modules modules
  * @returns {Record<string, string>} module id to name map
  */
 function buildModuleMap(modules) {
@@ -196,7 +197,9 @@ function buildModuleMap(modules) {
   const map = {};
 
   for (const item of modules) {
-    map[item.id] = item.name;
+    map[/** @type {string | number} */ (item.id)] = /** @type {string} */ (
+      item.name
+    );
   }
 
   return map;
@@ -207,7 +210,7 @@ function buildModuleMap(modules) {
  * @param {Stats | MultiStats} statsResult stats result
  * @param {EventStream} eventStream event stream
  * @param {((message: string) => void) | false} log logger or false to disable
- * @param {EXPECTED_ANY} statsOptions stats options
+ * @param {StatsOptions | undefined} statsOptions stats options
  */
 function publishStats(action, statsResult, eventStream, log, statsOptions) {
   const resultStatsOptions = {
@@ -222,17 +225,13 @@ function publishStats(action, statsResult, eventStream, log, statsOptions) {
     ...(statsOptions && typeof statsOptions === "object" ? statsOptions : {}),
   };
 
-  /** @type {EXPECTED_ANY[]} */
-  let bundles = [];
+  /** @type {StatsCompilation[]} */
+  let bundles;
 
   // Multi-compiler stats have stats for each child compiler.
-  if (/** @type {EXPECTED_ANY} */ (statsResult).stats) {
-    bundles = /** @type {EXPECTED_ANY} */ (statsResult).stats.flatMap(
-      /**
-       * @param {EXPECTED_ANY} stats stats
-       * @returns {EXPECTED_ANY[]} extracted bundles
-       */
-      (stats) => extractBundles(normalizeStats(stats, resultStatsOptions)),
+  if ("stats" in statsResult) {
+    bundles = statsResult.stats.flatMap((stats) =>
+      extractBundles(normalizeStats(stats, resultStatsOptions)),
     );
   } else {
     bundles = extractBundles(normalizeStats(statsResult, resultStatsOptions));
@@ -259,7 +258,7 @@ function publishStats(action, statsResult, eventStream, log, statsOptions) {
       hash: stats.hash,
       warnings: formatErrors(stats.warnings || []),
       errors: formatErrors(stats.errors || []),
-      modules: buildModuleMap(stats.modules),
+      modules: buildModuleMap(stats.modules || []),
     });
   }
 }
