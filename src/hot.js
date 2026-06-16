@@ -215,11 +215,8 @@ function buildModuleMap(modules) {
 function publishStats(action, statsResult, eventStream, log, statsOptions) {
   const resultStatsOptions = {
     all: false,
-    cached: true,
-    children: true,
-    modules: true,
-    timings: true,
     hash: true,
+    timings: true,
     errors: true,
     warnings: true,
     ...(statsOptions && typeof statsOptions === "object" ? statsOptions : {}),
