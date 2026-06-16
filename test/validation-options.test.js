@@ -85,6 +85,18 @@ describe("validation", () => {
       success: [true, false],
       failure: ["foo", 0],
     },
+    hot: {
+      success: [
+        true,
+        false,
+        {},
+        { path: "/__hmr" },
+        { heartbeat: 1000 },
+        { statsOptions: true },
+        { statsOptions: { all: false } },
+      ],
+      failure: ["foo", 0, { path: "" }, { heartbeat: -1 }, { unknown: true }],
+    },
   };
 
   // eslint-disable-next-line jsdoc/reject-any-type

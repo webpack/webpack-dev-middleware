@@ -28,6 +28,8 @@ declare namespace wdm {
     MultiStats,
     ReadStream,
     FilenameWithExtra,
+    HotOptions,
+    HotInstance,
     EXPECTED_ANY,
     EXPECTED_FUNCTION,
     ExtendedServerResponse,
@@ -128,6 +130,8 @@ type Stats = import("webpack").Stats;
 type MultiStats = import("webpack").MultiStats;
 type ReadStream = import("fs").ReadStream;
 type FilenameWithExtra = import("./middleware").FilenameWithExtra;
+type HotOptions = import("./hot").HotOptions;
+type HotInstance = import("./hot").HotInstance;
 type EXPECTED_ANY = any;
 type EXPECTED_FUNCTION = Function;
 type ExtendedServerResponse = {
@@ -210,6 +214,10 @@ type Context<
    * output file system
    */
   outputFileSystem: OutputFileSystem;
+  /**
+   * hot module replacement instance
+   */
+  hot?: HotInstance | undefined;
 };
 type FilledContext<
   RequestInternal extends IncomingMessage = import("http").IncomingMessage,
@@ -316,6 +324,10 @@ type Options<
    * forward error to next middleware
    */
   forwardError?: boolean | undefined;
+  /**
+   * enable hot module replacement
+   */
+  hot?: (boolean | HotOptions) | undefined;
 };
 type Middleware<
   RequestInternal extends IncomingMessage = import("http").IncomingMessage,

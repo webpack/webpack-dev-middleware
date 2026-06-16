@@ -177,6 +177,43 @@
       "description": "Enable or disable forwarding errors to next middleware.",
       "link": "https://github.com/webpack/webpack-dev-middleware#forwarderrors",
       "type": "boolean"
+    },
+    "hot": {
+      "description": "Enable hot module replacement via a Server-Sent Events endpoint.",
+      "link": "https://github.com/webpack/webpack-dev-middleware#hot",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "description": "The path the SSE endpoint is served at.",
+              "type": "string",
+              "minLength": 1
+            },
+            "heartbeat": {
+              "description": "Heartbeat interval (in milliseconds) used to keep the SSE connection alive.",
+              "type": "number",
+              "minimum": 0
+            },
+            "statsOptions": {
+              "description": "Webpack stats options used when serializing compilation results.",
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   },
   "additionalProperties": false

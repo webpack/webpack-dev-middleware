@@ -75,6 +75,48 @@ exports[`validation should throw an error on the "headers" option with "true" va
     * options.headers should be an instance of function."
 `;
 
+exports[`validation should throw an error on the "hot" option with "{"heartbeat":-1}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.heartbeat should be >= 0.
+   -> Heartbeat interval (in milliseconds) used to keep the SSE connection alive."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"path":""}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.path should be a non-empty string.
+   -> The path the SSE endpoint is served at."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"unknown":true}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot has an unknown property 'unknown'. These properties are valid:
+   object { path?, heartbeat?, statsOptions? }"
+`;
+
+exports[`validation should throw an error on the "hot" option with "0" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot should be one of these:
+   boolean | object { path?, heartbeat?, statsOptions? }
+   -> Enable hot module replacement via a Server-Sent Events endpoint.
+   -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
+   Details:
+    * options.hot should be a boolean.
+    * options.hot should be an object:
+      object { path?, heartbeat?, statsOptions? }"
+`;
+
+exports[`validation should throw an error on the "hot" option with "foo" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot should be one of these:
+   boolean | object { path?, heartbeat?, statsOptions? }
+   -> Enable hot module replacement via a Server-Sent Events endpoint.
+   -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
+   Details:
+    * options.hot should be a boolean.
+    * options.hot should be an object:
+      object { path?, heartbeat?, statsOptions? }"
+`;
+
 exports[`validation should throw an error on the "index" option with "{}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.index should be one of these:
