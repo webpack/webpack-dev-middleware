@@ -105,6 +105,10 @@ describe("hot middleware (unit)", () => {
       expect(pathMatch("/bundle.js", "/__webpack_hmr")).toBe(false);
     });
 
+    it("returns false when the path has a trailing segment", () => {
+      expect(pathMatch("/__webpack_hmr/extra", "/__webpack_hmr")).toBe(false);
+    });
+
     it("returns false when url is undefined", () => {
       expect(pathMatch(undefined, "/__webpack_hmr")).toBe(false);
     });
