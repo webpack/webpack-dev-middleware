@@ -10,12 +10,16 @@ jest.spyOn(globalThis.console, "log").mockImplementation();
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_OBJECT */
 
+/** @type {EXPECTED_OBJECT} */
+const noopLogger = { log() {} };
+
 /**
  * Build a minimal compiler-like object so we can drive `invalid`/`done` from
  * the test without spinning up webpack.
+ * @param {EXPECTED_OBJECT=} logger logger returned by getInfrastructureLogger
  * @returns {{ hooks: EXPECTED_OBJECT, emitInvalid: () => void, emitDone: (stats: EXPECTED_OBJECT) => void }} fake compiler
  */
-function makeFakeCompiler() {
+function makeFakeCompiler(logger = noopLogger) {
   const invalidTaps = [];
   const doneTaps = [];
   return {
@@ -23,6 +27,7 @@ function makeFakeCompiler() {
       invalid: { tap: (_name, fn) => invalidTaps.push(fn) },
       done: { tap: (_name, fn) => doneTaps.push(fn) },
     },
+    getInfrastructureLogger: () => logger,
     emitInvalid() {
       for (const fn of invalidTaps) fn();
     },
@@ -150,7 +155,7 @@ describe("hot middleware (unit)", () => {
     });
 
     it("emits a heartbeat at the configured interval", () => {
-      const stream = createEventStream(1000);
+      const stream = createEventStream(1000, noopLogger);
       const writes = [];
       const fakeRes = {
         writableEnded: false,
@@ -174,7 +179,7 @@ describe("hot middleware (unit)", () => {
     });
 
     it("publishes JSON payloads to attached clients", () => {
-      const stream = createEventStream(5000);
+      const stream = createEventStream(5000, noopLogger);
       const writes = [];
       const fakeRes = {
         writableEnded: false,
@@ -198,7 +203,7 @@ describe("hot middleware (unit)", () => {
     });
 
     it("close ends connected clients", () => {
-      const stream = createEventStream(5000);
+      const stream = createEventStream(5000, noopLogger);
       let ended = false;
       const fakeRes = {
         writableEnded: false,
@@ -221,21 +226,21 @@ describe("hot middleware (unit)", () => {
     });
 
     it("sets Connection: keep-alive for HTTP/1 clients", () => {
-      const stream = createEventStream(5000);
+      const stream = createEventStream(5000, noopLogger);
       const { headers } = attachClient(stream, { httpVersion: "1.1" });
       expect(headers.Connection).toBe("keep-alive");
       stream.close();
     });
 
     it("does not set Connection: keep-alive for HTTP/2 clients", () => {
-      const stream = createEventStream(5000);
+      const stream = createEventStream(5000, noopLogger);
       const { headers } = attachClient(stream, { httpVersion: "2.0" });
       expect(headers.Connection).toBeUndefined();
       stream.close();
     });
 
     it("broadcasts events to every attached client", () => {
-      const stream = createEventStream(5000);
+      const stream = createEventStream(5000, noopLogger);
       const clients = [
         attachClient(stream),
         attachClient(stream),
@@ -252,13 +257,58 @@ describe("hot middleware (unit)", () => {
 
       stream.close();
     });
+
+    it("logs client connect and disconnect with the active count", () => {
+      const messages = [];
+      const stream = createEventStream(5000, {
+        log: (message) => messages.push(message),
+      });
+      /** @type {() => void} */
+      let closeHandler = () => {};
+      const fakeReq = {
+        httpVersion: "1.1",
+        socket: { setKeepAlive: () => {} },
+        on: (event, fn) => {
+          if (event === "close") closeHandler = fn;
+        },
+      };
+      const fakeRes = {
+        writableEnded: false,
+        write: () => {},
+        writeHead: () => {},
+        end: () => {},
+      };
+
+      stream.handler(fakeReq, fakeRes);
+      expect(messages).toContain("Client connected (1 active)");
+
+      closeHandler();
+      expect(messages).toContain("Client disconnected (0 active)");
+
+      stream.close();
+    });
   });
 });
 
 describe("createHot", () => {
+  it("logs that HMR is enabled with the served path", () => {
+    const messages = [];
+    const compiler = makeFakeCompiler({
+      log: (message) => messages.push(message),
+    });
+
+    const hot = createHot(compiler, { path: "/__hmr" });
+
+    expect(messages).toContain(
+      'Hot module replacement enabled, serving events at "/__hmr"',
+    );
+
+    hot.close();
+  });
+
   it("exposes publish() so callers can broadcast custom payloads", () => {
     const compiler = makeFakeCompiler();
-    const hot = createHot(compiler, { log: false });
+    const hot = createHot(compiler, {});
     const { writes } = attachClient({ handler: hot.handle });
 
     hot.publish({ action: "custom-thing", payload: 42 });
@@ -275,7 +325,7 @@ describe("createHot", () => {
 
   it("sends a sync payload to a client that connects after a build", () => {
     const compiler = makeFakeCompiler();
-    const hot = createHot(compiler, { log: false });
+    const hot = createHot(compiler, {});
 
     // A build finishes BEFORE anyone connects.
     compiler.emitDone(makeFakeStats());
@@ -289,7 +339,7 @@ describe("createHot", () => {
 
   it("falls back to compilation.name when stats name is empty", () => {
     const compiler = makeFakeCompiler();
-    const hot = createHot(compiler, { log: false });
+    const hot = createHot(compiler, {});
     const { writes } = attachClient({ handler: hot.handle });
 
     compiler.emitDone({
@@ -318,7 +368,7 @@ describe("createHot", () => {
 
   it("stops publishing after close() even if the compiler still emits", () => {
     const compiler = makeFakeCompiler();
-    const hot = createHot(compiler, { log: false });
+    const hot = createHot(compiler, {});
     const { writes } = attachClient({ handler: hot.handle });
 
     hot.close();

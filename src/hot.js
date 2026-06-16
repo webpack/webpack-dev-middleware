@@ -1,5 +1,6 @@
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
+/** @typedef {ReturnType<Compiler["getInfrastructureLogger"]>} Logger */
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
 /** @typedef {import("webpack").StatsCompilation} StatsCompilation */
@@ -14,7 +15,6 @@
  * @typedef {object} HotOptions
  * @property {string=} path the path the SSE endpoint is served at
  * @property {number=} heartbeat heartbeat interval in milliseconds
- * @property {((message: string) => void) | false=} log logger
  * @property {StatsOptions=} statsOptions webpack stats options used when serializing compilation results
  */
 
@@ -57,9 +57,10 @@ function pathMatch(url, expected) {
 
 /**
  * @param {number} heartbeat heartbeat interval in milliseconds
+ * @param {Logger} logger logger
  * @returns {EventStream} event stream
  */
-function createEventStream(heartbeat) {
+function createEventStream(heartbeat, logger) {
   let clientId = 0;
   /** @type {Map<number, ServerResponse>} */
   let clients = new Map();
@@ -120,12 +121,14 @@ function createEventStream(heartbeat) {
 
       const id = clientId++;
       clients.set(id, res);
+      logger.log(`Client connected (${clients.size} active)`);
 
       req.on("close", () => {
         if (!res.writableEnded) {
           res.end();
         }
         clients.delete(id);
+        logger.log(`Client disconnected (${clients.size} active)`);
       });
     },
     publish(payload) {
@@ -209,10 +212,9 @@ function buildModuleMap(modules) {
  * @param {string} action action
  * @param {Stats | MultiStats} statsResult stats result
  * @param {EventStream} eventStream event stream
- * @param {((message: string) => void) | false} log logger or false to disable
  * @param {StatsOptions | undefined} statsOptions stats options
  */
-function publishStats(action, statsResult, eventStream, log, statsOptions) {
+function publishStats(action, statsResult, eventStream, statsOptions) {
   const resultStatsOptions = {
     all: false,
     hash: true,
@@ -240,12 +242,6 @@ function publishStats(action, statsResult, eventStream, log, statsOptions) {
     // Fallback to compilation name when there is a single bundle.
     if (!name && stats.compilation) {
       name = stats.compilation.name || "";
-    }
-
-    if (log) {
-      log(
-        `webpack built ${name ? `${name} ` : ""}${stats.hash} in ${stats.time}ms`,
-      );
     }
 
     eventStream.publish({
@@ -277,16 +273,11 @@ function createHot(compiler, userOptions) {
   const options = userOptions === true ? {} : userOptions;
   const path = options.path || HOT_DEFAULT_PATH;
   const heartbeat = options.heartbeat || HOT_DEFAULT_HEARTBEAT;
-  const log =
-    options.log === false
-      ? false
-      : typeof options.log === "function"
-        ? options.log
-        : // eslint-disable-next-line no-console
-          console.log.bind(console);
   const { statsOptions } = options;
+  const logger = compiler.getInfrastructureLogger("webpack-dev-middleware");
 
-  let eventStream = createEventStream(heartbeat);
+  let eventStream = createEventStream(heartbeat, logger);
+  logger.log(`Hot module replacement enabled, serving events at "${path}"`);
   /** @type {Stats | MultiStats | null} */
   let latestStats = null;
   let closed = false;
@@ -296,8 +287,6 @@ function createHot(compiler, userOptions) {
 
     latestStats = null;
 
-    if (log) log("webpack building...");
-
     eventStream.publish({ action: "building" });
   };
 
@@ -306,7 +295,7 @@ function createHot(compiler, userOptions) {
     if (closed) return;
 
     latestStats = statsResult;
-    publishStats("built", latestStats, eventStream, log, statsOptions);
+    publishStats("built", latestStats, eventStream, statsOptions);
   };
 
   compiler.hooks.invalid.tap(PLUGIN_NAME, onInvalid);
@@ -320,8 +309,7 @@ function createHot(compiler, userOptions) {
       eventStream.handler(req, res);
 
       if (latestStats) {
-        // Explicitly not passing in `log` so we don't double-log on the server.
-        publishStats("sync", latestStats, eventStream, false, statsOptions);
+        publishStats("sync", latestStats, eventStream, statsOptions);
       }
     },
     publish(payload) {

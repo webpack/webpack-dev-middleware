@@ -199,18 +199,6 @@
               "type": "number",
               "minimum": 0
             },
-            "log": {
-              "description": "Logger used to print build status. Pass `false` to disable.",
-              "anyOf": [
-                {
-                  "type": "boolean",
-                  "enum": [false]
-                },
-                {
-                  "instanceof": "Function"
-                }
-              ]
-            },
             "statsOptions": {
               "description": "Webpack stats options used when serializing compilation results.",
               "anyOf": [

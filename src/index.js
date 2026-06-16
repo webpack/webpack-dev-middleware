@@ -515,17 +515,7 @@ function wdm(compiler, options = {}, isPlugin = false) {
   compiler.hooks.done.tap(PLUGIN_NAME, done);
 
   if (options.hot) {
-    const hotUserOptions = options.hot === true ? {} : options.hot;
-    const userLog = hotUserOptions.log;
-    context.hot = createHot(compiler, {
-      ...hotUserOptions,
-      log:
-        userLog === undefined
-          ? /** @param {string} message message */ (message) => {
-              context.logger.log(message);
-            }
-          : userLog,
-    });
+    context.hot = createHot(compiler, options.hot === true ? {} : options.hot);
   }
 
   const compilersToModify = isMultipleCompiler(compiler)

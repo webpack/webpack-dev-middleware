@@ -92,19 +92,10 @@ describe("validation", () => {
         {},
         { path: "/__hmr" },
         { heartbeat: 1000 },
-        { log: false },
-        { log: () => {} },
         { statsOptions: true },
         { statsOptions: { all: false } },
       ],
-      failure: [
-        "foo",
-        0,
-        { path: "" },
-        { heartbeat: -1 },
-        { log: true },
-        { unknown: true },
-      ],
+      failure: ["foo", 0, { path: "" }, { heartbeat: -1 }, { unknown: true }],
     },
   };
 

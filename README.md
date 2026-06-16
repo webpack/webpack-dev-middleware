@@ -344,13 +344,6 @@ Default: `10000`
 
 Heartbeat interval (in milliseconds) used to keep the SSE connection alive when no compilation events are produced.
 
-#### `hot.log`
-
-Type: `Function | false`
-Default: the dev middleware's infrastructure logger
-
-Logger used to print build status (`webpack building...`, `webpack built <hash> in <ms>`). Pass `false` to disable logging from the hot middleware.
-
 #### `hot.statsOptions`
 
 Type: `Boolean | Object`

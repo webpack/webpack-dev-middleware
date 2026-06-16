@@ -28,6 +28,7 @@ declare namespace createHot {
     HotInstance,
     Compiler,
     MultiCompiler,
+    Logger,
     Stats,
     MultiStats,
     StatsCompilation,
@@ -44,6 +45,7 @@ declare namespace createHot {
 declare const HOT_DEFAULT_HEARTBEAT: number;
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("webpack").MultiCompiler} MultiCompiler */
+/** @typedef {ReturnType<Compiler["getInfrastructureLogger"]>} Logger */
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
 /** @typedef {import("webpack").StatsCompilation} StatsCompilation */
@@ -56,7 +58,6 @@ declare const HOT_DEFAULT_HEARTBEAT: number;
  * @typedef {object} HotOptions
  * @property {string=} path the path the SSE endpoint is served at
  * @property {number=} heartbeat heartbeat interval in milliseconds
- * @property {((message: string) => void) | false=} log logger
  * @property {StatsOptions=} statsOptions webpack stats options used when serializing compilation results
  */
 /**
@@ -83,9 +84,13 @@ declare const HOT_DEFAULT_PATH: "/__webpack_hmr";
 declare function buildModuleMap(modules: StatsModule[]): Record<string, string>;
 /**
  * @param {number} heartbeat heartbeat interval in milliseconds
+ * @param {Logger} logger logger
  * @returns {EventStream} event stream
  */
-declare function createEventStream(heartbeat: number): EventStream;
+declare function createEventStream(
+  heartbeat: number,
+  logger: Logger,
+): EventStream;
 /**
  * @param {(string | StatsError)[]} errors errors or warnings
  * @returns {string[]} flat strings
@@ -101,14 +106,12 @@ declare function pathMatch(url: string | undefined, expected: string): boolean;
  * @param {string} action action
  * @param {Stats | MultiStats} statsResult stats result
  * @param {EventStream} eventStream event stream
- * @param {((message: string) => void) | false} log logger or false to disable
  * @param {StatsOptions | undefined} statsOptions stats options
  */
 declare function publishStats(
   action: string,
   statsResult: Stats | MultiStats,
   eventStream: EventStream,
-  log: ((message: string) => void) | false,
   statsOptions: StatsOptions | undefined,
 ): void;
 type HotInstance = {
@@ -137,6 +140,7 @@ type HotInstance = {
 };
 type Compiler = import("webpack").Compiler;
 type MultiCompiler = import("webpack").MultiCompiler;
+type Logger = ReturnType<Compiler["getInfrastructureLogger"]>;
 type Stats = import("webpack").Stats;
 type MultiStats = import("webpack").MultiStats;
 type StatsCompilation = import("webpack").StatsCompilation;
@@ -154,10 +158,6 @@ type HotOptions = {
    * heartbeat interval in milliseconds
    */
   heartbeat?: number | undefined;
-  /**
-   * logger
-   */
-  log?: (((message: string) => void) | false) | undefined;
   /**
    * webpack stats options used when serializing compilation results
    */
