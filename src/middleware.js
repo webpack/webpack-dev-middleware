@@ -4,6 +4,8 @@ const querystring = require("node:querystring");
 const mime = require("mime-types");
 const onFinishedStream = require("on-finished");
 
+const { pathMatch: hotPathMatch } = require("./hot");
+
 const {
   createReadStreamOrReadFile,
   destroyStream,
@@ -376,6 +378,12 @@ function ready(context, callback, req) {
  */
 function wrapper(context) {
   return async function middleware(req, res, next) {
+    // Intercept Server-Sent Events handshake when the `hot` option is enabled.
+    if (context.hot && hotPathMatch(getRequestURL(req), context.hot.path)) {
+      context.hot.handle(req, res);
+      return;
+    }
+
     /**
      * @param {NodeJS.ErrnoException=} err an error
      * @returns {Promise<void>}

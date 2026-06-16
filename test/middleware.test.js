@@ -6946,4 +6946,120 @@ describe.each([
       });
     });
   });
+
+  describe("hot", () => {
+    let instance;
+    let server;
+    let req;
+
+    /**
+     * @param {import("supertest").Test} pending pending supertest request
+     * @returns {Promise<import("supertest").Response>} resolved response
+     */
+    async function readSseHandshake(pending) {
+      return new Promise((resolve, reject) => {
+        pending
+          .buffer(false)
+          .parse((res, cb) => {
+            res.on("data", () => {});
+            res.on("end", () => cb(null, ""));
+            // SSE never closes on its own; force-close after we have headers.
+            setTimeout(() => res.destroy(), 50);
+          })
+          .end((err, res) => {
+            if (err && err.code !== "ECONNRESET") {
+              reject(err);
+              return;
+            }
+            resolve(res);
+          });
+      });
+    }
+
+    afterEach(async () => {
+      await close(server, instance);
+    });
+
+    it("serves SSE on the default hot path", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: true },
+      );
+
+      const res = await readSseHandshake(req.get("/__webpack_hmr"));
+
+      expect(res.status).toBe(200);
+      expect(res.headers["content-type"]).toMatch(/text\/event-stream/);
+      expect(res.headers["cache-control"]).toBe("no-cache, no-transform");
+      expect(res.headers["x-accel-buffering"]).toBe("no");
+    });
+
+    it("respects a custom hot path", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        {
+          hot: { path: "/__custom_hmr" },
+        },
+      );
+
+      const res = await readSseHandshake(req.get("/__custom_hmr"));
+
+      expect(res.status).toBe(200);
+      expect(res.headers["content-type"]).toMatch(/text\/event-stream/);
+    });
+
+    it("does not intercept non-hot requests", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: true },
+      );
+
+      const response = await req.get("/bundle.js");
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers["content-type"] || "").not.toMatch(
+        /text\/event-stream/,
+      );
+    });
+
+    it("does not intercept the default hot path when hot is disabled", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        {},
+      );
+
+      const response = await req.get("/__webpack_hmr");
+
+      expect(response.headers["content-type"] || "").not.toMatch(
+        /text\/event-stream/,
+      );
+    });
+
+    it("works with MultiCompiler", async () => {
+      const compiler = getCompiler(webpackMultiConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: true },
+      );
+
+      const res = await readSseHandshake(req.get("/__webpack_hmr"));
+
+      expect(res.status).toBe(200);
+      expect(res.headers["content-type"]).toMatch(/text\/event-stream/);
+    });
+  });
 });
