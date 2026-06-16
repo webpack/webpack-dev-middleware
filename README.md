@@ -79,6 +79,7 @@ See [below](#other-servers) for an example of use with fastify.
 |        **[`writeToDisk`](#writetodisk)**        |        `boolean\|Function`        |                    `false`                    | Instructs the module to write files to the configured location on disk as specified in your `webpack` configuration. |
 |   **[`outputFileSystem`](#outputfilesystem)**   |             `Object`              | [`memfs`](https://github.com/streamich/memfs) | Set the default file system which will be used by webpack as primary destination of generated files.                 |
 | **[`modifyResponseData`](#modifyresponsedata)** |            `Function`             |                  `undefined`                  | Allows to set up a callback to change the response data.                                                             |
+|                **[`hot`](#hot)**                |         `boolean\|Object`         |                    `false`                    | Enables a Server-Sent Events endpoint that drives the browser HMR client.                                            |
 |       **[`forwardError`](#forwarderror)**       |             `boolean`             |                    `false`                    | Enable or disable forwarding errors to the next middleware.                                                          |
 
 The middleware accepts an `options` Object. The following is a property reference for the Object.
@@ -310,6 +311,115 @@ middleware(compiler, {
     // Don't use `res.end()` or `res.send()` here
     ({ data, byteLength }),
 });
+```
+
+### hot
+
+Type: `Boolean | Object`
+Default: `false`
+
+Enables hot module replacement by serving a [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) endpoint that publishes the webpack compiler's `building`, `built` and `sync` events to connected clients. When `true`, defaults are used; pass an object to customise. Use this option together with the browser runtime shipped as `webpack-dev-middleware/client`.
+
+```js
+const webpack = require("webpack");
+
+const compiler = webpack({
+  /* Webpack configuration with HotModuleReplacementPlugin and the client entry */
+});
+
+middleware(compiler, { hot: true });
+```
+
+#### `hot.path`
+
+Type: `String`
+Default: `'/__webpack_hmr'`
+
+Path the SSE endpoint is served at. Must match the `path` option used by the client.
+
+#### `hot.heartbeat`
+
+Type: `Number`
+Default: `10000`
+
+Heartbeat interval (in milliseconds) used to keep the SSE connection alive when no compilation events are produced.
+
+#### `hot.statsOptions`
+
+Type: `Boolean | Object`
+Default: `undefined`
+
+Webpack stats options used when serializing compilation results for the SSE payload. Forwarded to `stats.toJson(...)`. By default only the minimal stats needed by the client are requested (`hash`, `timings`, `errors`, `warnings`) to avoid slowing down rebuilds. Pass `statsOptions: { modules: true }` if you want the module id → name map used for nicer client logging.
+
+## Hot Module Replacement client
+
+When the server is configured to serve the hot module replacement endpoint, the bundled application needs a small runtime that subscribes to that stream and applies the updates. `webpack-dev-middleware` ships that runtime under the `./client` subpath. Add it as a webpack entry next to your application code and enable `HotModuleReplacementPlugin`:
+
+```js
+const webpack = require("webpack");
+
+module.exports = {
+  entry: ["webpack-dev-middleware/client", "./src/app.js"],
+  plugins: [new webpack.HotModuleReplacementPlugin()],
+};
+```
+
+The runtime connects to `/__webpack_hmr` by default. Any of the options below can be set by adding a query string to the entry path:
+
+```js
+entry: [
+  "webpack-dev-middleware/client?reload=false&overlay=false",
+  "./src/app.js",
+];
+```
+
+### Client options
+
+|        Name         |   Type    |     Default      | Description                                                                                                                                          |
+| :-----------------: | :-------: | :--------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
+|       `path`        | `string`  | `/__webpack_hmr` | Path the SSE endpoint is served at. Must match the server `hot.path`.                                                                                |
+|      `timeout`      | `number`  |     `20000`      | Reconnection / heartbeat watchdog timeout in milliseconds.                                                                                           |
+|      `overlay`      | `boolean` |      `true`      | Show compile-time errors in an in-page overlay.                                                                                                      |
+|  `overlayWarnings`  | `boolean` |     `false`      | Also show compile-time warnings in the overlay.                                                                                                      |
+|   `overlayStyles`   | `Object`  |       `{}`       | JSON object of CSS overrides for the overlay container. Pass JSON-encoded value via query string.                                                    |
+|    `ansiColors`     | `Object`  |       `{}`       | JSON object overriding the ANSI → HTML color map used by the overlay.                                                                                |
+|      `reload`       | `boolean` |      `true`      | Fall back to a full page reload when an update cannot be applied through HMR (e.g. recovering from a broken build). Set to `false` to keep HMR-only. |
+|      `logging`      | `string`  |     `"info"`     | Logger level — one of `"none"`, `"error"`, `"warn"`, `"info"`, `"log"`, `"verbose"`. Uses webpack's runtime logger.                                  |
+|       `name`        | `string`  |       `""`       | Restrict updates to a specific compilation name (useful with multi-compiler).                                                                        |
+|    `autoConnect`    | `boolean` |      `true`      | Connect on load; set to `false` and call `setOptionsAndConnect()` manually.                                                                          |
+| `dynamicPublicPath` | `boolean` |     `false`      | Prefix `path` with `__webpack_public_path__` at runtime.                                                                                             |
+
+### Programmatic API
+
+`webpack-dev-middleware/client` also exports a few functions for advanced cases:
+
+```js
+const hotClient = require("webpack-dev-middleware/client");
+
+// Receive every HMR payload (building / built / sync / custom).
+hotClient.subscribeAll((payload) => {
+  console.log("hot event", payload);
+});
+
+// Receive payloads whose `action` is not recognised by the client (i.e. custom
+// payloads published via the server's `instance.context.hot.publish(...)`).
+hotClient.subscribe((payload) => {
+  // do something
+});
+
+// Replace the default error overlay with your own implementation.
+hotClient.useCustomOverlay({
+  showProblems(type, lines) {
+    /* ... */
+  },
+  clear() {
+    /* ... */
+  },
+});
+
+// Connect manually when `autoConnect=false`. Accepts the same option keys as
+// the query-string API above.
+hotClient.setOptionsAndConnect({ path: "/__hmr" });
 ```
 
 ## API
