@@ -2,7 +2,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import configs from "eslint-config-webpack/configs.js";
 
 export default defineConfig([
-  globalIgnores(["client/**/*"]),
+  globalIgnores(["client/**/*", "examples/**/*"]),
   {
     extends: [configs["recommended-dirty"]],
     ignores: ["client-src/**/*"],
