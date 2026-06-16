@@ -128,6 +128,24 @@ describe("client", () => {
       expect(processUpdate).toHaveBeenCalledTimes(1);
     });
 
+    it("passes reload:true to the updater by default", () => {
+      EventSourceStub.lastInstance().onmessage(
+        makeMessage({
+          action: "built",
+          time: 100,
+          hash: "1234567890abcdef",
+          errors: [],
+          warnings: [],
+          modules: [],
+        }),
+      );
+      expect(processUpdate).toHaveBeenCalledWith(
+        "1234567890abcdef",
+        expect.anything(),
+        expect.objectContaining({ reload: true }),
+      );
+    });
+
     it("triggers webpack on successful syncs", () => {
       EventSourceStub.lastInstance().onmessage(
         makeMessage({
@@ -480,6 +498,41 @@ describe("client", () => {
         }),
       );
       expect(processUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("with reload disabled", () => {
+    let EventSourceStub;
+
+    beforeEach(() => {
+      EventSourceStub = makeEventSourceStub();
+      globalThis.EventSource = EventSourceStub;
+      jest.spyOn(console, "info").mockImplementation(() => {});
+      jest.spyOn(console, "log").mockImplementation(() => {});
+      jest.spyOn(console, "warn").mockImplementation(() => {});
+      loadClient("?reload=false");
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("passes reload:false to the updater", () => {
+      EventSourceStub.lastInstance().onmessage(
+        makeMessage({
+          action: "built",
+          time: 100,
+          hash: "1234567890abcdef",
+          errors: [],
+          warnings: [],
+          modules: [],
+        }),
+      );
+      expect(processUpdate).toHaveBeenCalledWith(
+        "1234567890abcdef",
+        expect.anything(),
+        expect.objectContaining({ reload: false }),
+      );
     });
   });
 
