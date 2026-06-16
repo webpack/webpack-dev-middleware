@@ -27,7 +27,7 @@ const options = {
   path: "/__webpack_hmr",
   timeout: 20 * 1000,
   overlay: true,
-  reload: false,
+  reload: true,
   logging: "info",
   name: "",
   autoConnect: true,
