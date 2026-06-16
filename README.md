@@ -368,26 +368,26 @@ The runtime connects to `/__webpack_hmr` by default. Any of the options below ca
 
 ```js
 entry: [
-  "webpack-dev-middleware/client?reload=true&overlay=false",
+  "webpack-dev-middleware/client?reload=false&overlay=false",
   "./src/app.js",
 ];
 ```
 
 ### Client options
 
-|        Name         |   Type    |     Default      | Description                                                                                                         |
-| :-----------------: | :-------: | :--------------: | :------------------------------------------------------------------------------------------------------------------ |
-|       `path`        | `string`  | `/__webpack_hmr` | Path the SSE endpoint is served at. Must match the server `hot.path`.                                               |
-|      `timeout`      | `number`  |     `20000`      | Reconnection / heartbeat watchdog timeout in milliseconds.                                                          |
-|      `overlay`      | `boolean` |      `true`      | Show compile-time errors in an in-page overlay.                                                                     |
-|  `overlayWarnings`  | `boolean` |     `false`      | Also show compile-time warnings in the overlay.                                                                     |
-|   `overlayStyles`   | `Object`  |       `{}`       | JSON object of CSS overrides for the overlay container. Pass JSON-encoded value via query string.                   |
-|    `ansiColors`     | `Object`  |       `{}`       | JSON object overriding the ANSI → HTML color map used by the overlay.                                               |
-|      `reload`       | `boolean` |     `false`      | Reload the page when an update cannot be applied through HMR.                                                       |
-|      `logging`      | `string`  |     `"info"`     | Logger level — one of `"none"`, `"error"`, `"warn"`, `"info"`, `"log"`, `"verbose"`. Uses webpack's runtime logger. |
-|       `name`        | `string`  |       `""`       | Restrict updates to a specific compilation name (useful with multi-compiler).                                       |
-|    `autoConnect`    | `boolean` |      `true`      | Connect on load; set to `false` and call `setOptionsAndConnect()` manually.                                         |
-| `dynamicPublicPath` | `boolean` |     `false`      | Prefix `path` with `__webpack_public_path__` at runtime.                                                            |
+|        Name         |   Type    |     Default      | Description                                                                                                                                          |
+| :-----------------: | :-------: | :--------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
+|       `path`        | `string`  | `/__webpack_hmr` | Path the SSE endpoint is served at. Must match the server `hot.path`.                                                                                |
+|      `timeout`      | `number`  |     `20000`      | Reconnection / heartbeat watchdog timeout in milliseconds.                                                                                           |
+|      `overlay`      | `boolean` |      `true`      | Show compile-time errors in an in-page overlay.                                                                                                      |
+|  `overlayWarnings`  | `boolean` |     `false`      | Also show compile-time warnings in the overlay.                                                                                                      |
+|   `overlayStyles`   | `Object`  |       `{}`       | JSON object of CSS overrides for the overlay container. Pass JSON-encoded value via query string.                                                    |
+|    `ansiColors`     | `Object`  |       `{}`       | JSON object overriding the ANSI → HTML color map used by the overlay.                                                                                |
+|      `reload`       | `boolean` |      `true`      | Fall back to a full page reload when an update cannot be applied through HMR (e.g. recovering from a broken build). Set to `false` to keep HMR-only. |
+|      `logging`      | `string`  |     `"info"`     | Logger level — one of `"none"`, `"error"`, `"warn"`, `"info"`, `"log"`, `"verbose"`. Uses webpack's runtime logger.                                  |
+|       `name`        | `string`  |       `""`       | Restrict updates to a specific compilation name (useful with multi-compiler).                                                                        |
+|    `autoConnect`    | `boolean` |      `true`      | Connect on load; set to `false` and call `setOptionsAndConnect()` manually.                                                                          |
+| `dynamicPublicPath` | `boolean` |     `false`      | Prefix `path` with `__webpack_public_path__` at runtime.                                                                                             |
 
 ### Programmatic API
 
