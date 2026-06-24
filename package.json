@@ -55,7 +55,7 @@
   "devDependencies": {
     "@babel/cli": "^7.16.7",
     "@babel/core": "^7.16.7",
-    "@babel/preset-env": "^7.16.7",
+    "@babel/preset-env": "^8.0.2",
     "@changesets/cli": "^2.30.0",
     "@changesets/get-github-info": "^0.8.0",
     "@fastify/express": "^4.0.2",
