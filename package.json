@@ -53,7 +53,7 @@
     "schema-utils": "^4.3.3"
   },
   "devDependencies": {
-    "@babel/cli": "^7.16.7",
+    "@babel/cli": "^8.0.1",
     "@babel/core": "^7.16.7",
     "@babel/preset-env": "^7.16.7",
     "@changesets/cli": "^2.30.0",
