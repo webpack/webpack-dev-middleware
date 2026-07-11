@@ -1,8 +1,8 @@
 const path = require("node:path");
 const querystring = require("node:querystring");
+const { finished } = require("node:stream");
 
 const mime = require("mime-types");
-const onFinishedStream = require("on-finished");
 
 const {
   createReadStreamOrReadFile,
@@ -1122,7 +1122,7 @@ function wrapper(context) {
 
       if (outgoing) {
         // Response finished, cleanup
-        onFinishedStream(outgoing, (err) => {
+        finished(outgoing, (err) => {
           if (err) {
             context.logger.error("Stream error:", err);
           }
