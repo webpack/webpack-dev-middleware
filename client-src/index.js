@@ -16,8 +16,10 @@ import stripAnsi from "./utils/strip-ansi.js";
  * @property {LogLevel} logging logger level
  * @property {string} name limit updates to this compilation name
  * @property {boolean} autoConnect connect immediately when the entry runs
- * @property {Record<string, string | number>} overlayStyles overrides for the overlay container CSS
+ * @property {Record<string, string | number>} overlayStyles overrides for the overlay card CSS
  * @property {boolean} overlayWarnings show warnings in the overlay too
+ * @property {boolean} overlayRuntimeErrors show uncaught runtime errors and unhandled rejections in the overlay
+ * @property {string} overlayTrustedTypesPolicyName Trusted Types policy name used for the overlay's HTML
  * @property {Record<string, string | string[]>} ansiColors overrides for ANSI → HTML color mapping
  */
 
@@ -32,6 +34,8 @@ const options = {
   autoConnect: true,
   overlayStyles: {},
   overlayWarnings: false,
+  overlayRuntimeErrors: true,
+  overlayTrustedTypesPolicyName: "",
   ansiColors: {},
 };
 
@@ -68,6 +72,15 @@ function setOverrides(overrides) {
 
   if (overrides.overlayWarnings) {
     options.overlayWarnings = overrides.overlayWarnings === "true";
+  }
+
+  if (overrides.overlayRuntimeErrors) {
+    options.overlayRuntimeErrors = overrides.overlayRuntimeErrors !== "false";
+  }
+
+  if (overrides.overlayTrustedTypesPolicyName) {
+    options.overlayTrustedTypesPolicyName =
+      overrides.overlayTrustedTypesPolicyName;
   }
 
   setLogLevel(options.logging);
@@ -222,6 +235,8 @@ function createReporter() {
     overlay = configureOverlay({
       ansiColors: options.ansiColors,
       overlayStyles: options.overlayStyles,
+      catchRuntimeError: options.overlayRuntimeErrors,
+      trustedTypesPolicyName: options.overlayTrustedTypesPolicyName,
     });
   }
 

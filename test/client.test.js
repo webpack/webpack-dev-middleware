@@ -545,6 +545,25 @@ describe("client", () => {
     });
   });
 
+  describe("with overlay runtime/trusted-types options", () => {
+    it("forwards them to the overlay factory", () => {
+      globalThis.EventSource = makeEventSourceStub();
+
+      loadClient(
+        "?overlayRuntimeErrors=false&overlayTrustedTypesPolicyName=webpack%23overlay",
+      );
+
+      const overlayFactory = require("../client-src/overlay");
+
+      expect(overlayFactory).toHaveBeenCalledWith(
+        expect.objectContaining({
+          catchRuntimeError: false,
+          trustedTypesPolicyName: "webpack#overlay",
+        }),
+      );
+    });
+  });
+
   describe("connection lifecycle", () => {
     let EventSourceStub;
     let client;

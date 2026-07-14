@@ -1,63 +1,58 @@
 import ansiHTML from "ansi-html-community";
-import { encode as encodeHtmlEntity } from "html-entities";
 
-// The backdrop dims the page and centers the error card.
-const clientOverlay = document.createElement("div");
-clientOverlay.id = "webpack-dev-middleware-hot-overlay";
+// eslint-disable-next-line jsdoc/reject-any-type
+/** @typedef {any} EXPECTED_ANY */
 
-// The card is the visible panel that holds the problem messages.
-const overlayCard = document.createElement("div");
-clientOverlay.append(overlayCard);
+/** @type {Record<string, string>} */
+const characterReferences = {
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&apos;",
+  "&": "&amp;",
+};
 
-// A close (×) button pinned to the top-right corner of the card.
-const closeButton = document.createElement("button");
-closeButton.type = "button";
-closeButton.textContent = "×";
-closeButton.setAttribute("aria-label", "Close");
-closeButton.style.position = "absolute";
-closeButton.style.top = "8px";
-closeButton.style.right = "12px";
-closeButton.style.border = "none";
-closeButton.style.background = "transparent";
-closeButton.style.color = "#999999";
-closeButton.style.fontSize = "22px";
-closeButton.style.lineHeight = "1";
-closeButton.style.cursor = "pointer";
-closeButton.style.padding = "0";
-closeButton.addEventListener("click", () => {
-  clear();
-});
-
-// Dismiss the overlay when clicking the backdrop (but not the card itself).
-clientOverlay.addEventListener("click", (event) => {
-  if (event.target === clientOverlay) {
-    clear();
+/**
+ * Encode the characters that are meaningful in HTML. Inlined (same as
+ * webpack-dev-server's overlay) so the client does not need `html-entities`.
+ * @param {string} text raw text
+ * @returns {string} entity-encoded text
+ */
+function encodeHtmlEntity(text) {
+  if (!text) {
+    return "";
   }
-});
 
-// Dismiss the overlay when pressing Escape.
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    clear();
-  }
-});
+  return text.replace(/[<>'"&]/g, (character) => {
+    return characterReferences[character];
+  });
+}
 
-/** @type {Record<string, string | number>} */
+const OVERLAY_ID = "webpack-dev-middleware-hot-overlay";
+const CARD_ID = `${OVERLAY_ID}-card`;
+
+// The overlay lives inside an `about:blank` iframe (same pattern as
+// webpack-dev-server) so page styles cannot leak into it and its styles cannot
+// leak out. Every style is applied through the CSSOM (`element.style`), which
+// a strict `style-src` Content Security Policy allows, unlike inline `style`
+// attributes.
+
+/**
+ * The iframe acts as the backdrop: it covers the viewport and dims the page.
+ * @type {Record<string, string | number>}
+ */
 const backdropStyles = {
   position: "fixed",
   top: 0,
   left: 0,
   right: 0,
   bottom: 0,
+  width: "100vw",
+  height: "100vh",
+  border: "none",
   zIndex: 9999,
   // webpack "Outer Space" (#2B3A42), translucent.
   background: "rgba(43,58,66,0.72)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "32px",
-  boxSizing: "border-box",
-  overflow: "auto",
 };
 
 /** @type {Record<string, string | number>} */
@@ -84,6 +79,33 @@ const styles = {
   textAlign: "left",
 };
 
+/** @type {Record<string, string | number>} */
+const bodyStyles = {
+  margin: 0,
+  padding: "32px",
+  boxSizing: "border-box",
+  minHeight: "100vh",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  overflow: "auto",
+  background: "transparent",
+};
+
+/** @type {Record<string, string | number>} */
+const closeButtonStyles = {
+  position: "absolute",
+  top: "8px",
+  right: "12px",
+  border: "none",
+  background: "transparent",
+  color: "#999999",
+  fontSize: "22px",
+  lineHeight: "1",
+  cursor: "pointer",
+  padding: "0",
+};
+
 /** @type {Record<string, string | string[]>} */
 const colors = {
   reset: ["transparent", "transparent"],
@@ -97,6 +119,59 @@ const colors = {
   lightgrey: "ebe7e3",
   darkgrey: "6d7891",
 };
+
+/** @type {HTMLIFrameElement | null} */
+let overlayFrame = null;
+/** @type {HTMLElement | null} */
+let overlayCard = null;
+
+// Runtime error capture (same behavior as webpack-dev-server's
+// `catchRuntimeError`): uncaught errors and unhandled promise rejections are
+// rendered in the overlay. Messages accumulate until the overlay is cleared.
+/** @type {string[]} */
+let runtimeMessages = [];
+let runtimeListenersAttached = false;
+
+// Trusted Types support (same pattern as webpack-dev-server): when the page
+// runs under `require-trusted-types-for 'script'`, every `innerHTML` write
+// must go through a policy.
+/** @type {{ createHTML: (value: string) => EXPECTED_ANY } | undefined} */
+let trustedTypesPolicy;
+/** @type {string | undefined} */
+let trustedTypesPolicyName;
+
+/**
+ * @param {HTMLElement} element element
+ * @param {string} html html to assign
+ */
+function setHTML(element, html) {
+  element.innerHTML = trustedTypesPolicy
+    ? trustedTypesPolicy.createHTML(html)
+    : html;
+}
+
+/**
+ * @param {EXPECTED_ANY} element element
+ * @param {Record<string, string | number>} style style map
+ */
+function applyStyle(element, style) {
+  for (const key of Object.keys(style)) {
+    element.style[key] = style[key];
+  }
+}
+
+/**
+ * Re-apply the inline `style` attributes produced by `ansi-html` (and our own
+ * highlight helpers) through the CSSOM. Under a strict `style-src` CSP the
+ * parser ignores `style` attributes, but CSSOM writes are always allowed.
+ * @param {HTMLElement} root subtree to normalize
+ */
+function normalizeInlineStyles(root) {
+  for (const element of root.querySelectorAll("[style]")) {
+    /** @type {EXPECTED_ANY} */ (element).style.cssText =
+      element.getAttribute("style");
+  }
+}
 
 /**
  * @param {"errors" | "warnings"} type problem type
@@ -184,53 +259,211 @@ function linkify(html) {
   });
 }
 
+// Dismiss the overlay when pressing Escape while the page has focus.
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    clear();
+  }
+});
+
+/**
+ * Create (or return) the overlay iframe and the card inside it.
+ * @returns {HTMLElement | null} the card element, or null when the frame
+ * document is not available
+ */
+function ensureOverlay() {
+  if (overlayFrame && overlayCard && overlayFrame.parentNode) {
+    return overlayCard;
+  }
+
+  // Enable Trusted Types if they are available in the current browser.
+  if (window.trustedTypes && !trustedTypesPolicy) {
+    trustedTypesPolicy = window.trustedTypes.createPolicy(
+      trustedTypesPolicyName || "webpack-dev-middleware#overlay",
+      {
+        createHTML: (value) => value,
+      },
+    );
+  }
+
+  overlayFrame = document.createElement("iframe");
+  overlayFrame.id = OVERLAY_ID;
+  overlayFrame.src = "about:blank";
+  applyStyle(overlayFrame, backdropStyles);
+  document.body.append(overlayFrame);
+
+  // A same-origin `about:blank` document is available synchronously.
+  const frameDocument = overlayFrame.contentDocument;
+
+  if (!frameDocument || !frameDocument.body) {
+    overlayFrame.remove();
+    overlayFrame = null;
+
+    return null;
+  }
+
+  applyStyle(frameDocument.body, bodyStyles);
+
+  // Dismiss the overlay when pressing Escape while the frame has focus.
+  frameDocument.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      clear();
+    }
+  });
+
+  // Dismiss the overlay when clicking the backdrop (but not the card itself).
+  frameDocument.addEventListener("click", (event) => {
+    if (
+      overlayCard &&
+      !overlayCard.contains(/** @type {EXPECTED_ANY} */ (event.target))
+    ) {
+      clear();
+    }
+  });
+
+  // The card is the visible panel that holds the problem messages.
+  overlayCard = frameDocument.createElement("div");
+  overlayCard.id = CARD_ID;
+  applyStyle(overlayCard, styles);
+  frameDocument.body.append(overlayCard);
+
+  return overlayCard;
+}
+
 /**
  * @param {"errors" | "warnings"} type problem type
  * @param {string[]} lines messages to render
  */
 export function showProblems(type, lines) {
+  const card = ensureOverlay();
+
+  if (!card) {
+    return;
+  }
+
+  const frameDocument = /** @type {Document} */ (
+    /** @type {HTMLIFrameElement} */ (overlayFrame).contentDocument
+  );
+
   // Accent the top bar with the problem color (red for errors, yellow for warnings).
-  overlayCard.style.borderTopColor = `#${problemColor(type)}`;
-  overlayCard.innerHTML = "";
-  overlayCard.append(closeButton);
+  card.style.borderTopColor = `#${problemColor(type)}`;
+  setHTML(card, "");
+
+  // A close (×) button pinned to the top-right corner of the card.
+  const closeButton = frameDocument.createElement("button");
+  closeButton.type = "button";
+  closeButton.textContent = "×";
+  closeButton.setAttribute("aria-label", "Close");
+  applyStyle(closeButton, closeButtonStyles);
+  closeButton.addEventListener("click", () => {
+    clear();
+  });
+  card.append(closeButton);
+
   for (const line of lines) {
     const msg = linkify(
       highlightFilePath(highlightCodeFrame(ansiHTML(encodeHtmlEntity(line)))),
     );
-    const div = document.createElement("div");
+    const div = frameDocument.createElement("div");
     div.style.marginBottom = "20px";
-    div.innerHTML = `${problemType(type)} in ${msg}`;
-    overlayCard.append(div);
+    setHTML(div, `${problemType(type)} in ${msg}`);
+    normalizeInlineStyles(div);
+    card.append(div);
   }
 
-  const hint = document.createElement("div");
-  hint.style.marginTop = "4px";
-  hint.style.paddingTop = "16px";
-  hint.style.borderTop = "1px solid #465e69";
-  hint.style.color = "#999999";
-  hint.style.fontSize = "13px";
+  const hint = frameDocument.createElement("div");
+  applyStyle(hint, {
+    marginTop: "4px",
+    paddingTop: "16px",
+    borderTop: "1px solid #465e69",
+    color: "#999999",
+    fontSize: "13px",
+  });
   hint.textContent = "Click outside, press Esc, or fix the code to dismiss.";
-  overlayCard.append(hint);
-
-  if (document.body) {
-    document.body.append(clientOverlay);
-  }
+  card.append(hint);
 }
 
 /**
- * Remove the overlay container from the DOM.
+ * Remove the overlay iframe from the DOM.
  */
 export function clear() {
-  if (clientOverlay.parentNode) {
-    clientOverlay.remove();
+  if (overlayFrame && overlayFrame.parentNode) {
+    overlayFrame.remove();
   }
+
+  overlayFrame = null;
+  overlayCard = null;
+  runtimeMessages = [];
 }
 
 /**
- * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number> }} options options
+ * @param {EXPECTED_ANY} error thrown value
+ * @param {string} fallbackMessage message used when the thrown value is not an Error
+ * @returns {string} printable message with stack
+ */
+function formatRuntimeError(error, fallbackMessage) {
+  const errorObject =
+    error instanceof Error ? error : new Error(error || fallbackMessage);
+  const stack = errorObject.stack ? `\n${errorObject.stack}` : "";
+
+  return `Uncaught runtime error: ${errorObject.message}${stack}`;
+}
+
+/**
+ * @param {EXPECTED_ANY} error thrown value
+ * @param {string} fallbackMessage fallback message
+ */
+function handleRuntimeError(error, fallbackMessage) {
+  // If the error stack indicates a React error boundary caught the error, do
+  // not show the overlay (same heuristic as webpack-dev-server).
+  if (
+    error &&
+    error.stack &&
+    error.stack.includes("invokeGuardedCallbackDev")
+  ) {
+    return;
+  }
+
+  runtimeMessages.push(formatRuntimeError(error, fallbackMessage));
+  showProblems("errors", runtimeMessages);
+}
+
+/**
+ * Listen for uncaught errors and unhandled rejections on the page.
+ */
+function attachRuntimeErrorListeners() {
+  if (runtimeListenersAttached) {
+    return;
+  }
+
+  runtimeListenersAttached = true;
+
+  window.addEventListener("error", (event) => {
+    if (!event.error && !event.message) {
+      return;
+    }
+
+    handleRuntimeError(event.error, event.message);
+  });
+
+  window.addEventListener("unhandledrejection", (event) => {
+    handleRuntimeError(event.reason, "Unknown promise rejection reason");
+  });
+}
+
+/**
+ * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number>, trustedTypesPolicyName?: string, catchRuntimeError?: boolean }} options options
  * @returns {{ showProblems: typeof showProblems, clear: typeof clear }} overlay api
  */
 export default function configureOverlay(options) {
+  if (options.trustedTypesPolicyName) {
+    trustedTypesPolicyName = options.trustedTypesPolicyName;
+  }
+
+  if (options.catchRuntimeError) {
+    attachRuntimeErrorListeners();
+  }
+
   if (options.ansiColors) {
     for (const color of Object.keys(options.ansiColors)) {
       if (color in colors) {
@@ -246,14 +479,8 @@ export default function configureOverlay(options) {
     }
   }
 
-  for (const key of Object.keys(backdropStyles)) {
-    /** @type {EXPECTED_ANY} */
-    (clientOverlay.style)[key] = backdropStyles[key];
-  }
-
-  for (const key of Object.keys(styles)) {
-    /** @type {EXPECTED_ANY} */
-    (overlayCard.style)[key] = styles[key];
+  if (overlayCard) {
+    applyStyle(overlayCard, styles);
   }
 
   return {
@@ -261,6 +488,3 @@ export default function configureOverlay(options) {
     clear,
   };
 }
-
-// eslint-disable-next-line jsdoc/reject-any-type
-/** @typedef {any} EXPECTED_ANY */
