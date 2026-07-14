@@ -3,6 +3,7 @@ import http from "node:http";
 /**
  * @typedef {object} SseEvent
  * @property {string=} action event action (building/built/sync/custom)
+ * @property {string=} file file that invalidated the compilation
  * @property {string=} name compilation name
  * @property {string=} hash compilation hash
  * @property {number=} time build time in ms
