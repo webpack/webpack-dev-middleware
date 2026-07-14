@@ -702,6 +702,36 @@ describe("client", () => {
     });
   });
 
+  describe("with dynamicPublicPath", () => {
+    let EventSourceStub;
+
+    beforeEach(() => {
+      EventSourceStub = makeEventSourceStub();
+      globalThis.EventSource = EventSourceStub;
+      jest.spyOn(console, "info").mockImplementation(() => {});
+      jest.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      delete globalThis.__webpack_public_path__;
+      jest.restoreAllMocks();
+    });
+
+    it("prepends the public path to the SSE path", () => {
+      globalThis.__webpack_public_path__ = "/assets";
+      loadClient("?dynamicPublicPath=true");
+      expect(EventSourceStub.lastInstance().url).toBe("/assets/__webpack_hmr");
+    });
+
+    it("does not produce a double slash when the public path has a trailing slash", () => {
+      globalThis.__webpack_public_path__ = "https://localhost:3000/assets/";
+      loadClient("?dynamicPublicPath=true");
+      expect(EventSourceStub.lastInstance().url).toBe(
+        "https://localhost:3000/assets/__webpack_hmr",
+      );
+    });
+  });
+
   describe("connection lifecycle", () => {
     let EventSourceStub;
     let client;

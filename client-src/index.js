@@ -113,7 +113,13 @@ function setOverrides(overrides) {
   }
 
   if (overrides.dynamicPublicPath) {
-    options.path = __webpack_public_path__ + options.path;
+    // Avoid a double slash when the public path has a trailing slash and the
+    // SSE path a leading one (e.g. "https://host/" + "/__webpack_hmr").
+    const publicPath = __webpack_public_path__;
+    options.path =
+      publicPath.endsWith("/") && options.path.startsWith("/")
+        ? publicPath + options.path.slice(1)
+        : publicPath + options.path;
   }
 
   setLogLevel(options.logging);
