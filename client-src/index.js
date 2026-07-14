@@ -183,7 +183,7 @@ export function setOptionsAndConnect(overrides) {
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_ANY */
 
-/** @typedef {{ name?: string, errors: string[], warnings: string[], hash: string, time?: number, modules?: Record<string, string>, action?: string }} HMRPayload */
+/** @typedef {{ name?: string, errors: string[], warnings: string[], hash: string, time?: number, action?: string }} HMRPayload */
 
 /**
  * @returns {{
@@ -295,7 +295,7 @@ function processMessage(obj) {
         reporter.success();
       }
       if (shouldApply) {
-        applyUpdate(obj.hash, obj.modules, options);
+        applyUpdate(obj.hash, options);
       }
       break;
     }

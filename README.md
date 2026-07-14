@@ -349,7 +349,7 @@ Heartbeat interval (in milliseconds) used to keep the SSE connection alive when 
 Type: `Boolean | Object`
 Default: `undefined`
 
-Webpack stats options used when serializing compilation results for the SSE payload. Forwarded to `stats.toJson(...)`. By default only the minimal stats needed by the client are requested (`hash`, `timings`, `errors`, `warnings`) to avoid slowing down rebuilds. Pass `statsOptions: { modules: true }` if you want the module id → name map used for nicer client logging.
+Webpack stats options used when serializing compilation results for the SSE payload. Forwarded to `stats.toJson(...)`. By default only the minimal stats needed by the client are requested (`hash`, `timings`, `errors`, `warnings`) to avoid slowing down rebuilds.
 
 ## Hot Module Replacement client
 

@@ -141,7 +141,6 @@ describe("client", () => {
       );
       expect(processUpdate).toHaveBeenCalledWith(
         "1234567890abcdef",
-        expect.anything(),
         expect.objectContaining({ reload: true }),
       );
     });
@@ -530,7 +529,6 @@ describe("client", () => {
       );
       expect(processUpdate).toHaveBeenCalledWith(
         "1234567890abcdef",
-        expect.anything(),
         expect.objectContaining({ reload: false }),
       );
     });
