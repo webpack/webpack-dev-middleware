@@ -597,6 +597,32 @@ describe("client", () => {
       jest.advanceTimersByTime(20 * 1000);
       expect(EventSourceStub.instances).toHaveLength(2);
     });
+
+    it("disconnect() closes the connection and does not reconnect", () => {
+      jest.useFakeTimers({ doNotFake: ["nextTick"] });
+      delete globalThis.__wdmEventSourceWrapper;
+      EventSourceStub.instances.length = 0;
+      client = loadClient();
+
+      const [first] = EventSourceStub.instances;
+      client.disconnect();
+
+      expect(first.closed).toBe(true);
+      // Neither the watchdog nor a reconnect timer may re-open it.
+      jest.advanceTimersByTime(60 * 1000);
+      expect(EventSourceStub.instances).toHaveLength(1);
+    });
+
+    it("disconnect() drops the cached wrapper so a new connect starts fresh", () => {
+      client.disconnect();
+      expect(
+        globalThis.__wdmEventSourceWrapper["/__webpack_hmr"],
+      ).toBeUndefined();
+
+      client.setOptionsAndConnect({});
+      expect(EventSourceStub.instances).toHaveLength(2);
+      expect(EventSourceStub.lastInstance().closed).toBe(false);
+    });
   });
 
   describe("with logging option", () => {
