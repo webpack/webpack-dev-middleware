@@ -20,6 +20,7 @@ interface ClientReporter {
 
 interface EventSourceWrapper {
   addMessageListener(fn: (event: { data: string }) => void): void;
+  close(): void;
 }
 
 interface Window {

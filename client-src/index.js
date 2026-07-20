@@ -78,7 +78,7 @@ function setOverrides(overrides) {
  */
 
 /**
- * @returns {{ addMessageListener: (fn: MessageListener) => void }} event source wrapper
+ * @returns {{ addMessageListener: (fn: MessageListener) => void, close: () => void }} event source wrapper
  */
 function createEventSourceWrapper() {
   /** @type {EventSource} */
@@ -104,9 +104,17 @@ function createEventSourceWrapper() {
     }
   };
 
-  const handleDisconnect = () => {
+  /**
+   * Close the connection and stop the activity timer without scheduling a
+   * reconnection.
+   */
+  const close = () => {
     clearInterval(timer);
     source.close();
+  };
+
+  const handleDisconnect = () => {
+    close();
     setTimeout(init, /** @type {number} */ (options.timeout));
   };
 
@@ -134,6 +142,7 @@ function createEventSourceWrapper() {
     addMessageListener(fn) {
       listeners.push(fn);
     },
+    close,
   };
 }
 
@@ -177,6 +186,20 @@ function connect() {
 export function setOptionsAndConnect(overrides) {
   setOverrides(overrides);
   connect();
+}
+
+/**
+ * Close the SSE connection for the current path and stop reconnecting. A
+ * later `setOptionsAndConnect` call opens a fresh connection.
+ */
+export function disconnect() {
+  const path = /** @type {string} */ (options.path);
+  const wrappers = window[WRAPPER_KEY];
+
+  if (wrappers && wrappers[path]) {
+    wrappers[path].close();
+    delete wrappers[path];
+  }
 }
 
 // eslint-disable-next-line jsdoc/reject-any-type
