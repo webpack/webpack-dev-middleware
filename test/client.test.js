@@ -269,7 +269,7 @@ describe("client", () => {
       expect(clientOverlay.clear).toHaveBeenCalledTimes(1);
     });
 
-    it("hides overlay after errored build becomes a warning", () => {
+    it("updates overlay when an errored build becomes a warning", () => {
       const es = EventSourceStub.lastInstance();
       es.onmessage(
         makeMessage({
@@ -291,8 +291,12 @@ describe("client", () => {
           modules: [],
         }),
       );
-      expect(clientOverlay.showProblems).toHaveBeenCalledTimes(1);
-      expect(clientOverlay.clear).toHaveBeenCalledTimes(1);
+      expect(clientOverlay.showProblems).toHaveBeenCalledTimes(2);
+      expect(clientOverlay.showProblems).toHaveBeenLastCalledWith("warnings", [
+        "This isn't great, but it's not terrible",
+      ]);
+      // The overlay content is replaced, not dismissed.
+      expect(clientOverlay.clear).not.toHaveBeenCalled();
     });
 
     it("triggers webpack on warning builds", () => {
@@ -309,7 +313,7 @@ describe("client", () => {
       expect(processUpdate).toHaveBeenCalledTimes(1);
     });
 
-    it("does not show overlay on warning builds by default", () => {
+    it("shows overlay on warning builds by default (dev-server parity)", () => {
       EventSourceStub.lastInstance().onmessage(
         makeMessage({
           action: "built",
@@ -320,8 +324,10 @@ describe("client", () => {
           modules: [],
         }),
       );
-      expect(clientOverlay.showProblems).not.toHaveBeenCalled();
-      // Warnings still surface through the logger even when the overlay stays hidden.
+      expect(clientOverlay.showProblems).toHaveBeenCalledWith("warnings", [
+        "This isn't great, but it's not terrible",
+      ]);
+      // Warnings also surface through the logger.
       expect(console.warn.mock.calls).toMatchSnapshot();
     });
 
@@ -347,11 +353,50 @@ describe("client", () => {
           modules: [],
         }),
       );
-      expect(clientOverlay.showProblems).toHaveBeenCalledTimes(1);
+      expect(clientOverlay.showProblems).toHaveBeenCalledTimes(2);
+      expect(clientOverlay.showProblems).toHaveBeenLastCalledWith("errors", [
+        "Something broke",
+        "Actually, 2 things broke",
+      ]);
     });
   });
 
-  describe("with overlayWarnings: true", () => {
+  describe("with an overlay warnings filter function", () => {
+    let EventSourceStub;
+
+    beforeEach(() => {
+      EventSourceStub = makeEventSourceStub();
+      globalThis.EventSource = EventSourceStub;
+      jest.spyOn(console, "info").mockImplementation(() => {});
+      jest.spyOn(console, "log").mockImplementation(() => {});
+      jest.spyOn(console, "warn").mockImplementation(() => {});
+      loadClient(
+        '?overlay={"warnings":"function(message){return message.includes(`keep`)}"}',
+      );
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("only shows the warnings the filter keeps (dev-server parity)", () => {
+      EventSourceStub.lastInstance().onmessage(
+        makeMessage({
+          action: "built",
+          time: 100,
+          hash: "1234567890abcdef",
+          errors: [],
+          warnings: ["drop this warning", "keep this warning"],
+          modules: [],
+        }),
+      );
+      expect(clientOverlay.showProblems).toHaveBeenCalledWith("warnings", [
+        "keep this warning",
+      ]);
+    });
+  });
+
+  describe("with overlay warnings enabled via the dev-server-shaped option", () => {
     let EventSourceStub;
 
     beforeEach(() => {
@@ -361,7 +406,7 @@ describe("client", () => {
       jest.spyOn(console, "log").mockImplementation(() => {});
       jest.spyOn(console, "warn").mockImplementation(() => {});
       jest.spyOn(console, "error").mockImplementation(() => {});
-      loadClient("?overlayWarnings=true");
+      loadClient('?overlay={"warnings":true}');
     });
 
     afterEach(() => {
@@ -550,7 +595,7 @@ describe("client", () => {
       globalThis.EventSource = makeEventSourceStub();
 
       loadClient(
-        "?overlayRuntimeErrors=false&overlayTrustedTypesPolicyName=webpack%23overlay&overlayOpenEditorEndpoint=/__open-editor",
+        '?overlay={"runtimeErrors":false,"trustedTypesPolicyName":"webpack#overlay"}&overlayOpenEditorEndpoint=/__open-editor',
       );
 
       const overlayFactory = require("../client-src/overlay");
@@ -704,7 +749,7 @@ describe("client", () => {
     });
 
     it("logging=warn silences info but keeps warn", () => {
-      loadClient("?logging=warn&overlayWarnings=true");
+      loadClient("?logging=warn");
       EventSourceStub.lastInstance().onmessage(
         makeMessage({
           action: "built",

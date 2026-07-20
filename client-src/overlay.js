@@ -131,6 +131,8 @@ let overlayCard = null;
 /** @type {string[]} */
 let runtimeMessages = [];
 let runtimeListenersAttached = false;
+/** @type {boolean | ((error: Error) => boolean)} */
+let catchRuntimeError = false;
 
 // When set, the file chips in error messages become clickable and issue
 // `GET <endpoint>?fileName=<file:line:column>`. The endpoint itself is
@@ -434,19 +436,6 @@ export function clear() {
 
 /**
  * @param {EXPECTED_ANY} error thrown value
- * @param {string} fallbackMessage message used when the thrown value is not an Error
- * @returns {string} printable message with stack
- */
-function formatRuntimeError(error, fallbackMessage) {
-  const errorObject =
-    error instanceof Error ? error : new Error(error || fallbackMessage);
-  const stack = errorObject.stack ? `\n${errorObject.stack}` : "";
-
-  return `Uncaught runtime error: ${errorObject.message}${stack}`;
-}
-
-/**
- * @param {EXPECTED_ANY} error thrown value
  * @param {string} fallbackMessage fallback message
  */
 function handleRuntimeError(error, fallbackMessage) {
@@ -460,7 +449,24 @@ function handleRuntimeError(error, fallbackMessage) {
     return;
   }
 
-  runtimeMessages.push(formatRuntimeError(error, fallbackMessage));
+  const errorObject =
+    error instanceof Error ? error : new Error(error || fallbackMessage);
+
+  // `catchRuntimeError` may be a filter function, like in webpack-dev-server.
+  const shouldDisplay =
+    typeof catchRuntimeError === "function"
+      ? catchRuntimeError(errorObject)
+      : true;
+
+  if (!shouldDisplay) {
+    return;
+  }
+
+  const stack = errorObject.stack ? `\n${errorObject.stack}` : "";
+
+  runtimeMessages.push(
+    `Uncaught runtime error: ${errorObject.message}${stack}`,
+  );
   showProblems("errors", runtimeMessages);
 }
 
@@ -488,7 +494,7 @@ function attachRuntimeErrorListeners() {
 }
 
 /**
- * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number>, trustedTypesPolicyName?: string, catchRuntimeError?: boolean, openEditorEndpoint?: string }} options options
+ * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number>, trustedTypesPolicyName?: string, catchRuntimeError?: boolean | ((error: Error) => boolean), openEditorEndpoint?: string }} options options
  * @returns {{ showProblems: typeof showProblems, clear: typeof clear }} overlay api
  */
 export default function configureOverlay(options) {
@@ -500,7 +506,11 @@ export default function configureOverlay(options) {
     openEditorEndpoint = options.openEditorEndpoint;
   }
 
-  if (options.catchRuntimeError) {
+  if (options.catchRuntimeError !== undefined) {
+    catchRuntimeError = options.catchRuntimeError;
+  }
+
+  if (catchRuntimeError) {
     attachRuntimeErrorListeners();
   }
 

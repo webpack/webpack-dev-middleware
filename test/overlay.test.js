@@ -219,7 +219,8 @@ describe("overlay", () => {
     });
 
     it("makes file chips clickable and calls the configured endpoint", () => {
-      jest.spyOn(globalThis, "fetch").mockResolvedValue(undefined);
+      // eslint-disable-next-line jest/prefer-spy-on -- jsdom does not define fetch
+      globalThis.fetch = jest.fn(() => Promise.resolve());
       configureOverlay({ openEditorEndpoint: "/__open-editor" });
       showProblems("errors", ["./src/render.js 7:2\nModule parse failed"]);
 
