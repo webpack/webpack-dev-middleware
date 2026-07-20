@@ -14,7 +14,7 @@ interface ClientReporter {
     type: "errors" | "warnings",
     obj: { errors: string[]; warnings: string[]; name?: string },
   ): boolean;
-  success(): void;
+  success(obj?: { name?: string }): void;
   useCustomOverlay(customOverlay: unknown): void;
 }
 

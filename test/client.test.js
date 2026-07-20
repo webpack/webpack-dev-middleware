@@ -361,6 +361,98 @@ describe("client", () => {
     });
   });
 
+  describe("with multi-compiler payloads", () => {
+    let EventSourceStub;
+
+    beforeEach(() => {
+      EventSourceStub = makeEventSourceStub();
+      globalThis.EventSource = EventSourceStub;
+      jest.spyOn(console, "info").mockImplementation(() => {});
+      jest.spyOn(console, "log").mockImplementation(() => {});
+      jest.spyOn(console, "warn").mockImplementation(() => {});
+      jest.spyOn(console, "error").mockImplementation(() => {});
+      loadClient();
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("keeps one bundle's errors when another bundle succeeds", () => {
+      const es = EventSourceStub.lastInstance();
+      es.onmessage(
+        makeMessage({
+          action: "built",
+          name: "app",
+          time: 100,
+          hash: "app-hash",
+          errors: ["app broke"],
+          warnings: [],
+        }),
+      );
+      expect(clientOverlay.showProblems).toHaveBeenLastCalledWith("errors", [
+        "app broke",
+      ]);
+
+      // A clean build from another bundle must not wipe app's errors.
+      es.onmessage(
+        makeMessage({
+          action: "built",
+          name: "admin",
+          time: 100,
+          hash: "admin-hash",
+          errors: [],
+          warnings: [],
+        }),
+      );
+      expect(clientOverlay.clear).not.toHaveBeenCalled();
+      expect(clientOverlay.showProblems).toHaveBeenLastCalledWith("errors", [
+        "app broke",
+      ]);
+
+      // Fixing the broken bundle finally clears the overlay.
+      es.onmessage(
+        makeMessage({
+          action: "built",
+          name: "app",
+          time: 100,
+          hash: "app-hash-2",
+          errors: [],
+          warnings: [],
+        }),
+      );
+      expect(clientOverlay.clear).toHaveBeenCalledTimes(1);
+    });
+
+    it("shows the union of problems from every broken bundle", () => {
+      const es = EventSourceStub.lastInstance();
+      es.onmessage(
+        makeMessage({
+          action: "built",
+          name: "app",
+          time: 100,
+          hash: "app-hash",
+          errors: ["app broke"],
+          warnings: [],
+        }),
+      );
+      es.onmessage(
+        makeMessage({
+          action: "built",
+          name: "admin",
+          time: 100,
+          hash: "admin-hash",
+          errors: ["admin broke too"],
+          warnings: [],
+        }),
+      );
+      expect(clientOverlay.showProblems).toHaveBeenLastCalledWith("errors", [
+        "app broke",
+        "admin broke too",
+      ]);
+    });
+  });
+
   describe("with an overlay warnings filter function", () => {
     let EventSourceStub;
 

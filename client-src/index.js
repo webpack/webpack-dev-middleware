@@ -269,7 +269,7 @@ export function disconnect() {
  * @returns {{
  * cleanProblemsCache: () => void,
  * problems: (type: "errors" | "warnings", obj: HMRPayload) => boolean,
- * success: () => void,
+ * success: (obj?: HMRPayload) => void,
  * useCustomOverlay: (customOverlay: EXPECTED_ANY) => void,
  * }} reporter
  */
@@ -293,19 +293,85 @@ function createReporter() {
     });
   }
 
-  /** @type {string | null} */
-  let previousProblems = null;
+  // Console de-duplication cache, keyed per bundle name and type so interleaved
+  // multi-compiler payloads do not defeat it.
+  /** @type {Map<string, string>} */
+  const previousProblems = new Map();
+
+  // Live problems per compilation name. A multi-compiler publishes one event
+  // per bundle; a success from one bundle must not wipe another bundle's
+  // still-valid errors from the overlay.
+  /** @type {Map<string, { errors: string[], warnings: string[] }>} */
+  const problemsByName = new Map();
+
+  /**
+   * Resolve the show/hide/filter setting for a problem type. Same resolution
+   * as webpack-dev-server: a boolean overlay applies to both types; an object
+   * carries a boolean or a filter function per type.
+   * @param {"errors" | "warnings"} type problem type
+   * @param {string[]} problems problems of one bundle
+   * @returns {string[]} the problems the overlay should show
+   */
+  const filterForOverlay = (type, problems) => {
+    const setting =
+      typeof options.overlay === "boolean"
+        ? options.overlay
+        : options.overlay && options.overlay[type];
+
+    if (!setting) {
+      return [];
+    }
+
+    return typeof setting === "function"
+      ? problems.filter((message) => setting(message))
+      : problems;
+  };
+
+  /**
+   * Render the union of every bundle's live problems, or clear the overlay
+   * when nothing is left.
+   * @returns {boolean} true when nothing is shown
+   */
+  const renderOverlay = () => {
+    if (!overlay) {
+      return true;
+    }
+
+    /** @type {string[]} */
+    const errors = [];
+    /** @type {string[]} */
+    const warnings = [];
+
+    for (const entry of problemsByName.values()) {
+      errors.push(...filterForOverlay("errors", entry.errors));
+      warnings.push(...filterForOverlay("warnings", entry.warnings));
+    }
+
+    if (errors.length > 0) {
+      overlay.showProblems("errors", errors);
+      return false;
+    }
+
+    if (warnings.length > 0) {
+      overlay.showProblems("warnings", warnings);
+      return false;
+    }
+
+    overlay.clear();
+    return true;
+  };
 
   /**
    * @param {"errors" | "warnings"} type problem type
    * @param {HMRPayload} obj payload
    */
   const logProblems = (type, obj) => {
+    const cacheKey = `${obj.name || ""}|${type}`;
     const newProblems = obj[type].map(stripAnsi).join("\n");
-    if (previousProblems === newProblems) {
+    if (previousProblems.get(cacheKey) === newProblems) {
       return;
     }
-    previousProblems = newProblems;
+    previousProblems.set(cacheKey, newProblems);
 
     const name = obj.name ? `'${obj.name}' ` : "";
     const title = `bundle ${name}has ${obj[type].length} ${type}`;
@@ -320,37 +386,19 @@ function createReporter() {
 
   return {
     cleanProblemsCache() {
-      previousProblems = null;
+      previousProblems.clear();
     },
     problems(type, obj) {
       logProblems(type, obj);
-      if (overlay) {
-        // Same setting resolution as webpack-dev-server: a boolean overlay
-        // applies to both types; an object carries a boolean or a filter
-        // function per type.
-        const setting =
-          typeof options.overlay === "boolean"
-            ? options.overlay
-            : options.overlay && options.overlay[type];
-
-        if (setting) {
-          const problems =
-            typeof setting === "function"
-              ? obj[type].filter((message) => setting(message))
-              : obj[type];
-
-          if (problems.length > 0) {
-            overlay.showProblems(type, problems);
-            return false;
-          }
-        }
-
-        overlay.clear();
-      }
-      return true;
+      problemsByName.set(obj.name || "", {
+        errors: obj.errors || [],
+        warnings: obj.warnings || [],
+      });
+      return renderOverlay();
     },
-    success() {
-      if (overlay) overlay.clear();
+    success(obj) {
+      problemsByName.delete((obj && obj.name) || "");
+      renderOverlay();
     },
     useCustomOverlay(customOverlay) {
       overlay = customOverlay;
@@ -404,7 +452,7 @@ function processMessage(obj) {
         }
       } else if (reporter) {
         reporter.cleanProblemsCache();
-        reporter.success();
+        reporter.success(obj);
       }
       if (shouldApply) {
         applyUpdate(obj.hash, options);
