@@ -687,7 +687,7 @@ describe("client", () => {
       globalThis.EventSource = makeEventSourceStub();
 
       loadClient(
-        '?overlay={"runtimeErrors":false,"trustedTypesPolicyName":"webpack#overlay"}&overlayOpenEditorEndpoint=/__open-editor',
+        '?overlay={"runtimeErrors":false,"trustedTypesPolicyName":"webpack#overlay","openEditorEndpoint":"/__open-editor"}',
       );
 
       const overlayFactory = require("../client-src/overlay");

@@ -8,13 +8,16 @@ import stripAnsi from "./utils/strip-ansi.js";
 /** @typedef {import("./utils/log.js").LogLevel} LogLevel */
 
 /**
- * Same shape as webpack-dev-server's `client.overlay` object so configs can
- * be migrated as-is. Partially-specified objects are filled with `true`.
+ * Superset of webpack-dev-server's `client.overlay` object; `styles`,
+ * `ansiColors` and `openEditorEndpoint` are webpack-dev-middleware extensions.
  * @typedef {object} OverlayOptions
  * @property {(boolean | ((error: string) => boolean))=} errors show build errors in the overlay
  * @property {(boolean | ((warning: string) => boolean))=} warnings show build warnings in the overlay
  * @property {(boolean | ((error: Error) => boolean))=} runtimeErrors show uncaught runtime errors and unhandled rejections in the overlay
  * @property {string=} trustedTypesPolicyName Trusted Types policy name used for the overlay's HTML
+ * @property {Record<string, string | number>=} styles overrides for the overlay card CSS
+ * @property {Record<string, string | string[]>=} ansiColors overrides for ANSI → HTML color mapping
+ * @property {string=} openEditorEndpoint endpoint the overlay calls (GET `?fileName=file:line:column`) when a file reference is clicked; empty disables it
  */
 
 /**
@@ -26,9 +29,6 @@ import stripAnsi from "./utils/strip-ansi.js";
  * @property {LogLevel} logging logger level
  * @property {string} name limit updates to this compilation name
  * @property {boolean} autoConnect connect immediately when the entry runs
- * @property {Record<string, string | number>} overlayStyles overrides for the overlay card CSS
- * @property {string} overlayOpenEditorEndpoint endpoint the overlay calls (GET `?fileName=file:line:column`) when a file reference is clicked; empty disables it
- * @property {Record<string, string | string[]>} ansiColors overrides for ANSI → HTML color mapping
  */
 
 /** @type {ClientOptions} */
@@ -40,9 +40,6 @@ const options = {
   logging: "info",
   name: "",
   autoConnect: true,
-  overlayStyles: {},
-  overlayOpenEditorEndpoint: "",
-  ansiColors: {},
 };
 
 /**
@@ -115,17 +112,6 @@ function setOverrides(overrides) {
 
   if (overrides.dynamicPublicPath) {
     options.path = __webpack_public_path__ + options.path;
-  }
-
-  if (overrides.ansiColors) {
-    options.ansiColors = JSON.parse(overrides.ansiColors);
-  }
-  if (overrides.overlayStyles) {
-    options.overlayStyles = JSON.parse(overrides.overlayStyles);
-  }
-
-  if (overrides.overlayOpenEditorEndpoint) {
-    options.overlayOpenEditorEndpoint = overrides.overlayOpenEditorEndpoint;
   }
 
   setLogLevel(options.logging);
@@ -277,20 +263,21 @@ function createReporter() {
   /** @type {EXPECTED_ANY} */
   let overlay;
   if (typeof document !== "undefined" && options.overlay) {
-    overlay = configureOverlay({
-      ansiColors: options.ansiColors,
-      overlayStyles: options.overlayStyles,
-      openEditorEndpoint: options.overlayOpenEditorEndpoint,
-      // Same mapping as webpack-dev-server's createOverlay call.
-      ...(typeof options.overlay === "object"
+    // Same mapping as webpack-dev-server's createOverlay call, extended with
+    // the webpack-dev-middleware-specific keys.
+    overlay = configureOverlay(
+      typeof options.overlay === "object"
         ? {
             catchRuntimeError: options.overlay.runtimeErrors,
             trustedTypesPolicyName: options.overlay.trustedTypesPolicyName,
+            ansiColors: options.overlay.ansiColors,
+            overlayStyles: options.overlay.styles,
+            openEditorEndpoint: options.overlay.openEditorEndpoint,
           }
         : {
             catchRuntimeError: options.overlay,
-          }),
-    });
+          },
+    );
   }
 
   // Console de-duplication cache, keyed per bundle name and type so interleaved
