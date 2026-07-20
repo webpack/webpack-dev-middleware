@@ -8,17 +8,27 @@ import stripAnsi from "./utils/strip-ansi.js";
 /** @typedef {import("./utils/log.js").LogLevel} LogLevel */
 
 /**
+ * Superset of webpack-dev-server's `client.overlay` object; `styles`,
+ * `ansiColors` and `openEditorEndpoint` are webpack-dev-middleware extensions.
+ * @typedef {object} OverlayOptions
+ * @property {(boolean | ((error: string) => boolean))=} errors show build errors in the overlay
+ * @property {(boolean | ((warning: string) => boolean))=} warnings show build warnings in the overlay
+ * @property {(boolean | ((error: Error) => boolean))=} runtimeErrors show uncaught runtime errors and unhandled rejections in the overlay
+ * @property {string=} trustedTypesPolicyName Trusted Types policy name used for the overlay's HTML
+ * @property {Record<string, string | number>=} styles overrides for the overlay card CSS
+ * @property {Record<string, string | string[]>=} ansiColors overrides for ANSI → HTML color mapping
+ * @property {string=} openEditorEndpoint endpoint the overlay calls (GET `?fileName=file:line:column`) when a file reference is clicked; empty disables it
+ */
+
+/**
  * @typedef {object} ClientOptions
  * @property {string} path SSE endpoint path
  * @property {number} timeout reconnection timeout in milliseconds
- * @property {boolean} overlay enable the in-page error overlay
+ * @property {boolean | OverlayOptions} overlay enable the in-page error overlay (same value shape as webpack-dev-server's `client.overlay`)
  * @property {boolean} reload reload the page when HMR cannot apply the update
  * @property {LogLevel} logging logger level
  * @property {string} name limit updates to this compilation name
  * @property {boolean} autoConnect connect immediately when the entry runs
- * @property {Record<string, string | number>} overlayStyles overrides for the overlay container CSS
- * @property {boolean} overlayWarnings show warnings in the overlay too
- * @property {Record<string, string | string[]>} ansiColors overrides for ANSI → HTML color mapping
  */
 
 /** @type {ClientOptions} */
@@ -30,10 +40,34 @@ const options = {
   logging: "info",
   name: "",
   autoConnect: true,
-  overlayStyles: {},
-  overlayWarnings: false,
-  ansiColors: {},
 };
+
+/**
+ * Turn the string values that `errors`/`warnings`/`runtimeErrors` may carry
+ * in the resource query into filter functions (same behavior as
+ * webpack-dev-server).
+ * @param {boolean | OverlayOptions} overlayOptions overlay options
+ */
+function decodeOverlayOptions(overlayOptions) {
+  if (typeof overlayOptions === "object") {
+    for (const property of ["errors", "warnings", "runtimeErrors"]) {
+      const value =
+        overlayOptions[/** @type {keyof OverlayOptions} */ (property)];
+
+      if (typeof value === "string") {
+        const filterFunctionString = decodeURIComponent(value);
+
+        /** @type {EXPECTED_ANY} */ (overlayOptions)[property] =
+          // eslint-disable-next-line no-new-func
+          new Function(
+            "message",
+            `var callback = ${filterFunctionString}
+        return callback(message)`,
+          );
+      }
+    }
+  }
+}
 
 setLogLevel(options.logging);
 
@@ -46,7 +80,28 @@ function setOverrides(overrides) {
   }
   if (overrides.path) options.path = overrides.path;
   if (overrides.timeout) options.timeout = Number(overrides.timeout);
-  if (overrides.overlay) options.overlay = overrides.overlay !== "false";
+  if (overrides.overlay) {
+    // Same value shape as webpack-dev-server's `client.overlay`: a boolean or
+    // a JSON object with `errors`, `warnings`, `runtimeErrors` (booleans or
+    // encoded filter functions) and `trustedTypesPolicyName`.
+    try {
+      options.overlay = JSON.parse(overrides.overlay);
+    } catch {
+      options.overlay = overrides.overlay !== "false";
+    }
+
+    // Fill in default "true" params for partially-specified objects.
+    if (typeof options.overlay === "object") {
+      options.overlay = {
+        errors: true,
+        warnings: true,
+        runtimeErrors: true,
+        ...options.overlay,
+      };
+
+      decodeOverlayOptions(options.overlay);
+    }
+  }
   if (overrides.reload) options.reload = overrides.reload !== "false";
   if (overrides.logging) {
     options.logging = /** @type {LogLevel} */ (overrides.logging);
@@ -57,17 +112,6 @@ function setOverrides(overrides) {
 
   if (overrides.dynamicPublicPath) {
     options.path = __webpack_public_path__ + options.path;
-  }
-
-  if (overrides.ansiColors) {
-    options.ansiColors = JSON.parse(overrides.ansiColors);
-  }
-  if (overrides.overlayStyles) {
-    options.overlayStyles = JSON.parse(overrides.overlayStyles);
-  }
-
-  if (overrides.overlayWarnings) {
-    options.overlayWarnings = overrides.overlayWarnings === "true";
   }
 
   setLogLevel(options.logging);
@@ -211,7 +255,7 @@ export function disconnect() {
  * @returns {{
  * cleanProblemsCache: () => void,
  * problems: (type: "errors" | "warnings", obj: HMRPayload) => boolean,
- * success: () => void,
+ * success: (obj?: HMRPayload) => void,
  * useCustomOverlay: (customOverlay: EXPECTED_ANY) => void,
  * }} reporter
  */
@@ -219,25 +263,102 @@ function createReporter() {
   /** @type {EXPECTED_ANY} */
   let overlay;
   if (typeof document !== "undefined" && options.overlay) {
-    overlay = configureOverlay({
-      ansiColors: options.ansiColors,
-      overlayStyles: options.overlayStyles,
-    });
+    // Same mapping as webpack-dev-server's createOverlay call, extended with
+    // the webpack-dev-middleware-specific keys.
+    overlay = configureOverlay(
+      typeof options.overlay === "object"
+        ? {
+            catchRuntimeError: options.overlay.runtimeErrors,
+            trustedTypesPolicyName: options.overlay.trustedTypesPolicyName,
+            ansiColors: options.overlay.ansiColors,
+            overlayStyles: options.overlay.styles,
+            openEditorEndpoint: options.overlay.openEditorEndpoint,
+          }
+        : {
+            catchRuntimeError: options.overlay,
+          },
+    );
   }
 
-  /** @type {string | null} */
-  let previousProblems = null;
+  // Console de-duplication cache, keyed per bundle name and type so interleaved
+  // multi-compiler payloads do not defeat it.
+  /** @type {Map<string, string>} */
+  const previousProblems = new Map();
+
+  // Live problems per compilation name. A multi-compiler publishes one event
+  // per bundle; a success from one bundle must not wipe another bundle's
+  // still-valid errors from the overlay.
+  /** @type {Map<string, { errors: string[], warnings: string[] }>} */
+  const problemsByName = new Map();
+
+  /**
+   * Resolve the show/hide/filter setting for a problem type. Same resolution
+   * as webpack-dev-server: a boolean overlay applies to both types; an object
+   * carries a boolean or a filter function per type.
+   * @param {"errors" | "warnings"} type problem type
+   * @param {string[]} problems problems of one bundle
+   * @returns {string[]} the problems the overlay should show
+   */
+  const filterForOverlay = (type, problems) => {
+    const setting =
+      typeof options.overlay === "boolean"
+        ? options.overlay
+        : options.overlay && options.overlay[type];
+
+    if (!setting) {
+      return [];
+    }
+
+    return typeof setting === "function"
+      ? problems.filter((message) => setting(message))
+      : problems;
+  };
+
+  /**
+   * Render the union of every bundle's live problems, or clear the overlay
+   * when nothing is left.
+   * @returns {boolean} true when nothing is shown
+   */
+  const renderOverlay = () => {
+    if (!overlay) {
+      return true;
+    }
+
+    /** @type {string[]} */
+    const errors = [];
+    /** @type {string[]} */
+    const warnings = [];
+
+    for (const entry of problemsByName.values()) {
+      errors.push(...filterForOverlay("errors", entry.errors));
+      warnings.push(...filterForOverlay("warnings", entry.warnings));
+    }
+
+    if (errors.length > 0) {
+      overlay.showProblems("errors", errors);
+      return false;
+    }
+
+    if (warnings.length > 0) {
+      overlay.showProblems("warnings", warnings);
+      return false;
+    }
+
+    overlay.clear();
+    return true;
+  };
 
   /**
    * @param {"errors" | "warnings"} type problem type
    * @param {HMRPayload} obj payload
    */
   const logProblems = (type, obj) => {
+    const cacheKey = `${obj.name || ""}|${type}`;
     const newProblems = obj[type].map(stripAnsi).join("\n");
-    if (previousProblems === newProblems) {
+    if (previousProblems.get(cacheKey) === newProblems) {
       return;
     }
-    previousProblems = newProblems;
+    previousProblems.set(cacheKey, newProblems);
 
     const name = obj.name ? `'${obj.name}' ` : "";
     const title = `bundle ${name}has ${obj[type].length} ${type}`;
@@ -252,21 +373,19 @@ function createReporter() {
 
   return {
     cleanProblemsCache() {
-      previousProblems = null;
+      previousProblems.clear();
     },
     problems(type, obj) {
       logProblems(type, obj);
-      if (overlay) {
-        if (options.overlayWarnings || type === "errors") {
-          overlay.showProblems(type, obj[type]);
-          return false;
-        }
-        overlay.clear();
-      }
-      return true;
+      problemsByName.set(obj.name || "", {
+        errors: obj.errors || [],
+        warnings: obj.warnings || [],
+      });
+      return renderOverlay();
     },
-    success() {
-      if (overlay) overlay.clear();
+    success(obj) {
+      problemsByName.delete((obj && obj.name) || "");
+      renderOverlay();
     },
     useCustomOverlay(customOverlay) {
       overlay = customOverlay;
@@ -313,12 +432,14 @@ function processMessage(obj) {
         if (reporter) reporter.problems("errors", obj);
         shouldApply = false;
       } else if (obj.warnings.length > 0) {
+        // Warnings are reported (and possibly shown in the overlay) but do
+        // not block the update, matching webpack-dev-server.
         if (reporter) {
-          shouldApply = reporter.problems("warnings", obj);
+          reporter.problems("warnings", obj);
         }
       } else if (reporter) {
         reporter.cleanProblemsCache();
-        reporter.success();
+        reporter.success(obj);
       }
       if (shouldApply) {
         applyUpdate(obj.hash, options);

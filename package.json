@@ -22,6 +22,7 @@
       "default": "./dist/index.js"
     },
     "./client": "./client/index.js",
+    "./client/overlay": "./client/overlay.js",
     "./package.json": "./package.json"
   },
   "main": "dist/index.js",
@@ -58,7 +59,6 @@
   },
   "dependencies": {
     "ansi-html-community": "^0.0.8",
-    "html-entities": "^2.6.0",
     "memfs": "^4.56.10",
     "mime-types": "^3.0.2",
     "on-finished": "^2.4.1",
