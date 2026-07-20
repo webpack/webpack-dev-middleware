@@ -8,7 +8,6 @@ import http from "node:http";
  * @property {number=} time build time in ms
  * @property {string[]=} errors errors
  * @property {string[]=} warnings warnings
- * @property {Record<string, string>=} modules module id → name map
  */
 
 /**

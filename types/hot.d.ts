@@ -19,7 +19,6 @@ declare namespace createHot {
   export {
     HOT_DEFAULT_HEARTBEAT,
     HOT_DEFAULT_PATH,
-    buildModuleMap,
     createEventStream,
     createHot,
     formatErrors,
@@ -33,7 +32,6 @@ declare namespace createHot {
     MultiStats,
     StatsCompilation,
     StatsError,
-    StatsModule,
     IncomingMessage,
     ServerResponse,
     StatsOptions,
@@ -50,7 +48,6 @@ declare const HOT_DEFAULT_HEARTBEAT: number;
 /** @typedef {import("webpack").MultiStats} MultiStats */
 /** @typedef {import("webpack").StatsCompilation} StatsCompilation */
 /** @typedef {import("webpack").StatsError} StatsError */
-/** @typedef {import("webpack").StatsModule} StatsModule */
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index.js").ServerResponse} ServerResponse */
 /** @typedef {NonNullable<import("webpack").Configuration["stats"]>} StatsOptions */
@@ -68,7 +65,6 @@ declare const HOT_DEFAULT_HEARTBEAT: number;
  * @property {string=} hash hash
  * @property {string[]=} warnings warnings
  * @property {string[]=} errors errors
- * @property {Record<string, string>=} modules modules
  */
 /**
  * @typedef {object} EventStream
@@ -77,11 +73,6 @@ declare const HOT_DEFAULT_HEARTBEAT: number;
  * @property {() => void} close end every client and stop the heartbeat
  */
 declare const HOT_DEFAULT_PATH: "/__webpack_hmr";
-/**
- * @param {StatsModule[]} modules modules
- * @returns {Record<string, string>} module id to name map
- */
-declare function buildModuleMap(modules: StatsModule[]): Record<string, string>;
 /**
  * @param {number} heartbeat heartbeat interval in milliseconds
  * @param {Logger} logger logger
@@ -145,7 +136,6 @@ type Stats = import("webpack").Stats;
 type MultiStats = import("webpack").MultiStats;
 type StatsCompilation = import("webpack").StatsCompilation;
 type StatsError = import("webpack").StatsError;
-type StatsModule = import("webpack").StatsModule;
 type IncomingMessage = import("./index.js").IncomingMessage;
 type ServerResponse = import("./index.js").ServerResponse;
 type StatsOptions = NonNullable<import("webpack").Configuration["stats"]>;
@@ -188,10 +178,6 @@ type Payload = {
    * errors
    */
   errors?: string[] | undefined;
-  /**
-   * modules
-   */
-  modules?: Record<string, string> | undefined;
 };
 type EventStream = {
   /**
