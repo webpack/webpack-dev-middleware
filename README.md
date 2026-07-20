@@ -420,6 +420,10 @@ hotClient.useCustomOverlay({
 // Connect manually when `autoConnect=false`. Accepts the same option keys as
 // the query-string API above.
 hotClient.setOptionsAndConnect({ path: "/__hmr" });
+
+// Close the SSE connection and stop reconnecting (e.g. before tearing the
+// page down). A later `setOptionsAndConnect` call opens a fresh connection.
+hotClient.disconnect();
 ```
 
 ## API
