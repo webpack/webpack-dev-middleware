@@ -596,10 +596,19 @@ function wdm(compiler, options = {}, isPlugin = false) {
   instance.invalidate = (callback = noop) => {
     middleware.ready(filledContext, callback);
 
+    // TODO for plugin usage (`isPlugin = true`) `watching` is `undefined` and this throws —
+    // invalidate the host's `compiler.watching` (each child's one for a `MultiCompiler`) instead
     filledContext.watching.invalidate();
   };
 
   instance.close = (callback = noop) => {
+    // For plugin usage the host (webpack-cli, webpack-dev-server, etc.) owns `compiler.watch()`,
+    // so there is no `watching` of our own to close (`compiler.close()` on the host handles it)
+    if (!filledContext.watching) {
+      callback(null);
+      return;
+    }
+
     filledContext.watching.close(callback);
   };
 
