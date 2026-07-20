@@ -20,6 +20,7 @@ import stripAnsi from "./utils/strip-ansi.js";
  * @property {boolean} overlayWarnings show warnings in the overlay too
  * @property {boolean} overlayRuntimeErrors show uncaught runtime errors and unhandled rejections in the overlay
  * @property {string} overlayTrustedTypesPolicyName Trusted Types policy name used for the overlay's HTML
+ * @property {string} overlayOpenEditorEndpoint endpoint the overlay calls (GET `?fileName=file:line:column`) when a file reference is clicked; empty disables it
  * @property {Record<string, string | string[]>} ansiColors overrides for ANSI → HTML color mapping
  */
 
@@ -36,6 +37,7 @@ const options = {
   overlayWarnings: false,
   overlayRuntimeErrors: true,
   overlayTrustedTypesPolicyName: "",
+  overlayOpenEditorEndpoint: "",
   ansiColors: {},
 };
 
@@ -81,6 +83,10 @@ function setOverrides(overrides) {
   if (overrides.overlayTrustedTypesPolicyName) {
     options.overlayTrustedTypesPolicyName =
       overrides.overlayTrustedTypesPolicyName;
+  }
+
+  if (overrides.overlayOpenEditorEndpoint) {
+    options.overlayOpenEditorEndpoint = overrides.overlayOpenEditorEndpoint;
   }
 
   setLogLevel(options.logging);
@@ -237,6 +243,7 @@ function createReporter() {
       overlayStyles: options.overlayStyles,
       catchRuntimeError: options.overlayRuntimeErrors,
       trustedTypesPolicyName: options.overlayTrustedTypesPolicyName,
+      openEditorEndpoint: options.overlayOpenEditorEndpoint,
     });
   }
 

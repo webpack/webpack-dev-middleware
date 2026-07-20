@@ -550,7 +550,7 @@ describe("client", () => {
       globalThis.EventSource = makeEventSourceStub();
 
       loadClient(
-        "?overlayRuntimeErrors=false&overlayTrustedTypesPolicyName=webpack%23overlay",
+        "?overlayRuntimeErrors=false&overlayTrustedTypesPolicyName=webpack%23overlay&overlayOpenEditorEndpoint=/__open-editor",
       );
 
       const overlayFactory = require("../client-src/overlay");
@@ -559,6 +559,7 @@ describe("client", () => {
         expect.objectContaining({
           catchRuntimeError: false,
           trustedTypesPolicyName: "webpack#overlay",
+          openEditorEndpoint: "/__open-editor",
         }),
       );
     });

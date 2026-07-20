@@ -212,6 +212,42 @@ describe("overlay", () => {
     });
   });
 
+  describe("open in editor", () => {
+    afterEach(() => {
+      configureOverlay({ openEditorEndpoint: "" });
+      delete globalThis.fetch;
+    });
+
+    it("makes file chips clickable and calls the configured endpoint", () => {
+      jest.spyOn(globalThis, "fetch").mockResolvedValue(undefined);
+      configureOverlay({ openEditorEndpoint: "/__open-editor" });
+      showProblems("errors", ["./src/render.js 7:2\nModule parse failed"]);
+
+      const chip = /** @type {Document} */ (
+        getOverlay().contentDocument
+      ).querySelector("[data-open-file]");
+
+      expect(chip).not.toBeNull();
+      expect(chip.getAttribute("data-open-file")).toBe("./src/render.js:7:2");
+
+      chip.click();
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `/__open-editor?fileName=${encodeURIComponent("./src/render.js:7:2")}`,
+      );
+    });
+
+    it("does not mark file chips when no endpoint is configured", () => {
+      showProblems("errors", ["./src/render.js 7:2\nModule parse failed"]);
+
+      expect(
+        /** @type {Document} */ (getOverlay().contentDocument).querySelector(
+          "[data-open-file]",
+        ),
+      ).toBeNull();
+    });
+  });
+
   describe("trusted types", () => {
     afterEach(() => {
       delete globalThis.trustedTypes;

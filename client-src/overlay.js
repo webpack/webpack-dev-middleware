@@ -132,6 +132,13 @@ let overlayCard = null;
 let runtimeMessages = [];
 let runtimeListenersAttached = false;
 
+// When set, the file chips in error messages become clickable and issue
+// `GET <endpoint>?fileName=<file:line:column>`. The endpoint itself is
+// provided by the server integration (e.g. a route that calls launch-editor,
+// like webpack-dev-server's `/webpack-dev-server/open-editor`).
+/** @type {string} */
+let openEditorEndpoint = "";
+
 // Trusted Types support (same pattern as webpack-dev-server): when the page
 // runs under `require-trusted-types-for 'script'`, every `innerHTML` write
 // must go through a policy.
@@ -236,6 +243,18 @@ function highlightFilePath(html) {
         );
       }
 
+      if (openEditorEndpoint) {
+        const position = location.trim().replace(/^:/, "");
+
+        return (
+          '<span style="color:#8dd6f9; cursor:pointer; ' +
+          'text-decoration:underline; text-underline-offset:2px;" ' +
+          `data-open-file="${filePath}:${position}" ` +
+          'title="Click to open in your editor">' +
+          `${filePath}</span>${location}\n`
+        );
+      }
+
       return `<span style="color:#8dd6f9;">${filePath}</span>${location}\n`;
     },
   );
@@ -318,6 +337,23 @@ function ensureOverlay() {
       !overlayCard.contains(/** @type {EXPECTED_ANY} */ (event.target))
     ) {
       clear();
+    }
+  });
+
+  // Open the clicked file reference through the configured endpoint.
+  frameDocument.addEventListener("click", (event) => {
+    const target = /** @type {EXPECTED_ANY} */ (event.target);
+    const opener =
+      target && typeof target.closest === "function"
+        ? target.closest("[data-open-file]")
+        : null;
+
+    if (opener && openEditorEndpoint) {
+      fetch(
+        `${openEditorEndpoint}?fileName=${encodeURIComponent(
+          opener.getAttribute("data-open-file"),
+        )}`,
+      );
     }
   });
 
@@ -452,12 +488,16 @@ function attachRuntimeErrorListeners() {
 }
 
 /**
- * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number>, trustedTypesPolicyName?: string, catchRuntimeError?: boolean }} options options
+ * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number>, trustedTypesPolicyName?: string, catchRuntimeError?: boolean, openEditorEndpoint?: string }} options options
  * @returns {{ showProblems: typeof showProblems, clear: typeof clear }} overlay api
  */
 export default function configureOverlay(options) {
   if (options.trustedTypesPolicyName) {
     trustedTypesPolicyName = options.trustedTypesPolicyName;
+  }
+
+  if (options.openEditorEndpoint !== undefined) {
+    openEditorEndpoint = options.openEditorEndpoint;
   }
 
   if (options.catchRuntimeError) {
