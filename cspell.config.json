@@ -16,6 +16,8 @@
     "eslintcache",
     "esmodules",
     "noopener",
-    "noreferrer"
+    "noreferrer",
+    "mred",
+    "mbold"
   ]
 }
