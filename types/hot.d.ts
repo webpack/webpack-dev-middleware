@@ -23,7 +23,8 @@ declare namespace createHot {
     createHot,
     formatErrors,
     pathMatch,
-    publishStats,
+    publishBundles,
+    toBundles,
     HotInstance,
     Compiler,
     MultiCompiler,
@@ -98,17 +99,27 @@ declare function formatErrors(errors: (string | StatsError)[]): string[];
  */
 declare function pathMatch(url: string | undefined, expected: string): boolean;
 /**
- * @param {string} action action
- * @param {Stats | MultiStats} statsResult stats result
+ * Publish one event per bundle. Bundles whose hash did not change are
+ * published as `sync`, so their clients do not fetch a hot-update manifest
+ * that was never emitted.
+ * @param {StatsCompilation[]} bundles bundles from the current build
+ * @param {StatsCompilation[] | null} previousBundles bundles from the previous build (null on the first build, which publishes everything as `built`)
  * @param {EventStream} eventStream event stream
- * @param {StatsOptions | undefined} statsOptions stats options
  */
-declare function publishStats(
-  action: string,
-  statsResult: Stats | MultiStats,
+declare function publishBundles(
+  bundles: StatsCompilation[],
+  previousBundles: StatsCompilation[] | null,
   eventStream: EventStream,
-  statsOptions: StatsOptions | undefined,
 ): void;
+/**
+ * @param {Stats | MultiStats} statsResult stats result
+ * @param {StatsOptions | undefined} statsOptions stats options
+ * @returns {StatsCompilation[]} normalized per-bundle stats
+ */
+declare function toBundles(
+  statsResult: Stats | MultiStats,
+  statsOptions: StatsOptions | undefined,
+): StatsCompilation[];
 type HotInstance = {
   /**
    * path the SSE endpoint is served at

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import Hapi from "@hapi/hapi";
@@ -7094,7 +7095,82 @@ describe.each([
         }
       });
 
-      it("streams building and built events on recompilation", async () => {
+      it("publishes built only for the changed bundle of a MultiCompiler", async () => {
+        // Real watch scenario: two compilers, only one source file changes.
+        const srcDir = fs.mkdtempSync(path.join(os.tmpdir(), "wdm-hot-multi-"));
+        const appEntry = path.join(srcDir, "app.js");
+        const adminEntry = path.join(srcDir, "admin.js");
+
+        fs.writeFileSync(appEntry, "console.log('app v1');");
+        fs.writeFileSync(adminEntry, "console.log('admin v1');");
+
+        const compiler = getCompiler([
+          {
+            mode: "development",
+            name: "app",
+            entry: appEntry,
+            output: {
+              filename: "bundle.js",
+              path: path.resolve(__dirname, "./outputs/hot-multi-app"),
+            },
+          },
+          {
+            mode: "development",
+            name: "admin",
+            entry: adminEntry,
+            output: {
+              filename: "bundle.js",
+              path: path.resolve(__dirname, "./outputs/hot-multi-admin"),
+            },
+          },
+        ]);
+
+        [server, req, instance] = await frameworkFactory(
+          name,
+          framework,
+          compiler,
+          { hot: true },
+        );
+
+        try {
+          await waitUntilValid(instance);
+
+          const pending = readSseEvents(server, "/__webpack_hmr", 3000);
+          // Change only the "admin" source once the client is listening.
+          setTimeout(() => {
+            fs.writeFileSync(adminEntry, "console.log('admin v2');");
+          }, 300);
+          const events = await pending;
+
+          const buildingIndex = events.findIndex(
+            (event) => event.action === "building",
+          );
+
+          expect(buildingIndex).toBeGreaterThan(-1);
+
+          const afterRebuild = events.slice(buildingIndex + 1);
+
+          expect(
+            afterRebuild.some(
+              (event) => event.name === "admin" && event.action === "built",
+            ),
+          ).toBe(true);
+          expect(
+            afterRebuild.some(
+              (event) => event.name === "app" && event.action === "sync",
+            ),
+          ).toBe(true);
+          expect(
+            afterRebuild.some(
+              (event) => event.name === "app" && event.action === "built",
+            ),
+          ).toBe(false);
+        } finally {
+          fs.rmSync(srcDir, { recursive: true, force: true });
+        }
+      });
+
+      it("streams building and sync events when recompilation does not change the hash", async () => {
         const compiler = getCompiler({ ...webpackConfig, watch: true });
         [server, req, instance] = await frameworkFactory(
           name,
@@ -7112,7 +7188,10 @@ describe.each([
         const actions = events.map((event) => event.action);
 
         expect(actions).toContain("building");
-        expect(actions).toContain("built");
+        expect(
+          actions.filter((action) => action === "sync").length,
+        ).toBeGreaterThanOrEqual(2);
+        expect(actions).not.toContain("built");
       });
 
       it("broadcasts to every connected client", async () => {
