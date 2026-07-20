@@ -1,16 +1,5 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`client with default options does not show overlay on warning builds by default 1`] = `
-[
-  [
-    "[webpack-dev-middleware] bundle has 1 warnings",
-  ],
-  [
-    "[webpack-dev-middleware] This isn't great, but it's not terrible",
-  ],
-]
-`;
-
 exports[`client with default options shows overlay on errored builds 1`] = `
 [
   [
@@ -19,6 +8,17 @@ exports[`client with default options shows overlay on errored builds 1`] = `
   [
     "[webpack-dev-middleware] Something broke
 Actually, 2 things broke",
+  ],
+]
+`;
+
+exports[`client with default options shows overlay on warning builds by default (dev-server parity) 1`] = `
+[
+  [
+    "[webpack-dev-middleware] bundle has 1 warnings",
+  ],
+  [
+    "[webpack-dev-middleware] This isn't great, but it's not terrible",
   ],
 ]
 `;
@@ -53,7 +53,7 @@ exports[`client with logging option logging=warn silences info but keeps warn 1`
 ]
 `;
 
-exports[`client with overlayWarnings: true shows overlay on errored builds 1`] = `
+exports[`client with overlay warnings enabled via the dev-server-shaped option shows overlay on errored builds 1`] = `
 [
   [
     "[webpack-dev-middleware] bundle has 2 errors",

@@ -14,7 +14,7 @@ interface ClientReporter {
     type: "errors" | "warnings",
     obj: { errors: string[]; warnings: string[]; name?: string },
   ): boolean;
-  success(): void;
+  success(obj?: { name?: string }): void;
   useCustomOverlay(customOverlay: unknown): void;
 }
 
@@ -23,7 +23,17 @@ interface EventSourceWrapper {
   close(): void;
 }
 
+interface OverlayTrustedTypesPolicy {
+  createHTML(value: string): string;
+}
+
 interface Window {
   __wdmEventSourceWrapper?: Record<string, EventSourceWrapper>;
   __webpack_dev_middleware_hot_reporter__?: ClientReporter;
+  trustedTypes?: {
+    createPolicy(
+      name: string,
+      rules: { createHTML(value: string): string },
+    ): OverlayTrustedTypesPolicy;
+  };
 }

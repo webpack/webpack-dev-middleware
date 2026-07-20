@@ -4,21 +4,28 @@
 
 import configureOverlay, { clear, showProblems } from "../client-src/overlay";
 
+// eslint-disable-next-line jsdoc/reject-any-type
+/** @typedef {any} EXPECTED_ANY */
+
 const OVERLAY_ID = "webpack-dev-middleware-hot-overlay";
 
 /**
- * @returns {HTMLElement | null} the overlay backdrop, if mounted
+ * @returns {HTMLIFrameElement | null} the overlay iframe (the backdrop), if mounted
  */
 function getOverlay() {
-  return document.getElementById(OVERLAY_ID);
+  return /** @type {HTMLIFrameElement | null} */ (
+    document.getElementById(OVERLAY_ID)
+  );
 }
 
 /**
- * @returns {HTMLElement} the visible card element inside the backdrop
+ * @returns {HTMLElement} the visible card element inside the iframe
  */
 function getCard() {
   return /** @type {HTMLElement} */ (
-    /** @type {HTMLElement} */ (getOverlay()).firstElementChild
+    /** @type {Document} */ (
+      /** @type {HTMLIFrameElement} */ (getOverlay()).contentDocument
+    ).getElementById(`${OVERLAY_ID}-card`)
   );
 }
 
@@ -136,7 +143,7 @@ describe("overlay", () => {
 
     it("closes when clicking the backdrop", () => {
       showProblems("errors", ["boom"]);
-      getOverlay().click();
+      getOverlay().contentDocument.body.click();
       expect(getOverlay()).toBeNull();
     });
 
@@ -152,6 +159,116 @@ describe("overlay", () => {
       expect(closeButton).not.toBeNull();
       closeButton.click();
       expect(getOverlay()).toBeNull();
+    });
+  });
+
+  describe("runtime errors", () => {
+    it("shows uncaught errors in the overlay and accumulates them", () => {
+      configureOverlay({ catchRuntimeError: true });
+
+      globalThis.dispatchEvent(
+        new ErrorEvent("error", {
+          error: new Error("boom-runtime"),
+          message: "boom-runtime",
+        }),
+      );
+
+      expect(getOverlay()).not.toBeNull();
+      expect(getCard().textContent).toContain(
+        "Uncaught runtime error: boom-runtime",
+      );
+
+      globalThis.dispatchEvent(
+        new ErrorEvent("error", {
+          error: new Error("boom-2"),
+          message: "boom-2",
+        }),
+      );
+
+      expect(getCard().textContent).toContain("boom-runtime");
+      expect(getCard().textContent).toContain("boom-2");
+    });
+
+    it("shows unhandled promise rejections", () => {
+      configureOverlay({ catchRuntimeError: true });
+
+      const event = new Event("unhandledrejection");
+      /** @type {EXPECTED_ANY} */ (event).reason = new Error("rejected-boom");
+      globalThis.dispatchEvent(event);
+
+      expect(getOverlay()).not.toBeNull();
+      expect(getCard().textContent).toContain("rejected-boom");
+    });
+
+    it("ignores errors already caught by a React error boundary", () => {
+      configureOverlay({ catchRuntimeError: true });
+
+      const error = new Error("boundary");
+      error.stack =
+        "Error: boundary\n at invokeGuardedCallbackDev (react-dom.js:1:1)";
+      globalThis.dispatchEvent(new ErrorEvent("error", { error }));
+
+      expect(getOverlay()).toBeNull();
+    });
+  });
+
+  describe("open in editor", () => {
+    afterEach(() => {
+      configureOverlay({ openEditorEndpoint: "" });
+      delete globalThis.fetch;
+    });
+
+    it("makes file chips clickable and calls the configured endpoint", () => {
+      // eslint-disable-next-line jest/prefer-spy-on -- jsdom does not define fetch
+      globalThis.fetch = jest.fn(() => Promise.resolve());
+      configureOverlay({ openEditorEndpoint: "/__open-editor" });
+      showProblems("errors", ["./src/render.js 7:2\nModule parse failed"]);
+
+      const chip = /** @type {Document} */ (
+        getOverlay().contentDocument
+      ).querySelector("[data-open-file]");
+
+      expect(chip).not.toBeNull();
+      expect(chip.getAttribute("data-open-file")).toBe("./src/render.js:7:2");
+
+      chip.click();
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `/__open-editor?fileName=${encodeURIComponent("./src/render.js:7:2")}`,
+      );
+    });
+
+    it("does not mark file chips when no endpoint is configured", () => {
+      showProblems("errors", ["./src/render.js 7:2\nModule parse failed"]);
+
+      expect(
+        /** @type {Document} */ (getOverlay().contentDocument).querySelector(
+          "[data-open-file]",
+        ),
+      ).toBeNull();
+    });
+  });
+
+  describe("trusted types", () => {
+    afterEach(() => {
+      delete globalThis.trustedTypes;
+    });
+
+    it("creates a policy with the configured name and renders through it", () => {
+      globalThis.trustedTypes = {
+        createPolicy: jest.fn((name, rules) => ({
+          createHTML: rules.createHTML,
+        })),
+      };
+
+      configureOverlay({ trustedTypesPolicyName: "custom#policy" });
+      showProblems("errors", ["boom"]);
+
+      expect(globalThis.trustedTypes.createPolicy).toHaveBeenCalledWith(
+        "custom#policy",
+        expect.objectContaining({ createHTML: expect.any(Function) }),
+      );
+      expect(getCard().textContent).toContain("boom");
     });
   });
 
