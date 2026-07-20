@@ -20,6 +20,7 @@
 /**
  * @typedef {object} Payload
  * @property {string} action action
+ * @property {string=} file file that invalidated the compilation
  * @property {string=} name name
  * @property {number=} time time
  * @property {string=} hash hash
@@ -262,12 +263,22 @@ function createHot(compiler, userOptions) {
   let latestStats = null;
   let closed = false;
 
-  const onInvalid = () => {
+  /** @param {string | null=} fileName file that triggered the rebuild */
+  const onInvalid = (fileName) => {
     if (closed) return;
 
     latestStats = null;
 
-    eventStream.publish({ action: "building" });
+    /** @type {{ action: string, file?: string }} */
+    const payload = { action: "building" };
+
+    // The invalid hook reports which file changed — forward it so clients
+    // can show what triggered the rebuild.
+    if (typeof fileName === "string" && fileName) {
+      payload.file = fileName;
+    }
+
+    eventStream.publish(payload);
   };
 
   /** @param {Stats | MultiStats} statsResult stats result */

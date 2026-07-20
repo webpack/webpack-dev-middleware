@@ -60,6 +60,7 @@ declare const HOT_DEFAULT_HEARTBEAT: number;
 /**
  * @typedef {object} Payload
  * @property {string} action action
+ * @property {string=} file file that invalidated the compilation
  * @property {string=} name name
  * @property {number=} time time
  * @property {string=} hash hash
@@ -158,6 +159,10 @@ type Payload = {
    * action
    */
   action: string;
+  /**
+   * file that invalidated the compilation
+   */
+  file?: string | undefined;
   /**
    * name
    */

@@ -27,8 +27,8 @@ function makeFakeCompiler(logger = noopLogger) {
       done: { tap: (_name, fn) => doneTaps.push(fn) },
     },
     getInfrastructureLogger: () => logger,
-    emitInvalid() {
-      for (const fn of invalidTaps) fn();
+    emitInvalid(fileName) {
+      for (const fn of invalidTaps) fn(fileName);
     },
     emitDone(stats) {
       for (const fn of doneTaps) fn(stats);
@@ -311,6 +311,38 @@ describe("createHot", () => {
           w.includes('"action":"custom-thing"') && w.includes('"payload":42'),
       ),
     ).toBe(true);
+
+    hot.close();
+  });
+
+  it("includes the changed file in the building payload", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    compiler.emitInvalid("/src/index.js");
+
+    expect(
+      writes.some(
+        (w) =>
+          w.includes('"action":"building"') &&
+          w.includes('"file":"/src/index.js"'),
+      ),
+    ).toBe(true);
+
+    hot.close();
+  });
+
+  it("omits the file field when the invalid hook reports none", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    compiler.emitInvalid();
+
+    const building = writes.find((w) => w.includes('"action":"building"'));
+    expect(building).toBeDefined();
+    expect(building).not.toContain('"file"');
 
     hot.close();
   });

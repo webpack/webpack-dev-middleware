@@ -205,7 +205,7 @@ export function disconnect() {
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_ANY */
 
-/** @typedef {{ name?: string, errors: string[], warnings: string[], hash: string, time?: number, action?: string }} HMRPayload */
+/** @typedef {{ name?: string, errors: string[], warnings: string[], hash: string, time?: number, action?: string, file?: string }} HMRPayload */
 
 /**
  * @returns {{
@@ -291,7 +291,11 @@ let subscribeAllHandler;
 function processMessage(obj) {
   switch (obj.action) {
     case "building": {
-      log.info(`bundle ${obj.name ? `'${obj.name}' ` : ""}rebuilding`);
+      log.info(
+        `bundle ${obj.name ? `'${obj.name}' ` : ""}rebuilding${
+          obj.file ? ` (${obj.file} changed)` : ""
+        }`,
+      );
       break;
     }
     case "built":
