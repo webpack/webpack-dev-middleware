@@ -1,10 +1,9 @@
 /* global __resourceQuery, __webpack_public_path__ */
 
-import stripAnsi from "strip-ansi";
-
 import configureOverlay from "./overlay.js";
 import applyUpdate from "./process-update.js";
 import { log, setLogLevel } from "./utils/log.js";
+import stripAnsi from "./utils/strip-ansi.js";
 
 /** @typedef {import("./utils/log.js").LogLevel} LogLevel */
 
