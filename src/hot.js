@@ -5,7 +5,6 @@
 /** @typedef {import("webpack").MultiStats} MultiStats */
 /** @typedef {import("webpack").StatsCompilation} StatsCompilation */
 /** @typedef {import("webpack").StatsError} StatsError */
-/** @typedef {import("webpack").StatsModule} StatsModule */
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index.js").ServerResponse} ServerResponse */
 
@@ -26,7 +25,6 @@
  * @property {string=} hash hash
  * @property {string[]=} warnings warnings
  * @property {string[]=} errors errors
- * @property {Record<string, string>=} modules modules
  */
 
 /**
@@ -192,23 +190,6 @@ function extractBundles(stats) {
 }
 
 /**
- * @param {StatsModule[]} modules modules
- * @returns {Record<string, string>} module id to name map
- */
-function buildModuleMap(modules) {
-  /** @type {Record<string, string>} */
-  const map = {};
-
-  for (const item of modules) {
-    map[/** @type {string | number} */ (item.id)] = /** @type {string} */ (
-      item.name
-    );
-  }
-
-  return map;
-}
-
-/**
  * @param {string} action action
  * @param {Stats | MultiStats} statsResult stats result
  * @param {EventStream} eventStream event stream
@@ -251,7 +232,6 @@ function publishStats(action, statsResult, eventStream, statsOptions) {
       hash: stats.hash,
       warnings: formatErrors(stats.warnings || []),
       errors: formatErrors(stats.errors || []),
-      modules: buildModuleMap(stats.modules || []),
     });
   }
 }
@@ -332,7 +312,6 @@ function createHot(compiler, userOptions) {
 module.exports = createHot;
 module.exports.HOT_DEFAULT_HEARTBEAT = HOT_DEFAULT_HEARTBEAT;
 module.exports.HOT_DEFAULT_PATH = HOT_DEFAULT_PATH;
-module.exports.buildModuleMap = buildModuleMap;
 module.exports.createEventStream = createEventStream;
 module.exports.createHot = createHot;
 module.exports.formatErrors = formatErrors;

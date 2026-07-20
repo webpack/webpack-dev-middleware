@@ -1,5 +1,4 @@
 import createHot, {
-  buildModuleMap,
   createEventStream,
   formatErrors,
   pathMatch,
@@ -135,17 +134,6 @@ describe("hot middleware (unit)", () => {
 
     it("tolerates missing moduleName and loc", () => {
       expect(formatErrors([{ message: "boom" }])).toEqual([" \nboom"]);
-    });
-  });
-
-  describe("buildModuleMap", () => {
-    it("maps id to name", () => {
-      expect(
-        buildModuleMap([
-          { id: 1, name: "./a.js" },
-          { id: 2, name: "./b.js" },
-        ]),
-      ).toEqual({ 1: "./a.js", 2: "./b.js" });
     });
   });
 
@@ -366,6 +354,35 @@ describe("createHot", () => {
           w.includes('"name":"child-bundle"') && w.includes('"action":"built"'),
       ),
     ).toBe(true);
+
+    hot.close();
+  });
+
+  it("forwards custom statsOptions to stats.toJson", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {
+      statsOptions: { modules: true, ids: true },
+    });
+    attachClient({ handler: hot.handle });
+
+    /** @type {EXPECTED_OBJECT} */
+    let receivedOptions;
+
+    compiler.emitDone({
+      toJson(statsOptions) {
+        receivedOptions = statsOptions;
+        return {
+          time: 1,
+          hash: "h",
+          warnings: [],
+          errors: [],
+          modules: [],
+        };
+      },
+      compilation: undefined,
+    });
+
+    expect(receivedOptions).toMatchObject({ modules: true, ids: true });
 
     hot.close();
   });

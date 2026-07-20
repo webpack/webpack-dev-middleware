@@ -49,10 +49,9 @@ function upToDate(hash) {
 
 /**
  * @param {string} hash latest hash from the SSE payload
- * @param {Record<string, string> | undefined} moduleMap module id → name map
  * @param {{ reload?: boolean }} options client options
  */
-export default function applyUpdate(hash, moduleMap, options) {
+export default function applyUpdate(hash, options) {
   const { reload } = options;
 
   /**
@@ -96,7 +95,7 @@ export default function applyUpdate(hash, moduleMap, options) {
           `See ${HMR_DOCS_URL} for more details.`,
       );
       for (const moduleId of unacceptedModules) {
-        log.warn(` - ${(moduleMap && moduleMap[moduleId]) || moduleId}`);
+        log.warn(` - ${moduleId}`);
       }
       performReload();
       return;
@@ -107,7 +106,7 @@ export default function applyUpdate(hash, moduleMap, options) {
     } else {
       log.info("Updated modules:");
       for (const moduleId of renewedModules) {
-        log.info(` - ${(moduleMap && moduleMap[moduleId]) || moduleId}`);
+        log.info(` - ${moduleId}`);
       }
     }
 
