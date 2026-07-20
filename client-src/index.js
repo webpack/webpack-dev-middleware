@@ -78,7 +78,7 @@ function setOverrides(overrides) {
  */
 
 /**
- * @returns {{ addMessageListener: (fn: MessageListener) => void }} event source wrapper
+ * @returns {{ addMessageListener: (fn: MessageListener) => void, close: () => void }} event source wrapper
  */
 function createEventSourceWrapper() {
   /** @type {EventSource} */
