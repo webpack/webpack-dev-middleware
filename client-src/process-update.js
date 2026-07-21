@@ -4,20 +4,15 @@ import getHot from "./utils/get-hot.js";
 import { log } from "./utils/log.js";
 import reloadPage from "./utils/reload.js";
 
-const maybeHot = getHot();
-
-if (!maybeHot) {
-  throw new Error("[HMR] Hot Module Replacement is disabled.");
-}
-
-const hot = maybeHot;
-
 const HMR_DOCS_URL = "https://webpack.js.org/concepts/hot-module-replacement/";
 
 /** @type {string | undefined} */
 let lastHash;
 /** @type {Record<string, number>} */
 const failureStatuses = { abort: 1, fail: 1 };
+// Set per applyUpdate() call from the client's `reload` option.
+let reloadOnErrored = false;
+let loggedRuntimeMissing = false;
 
 /** @type {webpack.ApplyOptions} */
 const applyOptions = {
@@ -39,6 +34,12 @@ const applyOptions = {
     log.warn(
       `Ignored an error while updating module ${event.moduleId} (${event.type})`,
     );
+    // An error thrown inside an accept handler leaves the app in an
+    // undefined state — fall back to a full page reload.
+    if (reloadOnErrored) {
+      log.warn("Reloading page");
+      reloadPage();
+    }
   },
 };
 
@@ -56,7 +57,25 @@ function upToDate(hash) {
  * @param {{ reload?: boolean }} options client options
  */
 export default function applyUpdate(hash, options) {
+  const maybeHot = getHot();
+
+  if (!maybeHot) {
+    // Logged (once) instead of thrown: this runs inside the SSE message
+    // handler, whose catch would mislabel a throw as an invalid message.
+    if (!loggedRuntimeMissing) {
+      loggedRuntimeMissing = true;
+      log.error(
+        "[HMR] Hot Module Replacement is disabled. " +
+          "Add HotModuleReplacementPlugin to the webpack configuration.",
+      );
+    }
+    return;
+  }
+
+  const hot = maybeHot;
   const { reload } = options;
+
+  reloadOnErrored = Boolean(reload);
 
   /**
    * Trigger a full page reload when HMR cannot apply the update.
