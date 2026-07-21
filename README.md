@@ -505,7 +505,7 @@ const hotClient = require("webpack-dev-middleware/client");
 
 hotClient.subscribe((payload) => {
   if (payload.action === "reload-all") {
-    window.location.reload();
+    globalThis.location.reload();
   }
 });
 ```
