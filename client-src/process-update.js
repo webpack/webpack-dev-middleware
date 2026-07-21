@@ -1,12 +1,16 @@
 /* global __webpack_hash__ */
 
+import getHot from "./utils/get-hot.js";
 import { log } from "./utils/log.js";
+import reloadPage from "./utils/reload.js";
 
-const hot = import.meta.webpackHot;
+const maybeHot = getHot();
 
-if (!hot) {
+if (!maybeHot) {
   throw new Error("[HMR] Hot Module Replacement is disabled.");
 }
+
+const hot = maybeHot;
 
 const HMR_DOCS_URL = "https://webpack.js.org/concepts/hot-module-replacement/";
 
@@ -60,7 +64,7 @@ export default function applyUpdate(hash, options) {
   function performReload() {
     if (reload) {
       log.warn("Reloading page");
-      window.location.reload();
+      reloadPage();
     }
   }
 
