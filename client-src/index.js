@@ -113,7 +113,9 @@ function setOverrides(overrides) {
   }
 
   if (overrides.dynamicPublicPath) {
-    options.path = __webpack_public_path__ + options.path;
+    // `path` is appended like a filename (no leading slash); the public path
+    // itself is not normalized.
+    options.path = __webpack_public_path__ + options.path.replace(/^\//, "");
   }
 
   setLogLevel(options.logging);
