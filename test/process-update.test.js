@@ -46,10 +46,9 @@ describe("process-update", () => {
   }
 
   /**
-   * Load a fresh process-update with the given fake runtime. The runtime is
-   * resolved at module evaluation, so the mock must be configured in the same
-   * module registry before process-update is required.
-   * @param {FakeHot} hot fake `import.meta.webpackHot`
+   * Load a fresh process-update with the given fake runtime configured in the
+   * same module registry.
+   * @param {FakeHot | undefined} hot fake `import.meta.webpackHot`
    * @returns {typeof import("../client-src/process-update").default} applyUpdate
    */
   function loadApplyUpdate(hot) {
@@ -84,17 +83,18 @@ describe("process-update", () => {
     jest.restoreAllMocks();
   });
 
-  it("throws at module evaluation when the HMR runtime is disabled", () => {
-    jest.isolateModules(() => {
-      /** @type {jest.Mock} */
-      const isolatedGetHot = require("../client-src/utils/get-hot");
+  it("logs an error once when the HMR runtime is disabled", () => {
+    applyUpdate = loadApplyUpdate(undefined);
 
-      isolatedGetHot.mockReturnValue(undefined);
+    expect(() => applyUpdate("h1", { reload: true })).not.toThrow();
+    applyUpdate("h2", { reload: true });
 
-      expect(() => require("../client-src/process-update")).toThrow(
-        /Hot Module Replacement is disabled/,
-      );
-    });
+    const runtimeErrors = console.error.mock.calls.filter((call) =>
+      call.join(" ").includes("Hot Module Replacement is disabled"),
+    );
+
+    expect(runtimeErrors).toHaveLength(1);
+    expect(reloadPage).not.toHaveBeenCalled();
   });
 
   it("checks and applies an update when the hash differs", async () => {
@@ -124,7 +124,7 @@ describe("process-update", () => {
     expect(reloadPage).toHaveBeenCalledTimes(1);
   });
 
-  it("ignores an error thrown by an accept handler during apply", async () => {
+  it("reloads when an accept handler errors during apply (onErrored)", async () => {
     applyUpdate = loadApplyUpdate(
       makeFakeHot({
         applyImpl: (applyOptions) => {
@@ -143,7 +143,28 @@ describe("process-update", () => {
     globalThis.__webpack_hash__ = "new-hash";
     await flushPromises();
 
-    // The error is logged but does not trigger a reload.
+    expect(reloadPage).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not reload on errored apply when reload is disabled", async () => {
+    applyUpdate = loadApplyUpdate(
+      makeFakeHot({
+        applyImpl: (applyOptions) => {
+          applyOptions.onErrored({
+            error: new Error("accept handler failed"),
+            moduleId: "./a.js",
+            type: "accept-errored",
+          });
+
+          return Promise.resolve(["./a.js"]);
+        },
+      }),
+    );
+
+    applyUpdate("new-hash", { reload: false });
+    globalThis.__webpack_hash__ = "new-hash";
+    await flushPromises();
+
     expect(reloadPage).not.toHaveBeenCalled();
   });
 

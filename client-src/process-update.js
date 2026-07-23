@@ -4,20 +4,15 @@ import getHot from "./utils/get-hot.js";
 import { log } from "./utils/log.js";
 import reloadPage from "./utils/reload.js";
 
-const maybeHot = getHot();
-
-if (!maybeHot) {
-  throw new Error("[HMR] Hot Module Replacement is disabled.");
-}
-
-const hot = maybeHot;
-
 const HMR_DOCS_URL = "https://webpack.js.org/concepts/hot-module-replacement/";
 
 /** @type {string | undefined} */
 let lastHash;
 /** @type {Record<string, number>} */
 const failureStatuses = { abort: 1, fail: 1 };
+// Set per applyUpdate() call from the client's `reload` option.
+let reloadOnErrored = false;
+let loggedRuntimeMissing = false;
 
 /** @type {webpack.ApplyOptions} */
 const applyOptions = {
@@ -39,6 +34,12 @@ const applyOptions = {
     log.warn(
       `Ignored an error while updating module ${event.moduleId} (${event.type})`,
     );
+    // An error thrown inside an accept handler leaves the app in an
+    // undefined state — fall back to a full page reload.
+    if (reloadOnErrored) {
+      log.warn("Reloading page");
+      reloadPage();
+    }
   },
 };
 
@@ -56,7 +57,24 @@ function upToDate(hash) {
  * @param {{ reload?: boolean }} options client options
  */
 export default function applyUpdate(hash, options) {
+  const hot = getHot();
+
+  if (!hot) {
+    // Logged (once) instead of thrown: this runs inside the SSE message
+    // handler, whose catch would mislabel a throw as an invalid message.
+    if (!loggedRuntimeMissing) {
+      loggedRuntimeMissing = true;
+      log.error(
+        "[HMR] Hot Module Replacement is disabled. " +
+          "Add HotModuleReplacementPlugin to the webpack configuration.",
+      );
+    }
+    return;
+  }
+
   const { reload } = options;
+
+  reloadOnErrored = Boolean(reload);
 
   /**
    * Trigger a full page reload when HMR cannot apply the update.
@@ -72,6 +90,7 @@ export default function applyUpdate(hash, options) {
    * @param {Error} err error
    */
   function handleError(err) {
+    // @ts-expect-error function declarations are hoisted, so the `!hot` guard narrowing is lost
     if (hot.status() in failureStatuses) {
       log.warn("Cannot check for update (Full reload needed)");
       log.warn(err.stack || err.message);
@@ -126,6 +145,7 @@ export default function applyUpdate(hash, options) {
    * Ask webpack for the next chunk of HMR updates and apply them.
    */
   function check() {
+    // @ts-expect-error function declarations are hoisted, so the `!hot` guard narrowing is lost
     hot
       .check(false)
       .then((updatedModules) => {
@@ -136,6 +156,7 @@ export default function applyUpdate(hash, options) {
           return undefined;
         }
 
+        // @ts-expect-error function declarations are hoisted, so the `!hot` guard narrowing is lost
         return hot.apply(applyOptions).then((renewedModules) => {
           if (!upToDate()) check();
           logUpdates(updatedModules, renewedModules);
