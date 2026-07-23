@@ -264,7 +264,7 @@ export function disconnect() {
 
 /**
  * @returns {{
- * cleanProblemsCache: () => void,
+ * cleanProblemsCache: (name: string) => void,
  * problems: (type: "errors" | "warnings", obj: HMRPayload) => boolean,
  * success: (obj?: HMRPayload) => void,
  * useCustomOverlay: (customOverlay: EXPECTED_ANY) => void,
@@ -384,8 +384,10 @@ function createReporter() {
   };
 
   return {
-    cleanProblemsCache() {
-      previousProblems.clear();
+    cleanProblemsCache(name) {
+      // Scoped to one bundle so a sibling's unchanged problems do not re-log.
+      previousProblems.delete(`${name}|errors`);
+      previousProblems.delete(`${name}|warnings`);
     },
     problems(type, obj) {
       logProblems(type, obj);
@@ -465,11 +467,11 @@ function processMessage(obj) {
           reporter.problems("warnings", obj);
         }
       } else if (reporter) {
-        reporter.cleanProblemsCache();
+        reporter.cleanProblemsCache(obj.name || "");
         reporter.success(obj);
       }
       if (shouldApply) {
-        applyUpdate(obj.hash, options);
+        applyUpdate(obj.hash, options, obj.name);
       }
       break;
     }
