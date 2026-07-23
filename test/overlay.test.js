@@ -185,8 +185,15 @@ describe("overlay", () => {
         }),
       );
 
-      expect(getCard().textContent).toContain("boom-runtime");
+      // With pagination (default) the newest runtime error is shown, and the
+      // previous one stays reachable.
       expect(getCard().textContent).toContain("boom-2");
+      expect(getCard().textContent).toContain("2 / 2");
+
+      getOverlay().contentDocument.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowLeft" }),
+      );
+      expect(getCard().textContent).toContain("boom-runtime");
     });
 
     it("shows unhandled promise rejections", () => {
@@ -246,6 +253,97 @@ describe("overlay", () => {
           "[data-open-file]",
         ),
       ).toBeNull();
+    });
+  });
+
+  describe("pagination", () => {
+    afterEach(() => {
+      // Restore the default.
+      configureOverlay({ paginate: true });
+    });
+
+    it("shows one problem at a time with a counter by default", () => {
+      showProblems("errors", ["first boom", "second boom", "third boom"]);
+
+      expect(getCard().textContent).toContain("first boom");
+      expect(getCard().textContent).not.toContain("second boom");
+      expect(getCard().textContent).toContain("1 / 3");
+    });
+
+    it("navigates with the prev/next buttons and clamps at the ends", () => {
+      showProblems("errors", ["first boom", "second boom"]);
+
+      const next = [...getCard().querySelectorAll("button")].find(
+        (button) => button.getAttribute("aria-label") === "Next problem",
+      );
+
+      next.click();
+      expect(getCard().textContent).toContain("second boom");
+      expect(getCard().textContent).toContain("2 / 2");
+
+      // Clamped at the last page.
+      const nextAgain = [...getCard().querySelectorAll("button")].find(
+        (button) => button.getAttribute("aria-label") === "Next problem",
+      );
+
+      nextAgain.click();
+      expect(getCard().textContent).toContain("2 / 2");
+
+      const prev = [...getCard().querySelectorAll("button")].find(
+        (button) => button.getAttribute("aria-label") === "Previous problem",
+      );
+
+      prev.click();
+      expect(getCard().textContent).toContain("first boom");
+    });
+
+    it("navigates with the arrow keys", () => {
+      showProblems("errors", ["first boom", "second boom"]);
+
+      getOverlay().contentDocument.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight" }),
+      );
+      expect(getCard().textContent).toContain("second boom");
+
+      getOverlay().contentDocument.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowLeft" }),
+      );
+      expect(getCard().textContent).toContain("first boom");
+    });
+
+    it("resets to the first page on a new problem set", () => {
+      showProblems("errors", ["first boom", "second boom"]);
+
+      getOverlay().contentDocument.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight" }),
+      );
+      showProblems("errors", ["new first", "new second", "new third"]);
+
+      expect(getCard().textContent).toContain("new first");
+      expect(getCard().textContent).toContain("1 / 3");
+    });
+
+    it("keeps the current page when the same problems are re-published", () => {
+      showProblems("errors", ["first boom", "second boom"]);
+
+      getOverlay().contentDocument.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight" }),
+      );
+      expect(getCard().textContent).toContain("2 / 2");
+
+      showProblems("errors", ["first boom", "second boom"]);
+
+      expect(getCard().textContent).toContain("second boom");
+      expect(getCard().textContent).toContain("2 / 2");
+    });
+
+    it("shows the full list when disabled", () => {
+      configureOverlay({ paginate: false });
+      showProblems("errors", ["first boom", "second boom"]);
+
+      expect(getCard().textContent).toContain("first boom");
+      expect(getCard().textContent).toContain("second boom");
+      expect(getCard().textContent).not.toContain("1 / 2");
     });
   });
 

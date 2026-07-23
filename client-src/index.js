@@ -9,7 +9,8 @@ import stripAnsi from "./utils/strip-ansi.js";
 
 /**
  * Superset of webpack-dev-server's `client.overlay` object; `styles`,
- * `ansiColors` and `openEditorEndpoint` are webpack-dev-middleware extensions.
+ * `ansiColors`, `openEditorEndpoint` and `paginate` are webpack-dev-middleware
+ * extensions.
  * @typedef {object} OverlayOptions
  * @property {(boolean | ((error: string) => boolean))=} errors show build errors in the overlay
  * @property {(boolean | ((warning: string) => boolean))=} warnings show build warnings in the overlay
@@ -18,6 +19,7 @@ import stripAnsi from "./utils/strip-ansi.js";
  * @property {Record<string, string | number>=} styles overrides for the overlay card CSS
  * @property {Record<string, string | string[]>=} ansiColors overrides for ANSI → HTML color mapping
  * @property {string=} openEditorEndpoint endpoint the overlay calls (GET `?fileName=file:line:column`) when a file reference is clicked; empty disables it
+ * @property {boolean=} paginate show one problem at a time with prev/next navigation
  */
 
 /**
@@ -273,6 +275,7 @@ function createReporter() {
             ansiColors: options.overlay.ansiColors,
             overlayStyles: options.overlay.styles,
             openEditorEndpoint: options.overlay.openEditorEndpoint,
+            paginate: options.overlay.paginate,
           }
         : {
             catchRuntimeError: options.overlay,
