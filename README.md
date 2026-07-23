@@ -344,6 +344,13 @@ Default: `10000`
 
 Heartbeat interval (in milliseconds) used to keep the SSE connection alive when no compilation events are produced.
 
+#### `hot.progress`
+
+Type: `Boolean`
+Default: `undefined`
+
+Publish compilation progress events (`{ action: "progress", percent, message }`) to the clients using webpack's `ProgressPlugin`. The bundled client shows the percentage in its building badge (see the client `progress` option).
+
 #### `hot.statsOptions`
 
 Type: `Boolean | Object`
@@ -384,6 +391,7 @@ entry: [
 |      `logging`      |     `string`      |     `"info"`     | Logger level — one of `"none"`, `"error"`, `"warn"`, `"info"`, `"log"`, `"verbose"`. Uses webpack's runtime logger.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 |       `name`        |     `string`      |       `""`       | Restrict updates to a specific compilation name (useful with multi-compiler).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 |    `autoConnect`    |     `boolean`     |      `true`      | Connect on load; set to `false` and call `setOptionsAndConnect()` manually.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+|     `progress`      |     `boolean`     |      `true`      | Show a small badge in the page while a rebuild is in progress (with the compilation percentage when the server enables `hot.progress`). Set to `false` to disable.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `dynamicPublicPath` |     `boolean`     |     `false`      | Prefix `path` with `__webpack_public_path__` at runtime. The leading slash of `path` is stripped and no other normalization is applied, so the public path should end with `/`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 ### Programmatic API
@@ -439,6 +447,16 @@ const overlay = configureOverlay({
 
 overlay.showProblems("errors", ["Something broke"]);
 overlay.clear();
+```
+
+The building indicator is exposed the same way:
+
+```js
+import { hide, show } from "webpack-dev-middleware/client/indicator";
+
+show("Rebuilding…"); // pulsing dot
+show("Rebuilding… 42%", 42); // progress ring
+hide();
 ```
 
 ## API

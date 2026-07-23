@@ -56,6 +56,7 @@ declare const HOT_DEFAULT_HEARTBEAT: number;
  * @property {string=} path the path the SSE endpoint is served at
  * @property {number=} heartbeat heartbeat interval in milliseconds
  * @property {StatsOptions=} statsOptions webpack stats options used when serializing compilation results
+ * @property {boolean=} progress publish compilation progress events to the clients
  */
 /**
  * @typedef {object} Payload
@@ -64,6 +65,8 @@ declare const HOT_DEFAULT_HEARTBEAT: number;
  * @property {string=} name name
  * @property {number=} time time
  * @property {string=} hash hash
+ * @property {number=} percent compilation progress (0-100)
+ * @property {string=} message progress message
  * @property {string[]=} warnings warnings
  * @property {string[]=} errors errors
  */
@@ -153,6 +156,10 @@ type HotOptions = {
    * webpack stats options used when serializing compilation results
    */
   statsOptions?: StatsOptions | undefined;
+  /**
+   * publish compilation progress events to the clients
+   */
+  progress?: boolean | undefined;
 };
 type Payload = {
   /**
@@ -175,6 +182,14 @@ type Payload = {
    * hash
    */
   hash?: string | undefined;
+  /**
+   * compilation progress (0-100)
+   */
+  percent?: number | undefined;
+  /**
+   * progress message
+   */
+  message?: string | undefined;
   /**
    * warnings
    */

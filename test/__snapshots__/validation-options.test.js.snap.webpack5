@@ -90,31 +90,31 @@ exports[`validation should throw an error on the "hot" option with "{"path":""}"
 exports[`validation should throw an error on the "hot" option with "{"unknown":true}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot has an unknown property 'unknown'. These properties are valid:
-   object { path?, heartbeat?, statsOptions? }"
+   object { path?, heartbeat?, progress?, statsOptions? }"
 `;
 
 exports[`validation should throw an error on the "hot" option with "0" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot should be one of these:
-   boolean | object { path?, heartbeat?, statsOptions? }
+   boolean | object { path?, heartbeat?, progress?, statsOptions? }
    -> Enable hot module replacement via a Server-Sent Events endpoint.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
    Details:
     * options.hot should be a boolean.
     * options.hot should be an object:
-      object { path?, heartbeat?, statsOptions? }"
+      object { path?, heartbeat?, progress?, statsOptions? }"
 `;
 
 exports[`validation should throw an error on the "hot" option with "foo" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot should be one of these:
-   boolean | object { path?, heartbeat?, statsOptions? }
+   boolean | object { path?, heartbeat?, progress?, statsOptions? }
    -> Enable hot module replacement via a Server-Sent Events endpoint.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
    Details:
     * options.hot should be a boolean.
     * options.hot should be an object:
-      object { path?, heartbeat?, statsOptions? }"
+      object { path?, heartbeat?, progress?, statsOptions? }"
 `;
 
 exports[`validation should throw an error on the "index" option with "{}" value 1`] = `

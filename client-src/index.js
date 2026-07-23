@@ -1,5 +1,6 @@
 /* global __resourceQuery, __webpack_public_path__ */
 
+import * as indicator from "./indicator.js";
 import configureOverlay from "./overlay.js";
 import applyUpdate from "./process-update.js";
 import { log, setLogLevel } from "./utils/log.js";
@@ -31,6 +32,7 @@ import stripAnsi from "./utils/strip-ansi.js";
  * @property {LogLevel} logging logger level
  * @property {string} name limit updates to this compilation name
  * @property {boolean} autoConnect connect immediately when the entry runs
+ * @property {boolean} progress show a small badge while a rebuild is in progress
  */
 
 /** @type {ClientOptions} */
@@ -42,6 +44,7 @@ const options = {
   logging: "info",
   name: "",
   autoConnect: true,
+  progress: true,
 };
 
 /**
@@ -110,6 +113,10 @@ function setOverrides(overrides) {
   }
   if (overrides.name) {
     options.name = overrides.name;
+  }
+
+  if (overrides.progress) {
+    options.progress = overrides.progress !== "false";
   }
 
   if (overrides.dynamicPublicPath) {
@@ -253,7 +260,7 @@ export function disconnect() {
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_ANY */
 
-/** @typedef {{ name?: string, errors: string[], warnings: string[], hash: string, time?: number, action?: string, file?: string }} HMRPayload */
+/** @typedef {{ name?: string, errors: string[], warnings: string[], hash: string, time?: number, action?: string, file?: string, percent?: number, message?: string }} HMRPayload */
 
 /**
  * @returns {{
@@ -420,10 +427,25 @@ function processMessage(obj) {
           obj.file ? ` (${obj.file} changed)` : ""
         }`,
       );
+      if (options.progress && typeof document !== "undefined") {
+        indicator.show(obj.file ? `Rebuilding… (${obj.file})` : undefined);
+      }
+      break;
+    }
+    case "progress": {
+      if (options.progress && typeof document !== "undefined") {
+        indicator.show(
+          `Rebuilding… ${obj.percent}%${obj.message ? ` (${obj.message})` : ""}`,
+          obj.percent,
+        );
+      }
       break;
     }
     case "built":
     case "sync": {
+      if (options.progress && typeof document !== "undefined") {
+        indicator.hide();
+      }
       if (obj.action === "built") {
         log.info(
           `bundle ${obj.name ? `'${obj.name}' ` : ""}rebuilt in ${obj.time}ms`,

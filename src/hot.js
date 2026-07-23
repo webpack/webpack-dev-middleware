@@ -15,6 +15,7 @@
  * @property {string=} path the path the SSE endpoint is served at
  * @property {number=} heartbeat heartbeat interval in milliseconds
  * @property {StatsOptions=} statsOptions webpack stats options used when serializing compilation results
+ * @property {boolean=} progress publish compilation progress events to the clients
  */
 
 /**
@@ -24,6 +25,8 @@
  * @property {string=} name name
  * @property {number=} time time
  * @property {string=} hash hash
+ * @property {number=} percent compilation progress (0-100)
+ * @property {string=} message progress message
  * @property {string[]=} warnings warnings
  * @property {string[]=} errors errors
  */
@@ -259,15 +262,39 @@ function createHot(compiler, userOptions) {
 
   let eventStream = createEventStream(heartbeat, logger);
   logger.log(`Hot module replacement enabled, serving events at "${path}"`);
+
   /** @type {Stats | MultiStats | null} */
   let latestStats = null;
   let closed = false;
+  let lastProgressPercent = -1;
+
+  if (options.progress) {
+    const { webpack } =
+      "compilers" in compiler ? compiler.compilers[0] : compiler;
+
+    // Published only when the rounded percent changes to keep the stream small.
+    new webpack.ProgressPlugin((percent, message) => {
+      const rounded = Math.round(percent * 100);
+
+      if (closed || rounded === lastProgressPercent) {
+        return;
+      }
+
+      lastProgressPercent = rounded;
+      eventStream.publish({
+        action: "progress",
+        percent: rounded,
+        message: message || "",
+      });
+    }).apply(compiler);
+  }
 
   /** @param {string | null=} fileName file that triggered the rebuild */
   const onInvalid = (fileName) => {
     if (closed) return;
 
     latestStats = null;
+    lastProgressPercent = -1;
 
     /** @type {{ action: string, file?: string }} */
     const payload = { action: "building" };

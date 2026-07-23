@@ -419,6 +419,103 @@ describe("createHot", () => {
     hot.close();
   });
 
+  it("publishes throttled progress events when progress is enabled", () => {
+    const compiler = makeFakeCompiler();
+    /** @type {EXPECTED_OBJECT} */
+    let progressHandler;
+
+    compiler.webpack = {
+      ProgressPlugin: class {
+        /** @param {EXPECTED_OBJECT} handler handler */
+        constructor(handler) {
+          progressHandler = handler;
+        }
+
+        apply() {}
+      },
+    };
+
+    const hot = createHot(compiler, { progress: true });
+    const { writes } = attachClient({ handler: hot.handle });
+
+    progressHandler(0.1, "building");
+    // Same rounded percent — must be skipped.
+    progressHandler(0.101, "building");
+    progressHandler(0.5, "sealing");
+
+    const progressWrites = writes.filter((w) =>
+      w.includes('"action":"progress"'),
+    );
+
+    expect(progressWrites).toHaveLength(2);
+    expect(progressWrites.some((w) => w.includes('"percent":10'))).toBe(true);
+    expect(
+      progressWrites.some(
+        (w) => w.includes('"percent":50') && w.includes('"message":"sealing"'),
+      ),
+    ).toBe(true);
+
+    hot.close();
+  });
+
+  it("resets the progress throttle when a new build starts", () => {
+    const compiler = makeFakeCompiler();
+    /** @type {EXPECTED_OBJECT} */
+    let progressHandler;
+
+    compiler.webpack = {
+      ProgressPlugin: class {
+        /** @param {EXPECTED_OBJECT} handler handler */
+        constructor(handler) {
+          progressHandler = handler;
+        }
+
+        apply() {}
+      },
+    };
+
+    const hot = createHot(compiler, { progress: true });
+    const { writes } = attachClient({ handler: hot.handle });
+
+    progressHandler(1, "done");
+    writes.length = 0;
+
+    // A new build whose first report rounds to the same percent must still
+    // be published.
+    compiler.emitInvalid();
+    progressHandler(1, "done");
+
+    expect(writes.some((w) => w.includes('"action":"progress"'))).toBe(true);
+
+    hot.close();
+  });
+
+  it("does not publish progress events after close()", () => {
+    const compiler = makeFakeCompiler();
+    /** @type {EXPECTED_OBJECT} */
+    let progressHandler;
+
+    compiler.webpack = {
+      ProgressPlugin: class {
+        /** @param {EXPECTED_OBJECT} handler handler */
+        constructor(handler) {
+          progressHandler = handler;
+        }
+
+        apply() {}
+      },
+    };
+
+    const hot = createHot(compiler, { progress: true });
+    const { writes } = attachClient({ handler: hot.handle });
+
+    hot.close();
+    writes.length = 0;
+    progressHandler(0.5, "sealing");
+
+    expect(writes).toHaveLength(0);
+  });
+
   it("stops publishing after close() even if the compiler still emits", () => {
     const compiler = makeFakeCompiler();
     const hot = createHot(compiler, {});
