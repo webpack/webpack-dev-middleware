@@ -165,13 +165,14 @@ function formatErrors(errors) {
 /**
  * @param {Stats} stats stats
  * @param {StatsOptions} statsOptions stats options
- * @returns {StatsCompilation} json stats with compilation reference attached
+ * @returns {StatsCompilation} json stats with the compilation name resolved
  */
 function normalizeStats(stats, statsOptions) {
   const statsJson = stats.toJson(statsOptions);
 
-  if (stats.compilation) {
-    statsJson.compilation = stats.compilation;
+  // Resolved here so stored bundles do not retain Compilation objects.
+  if (!statsJson.name && stats.compilation) {
+    statsJson.name = stats.compilation.name || "";
   }
 
   return statsJson;
@@ -194,12 +195,11 @@ function extractBundles(stats) {
 }
 
 /**
- * @param {string} action action
  * @param {Stats | MultiStats} statsResult stats result
- * @param {EventStream} eventStream event stream
  * @param {StatsOptions | undefined} statsOptions stats options
+ * @returns {StatsCompilation[]} normalized per-bundle stats
  */
-function publishStats(action, statsResult, eventStream, statsOptions) {
+function toBundles(statsResult, statsOptions) {
   const resultStatsOptions = {
     all: false,
     hash: true,
@@ -209,29 +209,36 @@ function publishStats(action, statsResult, eventStream, statsOptions) {
     ...(statsOptions && typeof statsOptions === "object" ? statsOptions : {}),
   };
 
-  /** @type {StatsCompilation[]} */
-  let bundles;
-
   // Multi-compiler stats have stats for each child compiler.
   if ("stats" in statsResult) {
-    bundles = statsResult.stats.flatMap((stats) =>
+    return statsResult.stats.flatMap((stats) =>
       extractBundles(normalizeStats(stats, resultStatsOptions)),
     );
-  } else {
-    bundles = extractBundles(normalizeStats(statsResult, resultStatsOptions));
   }
 
-  for (const stats of bundles) {
-    let name = stats.name || "";
+  return extractBundles(normalizeStats(statsResult, resultStatsOptions));
+}
 
-    // Fallback to compilation name when there is a single bundle.
-    if (!name && stats.compilation) {
-      name = stats.compilation.name || "";
-    }
+/**
+ * Publish one event per bundle. Bundles whose hash did not change are
+ * published as `sync`, so their clients do not fetch a hot-update manifest
+ * that was never emitted.
+ * @param {StatsCompilation[]} bundles bundles from the current build
+ * @param {StatsCompilation[] | null} previousBundles bundles from the previous build (null on the first build, which publishes everything as `built`)
+ * @param {EventStream} eventStream event stream
+ */
+function publishBundles(bundles, previousBundles, eventStream) {
+  for (const [index, stats] of bundles.entries()) {
+    const name = stats.name || "";
+
+    const changed =
+      previousBundles === null ||
+      !previousBundles[index] ||
+      previousBundles[index].hash !== stats.hash;
 
     eventStream.publish({
       name,
-      action,
+      action: changed ? "built" : "sync",
       time: stats.time,
       hash: stats.hash,
       warnings: formatErrors(stats.warnings || []),
@@ -263,8 +270,10 @@ function createHot(compiler, userOptions) {
   let eventStream = createEventStream(heartbeat, logger);
   logger.log(`Hot module replacement enabled, serving events at "${path}"`);
 
-  /** @type {Stats | MultiStats | null} */
-  let latestStats = null;
+  // `latestBundles` survives rebuilds so hashes can be compared per build.
+  /** @type {StatsCompilation[] | null} */
+  let latestBundles = null;
+  let valid = false;
   let closed = false;
   let lastProgressPercent = -1;
 
@@ -293,7 +302,7 @@ function createHot(compiler, userOptions) {
   const onInvalid = (fileName) => {
     if (closed) return;
 
-    latestStats = null;
+    valid = false;
     lastProgressPercent = -1;
 
     /** @type {{ action: string, file?: string }} */
@@ -312,8 +321,11 @@ function createHot(compiler, userOptions) {
   const onDone = (statsResult) => {
     if (closed) return;
 
-    latestStats = statsResult;
-    publishStats("built", latestStats, eventStream, statsOptions);
+    const bundles = toBundles(statsResult, statsOptions);
+
+    publishBundles(bundles, latestBundles, eventStream);
+    latestBundles = bundles;
+    valid = true;
   };
 
   compiler.hooks.invalid.tap(PLUGIN_NAME, onInvalid);
@@ -326,8 +338,9 @@ function createHot(compiler, userOptions) {
 
       eventStream.handler(req, res);
 
-      if (latestStats) {
-        publishStats("sync", latestStats, eventStream, statsOptions);
+      // Catch the new client up; self-comparison publishes everything as `sync`.
+      if (valid && latestBundles) {
+        publishBundles(latestBundles, latestBundles, eventStream);
       }
     },
     publish(payload) {
@@ -354,4 +367,5 @@ module.exports.createEventStream = createEventStream;
 module.exports.createHot = createHot;
 module.exports.formatErrors = formatErrors;
 module.exports.pathMatch = pathMatch;
-module.exports.publishStats = publishStats;
+module.exports.publishBundles = publishBundles;
+module.exports.toBundles = toBundles;
