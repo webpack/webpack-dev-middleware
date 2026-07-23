@@ -75,6 +75,7 @@ declare const HOT_DEFAULT_HEARTBEAT: number;
  * @typedef {object} EventStream
  * @property {(req: IncomingMessage, res: ServerResponse) => void} handler attach a new client
  * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
+ * @property {(res: ServerResponse, payload: Payload | { action: string }) => void} publishTo publish a payload to a single client
  * @property {() => void} close end every client and stop the heartbeat
  */
 declare const HOT_DEFAULT_PATH: "/__webpack_hmr";
@@ -219,6 +220,17 @@ type EventStream = {
    * publish a payload to every client
    */
   publish: (
+    payload:
+      | Payload
+      | {
+          action: string;
+        },
+  ) => void;
+  /**
+   * publish a payload to a single client
+   */
+  publishTo: (
+    res: ServerResponse,
     payload:
       | Payload
       | {
