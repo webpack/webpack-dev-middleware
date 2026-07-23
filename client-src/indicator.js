@@ -9,19 +9,59 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 // Circumference of the progress ring (r = 6).
 const RING_LENGTH = 2 * Math.PI * 6;
 
-/** @type {HTMLElement | null} */
-let host = null;
-/** @type {HTMLElement | null} */
-let label = null;
-/** @type {HTMLElement | null} */
-let dot = null;
-/** @type {SVGSVGElement | null} */
-let ring = null;
-/** @type {SVGCircleElement | null} */
-let ringValue = null;
-
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_ANY */
+
+/**
+ * @typedef {object} IndicatorState
+ * @property {HTMLElement | null} host badge host element
+ * @property {HTMLElement | null} label label inside the badge
+ * @property {HTMLElement | null} dot pulsing dot (indeterminate mode)
+ * @property {SVGSVGElement | null} ring progress ring (determinate mode)
+ * @property {SVGCircleElement | null} ringValue ring value circle
+ * @property {Record<string, true>} building sources with a build in progress — the badge hides only when every source finished
+ */
+
+/** @returns {IndicatorState} fresh indicator state */
+function createIndicatorState() {
+  return {
+    host: null,
+    label: null,
+    dot: null,
+    ring: null,
+    ringValue: null,
+    building: {},
+  };
+}
+
+// Shared through `window` so every bundled copy of this module drives one
+// single badge instead of stacking duplicates (same pattern as the overlay).
+const INDICATOR_STATE_KEY = "__webpack_dev_middleware_hot_indicator_state__";
+
+/** @type {IndicatorState} */
+const state = (() => {
+  if (typeof window === "undefined") {
+    return createIndicatorState();
+  }
+
+  const holder = /** @type {EXPECTED_ANY} */ (window);
+
+  if (!holder[INDICATOR_STATE_KEY]) {
+    holder[INDICATOR_STATE_KEY] = createIndicatorState();
+  } else {
+    // Fill fields another package version may not have created, in place.
+    const defaults = createIndicatorState();
+
+    for (const key of Object.keys(defaults)) {
+      if (!(key in holder[INDICATOR_STATE_KEY])) {
+        holder[INDICATOR_STATE_KEY][key] =
+          defaults[/** @type {keyof IndicatorState} */ (key)];
+      }
+    }
+  }
+
+  return holder[INDICATOR_STATE_KEY];
+})();
 
 /**
  * @param {EXPECTED_ANY} element element
@@ -37,7 +77,7 @@ function applyStyle(element, style) {
  * Create (or reuse) the indicator host element.
  */
 function ensureIndicator() {
-  if (host && host.parentNode) {
+  if (state.host && state.host.parentNode) {
     return;
   }
 
@@ -45,9 +85,9 @@ function ensureIndicator() {
     return;
   }
 
-  host = document.createElement("div");
-  host.id = INDICATOR_ID;
-  applyStyle(host, {
+  state.host = document.createElement("div");
+  state.host.id = INDICATOR_ID;
+  applyStyle(state.host, {
     position: "fixed",
     right: "16px",
     bottom: "16px",
@@ -55,7 +95,7 @@ function ensureIndicator() {
     pointerEvents: "none",
   });
 
-  const root = host.attachShadow({ mode: "open" });
+  const root = state.host.attachShadow({ mode: "open" });
 
   const badge = document.createElement("div");
   applyStyle(badge, {
@@ -72,8 +112,8 @@ function ensureIndicator() {
   });
 
   // Indeterminate mode: a pulsing dot.
-  dot = document.createElement("span");
-  applyStyle(dot, {
+  state.dot = document.createElement("span");
+  applyStyle(state.dot, {
     width: "8px",
     height: "8px",
     borderRadius: "50%",
@@ -81,17 +121,17 @@ function ensureIndicator() {
   });
 
   // Pulse through the Web Animations API — no <style> element involved.
-  if (typeof dot.animate === "function") {
-    dot.animate([{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }], {
+  if (typeof state.dot.animate === "function") {
+    state.dot.animate([{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }], {
       duration: 1000,
       iterations: Number.POSITIVE_INFINITY,
     });
   }
 
   // Determinate mode: a progress ring drawn with SVG presentation attributes.
-  ring = document.createElementNS(SVG_NS, "svg");
-  ring.setAttribute("viewBox", "0 0 16 16");
-  applyStyle(ring, { width: "14px", height: "14px", display: "none" });
+  state.ring = document.createElementNS(SVG_NS, "svg");
+  state.ring.setAttribute("viewBox", "0 0 16 16");
+  applyStyle(state.ring, { width: "14px", height: "14px", display: "none" });
 
   const track = document.createElementNS(SVG_NS, "circle");
   track.setAttribute("cx", "8");
@@ -101,25 +141,25 @@ function ensureIndicator() {
   track.setAttribute("stroke", "rgba(255,255,255,0.25)");
   track.setAttribute("stroke-width", "2.5");
 
-  ringValue = document.createElementNS(SVG_NS, "circle");
-  ringValue.setAttribute("cx", "8");
-  ringValue.setAttribute("cy", "8");
-  ringValue.setAttribute("r", "6");
-  ringValue.setAttribute("fill", "none");
-  ringValue.setAttribute("stroke", theme.accent);
-  ringValue.setAttribute("stroke-width", "2.5");
-  ringValue.setAttribute("stroke-linecap", "round");
-  ringValue.setAttribute("stroke-dasharray", String(RING_LENGTH));
-  ringValue.setAttribute("stroke-dashoffset", String(RING_LENGTH));
+  state.ringValue = document.createElementNS(SVG_NS, "circle");
+  state.ringValue.setAttribute("cx", "8");
+  state.ringValue.setAttribute("cy", "8");
+  state.ringValue.setAttribute("r", "6");
+  state.ringValue.setAttribute("fill", "none");
+  state.ringValue.setAttribute("stroke", theme.accent);
+  state.ringValue.setAttribute("stroke-width", "2.5");
+  state.ringValue.setAttribute("stroke-linecap", "round");
+  state.ringValue.setAttribute("stroke-dasharray", String(RING_LENGTH));
+  state.ringValue.setAttribute("stroke-dashoffset", String(RING_LENGTH));
   // Start the ring at 12 o'clock.
-  ringValue.setAttribute("transform", "rotate(-90 8 8)");
+  state.ringValue.setAttribute("transform", "rotate(-90 8 8)");
 
-  ring.append(track, ringValue);
+  state.ring.append(track, state.ringValue);
 
-  label = document.createElement("span");
-  badge.append(dot, ring, label);
+  state.label = document.createElement("span");
+  badge.append(state.dot, state.ring, state.label);
   root.append(badge);
-  document.body.append(host);
+  document.body.append(state.host);
 }
 
 /**
@@ -127,29 +167,32 @@ function ensureIndicator() {
  * progress ring; without one it renders a pulsing dot.
  * @param {string=} text label text
  * @param {number=} percent compilation progress (0-100)
+ * @param {string=} source who is building (e.g. a compilation name, or a
+ * client sharing the badge) — the badge stays until every source finished
  */
-export function show(text, percent) {
+export function show(text, percent, source = "") {
+  state.building[source] = true;
   ensureIndicator();
 
-  if (!label) {
+  if (!state.label) {
     return;
   }
 
-  label.textContent = text || "Rebuilding…";
+  state.label.textContent = text || "Rebuilding…";
 
   const determinate = typeof percent === "number";
 
-  /** @type {HTMLElement} */ (dot).style.display = determinate
+  /** @type {HTMLElement} */ (state.dot).style.display = determinate
     ? "none"
     : "inline-block";
-  /** @type {SVGSVGElement} */ (ring).style.display = determinate
+  /** @type {SVGSVGElement} */ (state.ring).style.display = determinate
     ? "block"
     : "none";
 
   if (determinate) {
     const clamped = Math.min(100, Math.max(0, percent));
 
-    /** @type {SVGCircleElement} */ (ringValue).setAttribute(
+    /** @type {SVGCircleElement} */ (state.ringValue).setAttribute(
       "stroke-dashoffset",
       String(RING_LENGTH * (1 - clamped / 100)),
     );
@@ -157,16 +200,32 @@ export function show(text, percent) {
 }
 
 /**
- * Remove the indicator from the page.
+ * Mark one source's build as finished, or remove the indicator entirely.
+ * @param {string=} source when given, only that source is dropped and the
+ * badge stays while any other source is still building; without it the badge
+ * is removed unconditionally
  */
-export function hide() {
-  if (host && host.parentNode) {
-    host.remove();
+export function hide(source) {
+  if (source !== undefined) {
+    if (!Object.prototype.hasOwnProperty.call(state.building, source)) {
+      return;
+    }
+
+    delete state.building[source];
+
+    if (Object.keys(state.building).length > 0) {
+      return;
+    }
   }
 
-  host = null;
-  label = null;
-  dot = null;
-  ring = null;
-  ringValue = null;
+  if (state.host && state.host.parentNode) {
+    state.host.remove();
+  }
+
+  state.host = null;
+  state.label = null;
+  state.dot = null;
+  state.ring = null;
+  state.ringValue = null;
+  state.building = {};
 }
