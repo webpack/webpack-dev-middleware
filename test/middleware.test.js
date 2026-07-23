@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import Hapi from "@hapi/hapi";
@@ -31,6 +32,8 @@ import webpackWatchOptionsConfig from "./fixtures/webpack.watch-options.config";
 import getCompiler from "./helpers/getCompiler";
 
 import getCompilerHooks from "./helpers/getCompilerHooks";
+
+import { readSseEvents, readSseHandshake, waitUntilValid } from "./helpers/sse";
 
 // Suppress unnecessary stats output
 jest.spyOn(globalThis.console, "log").mockImplementation();
@@ -6943,6 +6946,298 @@ describe.each([
             "public, max-age=5000",
           );
         });
+      });
+    });
+  });
+
+  describe("hot", () => {
+    let instance;
+    let server;
+    let req;
+
+    afterEach(async () => {
+      await close(server, instance);
+    });
+
+    it("serves SSE on the default hot path", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: true },
+      );
+
+      const res = await readSseHandshake(req.get("/__webpack_hmr"));
+
+      expect(res.status).toBe(200);
+      expect(res.headers["content-type"]).toMatch(/text\/event-stream/);
+      expect(res.headers["cache-control"]).toBe("no-cache, no-transform");
+      expect(res.headers["x-accel-buffering"]).toBe("no");
+    });
+
+    it("respects a custom hot path", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        {
+          hot: { path: "/__custom_hmr" },
+        },
+      );
+
+      const res = await readSseHandshake(req.get("/__custom_hmr"));
+
+      expect(res.status).toBe(200);
+      expect(res.headers["content-type"]).toMatch(/text\/event-stream/);
+    });
+
+    it("does not intercept non-hot requests", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: true },
+      );
+
+      const response = await req.get("/bundle.js");
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers["content-type"] || "").not.toMatch(
+        /text\/event-stream/,
+      );
+    });
+
+    it("does not hang hot requests made after instance.close()", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: true },
+      );
+
+      await waitUntilValid(instance);
+      await new Promise((resolve) => {
+        instance.close(resolve);
+      });
+
+      // The SSE intercept is detached, so the request must get a regular
+      // (non-stream) response instead of hanging forever.
+      const response = await req.get("/__webpack_hmr");
+
+      expect(response.headers["content-type"] || "").not.toMatch(
+        /text\/event-stream/,
+      );
+    });
+
+    it("does not intercept the default hot path when hot is disabled", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        {},
+      );
+
+      const response = await req.get("/__webpack_hmr");
+
+      expect(response.headers["content-type"] || "").not.toMatch(
+        /text\/event-stream/,
+      );
+    });
+
+    it("works with MultiCompiler", async () => {
+      const compiler = getCompiler(webpackMultiConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: true },
+      );
+
+      const res = await readSseHandshake(req.get("/__webpack_hmr"));
+
+      expect(res.status).toBe(200);
+      expect(res.headers["content-type"]).toMatch(/text\/event-stream/);
+    });
+
+    it("sends a permissive CORS header", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: true },
+      );
+
+      const res = await readSseHandshake(req.get("/__webpack_hmr"));
+
+      expect(res.headers["access-control-allow-origin"]).toBe("*");
+    });
+
+    describe("SSE payload", () => {
+      it("sends a sync event with the build hash to a client connecting after a build", async () => {
+        const compiler = getCompiler(webpackConfig);
+        [server, req, instance] = await frameworkFactory(
+          name,
+          framework,
+          compiler,
+          { hot: true },
+        );
+
+        await waitUntilValid(instance);
+
+        const events = await readSseEvents(server, "/__webpack_hmr");
+        const sync = events.find((event) => event.action === "sync");
+
+        expect(sync).toBeDefined();
+        expect(typeof sync.hash).toBe("string");
+        expect(sync.errors).toEqual([]);
+      });
+
+      it("sends a sync event per compilation for a MultiCompiler", async () => {
+        const compiler = getCompiler(webpackMultiConfig);
+        [server, req, instance] = await frameworkFactory(
+          name,
+          framework,
+          compiler,
+          { hot: true },
+        );
+
+        await waitUntilValid(instance);
+
+        const events = await readSseEvents(server, "/__webpack_hmr");
+        const syncs = events.filter((event) => event.action === "sync");
+
+        expect(syncs).toHaveLength(webpackMultiConfig.length);
+        for (const sync of syncs) {
+          expect(typeof sync.hash).toBe("string");
+        }
+      });
+
+      it("publishes built only for the changed bundle of a MultiCompiler", async () => {
+        // Real watch scenario: two compilers, only one source file changes.
+
+        const srcDir = fs.mkdtempSync(
+          path.join(fs.realpathSync.native(os.tmpdir()), "wdm-hot-multi-"),
+        );
+        const appEntry = path.join(srcDir, "app.js");
+        const adminEntry = path.join(srcDir, "admin.js");
+
+        fs.writeFileSync(appEntry, "console.log('app v1');");
+        fs.writeFileSync(adminEntry, "console.log('admin v1');");
+
+        const compiler = getCompiler([
+          {
+            mode: "development",
+            name: "app",
+            entry: appEntry,
+            output: {
+              filename: "bundle.js",
+              path: path.resolve(__dirname, "./outputs/hot-multi-app"),
+            },
+          },
+          {
+            mode: "development",
+            name: "admin",
+            entry: adminEntry,
+            output: {
+              filename: "bundle.js",
+              path: path.resolve(__dirname, "./outputs/hot-multi-admin"),
+            },
+          },
+        ]);
+
+        [server, req, instance] = await frameworkFactory(
+          name,
+          framework,
+          compiler,
+          { hot: true },
+        );
+
+        try {
+          await waitUntilValid(instance);
+
+          const pending = readSseEvents(server, "/__webpack_hmr", 3000);
+          // Change only the "admin" source once the client is listening.
+          setTimeout(() => {
+            fs.writeFileSync(adminEntry, "console.log('admin v2');");
+          }, 300);
+          const events = await pending;
+
+          const buildingIndex = events.findIndex(
+            (event) => event.action === "building",
+          );
+
+          expect(buildingIndex).toBeGreaterThan(-1);
+
+          const afterRebuild = events.slice(buildingIndex + 1);
+
+          expect(
+            afterRebuild.some(
+              (event) => event.name === "admin" && event.action === "built",
+            ),
+          ).toBe(true);
+          expect(
+            afterRebuild.some(
+              (event) => event.name === "app" && event.action === "sync",
+            ),
+          ).toBe(true);
+          expect(
+            afterRebuild.some(
+              (event) => event.name === "app" && event.action === "built",
+            ),
+          ).toBe(false);
+        } finally {
+          fs.rmSync(srcDir, { recursive: true, force: true });
+        }
+      });
+
+      it("streams building and sync events when recompilation does not change the hash", async () => {
+        const compiler = getCompiler({ ...webpackConfig, watch: true });
+        [server, req, instance] = await frameworkFactory(
+          name,
+          framework,
+          compiler,
+          { hot: true },
+        );
+
+        await waitUntilValid(instance);
+
+        const pending = readSseEvents(server, "/__webpack_hmr", 2000);
+        // Trigger a rebuild once the client is listening.
+        setTimeout(() => instance.invalidate(), 150);
+        const events = await pending;
+        const actions = events.map((event) => event.action);
+
+        expect(actions).toContain("building");
+        expect(
+          actions.filter((action) => action === "sync").length,
+        ).toBeGreaterThanOrEqual(2);
+        expect(actions).not.toContain("built");
+      });
+
+      it("broadcasts to every connected client", async () => {
+        const compiler = getCompiler(webpackConfig);
+        [server, req, instance] = await frameworkFactory(
+          name,
+          framework,
+          compiler,
+          { hot: true },
+        );
+
+        await waitUntilValid(instance);
+
+        const [first, second] = await Promise.all([
+          readSseEvents(server, "/__webpack_hmr"),
+          readSseEvents(server, "/__webpack_hmr"),
+        ]);
+
+        expect(first.some((event) => event.action === "sync")).toBe(true);
+        expect(second.some((event) => event.action === "sync")).toBe(true);
       });
     });
   });

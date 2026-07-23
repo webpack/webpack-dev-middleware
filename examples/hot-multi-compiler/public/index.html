@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>webpack-dev-middleware — hot multi-compiler example</title>
+  </head>
+  <body>
+    <main id="root"></main>
+    <aside id="admin-root"></aside>
+    <!-- Served from memory by webpack-dev-middleware at output.publicPath.
+         Two bundles from one MultiCompiler; they share a single SSE connection. -->
+    <script src="/app.js"></script>
+    <script src="/admin.js"></script>
+  </body>
+</html>

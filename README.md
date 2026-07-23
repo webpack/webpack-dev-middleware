@@ -79,6 +79,7 @@ See [below](#other-servers) for an example of use with fastify.
 |        **[`writeToDisk`](#writetodisk)**        |        `boolean\|Function`        |                    `false`                    | Instructs the module to write files to the configured location on disk as specified in your `webpack` configuration. |
 |   **[`outputFileSystem`](#outputfilesystem)**   |             `Object`              | [`memfs`](https://github.com/streamich/memfs) | Set the default file system which will be used by webpack as primary destination of generated files.                 |
 | **[`modifyResponseData`](#modifyresponsedata)** |            `Function`             |                  `undefined`                  | Allows to set up a callback to change the response data.                                                             |
+|                **[`hot`](#hot)**                |         `boolean\|Object`         |                    `false`                    | Enables a Server-Sent Events endpoint that drives the browser HMR client.                                            |
 |       **[`forwardError`](#forwarderror)**       |             `boolean`             |                    `false`                    | Enable or disable forwarding errors to the next middleware.                                                          |
 
 The middleware accepts an `options` Object. The following is a property reference for the Object.
@@ -309,6 +310,203 @@ middleware(compiler, {
     // Your logic
     // Don't use `res.end()` or `res.send()` here
     ({ data, byteLength }),
+});
+```
+
+### hot
+
+Type: `Boolean | Object`
+Default: `false`
+
+Enables hot module replacement by serving a [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) endpoint that publishes the webpack compiler's `building`, `built` and `sync` events to connected clients. When `true`, defaults are used; pass an object to customise. Use this option together with the browser runtime shipped as `webpack-dev-middleware/client`.
+
+```js
+const webpack = require("webpack");
+
+const compiler = webpack({
+  /* Webpack configuration with HotModuleReplacementPlugin and the client entry */
+});
+
+middleware(compiler, { hot: true });
+```
+
+#### `hot.path`
+
+Type: `String`
+Default: `'/__webpack_hmr'`
+
+Path the SSE endpoint is served at. Must match the `path` option used by the client.
+
+#### `hot.heartbeat`
+
+Type: `Number`
+Default: `10000`
+
+Heartbeat interval (in milliseconds) used to keep the SSE connection alive when no compilation events are produced.
+
+#### `hot.progress`
+
+Type: `Boolean`
+Default: `undefined`
+
+Publish compilation progress events (`{ action: "progress", percent, message }`) to the clients using webpack's `ProgressPlugin`. The bundled client shows the percentage in its building badge (see the client `progress` option).
+
+#### `hot.statsOptions`
+
+Type: `Boolean | Object`
+Default: `undefined`
+
+Webpack stats options used when serializing compilation results for the SSE payload. Forwarded to `stats.toJson(...)`. By default only the minimal stats needed by the client are requested (`hash`, `timings`, `errors`, `warnings`) to avoid slowing down rebuilds.
+
+## Hot Module Replacement client
+
+When the server is configured to serve the hot module replacement endpoint, the bundled application needs a small runtime that subscribes to that stream and applies the updates. `webpack-dev-middleware` ships that runtime under the `./client` subpath. Add it as a webpack entry next to your application code and enable `HotModuleReplacementPlugin`:
+
+```js
+const webpack = require("webpack");
+
+module.exports = {
+  entry: ["webpack-dev-middleware/client", "./src/app.js"],
+  plugins: [new webpack.HotModuleReplacementPlugin()],
+};
+```
+
+The runtime connects to `/__webpack_hmr` by default. Any of the options below can be set by adding a query string to the entry path:
+
+```js
+entry: [
+  "webpack-dev-middleware/client?reload=false&overlay=false",
+  "./src/app.js",
+];
+```
+
+### Client options
+
+|        Name         |       Type        |     Default      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| :-----------------: | :---------------: | :--------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|       `path`        |     `string`      | `/__webpack_hmr` | Path the SSE endpoint is served at. Must match the server `hot.path`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+|      `timeout`      |     `number`      |     `20000`      | Reconnection / heartbeat watchdog timeout in milliseconds.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|      `overlay`      | `boolean\|Object` |      `true`      | In-page overlay for problems. Same value shape as webpack-dev-server's [`client.overlay`](https://webpack.js.org/configuration/dev-server/#overlay): a boolean, or a JSON object with `errors`, `warnings`, `runtimeErrors` (booleans or filter functions) and `trustedTypesPolicyName`. Partial objects are filled with `true`. Also accepts the webpack-dev-middleware extensions `styles` (CSS overrides for the overlay card), `ansiColors` (ANSI → HTML color map) and `openEditorEndpoint` (when set, file references become clickable and issue `GET <endpoint>?fileName=<file:line:column>`), `paginate` (show one problem at a time with prev/next navigation, enabled by default — disable with `{"paginate":false}`; the endpoint is provided by your server, e.g. a route calling [launch-editor](https://github.com/yyx990803/launch-editor)). |
+|      `reload`       |     `boolean`     |      `true`      | Fall back to a full page reload when an update cannot be applied through HMR (e.g. recovering from a broken build). Enabled by default, unlike webpack-hot-middleware; set to `false` to keep HMR-only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+|      `logging`      |     `string`      |     `"info"`     | Logger level — one of `"none"`, `"error"`, `"warn"`, `"info"`, `"log"`, `"verbose"`. Uses webpack's runtime logger.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+|       `name`        |     `string`      |       `""`       | Restrict updates to a specific compilation name (useful with multi-compiler).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+|    `autoConnect`    |     `boolean`     |      `true`      | Connect on load; set to `false` and call `setOptionsAndConnect()` manually.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+|     `progress`      |     `boolean`     |      `true`      | Show a small badge in the page while a rebuild is in progress (with the compilation percentage when the server enables `hot.progress`). Set to `false` to disable.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `dynamicPublicPath` |     `boolean`     |     `false`      | Prefix `path` with `__webpack_public_path__` at runtime. The leading slash of `path` is stripped and no other normalization is applied, so the public path should end with `/`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+
+### Programmatic API
+
+`webpack-dev-middleware/client` also exports a few functions for advanced cases:
+
+```js
+const hotClient = require("webpack-dev-middleware/client");
+
+// Receive every HMR payload (building / built / sync / custom).
+hotClient.subscribeAll((payload) => {
+  console.log("hot event", payload);
+});
+
+// Receive payloads whose `action` is not recognised by the client (i.e. custom
+// payloads published via the server's `instance.context.hot.publish(...)`).
+hotClient.subscribe((payload) => {
+  // do something
+});
+
+// Replace the default error overlay with your own implementation.
+hotClient.useCustomOverlay({
+  showProblems(type, lines) {
+    /* ... */
+  },
+  clear() {
+    /* ... */
+  },
+});
+
+// Connect manually when `autoConnect=false`. Accepts the same option keys as
+// the query-string API above.
+hotClient.setOptionsAndConnect({ path: "/__hmr" });
+
+// Close the SSE connection and stop reconnecting (e.g. before tearing the
+// page down). A later `setOptionsAndConnect` call opens a fresh connection.
+hotClient.disconnect();
+```
+
+The error overlay is also exposed as a standalone module so other tooling
+(e.g. `webpack-dev-server`) can reuse it without the SSE client:
+
+```js
+import configureOverlay, {
+  clear,
+  showProblems,
+} from "webpack-dev-middleware/client/overlay";
+
+const overlay = configureOverlay({
+  // ansiColors, overlayStyles, trustedTypesPolicyName, catchRuntimeError,
+  // openEditorEndpoint, paginate
+});
+
+overlay.showProblems("errors", ["Something broke"]);
+overlay.clear();
+```
+
+The building indicator is exposed the same way:
+
+```js
+import { hide, show } from "webpack-dev-middleware/client/indicator";
+
+show("Rebuilding…"); // pulsing dot
+show("Rebuilding… 42%", 42); // progress ring
+hide();
+```
+
+## HMR notes and troubleshooting
+
+### Browser connection limits (many tabs)
+
+Each open tab keeps one SSE connection to the `hot.path` endpoint. Over
+HTTP/1.1, browsers allow only ~6 concurrent connections per origin, so opening
+many tabs can leave the extra ones hanging (browsers have marked this
+[Won't Fix](https://developer.mozilla.org/en-US/docs/Web/API/EventSource)).
+Multiple webpack entries on the same page already share a single connection,
+and the endpoint works over HTTP/2 out of the box — serve your development
+server over HTTP/2 if you need many simultaneous tabs.
+
+### Filtering warnings
+
+Three layers, from build to presentation:
+
+- webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings) removes them from the stats, so clients never receive them.
+- `hot: { statsOptions: { warnings: false } }` keeps them in the build output but out of the SSE payload.
+- On the client, `?overlay={"warnings":false}` hides them from the overlay and `?logging=error` from the console.
+
+### Paths and public paths
+
+- The client `path` option accepts absolute URLs (the endpoint sends
+  `Access-Control-Allow-Origin: *`), which allows connecting across ports or
+  hosts. Pages served over HTTPS need the endpoint over HTTPS too.
+- For apps with nested routes (`/some/route`), use an absolute
+  `output.publicPath` (e.g. `"/"`): with a relative one the browser resolves
+  `*.hot-update.json` requests against the current route and they 404.
+
+### Custom events
+
+The server can broadcast arbitrary payloads and the client can react to them —
+for example, forcing every open tab to reload on demand:
+
+```js
+// Server
+const instance = middleware(compiler, { hot: true });
+instance.context.hot.publish({ action: "reload-all" });
+```
+
+```js
+// Client
+const hotClient = require("webpack-dev-middleware/client");
+
+hotClient.subscribe((payload) => {
+  if (payload.action === "reload-all") {
+    globalThis.location.reload();
+  }
 });
 ```
 
