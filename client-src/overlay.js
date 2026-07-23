@@ -1,5 +1,7 @@
 import ansiHTML from "ansi-html-community";
 
+import theme from "./theme.js";
+
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_ANY */
 
@@ -51,16 +53,15 @@ const backdropStyles = {
   height: "100vh",
   border: "none",
   zIndex: 9999,
-  // webpack "Outer Space" (#2B3A42), translucent.
-  background: "rgba(43,58,66,0.72)",
+  background: theme.backdrop,
 };
 
 /** @type {Record<string, string | number>} */
 const styles = {
   // Dark panel; the top accent bar color is set per problem type in showProblems.
   position: "relative",
-  background: "#101619",
-  color: "#f2f2f2",
+  background: theme.panel,
+  color: theme.text,
   lineHeight: "1.6",
   whiteSpace: "pre-wrap",
   fontFamily: "Menlo, Consolas, 'Courier New', monospace",
@@ -99,7 +100,7 @@ const closeButtonStyles = {
   right: "12px",
   border: "none",
   background: "transparent",
-  color: "#999999",
+  color: theme.muted,
   fontSize: "22px",
   lineHeight: "1",
   cursor: "pointer",
@@ -247,7 +248,7 @@ function highlightFilePath(html) {
     (match, filePath, location) => {
       if (!location) {
         return (
-          '<span style="color:#8dd6f9; text-decoration:underline; ' +
+          `<span style="color:${theme.accent}; text-decoration:underline; ` +
           `text-underline-offset:2px;">${match}</span>`
         );
       }
@@ -256,7 +257,7 @@ function highlightFilePath(html) {
         const position = location.trim().replace(/^:/, "");
 
         return (
-          '<span style="color:#8dd6f9; cursor:pointer; ' +
+          `<span style="color:${theme.accent}; cursor:pointer; ` +
           'text-decoration:underline; text-underline-offset:2px;" ' +
           `data-open-file="${filePath}:${position}" ` +
           'title="Click to open in your editor">' +
@@ -264,7 +265,7 @@ function highlightFilePath(html) {
         );
       }
 
-      return `<span style="color:#8dd6f9;">${filePath}</span>${location}\n`;
+      return `<span style="color:${theme.accent};">${filePath}</span>${location}\n`;
     },
   );
 }
@@ -282,7 +283,7 @@ function linkify(html) {
     const href = url.slice(0, url.length - cut.length);
     return (
       `<a href="${href}" target="_blank" rel="noopener noreferrer" ` +
-      `style="color:#8dd6f9;">${href}</a>${cut}`
+      `style="color:${theme.accent};">${href}</a>${cut}`
     );
   });
 }
@@ -302,6 +303,10 @@ document.addEventListener("keydown", (event) => {
 function ensureOverlay() {
   if (overlayFrame && overlayCard && overlayFrame.parentNode) {
     return overlayCard;
+  }
+
+  if (!document.body) {
+    return null;
   }
 
   // Enable Trusted Types if they are available in the current browser.
@@ -570,7 +575,7 @@ function renderProblems() {
     marginTop: "4px",
     paddingTop: "16px",
     borderTop: "1px solid #465e69",
-    color: "#999999",
+    color: theme.muted,
     fontSize: "13px",
   });
   hint.textContent = paginated

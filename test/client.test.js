@@ -84,6 +84,11 @@ function loadClient(resourceQuery = "") {
 
 describe("client", () => {
   afterEach(() => {
+    for (const el of document.querySelectorAll(
+      "#webpack-dev-middleware-building-indicator",
+    )) {
+      el.remove();
+    }
     delete globalThis.__resourceQuery;
     delete globalThis.EventSource;
     delete globalThis.__wdmEventSourceWrapper;
@@ -737,6 +742,79 @@ describe("client", () => {
       expect(EventSourceStub.lastInstance().url).toBe(
         "https://localhost:3000/assets/__webpack_hmr",
       );
+    });
+  });
+
+  describe("with progress option", () => {
+    const INDICATOR_ID = "webpack-dev-middleware-building-indicator";
+    let EventSourceStub;
+
+    beforeEach(() => {
+      EventSourceStub = makeEventSourceStub();
+      globalThis.EventSource = EventSourceStub;
+      jest.spyOn(console, "info").mockImplementation(() => {});
+      jest.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("shows the badge while building and hides it when built", () => {
+      loadClient();
+      const es = EventSourceStub.lastInstance();
+
+      es.onmessage(makeMessage({ action: "building", file: "/src/a.js" }));
+
+      const host = document.getElementById(INDICATOR_ID);
+
+      expect(host).not.toBeNull();
+      expect(host.shadowRoot.textContent).toContain("Rebuilding");
+      expect(host.shadowRoot.textContent).toContain("/src/a.js");
+
+      es.onmessage(
+        makeMessage({
+          action: "built",
+          time: 1,
+          hash: "h",
+          errors: [],
+          warnings: [],
+        }),
+      );
+
+      expect(document.getElementById(INDICATOR_ID)).toBeNull();
+    });
+
+    it("updates the badge with progress events", () => {
+      loadClient();
+      const es = EventSourceStub.lastInstance();
+
+      es.onmessage(makeMessage({ action: "building" }));
+      es.onmessage(
+        makeMessage({ action: "progress", percent: 42, message: "building" }),
+      );
+
+      const host = document.getElementById(INDICATOR_ID);
+
+      expect(host.shadowRoot.textContent).toContain("42%");
+
+      // The progress ring replaces the pulsing dot and reflects the percent.
+      const [, ringValue] = host.shadowRoot.querySelectorAll("circle");
+      const length = 2 * Math.PI * 6;
+
+      expect(Number(ringValue.getAttribute("stroke-dashoffset"))).toBeCloseTo(
+        length * (1 - 42 / 100),
+        3,
+      );
+    });
+
+    it("does not show the badge when progress is disabled", () => {
+      loadClient("?progress=false");
+      EventSourceStub.lastInstance().onmessage(
+        makeMessage({ action: "building" }),
+      );
+
+      expect(document.getElementById(INDICATOR_ID)).toBeNull();
     });
   });
 
