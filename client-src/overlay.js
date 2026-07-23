@@ -134,6 +134,13 @@ let runtimeListenersAttached = false;
 /** @type {boolean | ((error: Error) => boolean)} */
 let catchRuntimeError = false;
 
+// Pagination (wdm extension, enabled by default): the card shows one problem
+// at a time with prev/next navigation.
+let paginate = true;
+let pageIndex = 0;
+/** @type {{ type: "errors" | "warnings", lines: string[] } | null} */
+let currentProblems = null;
+
 // When set, the file chips in error messages become clickable and issue
 // `GET <endpoint>?fileName=<file:line:column>`. The endpoint itself is
 // provided by the server integration (e.g. a route that calls launch-editor,
@@ -325,19 +332,29 @@ function ensureOverlay() {
 
   applyStyle(frameDocument.body, bodyStyles);
 
-  // Dismiss the overlay when pressing Escape while the frame has focus.
+  // Dismiss the overlay when pressing Escape while the frame has focus;
+  // navigate between problems with the arrow keys when paginating.
   frameDocument.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       clear();
+    } else if (paginate && event.key === "ArrowLeft") {
+      goToPage(pageIndex - 1);
+    } else if (paginate && event.key === "ArrowRight") {
+      goToPage(pageIndex + 1);
     }
   });
 
   // Dismiss the overlay when clicking the backdrop (but not the card itself).
   frameDocument.addEventListener("click", (event) => {
-    if (
-      overlayCard &&
-      !overlayCard.contains(/** @type {EXPECTED_ANY} */ (event.target))
-    ) {
+    const target = /** @type {EXPECTED_ANY} */ (event.target);
+
+    // Elements re-rendered away mid-dispatch (e.g. the pagination buttons)
+    // are no longer inside the card — do not treat them as backdrop clicks.
+    if (target && target.isConnected === false) {
+      return;
+    }
+
+    if (overlayCard && !overlayCard.contains(target)) {
       clear();
     }
   });
@@ -373,6 +390,47 @@ function ensureOverlay() {
  * @param {string[]} lines messages to render
  */
 export function showProblems(type, lines) {
+  // Re-publishing an identical set (e.g. another bundle of a multi-compiler
+  // synced) must not reset the page the user is reading.
+  const unchanged =
+    currentProblems !== null &&
+    overlayFrame !== null &&
+    currentProblems.type === type &&
+    currentProblems.lines.length === lines.length &&
+    currentProblems.lines.every((line, index) => line === lines[index]);
+
+  currentProblems = { type, lines };
+
+  if (unchanged) {
+    return;
+  }
+
+  // Each new problem set starts at its first page.
+  pageIndex = 0;
+  renderProblems();
+}
+
+/**
+ * Clamp the page index and re-render.
+ * @param {number} index requested page index
+ */
+function goToPage(index) {
+  if (!currentProblems) {
+    return;
+  }
+
+  pageIndex = Math.min(currentProblems.lines.length - 1, Math.max(0, index));
+  renderProblems();
+}
+
+/**
+ * Render the current problem set into the card.
+ */
+function renderProblems() {
+  if (!currentProblems) {
+    return;
+  }
+
   const card = ensureOverlay();
 
   if (!card) {
@@ -382,6 +440,8 @@ export function showProblems(type, lines) {
   const frameDocument = /** @type {Document} */ (
     /** @type {HTMLIFrameElement} */ (overlayFrame).contentDocument
   );
+  const { type, lines } = currentProblems;
+  const paginated = paginate && lines.length > 1;
 
   // Accent the top bar with the problem color (red for errors, yellow for warnings).
   card.style.borderTopColor = `#${problemColor(type)}`;
@@ -398,13 +458,109 @@ export function showProblems(type, lines) {
   });
   card.append(closeButton);
 
-  for (const line of lines) {
+  const visible = paginated ? [lines[pageIndex]] : lines;
+
+  if (paginated) {
+    // Header row: badge and the problem's first line (usually the file
+    // reference) on the left, page navigation on the right (leaving room for
+    // the absolute-positioned close button).
+    const header = frameDocument.createElement("div");
+    applyStyle(header, {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "12px",
+      marginBottom: "16px",
+      paddingRight: "28px",
+    });
+
+    const line = /** @type {string} */ (visible[0]);
+    const newlineIndex = line.indexOf("\n");
+    const title = newlineIndex === -1 ? line : line.slice(0, newlineIndex);
+
+    const badge = frameDocument.createElement("span");
+    applyStyle(badge, {
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    });
+    setHTML(
+      badge,
+      `${problemType(type)} in ${linkify(
+        highlightFilePath(ansiHTML(encodeHtmlEntity(title))),
+      )}`,
+    );
+    normalizeInlineStyles(badge);
+
+    const nav = frameDocument.createElement("div");
+    applyStyle(nav, {
+      display: "flex",
+      alignItems: "center",
+      gap: "12px",
+      fontSize: "13px",
+      color: "#999999",
+    });
+
+    /**
+     * @param {string} text button text
+     * @param {number} delta page delta
+     * @param {string} ariaLabel accessible label
+     * @returns {HTMLButtonElement} nav button
+     */
+    const makeNavButton = (text, delta, ariaLabel) => {
+      const button = frameDocument.createElement("button");
+      button.type = "button";
+      button.textContent = text;
+      button.setAttribute("aria-label", ariaLabel);
+      applyStyle(button, {
+        border: "none",
+        background: "transparent",
+        // Follow the problem color (red for errors, yellow for warnings).
+        color: `#${problemColor(type)}`,
+        cursor: "pointer",
+        fontSize: "16px",
+        lineHeight: "1",
+        padding: "0",
+      });
+      button.addEventListener("click", () => {
+        goToPage(pageIndex + delta);
+      });
+      return button;
+    };
+
+    const counter = frameDocument.createElement("span");
+    counter.textContent = `${pageIndex + 1} / ${lines.length}`;
+    applyStyle(counter, { color: "#f2f2f2" });
+
+    nav.append(
+      makeNavButton("‹", -1, "Previous problem"),
+      counter,
+      makeNavButton("›", 1, "Next problem"),
+    );
+    header.append(badge, nav);
+    card.append(header);
+  }
+
+  for (const line of visible) {
+    // When paginating, the first line (badge + file reference) already lives
+    // in the header; render only the remainder.
+    const newlineIndex = line.indexOf("\n");
+    const body = paginated
+      ? newlineIndex === -1
+        ? ""
+        : line.slice(newlineIndex + 1)
+      : line;
+
+    if (paginated && !body) {
+      continue;
+    }
+
     const msg = linkify(
-      highlightFilePath(highlightCodeFrame(ansiHTML(encodeHtmlEntity(line)))),
+      highlightFilePath(highlightCodeFrame(ansiHTML(encodeHtmlEntity(body)))),
     );
     const div = frameDocument.createElement("div");
     div.style.marginBottom = "20px";
-    setHTML(div, `${problemType(type)} in ${msg}`);
+    setHTML(div, paginated ? msg : `${problemType(type)} in ${msg}`);
     normalizeInlineStyles(div);
     card.append(div);
   }
@@ -417,7 +573,9 @@ export function showProblems(type, lines) {
     color: "#999999",
     fontSize: "13px",
   });
-  hint.textContent = "Click outside, press Esc, or fix the code to dismiss.";
+  hint.textContent = paginated
+    ? "Use ‹ › or the arrow keys to navigate. Click outside, press Esc, or fix the code to dismiss."
+    : "Click outside, press Esc, or fix the code to dismiss.";
   card.append(hint);
 }
 
@@ -432,6 +590,8 @@ export function clear() {
   overlayFrame = null;
   overlayCard = null;
   runtimeMessages = [];
+  currentProblems = null;
+  pageIndex = 0;
 }
 
 /**
@@ -468,6 +628,8 @@ function handleRuntimeError(error, fallbackMessage) {
     `Uncaught runtime error: ${errorObject.message}${stack}`,
   );
   showProblems("errors", runtimeMessages);
+  // When paginating, land on the newest runtime error.
+  goToPage(runtimeMessages.length - 1);
 }
 
 /**
@@ -494,7 +656,7 @@ function attachRuntimeErrorListeners() {
 }
 
 /**
- * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number>, trustedTypesPolicyName?: string, catchRuntimeError?: boolean | ((error: Error) => boolean), openEditorEndpoint?: string }} options options
+ * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number>, trustedTypesPolicyName?: string, catchRuntimeError?: boolean | ((error: Error) => boolean), openEditorEndpoint?: string, paginate?: boolean }} options options
  * @returns {{ showProblems: typeof showProblems, clear: typeof clear }} overlay api
  */
 export default function configureOverlay(options) {
@@ -504,6 +666,10 @@ export default function configureOverlay(options) {
 
   if (options.openEditorEndpoint !== undefined) {
     openEditorEndpoint = options.openEditorEndpoint;
+  }
+
+  if (options.paginate !== undefined) {
+    paginate = Boolean(options.paginate);
   }
 
   if (options.catchRuntimeError !== undefined) {
