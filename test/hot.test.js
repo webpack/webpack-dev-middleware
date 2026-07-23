@@ -455,6 +455,30 @@ describe("createHot", () => {
     hot.close();
   });
 
+  it("responds 404 instead of hanging when a client connects after close()", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+
+    hot.close();
+
+    /** @type {number | undefined} */
+    let statusCode;
+    let ended = false;
+    const res = {
+      writeHead: (code) => {
+        statusCode = code;
+      },
+      end: () => {
+        ended = true;
+      },
+    };
+
+    hot.handle({}, res);
+
+    expect(statusCode).toBe(404);
+    expect(ended).toBe(true);
+  });
+
   it("does not re-send the catch-up sync to already connected clients", () => {
     const compiler = makeFakeCompiler();
     const hot = createHot(compiler, {});
