@@ -455,6 +455,52 @@ describe("createHot", () => {
     hot.close();
   });
 
+  it("does not re-send the catch-up sync to already connected clients", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    const { writes: firstWrites } = attachClient({ handler: hot.handle });
+
+    compiler.emitDone(makeFakeStats());
+    firstWrites.length = 0;
+
+    const { writes: secondWrites } = attachClient({ handler: hot.handle });
+
+    expect(secondWrites.some((w) => w.includes('"action":"sync"'))).toBe(true);
+    expect(firstWrites.some((w) => w.includes('"action":"sync"'))).toBe(false);
+
+    hot.close();
+  });
+
+  it("pairs bundles by name when the compilation order changes", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    compiler.emitDone({
+      stats: [
+        makeFakeStats({ name: "app", hash: "app-1" }),
+        makeFakeStats({ name: "admin", hash: "admin-1" }),
+      ],
+    });
+    writes.length = 0;
+
+    // Same hashes, different order — nothing actually changed.
+    compiler.emitInvalid();
+    compiler.emitDone({
+      stats: [
+        makeFakeStats({ name: "admin", hash: "admin-1" }),
+        makeFakeStats({ name: "app", hash: "app-1" }),
+      ],
+    });
+
+    expect(writes.some((w) => w.includes('"action":"built"'))).toBe(false);
+    expect(
+      writes.filter((w) => w.includes('"action":"sync"')).length,
+    ).toBeGreaterThanOrEqual(2);
+
+    hot.close();
+  });
+
   it("falls back to compilation.name when stats name is empty", () => {
     const compiler = makeFakeCompiler();
     const hot = createHot(compiler, {});
