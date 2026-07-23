@@ -676,6 +676,13 @@ function renderProblems() {
  */
 export function clear(source) {
   if (source !== undefined) {
+    // The reporter clears its slots on every clean build — when the source
+    // never reported anything there is nothing to drop, and re-rendering
+    // would needlessly rebuild the card another client is showing.
+    if (!Object.prototype.hasOwnProperty.call(state.problemsBySource, source)) {
+      return;
+    }
+
     delete state.problemsBySource[source];
 
     const union = computeProblemsUnion();

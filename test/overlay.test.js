@@ -522,6 +522,19 @@ describe("overlay", () => {
       expect(getCard().style.borderTopColor).toBe("rgb(255, 211, 14)");
     });
 
+    it("does not re-render when clearing a source that reported nothing", () => {
+      showProblems("errors", ["a", "b"], "x");
+
+      const cardChild = getCard().firstElementChild;
+
+      // What the reporter does on every clean build of its own bundle.
+      clear("never-reported");
+
+      // Same DOM nodes — the card another client is showing was not rebuilt.
+      expect(getCard().firstElementChild).toBe(cardChild);
+      expect(getOverlay()).not.toBeNull();
+    });
+
     it("fills state fields missing from an older copy's shape", () => {
       const OVERLAY_STATE_KEY = "__webpack_dev_middleware_hot_overlay_state__";
 
