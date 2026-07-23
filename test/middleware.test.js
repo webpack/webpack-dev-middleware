@@ -7010,6 +7010,29 @@ describe.each([
       );
     });
 
+    it("does not hang hot requests made after instance.close()", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: true },
+      );
+
+      await waitUntilValid(instance);
+      await new Promise((resolve) => {
+        instance.close(resolve);
+      });
+
+      // The SSE intercept is detached, so the request must get a regular
+      // (non-stream) response instead of hanging forever.
+      const response = await req.get("/__webpack_hmr");
+
+      expect(response.headers["content-type"] || "").not.toMatch(
+        /text\/event-stream/,
+      );
+    });
+
     it("does not intercept the default hot path when hot is disabled", async () => {
       const compiler = getCompiler(webpackConfig);
       [server, req, instance] = await frameworkFactory(

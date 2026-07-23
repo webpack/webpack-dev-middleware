@@ -358,7 +358,14 @@ function createHot(compiler, userOptions) {
   return {
     path,
     handle(req, res) {
-      if (closed) return;
+      // A request can race `close()` past the middleware intercept — end it
+      // instead of leaving it hanging without a response.
+      if (closed) {
+        res.writeHead(404);
+        res.end();
+
+        return;
+      }
 
       eventStream.handler(req, res);
 

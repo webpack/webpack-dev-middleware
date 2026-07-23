@@ -616,6 +616,9 @@ function wdm(compiler, options = {}, isPlugin = false) {
   instance.close = (callback = noop) => {
     if (filledContext.hot) {
       filledContext.hot.close();
+      // Also detach the SSE intercept so later requests fall through to the
+      // regular middleware instead of reaching the closed hot instance.
+      filledContext.hot = undefined;
     }
     filledContext.watching.close(callback);
   };
