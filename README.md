@@ -387,7 +387,7 @@ entry: [
 |       `path`        |     `string`      | `/__webpack_hmr` | Path the SSE endpoint is served at. Must match the server `hot.path`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 |      `timeout`      |     `number`      |     `20000`      | Reconnection / heartbeat watchdog timeout in milliseconds.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 |      `overlay`      | `boolean\|Object` |      `true`      | In-page overlay for problems. Same value shape as webpack-dev-server's [`client.overlay`](https://webpack.js.org/configuration/dev-server/#overlay): a boolean, or a JSON object with `errors`, `warnings`, `runtimeErrors` (booleans or filter functions) and `trustedTypesPolicyName`. Partial objects are filled with `true`. Also accepts the webpack-dev-middleware extensions `styles` (CSS overrides for the overlay card), `ansiColors` (ANSI → HTML color map) and `openEditorEndpoint` (when set, file references become clickable and issue `GET <endpoint>?fileName=<file:line:column>`), `paginate` (show one problem at a time with prev/next navigation, enabled by default — disable with `{"paginate":false}`; the endpoint is provided by your server, e.g. a route calling [launch-editor](https://github.com/yyx990803/launch-editor)). |
-|      `reload`       |     `boolean`     |      `true`      | Fall back to a full page reload when an update cannot be applied through HMR (e.g. recovering from a broken build). Set to `false` to keep HMR-only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+|      `reload`       |     `boolean`     |      `true`      | Fall back to a full page reload when an update cannot be applied through HMR (e.g. recovering from a broken build). Enabled by default, unlike webpack-hot-middleware; set to `false` to keep HMR-only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 |      `logging`      |     `string`      |     `"info"`     | Logger level — one of `"none"`, `"error"`, `"warn"`, `"info"`, `"log"`, `"verbose"`. Uses webpack's runtime logger.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 |       `name`        |     `string`      |       `""`       | Restrict updates to a specific compilation name (useful with multi-compiler).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 |    `autoConnect`    |     `boolean`     |      `true`      | Connect on load; set to `false` and call `setOptionsAndConnect()` manually.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
@@ -457,6 +457,57 @@ import { hide, show } from "webpack-dev-middleware/client/indicator";
 show("Rebuilding…"); // pulsing dot
 show("Rebuilding… 42%", 42); // progress ring
 hide();
+```
+
+## HMR notes and troubleshooting
+
+### Browser connection limits (many tabs)
+
+Each open tab keeps one SSE connection to the `hot.path` endpoint. Over
+HTTP/1.1, browsers allow only ~6 concurrent connections per origin, so opening
+many tabs can leave the extra ones hanging (browsers have marked this
+[Won't Fix](https://developer.mozilla.org/en-US/docs/Web/API/EventSource)).
+Multiple webpack entries on the same page already share a single connection,
+and the endpoint works over HTTP/2 out of the box — serve your development
+server over HTTP/2 if you need many simultaneous tabs.
+
+### Filtering warnings
+
+Three layers, from build to presentation:
+
+- webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings) removes them from the stats, so clients never receive them.
+- `hot: { statsOptions: { warnings: false } }` keeps them in the build output but out of the SSE payload.
+- On the client, `?overlay={"warnings":false}` hides them from the overlay and `?logging=error` from the console.
+
+### Paths and public paths
+
+- The client `path` option accepts absolute URLs (the endpoint sends
+  `Access-Control-Allow-Origin: *`), which allows connecting across ports or
+  hosts. Pages served over HTTPS need the endpoint over HTTPS too.
+- For apps with nested routes (`/some/route`), use an absolute
+  `output.publicPath` (e.g. `"/"`): with a relative one the browser resolves
+  `*.hot-update.json` requests against the current route and they 404.
+
+### Custom events
+
+The server can broadcast arbitrary payloads and the client can react to them —
+for example, forcing every open tab to reload on demand:
+
+```js
+// Server
+const instance = middleware(compiler, { hot: true });
+instance.context.hot.publish({ action: "reload-all" });
+```
+
+```js
+// Client
+const hotClient = require("webpack-dev-middleware/client");
+
+hotClient.subscribe((payload) => {
+  if (payload.action === "reload-all") {
+    globalThis.location.reload();
+  }
+});
 ```
 
 ## API
