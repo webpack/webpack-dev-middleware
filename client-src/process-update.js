@@ -57,9 +57,9 @@ function upToDate(hash) {
  * @param {{ reload?: boolean }} options client options
  */
 export default function applyUpdate(hash, options) {
-  const maybeHot = getHot();
+  const hot = getHot();
 
-  if (!maybeHot) {
+  if (!hot) {
     // Logged (once) instead of thrown: this runs inside the SSE message
     // handler, whose catch would mislabel a throw as an invalid message.
     if (!loggedRuntimeMissing) {
@@ -72,7 +72,6 @@ export default function applyUpdate(hash, options) {
     return;
   }
 
-  const hot = maybeHot;
   const { reload } = options;
 
   reloadOnErrored = Boolean(reload);
