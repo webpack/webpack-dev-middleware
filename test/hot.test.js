@@ -37,7 +37,7 @@ function makeFakeCompiler(logger = noopLogger) {
 }
 
 /**
- * Build a minimal Stats-like object that satisfies `publishStats`.
+ * Build a minimal Stats-like object that satisfies `toBundles`.
  * @param {EXPECTED_OBJECT=} overrides field overrides applied on top of the defaults
  * @returns {EXPECTED_OBJECT} fake stats
  */
@@ -343,6 +343,100 @@ describe("createHot", () => {
     const building = writes.find((w) => w.includes('"action":"building"'));
     expect(building).toBeDefined();
     expect(building).not.toContain('"file"');
+
+    hot.close();
+  });
+
+  it("publishes sync instead of built when a bundle's hash did not change", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    compiler.emitDone(makeFakeStats({ hash: "same" }));
+    writes.length = 0;
+
+    // A rebuild that produced the same hash (e.g. another bundle of a
+    // multi-compiler changed) must not be announced as `built`.
+    compiler.emitInvalid();
+    compiler.emitDone(makeFakeStats({ hash: "same" }));
+
+    expect(writes.some((w) => w.includes('"action":"sync"'))).toBe(true);
+    expect(writes.some((w) => w.includes('"action":"built"'))).toBe(false);
+
+    hot.close();
+  });
+
+  it("publishes built when the bundle's hash changed", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    compiler.emitDone(makeFakeStats({ hash: "one" }));
+    writes.length = 0;
+
+    compiler.emitInvalid();
+    compiler.emitDone(makeFakeStats({ hash: "two" }));
+
+    expect(
+      writes.some(
+        (w) => w.includes('"action":"built"') && w.includes('"hash":"two"'),
+      ),
+    ).toBe(true);
+
+    hot.close();
+  });
+
+  it("publishes built only for the changed bundles of a multi-compiler", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    compiler.emitDone({
+      stats: [
+        makeFakeStats({ name: "app", hash: "app-1" }),
+        makeFakeStats({ name: "admin", hash: "admin-1" }),
+      ],
+    });
+    writes.length = 0;
+
+    // Only "admin" rebuilt.
+    compiler.emitInvalid();
+    compiler.emitDone({
+      stats: [
+        makeFakeStats({ name: "app", hash: "app-1" }),
+        makeFakeStats({ name: "admin", hash: "admin-2" }),
+      ],
+    });
+
+    expect(
+      writes.some(
+        (w) => w.includes('"name":"app"') && w.includes('"action":"sync"'),
+      ),
+    ).toBe(true);
+    expect(
+      writes.some(
+        (w) => w.includes('"name":"admin"') && w.includes('"action":"built"'),
+      ),
+    ).toBe(true);
+    expect(
+      writes.some(
+        (w) => w.includes('"name":"app"') && w.includes('"action":"built"'),
+      ),
+    ).toBe(false);
+
+    hot.close();
+  });
+
+  it("does not sync new clients while a rebuild is in progress", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+
+    compiler.emitDone(makeFakeStats());
+    compiler.emitInvalid();
+
+    const { writes } = attachClient({ handler: hot.handle });
+
+    expect(writes.some((w) => w.includes('"action":"sync"'))).toBe(false);
 
     hot.close();
   });
