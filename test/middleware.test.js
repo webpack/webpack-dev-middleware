@@ -7097,7 +7097,10 @@ describe.each([
 
       it("publishes built only for the changed bundle of a MultiCompiler", async () => {
         // Real watch scenario: two compilers, only one source file changes.
-        const srcDir = fs.mkdtempSync(path.join(os.tmpdir(), "wdm-hot-multi-"));
+
+        const srcDir = fs.mkdtempSync(
+          path.join(fs.realpathSync.native(os.tmpdir()), "wdm-hot-multi-"),
+        );
         const appEntry = path.join(srcDir, "app.js");
         const adminEntry = path.join(srcDir, "admin.js");
 
