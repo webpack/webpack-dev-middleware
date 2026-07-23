@@ -35,6 +35,7 @@
  * @typedef {object} EventStream
  * @property {(req: IncomingMessage, res: ServerResponse) => void} handler attach a new client
  * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
+ * @property {(res: ServerResponse, payload: Payload | { action: string }) => void} publishTo publish a payload to a single client
  * @property {() => void} close end every client and stop the heartbeat
  */
 
@@ -138,6 +139,9 @@ function createEventStream(heartbeat, logger) {
         client.write(`data: ${JSON.stringify(payload)}\n\n`);
       });
     },
+    publishTo(res, payload) {
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    },
   };
 }
 
@@ -220,6 +224,22 @@ function toBundles(statsResult, statsOptions) {
 }
 
 /**
+ * @param {StatsCompilation} stats normalized per-bundle stats
+ * @param {"built" | "sync"} action action
+ * @returns {Payload} SSE payload
+ */
+function bundlePayload(stats, action) {
+  return {
+    name: stats.name || "",
+    action,
+    time: stats.time,
+    hash: stats.hash,
+    warnings: formatErrors(stats.warnings || []),
+    errors: formatErrors(stats.errors || []),
+  };
+}
+
+/**
  * Publish one event per bundle. Bundles whose hash did not change are
  * published as `sync`, so their clients do not fetch a hot-update manifest
  * that was never emitted.
@@ -231,19 +251,23 @@ function publishBundles(bundles, previousBundles, eventStream) {
   for (const [index, stats] of bundles.entries()) {
     const name = stats.name || "";
 
+    // Paired by name so a changing set of compilations (children appearing,
+    // config reloads) cannot compare a bundle against a sibling's hash;
+    // unnamed bundles fall back to their position.
+    let previous = null;
+
+    if (previousBundles !== null) {
+      previous = name
+        ? previousBundles.find((bundle) => (bundle.name || "") === name) || null
+        : previousBundles[index] || null;
+    }
+
     const changed =
       previousBundles === null ||
-      !previousBundles[index] ||
-      previousBundles[index].hash !== stats.hash;
+      previous === null ||
+      previous.hash !== stats.hash;
 
-    eventStream.publish({
-      name,
-      action: changed ? "built" : "sync",
-      time: stats.time,
-      hash: stats.hash,
-      warnings: formatErrors(stats.warnings || []),
-      errors: formatErrors(stats.errors || []),
-    });
+    eventStream.publish(bundlePayload(stats, changed ? "built" : "sync"));
   }
 }
 
@@ -338,9 +362,11 @@ function createHot(compiler, userOptions) {
 
       eventStream.handler(req, res);
 
-      // Catch the new client up; self-comparison publishes everything as `sync`.
+      // Catch only the new client up, as `sync` events with the last hashes.
       if (valid && latestBundles) {
-        publishBundles(latestBundles, latestBundles, eventStream);
+        for (const stats of latestBundles) {
+          eventStream.publishTo(res, bundlePayload(stats, "sync"));
+        }
       }
     },
     publish(payload) {

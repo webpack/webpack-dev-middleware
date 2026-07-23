@@ -147,6 +147,7 @@ describe("client", () => {
       expect(processUpdate).toHaveBeenCalledWith(
         "1234567890abcdef",
         expect.objectContaining({ reload: true }),
+        undefined,
       );
     });
 
@@ -429,6 +430,80 @@ describe("client", () => {
       expect(clientOverlay.clear).toHaveBeenCalledTimes(1);
     });
 
+    it("re-logs the same error text after the bundle's own successful build", () => {
+      const es = EventSourceStub.lastInstance();
+      const brokenPayload = {
+        action: "built",
+        name: "app",
+        time: 100,
+        hash: "app-hash",
+        errors: ["app broke"],
+        warnings: [],
+      };
+      es.onmessage(makeMessage(brokenPayload));
+
+      const appLogs = () =>
+        console.error.mock.calls.filter((call) =>
+          call.join(" ").includes("app broke"),
+        ).length;
+      const before = appLogs();
+
+      expect(before).toBeGreaterThan(0);
+
+      // The bundle's own success drops its console cache…
+      es.onmessage(
+        makeMessage({
+          action: "built",
+          name: "app",
+          time: 100,
+          hash: "app-hash-2",
+          errors: [],
+          warnings: [],
+        }),
+      );
+      // …so breaking again with the exact same text logs again.
+      es.onmessage(makeMessage({ ...brokenPayload, hash: "app-hash-3" }));
+
+      expect(appLogs()).toBe(before * 2);
+    });
+
+    it("does not re-log a bundle's unchanged errors when a sibling succeeds", () => {
+      const es = EventSourceStub.lastInstance();
+      const appPayload = {
+        action: "sync",
+        name: "app",
+        time: 100,
+        hash: "app-hash",
+        errors: ["app broke"],
+        warnings: [],
+      };
+      es.onmessage(makeMessage(appPayload));
+
+      const appLogs = () =>
+        console.error.mock.calls.filter((call) =>
+          call.join(" ").includes("app broke"),
+        ).length;
+      const before = appLogs();
+
+      expect(before).toBeGreaterThan(0);
+
+      // A clean sibling build clears only its own console cache, so
+      // re-publishing app's identical errors stays de-duplicated.
+      es.onmessage(
+        makeMessage({
+          action: "built",
+          name: "admin",
+          time: 100,
+          hash: "admin-hash",
+          errors: [],
+          warnings: [],
+        }),
+      );
+      es.onmessage(makeMessage(appPayload));
+
+      expect(appLogs()).toBe(before);
+    });
+
     it("shows the union of problems from every broken bundle", () => {
       const es = EventSourceStub.lastInstance();
       es.onmessage(
@@ -683,6 +758,7 @@ describe("client", () => {
       expect(processUpdate).toHaveBeenCalledWith(
         "1234567890abcdef",
         expect.objectContaining({ reload: false }),
+        undefined,
       );
     });
   });

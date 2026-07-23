@@ -8,6 +8,10 @@ const HMR_DOCS_URL = "https://webpack.js.org/concepts/hot-module-replacement/";
 
 /** @type {string | undefined} */
 let lastHash;
+// Name of the compilation this runtime belongs to, locked on the first event
+// whose hash matches `__webpack_hash__` (e.g. the `sync` sent on connect).
+/** @type {string | undefined} */
+let ownName;
 /** @type {Record<string, number>} */
 const failureStatuses = { abort: 1, fail: 1 };
 // Set per applyUpdate() call from the client's `reload` option.
@@ -55,8 +59,21 @@ function upToDate(hash) {
 /**
  * @param {string} hash latest hash from the SSE payload
  * @param {{ reload?: boolean }} options client options
+ * @param {string=} name compilation name the payload belongs to
  */
-export default function applyUpdate(hash, options) {
+export default function applyUpdate(hash, options, name) {
+  // MultiCompiler: a sibling bundle's hash would poison `lastHash` and end
+  // in "Cannot find update" plus a spurious full reload.
+  if (name) {
+    if (ownName === undefined && hash === __webpack_hash__) {
+      ownName = name;
+    }
+
+    if (ownName !== undefined && name !== ownName) {
+      return;
+    }
+  }
+
   const hot = getHot();
 
   if (!hot) {
@@ -150,6 +167,12 @@ export default function applyUpdate(hash, options) {
       .check(false)
       .then((updatedModules) => {
         if (!updatedModules) {
+          // A sibling bundle's event that raced the connect-time lock — the
+          // missing manifest is expected, not a reason to reload.
+          if (name && ownName !== undefined && name !== ownName) {
+            return undefined;
+          }
+
           log.warn("Cannot find update (Full reload needed)");
           log.warn("(Probably because of restarting the server)");
           performReload();

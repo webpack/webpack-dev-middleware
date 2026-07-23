@@ -97,6 +97,55 @@ describe("process-update", () => {
     expect(reloadPage).not.toHaveBeenCalled();
   });
 
+  describe("multi-compiler bundles", () => {
+    it("ignores events from sibling bundles once the own compilation is identified", async () => {
+      // The `sync` sent on connect carries the bundle's own hash and locks the name.
+      applyUpdate("current-hash", { reload: true }, "app");
+
+      const hot = getHot();
+
+      expect(hot.check).not.toHaveBeenCalled();
+
+      // A sibling bundle rebuilds with a hash this runtime can never match.
+      applyUpdate("admin-hash", { reload: true }, "admin");
+      await flushPromises();
+
+      expect(hot.check).not.toHaveBeenCalled();
+      expect(reloadPage).not.toHaveBeenCalled();
+
+      // The own bundle rebuilding still applies the update.
+      applyUpdate("app-hash-2", { reload: true }, "app");
+      globalThis.__webpack_hash__ = "app-hash-2";
+      await flushPromises();
+
+      expect(hot.check).toHaveBeenCalledWith(false);
+      expect(hot.apply).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not reload when a pre-lock sibling check resolves without an update", async () => {
+      applyUpdate = loadApplyUpdate(makeFakeHot({ checkResult: null }));
+      globalThis.__webpack_hash__ = "app-hash";
+
+      // Connect-time catch-up: the sibling's sync arrives first and starts a
+      // check against a manifest that was never emitted…
+      applyUpdate("admin-hash", { reload: true }, "admin");
+      // …and the own bundle's sync locks the name before that check resolves.
+      applyUpdate("app-hash", { reload: true }, "app");
+      await flushPromises();
+
+      expect(getHot().check).toHaveBeenCalledTimes(1);
+      expect(reloadPage).not.toHaveBeenCalled();
+    });
+
+    it("still checks named events while the own compilation is unknown", async () => {
+      applyUpdate("new-hash", { reload: true }, "admin");
+      globalThis.__webpack_hash__ = "new-hash";
+      await flushPromises();
+
+      expect(getHot().check).toHaveBeenCalledWith(false);
+    });
+  });
+
   it("checks and applies an update when the hash differs", async () => {
     applyUpdate("new-hash", { reload: true });
     globalThis.__webpack_hash__ = "new-hash";
