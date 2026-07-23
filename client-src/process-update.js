@@ -90,6 +90,7 @@ export default function applyUpdate(hash, options) {
    * @param {Error} err error
    */
   function handleError(err) {
+    // @ts-expect-error function declarations are hoisted, so the `!hot` guard narrowing is lost
     if (hot.status() in failureStatuses) {
       log.warn("Cannot check for update (Full reload needed)");
       log.warn(err.stack || err.message);
@@ -144,6 +145,7 @@ export default function applyUpdate(hash, options) {
    * Ask webpack for the next chunk of HMR updates and apply them.
    */
   function check() {
+    // @ts-expect-error function declarations are hoisted, so the `!hot` guard narrowing is lost
     hot
       .check(false)
       .then((updatedModules) => {
@@ -154,6 +156,7 @@ export default function applyUpdate(hash, options) {
           return undefined;
         }
 
+        // @ts-expect-error function declarations are hoisted, so the `!hot` guard narrowing is lost
         return hot.apply(applyOptions).then((renewedModules) => {
           if (!upToDate()) check();
           logUpdates(updatedModules, renewedModules);
