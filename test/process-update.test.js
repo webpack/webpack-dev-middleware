@@ -189,7 +189,18 @@ describe("process-update", () => {
       return spy.mock.calls.some((call) => call.join(" ").includes(text));
     }
 
-    it("lists the updated modules at the default info level", async () => {
+    beforeEach(() => {
+      if (typeof console.groupCollapsed !== "function") {
+        console.groupCollapsed = () => {};
+      }
+      if (typeof console.groupEnd !== "function") {
+        console.groupEnd = () => {};
+      }
+      jest.spyOn(console, "groupCollapsed").mockImplementation(() => {});
+      jest.spyOn(console, "groupEnd").mockImplementation(() => {});
+    });
+
+    it("logs a one-line summary at the default info level", async () => {
       applyUpdate = loadApplyUpdate(
         makeFakeHot({
           checkResult: ["./a.js", "./b.js"],
@@ -201,9 +212,35 @@ describe("process-update", () => {
       globalThis.__webpack_hash__ = "new-hash";
       await flushPromises();
 
-      expect(logged(console.info, "Updated modules:")).toBe(true);
-      expect(logged(console.info, "./a.js")).toBe(true);
-      expect(logged(console.info, "./b.js")).toBe(true);
+      expect(logged(console.info, "Hot updated 2 modules.")).toBe(true);
+      // Groups are gated below the "log" level.
+      expect(console.groupCollapsed).not.toHaveBeenCalled();
+      expect(logged(console.log, "./a.js")).toBe(false);
+    });
+
+    it("adds a collapsed group with the module detail at the log level", async () => {
+      applyUpdate = loadApplyUpdate(
+        makeFakeHot({
+          checkResult: ["./a.js", "./b.js"],
+          applyImpl: () => Promise.resolve(["./a.js", "./b.js"]),
+        }),
+      );
+      setLogLevel("log");
+
+      applyUpdate("new-hash", { reload: true });
+      globalThis.__webpack_hash__ = "new-hash";
+      await flushPromises();
+
+      expect(logged(console.info, "Hot updated 2 modules.")).toBe(true);
+      expect(
+        logged(
+          /** @type {jest.Mock} */ (console.groupCollapsed),
+          "Updated modules:",
+        ),
+      ).toBe(true);
+      expect(logged(console.log, "./a.js")).toBe(true);
+      expect(logged(console.log, "./b.js")).toBe(true);
+      expect(console.groupEnd).toHaveBeenCalled();
     });
   });
 });
