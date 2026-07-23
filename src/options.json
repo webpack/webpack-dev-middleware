@@ -199,6 +199,10 @@
               "type": "number",
               "minimum": 0
             },
+            "progress": {
+              "description": "Publish compilation progress events to the clients.",
+              "type": "boolean"
+            },
             "statsOptions": {
               "description": "Webpack stats options used when serializing compilation results.",
               "anyOf": [
