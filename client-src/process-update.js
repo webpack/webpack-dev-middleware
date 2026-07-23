@@ -108,10 +108,13 @@ export default function applyUpdate(hash, options) {
     if (!renewedModules || renewedModules.length === 0) {
       log.info("Nothing hot updated.");
     } else {
-      log.info("Updated modules:");
+      log.info(`Hot updated ${renewedModules.length} modules.`);
+      // Detail as a collapsed group, visible from the "log" level up.
+      log.groupCollapsed("Updated modules:");
       for (const moduleId of renewedModules) {
-        log.info(` - ${moduleId}`);
+        log.log(` - ${moduleId}`);
       }
+      log.groupEnd();
     }
 
     if (upToDate()) {
