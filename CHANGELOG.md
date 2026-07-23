@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.0.4
+
+### Patch Changes
+
+- Replace the `on-finished` dependency with Node.js built-in `stream.finished`. (by [@bjohansebas](https://github.com/bjohansebas) in [#2346](https://github.com/webpack/webpack-dev-middleware/pull/2346))
+
 ## 8.0.3
 
 ### Patch Changes
