@@ -272,7 +272,8 @@ describe("client", () => {
         }),
       );
       expect(clientOverlay.showProblems).toHaveBeenCalledTimes(1);
-      expect(clientOverlay.clear).toHaveBeenCalledTimes(1);
+      expect(clientOverlay.clear).toHaveBeenCalledWith("");
+      expect(clientOverlay.clear).toHaveBeenCalledWith("runtime");
     });
 
     it("updates overlay when an errored build becomes a warning", () => {
@@ -427,7 +428,8 @@ describe("client", () => {
           warnings: [],
         }),
       );
-      expect(clientOverlay.clear).toHaveBeenCalledTimes(1);
+      expect(clientOverlay.clear).toHaveBeenCalledWith("");
+      expect(clientOverlay.clear).toHaveBeenCalledWith("runtime");
     });
 
     it("re-logs the same error text after the bundle's own successful build", () => {
@@ -644,7 +646,8 @@ describe("client", () => {
         }),
       );
       expect(clientOverlay.showProblems).toHaveBeenCalledTimes(1);
-      expect(clientOverlay.clear).toHaveBeenCalledTimes(1);
+      expect(clientOverlay.clear).toHaveBeenCalledWith("");
+      expect(clientOverlay.clear).toHaveBeenCalledWith("runtime");
     });
 
     it("updates overlay after errored build becomes a warning", () => {

@@ -119,6 +119,17 @@ describe("overlay", () => {
       expect(getCard().textContent).toContain("second");
       expect(getCard().textContent).not.toContain("first");
     });
+
+    it("re-mounts the overlay when the iframe was removed without clear()", () => {
+      showProblems("errors", ["boom"]);
+      // A framework wiping `document.body` removes the iframe behind our back.
+      getOverlay().remove();
+      // Re-publishing the identical set must re-mount, not hit the
+      // unchanged-set guard.
+      showProblems("errors", ["boom"]);
+      expect(getOverlay()).not.toBeNull();
+      expect(getCard().textContent).toContain("boom");
+    });
   });
 
   describe("clear", () => {
@@ -216,6 +227,57 @@ describe("overlay", () => {
       globalThis.dispatchEvent(new ErrorEvent("error", { error }));
 
       expect(getOverlay()).toBeNull();
+    });
+
+    it("resets the accumulation when the runtime slot is cleared", () => {
+      configureOverlay({ catchRuntimeError: true });
+
+      globalThis.dispatchEvent(
+        new ErrorEvent("error", {
+          error: new Error("boom-before"),
+          message: "boom-before",
+        }),
+      );
+      expect(getCard().textContent).toContain("boom-before");
+
+      // What the reporter does on a clean build.
+      clear("runtime");
+      expect(getOverlay()).toBeNull();
+
+      globalThis.dispatchEvent(
+        new ErrorEvent("error", {
+          error: new Error("boom-after"),
+          message: "boom-after",
+        }),
+      );
+
+      expect(getCard().textContent).toContain("boom-after");
+      expect(getCard().textContent).not.toContain("boom-before");
+      expect(getCard().textContent).not.toContain("1 / 2");
+    });
+
+    it("honors the runtime filter configured by a later copy", () => {
+      // The window listeners were attached by this copy…
+      configureOverlay({ catchRuntimeError: true });
+
+      // …but the filter comes from a second bundled copy of the module.
+      jest.resetModules();
+
+      const laterCopy = require("../client-src/overlay");
+
+      laterCopy.default({ catchRuntimeError: () => false });
+
+      globalThis.dispatchEvent(
+        new ErrorEvent("error", {
+          error: new Error("filtered-out"),
+          message: "filtered-out",
+        }),
+      );
+
+      expect(getOverlay()).toBeNull();
+
+      // Restore the plain-boolean configuration for the remaining tests.
+      configureOverlay({ catchRuntimeError: true });
     });
   });
 
@@ -393,6 +455,103 @@ describe("overlay", () => {
 
       // Restore the default so module-level state does not leak.
       configureOverlay({ ansiColors: { red: "ff3348" } });
+    });
+  });
+
+  describe("shared state across module copies", () => {
+    it("shows the errors of two clients in the same overlay", () => {
+      // First client (e.g. the webpack-dev-middleware SSE client) reports.
+      showProblems("errors", ["boom from the wdm client"]);
+
+      expect(document.querySelectorAll("iframe")).toHaveLength(1);
+      expect(getCard().textContent).toContain("boom from the wdm client");
+
+      // A second client bundling its own copy of the module (e.g. the
+      // webpack-dev-server client) reports into the SAME overlay: it adopts
+      // the shared iframe instead of stacking a duplicate, and its own
+      // source slot joins the union next to the first client's problems.
+      jest.resetModules();
+
+      const secondClient = require("../client-src/overlay");
+
+      secondClient.showProblems("errors", ["boom from the wds client"], "wds");
+
+      expect(document.querySelectorAll("iframe")).toHaveLength(1);
+      // Both clients' errors are in the union, paginated together.
+      expect(getCard().textContent).toContain("boom from the wdm client");
+      expect(getCard().textContent).toContain("1 / 2");
+
+      getOverlay().contentDocument.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight" }),
+      );
+      expect(getCard().textContent).toContain("boom from the wds client");
+
+      // The state is shared both ways: dismissing from the first client
+      // removes the overlay the second client rendered.
+      clear();
+      expect(getOverlay()).toBeNull();
+      expect(document.querySelectorAll("iframe")).toHaveLength(0);
+    });
+
+    it("prefers one client's errors over another client's warnings", () => {
+      showProblems("errors", ["boom from the wdm client"]);
+
+      jest.resetModules();
+
+      const secondClient = require("../client-src/overlay");
+
+      // Errors from any source suppress warnings in the union, so another
+      // client's warnings do not hide the broken build.
+      secondClient.showProblems(
+        "warnings",
+        ["careful from the wds client"],
+        "wds",
+      );
+
+      expect(document.querySelectorAll("iframe")).toHaveLength(1);
+      expect(getCard().textContent).toContain("boom from the wdm client");
+      expect(getCard().textContent).not.toContain(
+        "careful from the wds client",
+      );
+      expect(getCard().style.borderTopColor).toBe("rgb(255, 51, 72)");
+
+      // Once the erroring source recovers, the warnings surface.
+      secondClient.clear("");
+
+      expect(getCard().textContent).toContain("careful from the wds client");
+      expect(getCard().style.borderTopColor).toBe("rgb(255, 211, 14)");
+    });
+
+    it("does not re-render when clearing a source that reported nothing", () => {
+      showProblems("errors", ["a", "b"], "x");
+
+      const cardChild = getCard().firstElementChild;
+
+      // What the reporter does on every clean build of its own bundle.
+      clear("never-reported");
+
+      // Same DOM nodes — the card another client is showing was not rebuilt.
+      expect(getCard().firstElementChild).toBe(cardChild);
+      expect(getOverlay()).not.toBeNull();
+    });
+
+    it("fills state fields missing from an older copy's shape", () => {
+      const OVERLAY_STATE_KEY = "__webpack_dev_middleware_hot_overlay_state__";
+
+      // Simulate an older package version having created a leaner state.
+      window[OVERLAY_STATE_KEY] = { frame: null, card: null };
+
+      jest.resetModules();
+
+      const newerCopy = require("../client-src/overlay");
+
+      expect(() =>
+        newerCopy.showProblems("errors", ["boom"], "newer"),
+      ).not.toThrow();
+      expect(document.querySelectorAll("iframe")).toHaveLength(1);
+
+      newerCopy.clear();
+      delete window[OVERLAY_STATE_KEY];
     });
   });
 });
