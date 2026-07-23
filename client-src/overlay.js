@@ -121,26 +121,68 @@ const colors = {
   darkgrey: "6d7891",
 };
 
-/** @type {HTMLIFrameElement | null} */
-let overlayFrame = null;
-/** @type {HTMLElement | null} */
-let overlayCard = null;
+/**
+ * @typedef {object} OverlayState
+ * @property {HTMLIFrameElement | null} frame overlay iframe
+ * @property {HTMLElement | null} card visible panel inside the iframe
+ * @property {boolean} runtimeListenersAttached whether the window listeners are attached
+ * @property {number} pageIndex page shown when paginating
+ * @property {Record<string, { type: "errors" | "warnings", lines: string[] }>} problemsBySource each reporting source's problems
+ * @property {{ type: "errors" | "warnings", lines: string[] } | null} currentProblems union of every source, as displayed
+ * @property {{ createHTML: (value: string) => EXPECTED_ANY } | undefined} trustedTypesPolicy trusted types policy
+ * @property {boolean | ((error: Error) => boolean)} catchRuntimeError whether (or which) runtime errors are shown — shared, so the copy that attached the window listeners honors every copy's configuration
+ */
 
-// Runtime error capture (same behavior as webpack-dev-server's
-// `catchRuntimeError`): uncaught errors and unhandled promise rejections are
-// rendered in the overlay. Messages accumulate until the overlay is cleared.
-/** @type {string[]} */
-let runtimeMessages = [];
-let runtimeListenersAttached = false;
-/** @type {boolean | ((error: Error) => boolean)} */
-let catchRuntimeError = false;
+/** @returns {OverlayState} fresh overlay state */
+function createOverlayState() {
+  return {
+    frame: null,
+    card: null,
+    runtimeListenersAttached: false,
+    pageIndex: 0,
+    problemsBySource: {},
+    currentProblems: null,
+    trustedTypesPolicy: undefined,
+    catchRuntimeError: false,
+  };
+}
+
+// The DOM/problem state is a per-page singleton shared through `window`, so
+// every bundled copy of this module (e.g. the webpack-dev-server client and
+// the webpack-dev-middleware client on the same page) renders into a single
+// overlay instead of stacking duplicate iframes.
+const OVERLAY_STATE_KEY = "__webpack_dev_middleware_hot_overlay_state__";
+
+/** @type {OverlayState} */
+const state = (() => {
+  if (typeof window === "undefined") {
+    return createOverlayState();
+  }
+
+  const holder = /** @type {EXPECTED_ANY} */ (window);
+
+  if (!holder[OVERLAY_STATE_KEY]) {
+    holder[OVERLAY_STATE_KEY] = createOverlayState();
+  } else {
+    // A copy from another package version may have created the state with
+    // fewer fields — fill the gaps in place (replacing the object would
+    // orphan the references other copies already hold).
+    const defaults = createOverlayState();
+
+    for (const key of Object.keys(defaults)) {
+      if (!(key in holder[OVERLAY_STATE_KEY])) {
+        holder[OVERLAY_STATE_KEY][key] =
+          defaults[/** @type {keyof OverlayState} */ (key)];
+      }
+    }
+  }
+
+  return holder[OVERLAY_STATE_KEY];
+})();
 
 // Pagination (wdm extension, enabled by default): the card shows one problem
 // at a time with prev/next navigation.
 let paginate = true;
-let pageIndex = 0;
-/** @type {{ type: "errors" | "warnings", lines: string[] } | null} */
-let currentProblems = null;
 
 // When set, the file chips in error messages become clickable and issue
 // `GET <endpoint>?fileName=<file:line:column>`. The endpoint itself is
@@ -151,9 +193,8 @@ let openEditorEndpoint = "";
 
 // Trusted Types support (same pattern as webpack-dev-server): when the page
 // runs under `require-trusted-types-for 'script'`, every `innerHTML` write
-// must go through a policy.
-/** @type {{ createHTML: (value: string) => EXPECTED_ANY } | undefined} */
-let trustedTypesPolicy;
+// must go through a policy. The policy itself lives in the shared state —
+// creating two policies with the same name throws under an enforced CSP.
 /** @type {string | undefined} */
 let trustedTypesPolicyName;
 
@@ -162,8 +203,8 @@ let trustedTypesPolicyName;
  * @param {string} html html to assign
  */
 function setHTML(element, html) {
-  element.innerHTML = trustedTypesPolicy
-    ? trustedTypesPolicy.createHTML(html)
+  element.innerHTML = state.trustedTypesPolicy
+    ? state.trustedTypesPolicy.createHTML(html)
     : html;
 }
 
@@ -301,8 +342,8 @@ document.addEventListener("keydown", (event) => {
  * document is not available
  */
 function ensureOverlay() {
-  if (overlayFrame && overlayCard && overlayFrame.parentNode) {
-    return overlayCard;
+  if (state.frame && state.card && state.frame.parentNode) {
+    return state.card;
   }
 
   if (!document.body) {
@@ -310,8 +351,8 @@ function ensureOverlay() {
   }
 
   // Enable Trusted Types if they are available in the current browser.
-  if (window.trustedTypes && !trustedTypesPolicy) {
-    trustedTypesPolicy = window.trustedTypes.createPolicy(
+  if (window.trustedTypes && !state.trustedTypesPolicy) {
+    state.trustedTypesPolicy = window.trustedTypes.createPolicy(
       trustedTypesPolicyName || "webpack-dev-middleware#overlay",
       {
         createHTML: (value) => value,
@@ -319,18 +360,18 @@ function ensureOverlay() {
     );
   }
 
-  overlayFrame = document.createElement("iframe");
-  overlayFrame.id = OVERLAY_ID;
-  overlayFrame.src = "about:blank";
-  applyStyle(overlayFrame, backdropStyles);
-  document.body.append(overlayFrame);
+  state.frame = document.createElement("iframe");
+  state.frame.id = OVERLAY_ID;
+  state.frame.src = "about:blank";
+  applyStyle(state.frame, backdropStyles);
+  document.body.append(state.frame);
 
   // A same-origin `about:blank` document is available synchronously.
-  const frameDocument = overlayFrame.contentDocument;
+  const frameDocument = state.frame.contentDocument;
 
   if (!frameDocument || !frameDocument.body) {
-    overlayFrame.remove();
-    overlayFrame = null;
+    state.frame.remove();
+    state.frame = null;
 
     return null;
   }
@@ -343,9 +384,9 @@ function ensureOverlay() {
     if (event.key === "Escape") {
       clear();
     } else if (paginate && event.key === "ArrowLeft") {
-      goToPage(pageIndex - 1);
+      goToPage(state.pageIndex - 1);
     } else if (paginate && event.key === "ArrowRight") {
-      goToPage(pageIndex + 1);
+      goToPage(state.pageIndex + 1);
     }
   });
 
@@ -359,7 +400,7 @@ function ensureOverlay() {
       return;
     }
 
-    if (overlayCard && !overlayCard.contains(target)) {
+    if (state.card && !state.card.contains(target)) {
       clear();
     }
   });
@@ -382,36 +423,76 @@ function ensureOverlay() {
   });
 
   // The card is the visible panel that holds the problem messages.
-  overlayCard = frameDocument.createElement("div");
-  overlayCard.id = CARD_ID;
-  applyStyle(overlayCard, styles);
-  frameDocument.body.append(overlayCard);
+  state.card = frameDocument.createElement("div");
+  state.card.id = CARD_ID;
+  applyStyle(state.card, styles);
+  frameDocument.body.append(state.card);
 
-  return overlayCard;
+  return state.card;
+}
+
+/**
+ * Compute the union of every source's problems. Errors from any source take
+ * precedence over warnings, mirroring the reporter's per-bundle behavior.
+ * @returns {{ type: "errors" | "warnings", lines: string[] } | null} union
+ */
+function computeProblemsUnion() {
+  const slots = Object.values(state.problemsBySource);
+
+  if (slots.length === 0) {
+    return null;
+  }
+
+  const errorLines = slots
+    .filter((slot) => slot.type === "errors")
+    .flatMap((slot) => slot.lines);
+
+  if (errorLines.length > 0) {
+    return { type: "errors", lines: errorLines };
+  }
+
+  return {
+    type: "warnings",
+    lines: slots.flatMap((slot) => slot.lines),
+  };
 }
 
 /**
  * @param {"errors" | "warnings"} type problem type
  * @param {string[]} lines messages to render
+ * @param {string=} source who reports them — each source (e.g. this client,
+ * the webpack-dev-server client, the runtime error capture) keeps its own
+ * slot and the overlay renders the union of every slot
  */
-export function showProblems(type, lines) {
+export function showProblems(type, lines, source = "") {
+  state.problemsBySource[source] = { type, lines: [...lines] };
+
+  const union =
+    /** @type {{ type: "errors" | "warnings", lines: string[] }} */
+    (computeProblemsUnion());
+
   // Re-publishing an identical set (e.g. another bundle of a multi-compiler
   // synced) must not reset the page the user is reading.
   const unchanged =
-    currentProblems !== null &&
-    overlayFrame !== null &&
-    currentProblems.type === type &&
-    currentProblems.lines.length === lines.length &&
-    currentProblems.lines.every((line, index) => line === lines[index]);
+    state.currentProblems !== null &&
+    state.frame !== null &&
+    // The frame may have been detached without `clear()` (e.g. a framework
+    // wiping `document.body`) — an identical set must still re-mount it.
+    state.frame.parentNode !== null &&
+    state.currentProblems.type === union.type &&
+    state.currentProblems.lines.length === union.lines.length &&
+    state.currentProblems.lines.every(
+      (line, index) => line === union.lines[index],
+    );
 
-  currentProblems = { type, lines };
+  state.currentProblems = union;
 
   if (unchanged) {
     return;
   }
 
   // Each new problem set starts at its first page.
-  pageIndex = 0;
+  state.pageIndex = 0;
   renderProblems();
 }
 
@@ -420,11 +501,14 @@ export function showProblems(type, lines) {
  * @param {number} index requested page index
  */
 function goToPage(index) {
-  if (!currentProblems) {
+  if (!state.currentProblems) {
     return;
   }
 
-  pageIndex = Math.min(currentProblems.lines.length - 1, Math.max(0, index));
+  state.pageIndex = Math.min(
+    state.currentProblems.lines.length - 1,
+    Math.max(0, index),
+  );
   renderProblems();
 }
 
@@ -432,7 +516,7 @@ function goToPage(index) {
  * Render the current problem set into the card.
  */
 function renderProblems() {
-  if (!currentProblems) {
+  if (!state.currentProblems) {
     return;
   }
 
@@ -443,9 +527,9 @@ function renderProblems() {
   }
 
   const frameDocument = /** @type {Document} */ (
-    /** @type {HTMLIFrameElement} */ (overlayFrame).contentDocument
+    /** @type {HTMLIFrameElement} */ (state.frame).contentDocument
   );
-  const { type, lines } = currentProblems;
+  const { type, lines } = state.currentProblems;
   const paginated = paginate && lines.length > 1;
 
   // Accent the top bar with the problem color (red for errors, yellow for warnings).
@@ -463,7 +547,7 @@ function renderProblems() {
   });
   card.append(closeButton);
 
-  const visible = paginated ? [lines[pageIndex]] : lines;
+  const visible = paginated ? [lines[state.pageIndex]] : lines;
 
   if (paginated) {
     // Header row: badge and the problem's first line (usually the file
@@ -528,13 +612,13 @@ function renderProblems() {
         padding: "0",
       });
       button.addEventListener("click", () => {
-        goToPage(pageIndex + delta);
+        goToPage(state.pageIndex + delta);
       });
       return button;
     };
 
     const counter = frameDocument.createElement("span");
-    counter.textContent = `${pageIndex + 1} / ${lines.length}`;
+    counter.textContent = `${state.pageIndex + 1} / ${lines.length}`;
     applyStyle(counter, { color: "#f2f2f2" });
 
     nav.append(
@@ -585,18 +669,36 @@ function renderProblems() {
 }
 
 /**
- * Remove the overlay iframe from the DOM.
+ * Remove one source's problems, or the whole overlay.
+ * @param {string=} source when given, only that source's problems are
+ * dropped and the overlay re-renders the remaining union; without it the
+ * overlay is dismissed entirely (Escape, backdrop, close button)
  */
-export function clear() {
-  if (overlayFrame && overlayFrame.parentNode) {
-    overlayFrame.remove();
+export function clear(source) {
+  if (source !== undefined) {
+    delete state.problemsBySource[source];
+
+    const union = computeProblemsUnion();
+
+    state.currentProblems = union;
+
+    if (union) {
+      state.pageIndex = Math.min(state.pageIndex, union.lines.length - 1);
+      renderProblems();
+
+      return;
+    }
   }
 
-  overlayFrame = null;
-  overlayCard = null;
-  runtimeMessages = [];
-  currentProblems = null;
-  pageIndex = 0;
+  if (state.frame && state.frame.parentNode) {
+    state.frame.remove();
+  }
+
+  state.frame = null;
+  state.card = null;
+  state.problemsBySource = {};
+  state.currentProblems = null;
+  state.pageIndex = 0;
 }
 
 /**
@@ -619,8 +721,8 @@ function handleRuntimeError(error, fallbackMessage) {
 
   // `catchRuntimeError` may be a filter function, like in webpack-dev-server.
   const shouldDisplay =
-    typeof catchRuntimeError === "function"
-      ? catchRuntimeError(errorObject)
+    typeof state.catchRuntimeError === "function"
+      ? state.catchRuntimeError(errorObject)
       : true;
 
   if (!shouldDisplay) {
@@ -628,24 +730,30 @@ function handleRuntimeError(error, fallbackMessage) {
   }
 
   const stack = errorObject.stack ? `\n${errorObject.stack}` : "";
+  const message = `Uncaught runtime error: ${errorObject.message}${stack}`;
 
-  runtimeMessages.push(
-    `Uncaught runtime error: ${errorObject.message}${stack}`,
-  );
-  showProblems("errors", runtimeMessages);
+  // Runtime errors accumulate in their own slot, so they coexist with build
+  // problems and clearing the slot resets the accumulation.
+  const runtimeSlot = state.problemsBySource.runtime;
+  const messages = runtimeSlot ? [...runtimeSlot.lines, message] : [message];
+
+  showProblems("errors", messages, "runtime");
+
   // When paginating, land on the newest runtime error.
-  goToPage(runtimeMessages.length - 1);
+  if (state.currentProblems) {
+    goToPage(state.currentProblems.lines.lastIndexOf(message));
+  }
 }
 
 /**
  * Listen for uncaught errors and unhandled rejections on the page.
  */
 function attachRuntimeErrorListeners() {
-  if (runtimeListenersAttached) {
+  if (state.runtimeListenersAttached) {
     return;
   }
 
-  runtimeListenersAttached = true;
+  state.runtimeListenersAttached = true;
 
   window.addEventListener("error", (event) => {
     if (!event.error && !event.message) {
@@ -678,10 +786,10 @@ export default function configureOverlay(options) {
   }
 
   if (options.catchRuntimeError !== undefined) {
-    catchRuntimeError = options.catchRuntimeError;
+    state.catchRuntimeError = options.catchRuntimeError;
   }
 
-  if (catchRuntimeError) {
+  if (state.catchRuntimeError) {
     attachRuntimeErrorListeners();
   }
 
@@ -700,8 +808,8 @@ export default function configureOverlay(options) {
     }
   }
 
-  if (overlayCard) {
-    applyStyle(overlayCard, styles);
+  if (state.card) {
+    applyStyle(state.card, styles);
   }
 
   return {
