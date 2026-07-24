@@ -7033,6 +7033,33 @@ describe.each([
       );
     });
 
+    if (name === "hono") {
+      it("replaces headers left by earlier middleware on the SSE handshake", async () => {
+        const compiler = getCompiler(webpackConfig);
+        [server, req, instance] = await frameworkFactory(
+          name,
+          framework,
+          compiler,
+          { hot: true },
+          {
+            setupMiddlewares: (middlewares) => [
+              async (c, next) => {
+                c.res.headers.set("Cache-Control", "max-age=100");
+                await next();
+              },
+              ...middlewares,
+            ],
+          },
+        );
+
+        const res = await readSseHandshake(req.get("/__webpack_hmr"));
+
+        // writeHead must replace the pre-set value, not append to it
+        // ("max-age=100, no-cache, no-transform").
+        expect(res.headers["cache-control"]).toBe("no-cache, no-transform");
+      });
+    }
+
     it("routes SSE handshake errors to the framework error handler", async () => {
       const compiler = getCompiler(webpackConfig);
       [server, req, instance] = await frameworkFactory(

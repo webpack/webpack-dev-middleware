@@ -1001,7 +1001,9 @@ function honoWrapper(compiler, options = {}, usePlugin = false) {
 
               if (headers) {
                 for (const name of Object.keys(headers)) {
-                  context.res.headers.append(name, String(headers[name]));
+                  // `set`, not `append`: writeHead replaces headers left by
+                  // earlier middleware instead of comma-joining values.
+                  context.res.headers.set(name, String(headers[name]));
                 }
               }
 
