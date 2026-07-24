@@ -418,6 +418,10 @@ let customHandler;
 /** @type {((obj: HMRPayload) => void) | undefined} */
 let subscribeAllHandler;
 
+// Name of the build that most recently reported `building` — progress
+// payloads carry no name, so they are attributed to it.
+let lastBuildingName = "";
+
 /**
  * @param {HMRPayload} obj payload
  */
@@ -430,15 +434,23 @@ function processMessage(obj) {
         }`,
       );
       if (options.progress && typeof document !== "undefined") {
-        indicator.show(obj.file ? `Rebuilding… (${obj.file})` : undefined);
+        lastBuildingName = obj.name || "";
+        indicator.show(
+          obj.file ? `Rebuilding… (${obj.file})` : undefined,
+          undefined,
+          lastBuildingName,
+        );
       }
       break;
     }
     case "progress": {
+      // Progress payloads carry no name — attribute them to the build that
+      // most recently reported `building`.
       if (options.progress && typeof document !== "undefined") {
         indicator.show(
           `Rebuilding… ${obj.percent}%${obj.message ? ` (${obj.message})` : ""}`,
           obj.percent,
+          lastBuildingName,
         );
       }
       break;
@@ -446,7 +458,7 @@ function processMessage(obj) {
     case "built":
     case "sync": {
       if (options.progress && typeof document !== "undefined") {
-        indicator.hide();
+        indicator.hide(obj.name || "");
       }
       if (obj.action === "built") {
         log.info(

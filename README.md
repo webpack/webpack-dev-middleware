@@ -459,6 +459,18 @@ show("Rebuilding… 42%", 42); // progress ring
 hide();
 ```
 
+The badge is a per-page singleton shared by every bundled copy of the module.
+Concurrent builds can report through a `source` — the badge stays until every
+source finished:
+
+```js
+show("Rebuilding app…", undefined, "app");
+show("Rebuilding admin…", undefined, "admin");
+hide("app"); // still shown — "admin" is building
+hide("admin"); // removed
+hide(); // without a source: removed unconditionally
+```
+
 ## HMR notes and troubleshooting
 
 ### Browser connection limits (many tabs)
