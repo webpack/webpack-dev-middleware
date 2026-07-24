@@ -89,8 +89,14 @@ exports[`validation should throw an error on the "hot" option with "{"heartbeat"
 
 exports[`validation should throw an error on the "hot" option with "{"path":""}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
- - options.hot.path should be a non-empty string.
-   -> The path the SSE endpoint is served at."
+ - options.hot.path should match pattern "^/".
+   -> The path the SSE endpoint is served at. Must start with a slash."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"path":"hmr"}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.path should match pattern "^/".
+   -> The path the SSE endpoint is served at. Must start with a slash."
 `;
 
 exports[`validation should throw an error on the "hot" option with "{"statsOptions":"errors-only"}" value 1`] = `
