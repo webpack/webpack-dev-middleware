@@ -1010,6 +1010,44 @@ describe("client", () => {
       expect(EventSourceStub.instances).toHaveLength(1);
     });
 
+    it("keeps the inactivity watchdog after a reconnect", () => {
+      jest.useFakeTimers({ doNotFake: ["nextTick"] });
+      delete globalThis.__wdmEventSourceWrapper;
+      EventSourceStub.instances.length = 0;
+      loadClient();
+
+      // First silent stall: the watchdog disconnects and a reconnect opens a
+      // second source 20s later.
+      jest.advanceTimersByTime(30 * 1000);
+      jest.advanceTimersByTime(20 * 1000);
+      expect(EventSourceStub.instances).toHaveLength(2);
+
+      // The reconnected source must be watched too: another silent stall has
+      // to close it and schedule a third connection.
+      const second = EventSourceStub.lastInstance();
+      jest.advanceTimersByTime(30 * 1000);
+      expect(second.closed).toBe(true);
+      jest.advanceTimersByTime(20 * 1000);
+      expect(EventSourceStub.instances).toHaveLength(3);
+    });
+
+    it("disconnect() during the reconnect window cancels the pending reconnect", () => {
+      jest.useFakeTimers({ doNotFake: ["nextTick"] });
+      delete globalThis.__wdmEventSourceWrapper;
+      EventSourceStub.instances.length = 0;
+      const freshClient = loadClient();
+
+      // A connection error schedules a reconnect `timeout` (20s) out.
+      const [first] = EventSourceStub.instances;
+      first.dispatch("error", {});
+      expect(first.closed).toBe(true);
+
+      // Disconnecting inside that window must cancel it — nothing may reopen.
+      freshClient.disconnect();
+      jest.advanceTimersByTime(60 * 1000);
+      expect(EventSourceStub.instances).toHaveLength(1);
+    });
+
     it("disconnect() drops the cached wrapper so a new connect starts fresh", () => {
       client.disconnect();
       expect(

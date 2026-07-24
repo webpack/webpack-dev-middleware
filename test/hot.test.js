@@ -347,6 +347,42 @@ describe("createHot", () => {
     hot.close();
   });
 
+  it("includes the compilation name in the building payload", () => {
+    const compiler = makeFakeCompiler();
+    compiler.name = "main";
+    const hot = createHot(compiler, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    compiler.emitInvalid();
+
+    // The client pairs `building` with the `built`/`sync` that follows by
+    // name — without it the building indicator can never be hidden.
+    const building = writes.find((w) => w.includes('"action":"building"'));
+    expect(building).toContain('"name":"main"');
+
+    hot.close();
+  });
+
+  it("names the building payload after the compiler that invalidated in a multi-compiler", () => {
+    const app = makeFakeCompiler();
+    app.name = "app";
+    const widget = makeFakeCompiler();
+    widget.name = "widget";
+    const multi = makeFakeCompiler();
+    multi.compilers = [app, widget];
+    const hot = createHot(multi, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    widget.emitInvalid("/src/widget.js");
+
+    const building = writes.filter((w) => w.includes('"action":"building"'));
+    expect(building).toHaveLength(1);
+    expect(building[0]).toContain('"name":"widget"');
+    expect(building[0]).toContain('"file":"/src/widget.js"');
+
+    hot.close();
+  });
+
   it("publishes sync instead of built when a bundle's hash did not change", () => {
     const compiler = makeFakeCompiler();
     const hot = createHot(compiler, {});
