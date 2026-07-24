@@ -98,6 +98,9 @@ describe("validation", () => {
         "foo",
         0,
         { path: "" },
+        // Would validate but never match a request: pathnames always start
+        // with a slash.
+        { path: "hmr" },
         { heartbeat: -1 },
         // 0 would silently fall back to the default interval — reject it.
         { heartbeat: 0 },

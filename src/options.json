@@ -190,9 +190,9 @@
           "additionalProperties": false,
           "properties": {
             "path": {
-              "description": "The path the SSE endpoint is served at.",
+              "description": "The path the SSE endpoint is served at. Must start with a slash.",
               "type": "string",
-              "minLength": 1
+              "pattern": "^/"
             },
             "heartbeat": {
               "description": "Heartbeat interval (in milliseconds) used to keep the SSE connection alive.",

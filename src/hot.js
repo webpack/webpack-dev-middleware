@@ -146,8 +146,10 @@ function createEventStream(heartbeat, logger) {
       });
     },
     publish(payload) {
+      const frame = `data: ${JSON.stringify(payload)}\n\n`;
+
       everyClient((client) => {
-        client.write(`data: ${JSON.stringify(payload)}\n\n`);
+        client.write(frame);
       });
     },
     publishTo(res, payload) {

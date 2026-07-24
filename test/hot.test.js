@@ -110,6 +110,23 @@ describe("hot middleware (unit)", () => {
       expect(pathMatch("/__webpack_hmr/extra", "/__webpack_hmr")).toBe(false);
     });
 
+    it("strips a fragment", () => {
+      expect(pathMatch("/__webpack_hmr#section", "/__webpack_hmr")).toBe(true);
+    });
+
+    it("matches absolute urls by pathname", () => {
+      expect(
+        pathMatch(
+          "http://localhost:3000/__webpack_hmr?name=app",
+          "/__webpack_hmr",
+        ),
+      ).toBe(true);
+    });
+
+    it("does not mistake a protocol-relative host for a pathname", () => {
+      expect(pathMatch("//__webpack_hmr", "/__webpack_hmr")).toBe(false);
+    });
+
     it("returns false when url is undefined", () => {
       expect(pathMatch(undefined, "/__webpack_hmr")).toBe(false);
     });
