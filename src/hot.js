@@ -322,15 +322,24 @@ function createHot(compiler, userOptions) {
     }).apply(compiler);
   }
 
-  /** @param {string | null=} fileName file that triggered the rebuild */
-  const onInvalid = (fileName) => {
+  /**
+   * @param {string=} name name of the compilation the hook belongs to
+   * @returns {(fileName?: string | null) => void} invalid hook handler
+   */
+  const onInvalid = (name) => (fileName) => {
     if (closed) return;
 
     valid = false;
     lastProgressPercent = -1;
 
-    /** @type {{ action: string, file?: string }} */
+    /** @type {{ action: string, name?: string, file?: string }} */
     const payload = { action: "building" };
+
+    // Named so clients can pair this event with the `built`/`sync` that
+    // follows it — the building indicator tracks in-flight builds per name.
+    if (name) {
+      payload.name = name;
+    }
 
     // The invalid hook reports which file changed — forward it so clients
     // can show what triggered the rebuild.
@@ -352,7 +361,13 @@ function createHot(compiler, userOptions) {
     valid = true;
   };
 
-  compiler.hooks.invalid.tap(PLUGIN_NAME, onInvalid);
+  // Tapped per child compiler rather than on the MultiCompiler hook, which
+  // does not say which compilation invalidated.
+  for (const child of "compilers" in compiler
+    ? compiler.compilers
+    : [compiler]) {
+    child.hooks.invalid.tap(PLUGIN_NAME, onInvalid(child.name));
+  }
   compiler.hooks.done.tap(PLUGIN_NAME, onDone);
 
   return {

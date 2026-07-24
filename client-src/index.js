@@ -143,6 +143,8 @@ function createEventSourceWrapper() {
   const listeners = [];
   /** @type {ReturnType<typeof setInterval>} */
   let timer;
+  /** @type {ReturnType<typeof setTimeout>} */
+  let reconnectTimer;
 
   const handleOnline = () => {
     log.info("connected");
@@ -161,37 +163,47 @@ function createEventSourceWrapper() {
 
   /**
    * Close the connection and stop the activity timer without scheduling a
-   * reconnection.
+   * reconnection. A reconnection that is already pending is cancelled too, so
+   * closing during the reconnect window really is final.
    */
   const close = () => {
     clearInterval(timer);
+    clearTimeout(reconnectTimer);
     source.close();
   };
 
   const handleDisconnect = () => {
     close();
-    setTimeout(init, /** @type {number} */ (options.timeout));
+    reconnectTimer = setTimeout(init, /** @type {number} */ (options.timeout));
   };
 
   /**
-   * Open the EventSource connection.
+   * Open the EventSource connection and (re)start the inactivity watchdog —
+   * `handleDisconnect` stops the watchdog, so a reconnected source has to
+   * bring its own.
    */
   function init() {
     source = new window.EventSource(/** @type {string} */ (options.path));
     source.addEventListener("open", handleOnline);
     source.addEventListener("error", handleDisconnect);
     source.addEventListener("message", handleMessage);
+
+    lastActivity = Date.now();
+    clearInterval(timer);
+    timer = setInterval(
+      () => {
+        if (
+          Date.now() - lastActivity >
+          /** @type {number} */ (options.timeout)
+        ) {
+          handleDisconnect();
+        }
+      },
+      /** @type {number} */ (options.timeout) / 2,
+    );
   }
 
   init();
-  timer = setInterval(
-    () => {
-      if (Date.now() - lastActivity > /** @type {number} */ (options.timeout)) {
-        handleDisconnect();
-      }
-    },
-    /** @type {number} */ (options.timeout) / 2,
-  );
 
   return {
     addMessageListener(fn) {
