@@ -93,6 +93,7 @@ describe("client", () => {
     delete globalThis.EventSource;
     delete globalThis.__wdmEventSourceWrapper;
     delete globalThis.__webpack_dev_middleware_hot_reporter__;
+    delete globalThis.__webpack_dev_middleware_hot_indicator_state__;
     jest.useRealTimers();
   });
 
@@ -890,6 +891,39 @@ describe("client", () => {
         makeMessage({ action: "building" }),
       );
 
+      expect(document.getElementById(INDICATOR_ID)).toBeNull();
+    });
+
+    it("keeps the badge until every compilation finished", () => {
+      loadClient();
+      const es = EventSourceStub.lastInstance();
+
+      es.onmessage(makeMessage({ action: "building", name: "app" }));
+      es.onmessage(makeMessage({ action: "building", name: "admin" }));
+
+      es.onmessage(
+        makeMessage({
+          action: "built",
+          name: "app",
+          time: 1,
+          hash: "h1",
+          errors: [],
+          warnings: [],
+        }),
+      );
+      // "admin" is still building — its `built` has not arrived yet.
+      expect(document.getElementById(INDICATOR_ID)).not.toBeNull();
+
+      es.onmessage(
+        makeMessage({
+          action: "built",
+          name: "admin",
+          time: 1,
+          hash: "h2",
+          errors: [],
+          warnings: [],
+        }),
+      );
       expect(document.getElementById(INDICATOR_ID)).toBeNull();
     });
   });
