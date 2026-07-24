@@ -25,7 +25,17 @@
     "hono",
     "rspack",
     "apos",
-    "malformed"
+    "malformed",
+    "Consolas",
+    "cspellcache",
+    "CSSOM",
+    "darkgrey",
+    "eslintcache",
+    "esmodules",
+    "mbold",
+    "mred",
+    "noopener",
+    "noreferrer"
   ],
   "ignorePaths": [
     "CHANGELOG.md",
@@ -37,6 +47,8 @@
     "coverage",
     "*.log",
     "./test/fixtures/**",
-    "./test/outputs/**"
+    "./test/outputs/**",
+    "client/**",
+    "examples/*/dist/**"
   ]
 }
