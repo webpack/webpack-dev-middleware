@@ -449,6 +449,19 @@ overlay.showProblems("errors", ["Something broke"]);
 overlay.clear();
 ```
 
+The overlay state is a per-page singleton: every bundled copy of the module
+renders into the same overlay. Multiple clients can report side by side by
+passing a `source` — each source keeps its own slot and the overlay shows the
+union, with errors from any source taking precedence over warnings:
+
+```js
+overlay.showProblems("errors", ["Something broke"], "my-client");
+// Drop only this client's problems; other sources stay on screen.
+overlay.clear("my-client");
+// Without a source, everything is dismissed (same as Esc / backdrop / ×).
+overlay.clear();
+```
+
 The building indicator is exposed the same way:
 
 ```js
