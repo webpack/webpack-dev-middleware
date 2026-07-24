@@ -356,7 +356,10 @@ function createReporter() {
       return false;
     }
 
-    overlay.clear();
+    // Clear only this client's problems and the runtime errors — other
+    // clients sharing the overlay keep theirs.
+    overlay.clear("");
+    overlay.clear("runtime");
     return true;
   };
 
