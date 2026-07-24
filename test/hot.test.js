@@ -437,6 +437,33 @@ describe("createHot", () => {
     hot.close();
   });
 
+  it("pairs bundles sharing a name by occurrence so unchanged ones publish sync", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    // Webpack does not forbid two configs with the same name. Pairing by name
+    // alone would compare the second "app" against the first one's hash and
+    // report it as built on every rebuild.
+    const multiStats = {
+      stats: [
+        makeFakeStats({ name: "app", hash: "a1" }),
+        makeFakeStats({ name: "app", hash: "b1" }),
+      ],
+    };
+
+    compiler.emitDone(multiStats);
+    writes.length = 0;
+
+    compiler.emitInvalid();
+    compiler.emitDone(multiStats);
+
+    expect(writes.filter((w) => w.includes('"action":"sync"'))).toHaveLength(2);
+    expect(writes.some((w) => w.includes('"action":"built"'))).toBe(false);
+
+    hot.close();
+  });
+
   it("publishes built when the bundle's hash changed", () => {
     const compiler = makeFakeCompiler();
     const hot = createHot(compiler, {});

@@ -92,10 +92,21 @@ describe("validation", () => {
         {},
         { path: "/__hmr" },
         { heartbeat: 1000 },
-        { statsOptions: true },
         { statsOptions: { all: false } },
       ],
-      failure: ["foo", 0, { path: "" }, { heartbeat: -1 }, { unknown: true }],
+      failure: [
+        "foo",
+        0,
+        { path: "" },
+        { heartbeat: -1 },
+        // 0 would silently fall back to the default interval — reject it.
+        { heartbeat: 0 },
+        { unknown: true },
+        // Presets and booleans cannot be merged over the middleware's base
+        // stats options — only the object form is accepted.
+        { statsOptions: "errors-only" },
+        { statsOptions: true },
+      ],
     },
   };
 

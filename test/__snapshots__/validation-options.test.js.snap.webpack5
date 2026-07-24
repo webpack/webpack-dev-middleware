@@ -77,7 +77,13 @@ exports[`validation should throw an error on the "headers" option with "true" va
 
 exports[`validation should throw an error on the "hot" option with "{"heartbeat":-1}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
- - options.hot.heartbeat should be >= 0.
+ - options.hot.heartbeat should be >= 1.
+   -> Heartbeat interval (in milliseconds) used to keep the SSE connection alive."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"heartbeat":0}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.heartbeat should be >= 1.
    -> Heartbeat interval (in milliseconds) used to keep the SSE connection alive."
 `;
 
@@ -85,6 +91,20 @@ exports[`validation should throw an error on the "hot" option with "{"path":""}"
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot.path should be a non-empty string.
    -> The path the SSE endpoint is served at."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"statsOptions":"errors-only"}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.statsOptions should be an object:
+   object { … }
+   -> Webpack stats options used when serializing compilation results."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"statsOptions":true}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.statsOptions should be an object:
+   object { … }
+   -> Webpack stats options used when serializing compilation results."
 `;
 
 exports[`validation should throw an error on the "hot" option with "{"unknown":true}" value 1`] = `

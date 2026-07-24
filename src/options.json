@@ -197,7 +197,7 @@
             "heartbeat": {
               "description": "Heartbeat interval (in milliseconds) used to keep the SSE connection alive.",
               "type": "number",
-              "minimum": 0
+              "minimum": 1
             },
             "progress": {
               "description": "Publish compilation progress events to the clients.",
@@ -205,15 +205,8 @@
             },
             "statsOptions": {
               "description": "Webpack stats options used when serializing compilation results.",
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": true
-                }
-              ]
+              "type": "object",
+              "additionalProperties": true
             }
           }
         }
