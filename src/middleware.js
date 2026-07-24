@@ -380,7 +380,11 @@ function wrapper(context) {
   return async function middleware(req, res, next) {
     // Intercept Server-Sent Events handshake when the `hot` option is enabled.
     if (context.hot && hotPathMatch(getRequestURL(req), context.hot.path)) {
-      context.hot.handle(req, res);
+      try {
+        context.hot.handle(req, res);
+      } catch (error) {
+        return next(/** @type {NodeJS.ErrnoException} */ (error));
+      }
       return;
     }
 

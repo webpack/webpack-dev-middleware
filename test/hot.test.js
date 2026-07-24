@@ -1,3 +1,5 @@
+import http from "node:http";
+
 import createHot, {
   createEventStream,
   formatErrors,
@@ -345,6 +347,39 @@ describe("createHot", () => {
     expect(building).not.toContain('"file"');
 
     hot.close();
+  });
+
+  it("ends a response whose headers were already sent instead of registering it", async () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+
+    const server = http.createServer((req, res) => {
+      // Another middleware already started this response before the SSE
+      // handshake sees it.
+      res.writeHead(200, { "Content-Type": "text/plain" });
+      res.write("already-started");
+
+      hot.handle(req, res);
+      // Were the response wrongly registered as a client, this frame would
+      // show up in the body below.
+      hot.publish({ action: "custom" });
+    });
+
+    await new Promise((resolve) => {
+      server.listen(0, resolve);
+    });
+    const { port } = server.address();
+
+    const response = await fetch(`http://127.0.0.1:${port}/__webpack_hmr`);
+    const body = await response.text();
+
+    expect(response.headers.get("content-type")).toBe("text/plain");
+    expect(body).toBe("already-started");
+
+    hot.close();
+    await new Promise((resolve) => {
+      server.close(resolve);
+    });
   });
 
   it("includes the compilation name in the building payload", () => {
