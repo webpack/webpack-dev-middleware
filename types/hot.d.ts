@@ -51,7 +51,7 @@ declare const HOT_DEFAULT_HEARTBEAT: number;
 /** @typedef {import("webpack").StatsError} StatsError */
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index.js").ServerResponse} ServerResponse */
-/** @typedef {NonNullable<import("webpack").Configuration["stats"]>} StatsOptions */
+/** @typedef {import("webpack").StatsOptions} StatsOptions */
 /**
  * @typedef {object} HotOptions
  * @property {string=} path the path the SSE endpoint is served at
@@ -154,7 +154,7 @@ type StatsCompilation = import("webpack").StatsCompilation;
 type StatsError = import("webpack").StatsError;
 type IncomingMessage = import("./index.js").IncomingMessage;
 type ServerResponse = import("./index.js").ServerResponse;
-type StatsOptions = NonNullable<import("webpack").Configuration["stats"]>;
+type StatsOptions = import("webpack").StatsOptions;
 type HotOptions = {
   /**
    * the path the SSE endpoint is served at

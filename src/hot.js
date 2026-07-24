@@ -8,7 +8,9 @@
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index.js").ServerResponse} ServerResponse */
 
-/** @typedef {NonNullable<import("webpack").Configuration["stats"]>} StatsOptions */
+// The object form only (no presets/booleans) — it is merged over the
+// middleware's own base options, which string or boolean forms cannot be.
+/** @typedef {import("webpack").StatsOptions} StatsOptions */
 
 /**
  * @typedef {object} HotOptions
@@ -219,7 +221,7 @@ function toBundles(statsResult, statsOptions) {
     timings: true,
     errors: true,
     warnings: true,
-    ...(statsOptions && typeof statsOptions === "object" ? statsOptions : {}),
+    ...statsOptions,
   };
 
   // Multi-compiler stats have stats for each child compiler.
@@ -257,18 +259,29 @@ function bundlePayload(stats, action) {
  * @param {EventStream} eventStream event stream
  */
 function publishBundles(bundles, previousBundles, eventStream) {
+  /** @type {Map<string, number>} */
+  const occurrences = new Map();
+
   for (const [index, stats] of bundles.entries()) {
     const name = stats.name || "";
 
     // Paired by name so a changing set of compilations (children appearing,
-    // config reloads) cannot compare a bundle against a sibling's hash;
-    // unnamed bundles fall back to their position.
+    // config reloads) cannot compare a bundle against a sibling's hash.
+    // Webpack does not forbid duplicate names, so same-named bundles pair by
+    // occurrence; unnamed bundles fall back to their position.
     let previous = null;
 
     if (previousBundles !== null) {
-      previous = name
-        ? previousBundles.find((bundle) => (bundle.name || "") === name) || null
-        : previousBundles[index] || null;
+      if (name) {
+        const occurrence = occurrences.get(name) || 0;
+        occurrences.set(name, occurrence + 1);
+        previous =
+          previousBundles.filter((bundle) => (bundle.name || "") === name)[
+            occurrence
+          ] || null;
+      } else {
+        previous = previousBundles[index] || null;
+      }
     }
 
     const changed =
@@ -296,7 +309,7 @@ function publishBundles(bundles, previousBundles, eventStream) {
 function createHot(compiler, userOptions) {
   const options = userOptions === true ? {} : userOptions;
   const path = options.path || HOT_DEFAULT_PATH;
-  const heartbeat = options.heartbeat || HOT_DEFAULT_HEARTBEAT;
+  const heartbeat = options.heartbeat ?? HOT_DEFAULT_HEARTBEAT;
   const { statsOptions } = options;
   const logger = compiler.getInfrastructureLogger("webpack-dev-middleware");
 
