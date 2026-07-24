@@ -126,6 +126,7 @@ const colors = {
  * @property {HTMLIFrameElement | null} frame overlay iframe
  * @property {HTMLElement | null} card visible panel inside the iframe
  * @property {boolean} runtimeListenersAttached whether the window listeners are attached
+ * @property {boolean} hostKeydownAttached whether the host document's Escape listener is attached
  * @property {number} pageIndex page shown when paginating
  * @property {Record<string, { type: "errors" | "warnings", lines: string[] }>} problemsBySource each reporting source's problems
  * @property {{ type: "errors" | "warnings", lines: string[] } | null} currentProblems union of every source, as displayed
@@ -139,6 +140,7 @@ function createOverlayState() {
     frame: null,
     card: null,
     runtimeListenersAttached: false,
+    hostKeydownAttached: false,
     pageIndex: 0,
     problemsBySource: {},
     currentProblems: null,
@@ -329,13 +331,6 @@ function linkify(html) {
   });
 }
 
-// Dismiss the overlay when pressing Escape while the page has focus.
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    clear();
-  }
-});
-
 /**
  * Create (or return) the overlay iframe and the card inside it.
  * @returns {HTMLElement | null} the card element, or null when the frame
@@ -348,6 +343,19 @@ function ensureOverlay() {
 
   if (!document.body) {
     return null;
+  }
+
+  // Dismiss the overlay when pressing Escape while the host page has focus —
+  // the frame's own keydown listener only fires when the frame is focused.
+  // Attached lazily on the first render (and once per page, the flag lives in
+  // the shared state) so importing the module stays free of DOM side effects.
+  if (!state.hostKeydownAttached) {
+    state.hostKeydownAttached = true;
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        clear();
+      }
+    });
   }
 
   // Enable Trusted Types if they are available in the current browser.

@@ -7033,6 +7033,24 @@ describe.each([
       );
     });
 
+    it("routes SSE handshake errors to the framework error handler", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: true },
+      );
+
+      instance.context.hot.handle = () => {
+        throw new Error("handshake failed");
+      };
+
+      const response = await req.get("/__webpack_hmr");
+
+      expect(response.statusCode).toBe(500);
+    });
+
     it("does not hang hot requests made after instance.close()", async () => {
       const compiler = getCompiler(webpackConfig);
       [server, req, instance] = await frameworkFactory(

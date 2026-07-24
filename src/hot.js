@@ -99,6 +99,15 @@ function createEventStream(heartbeat, logger) {
       clients = new Map();
     },
     handler(req, res) {
+      // A response another middleware already started can no longer become an
+      // SSE stream — end it instead of crashing on writeHead.
+      if (res.headersSent) {
+        if (!res.writableEnded) {
+          res.end();
+        }
+        return;
+      }
+
       /** @type {Record<string, string>} */
       const headers = {
         "Access-Control-Allow-Origin": "*",
