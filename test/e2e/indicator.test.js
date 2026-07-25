@@ -4,6 +4,8 @@ import runBrowser from "../helpers/run-browser";
 jest.setTimeout(120000);
 
 const INDICATOR_ID = "webpack-dev-middleware-building-indicator";
+const INDICATOR_ENTRY = require.resolve("../../client-src/indicator.js");
+const INDICATOR_STATE_KEY = "__webpack_dev_middleware_hot_indicator_state__";
 
 /**
  * @param {string} text text rendered into #app
@@ -141,5 +143,142 @@ describe("building indicator (browser)", () => {
     await waitForAppText(page, "v2");
 
     expect(await page.evaluate(() => globalThis.__badgeSeen)).toBe(false);
+  });
+});
+
+describe("indicator shared state across bundled copies (browser)", () => {
+  let hotApp;
+  let browser;
+  let page;
+
+  /**
+   * Two real bundled copies of the indicator module — one per compilation —
+   * exposed as globals so the tests can drive both from the page.
+   * @param {string} globalName global to expose the copy under
+   * @returns {string} app source
+   */
+  const exposeIndicator = (globalName) =>
+    `globalThis.${globalName} = require(${JSON.stringify(INDICATOR_ENTRY)});`;
+
+  const start = async () => {
+    hotApp = await createHotApp({
+      apps: [
+        { name: "a", code: exposeIndicator("indicatorA") },
+        { name: "b", code: exposeIndicator("indicatorB") },
+      ],
+    });
+    ({ page, browser } = await runBrowser());
+  };
+
+  afterEach(async () => {
+    // try/finally: a rejected browser.close() must not leak the watcher,
+    // the server, and the temp dir behind it.
+    try {
+      if (browser) {
+        await browser.close();
+      }
+    } finally {
+      browser = undefined;
+      if (hotApp) {
+        const closing = hotApp;
+        hotApp = undefined;
+        await closing.close();
+      }
+    }
+  });
+
+  it("drives a single badge from a second bundled copy", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    const state = await page.evaluate((id) => {
+      globalThis.indicatorA.show("Rebuilding…");
+      globalThis.indicatorB.show("Rebuilding… 42%", 42);
+
+      const hosts = document.querySelectorAll(`#${id}`);
+
+      return {
+        count: hosts.length,
+        text: hosts[0] ? hosts[0].shadowRoot.textContent : "",
+      };
+    }, INDICATOR_ID);
+
+    // One badge, adopted (not stacked) by the second copy, showing its text.
+    expect(state.count).toBe(1);
+    expect(state.text).toContain("42%");
+
+    // The state is shared, so the first copy's hide() removes the badge the
+    // second copy updated.
+    await page.evaluate(() => globalThis.indicatorA.hide());
+    expect(
+      await page.evaluate((id) => document.getElementById(id), INDICATOR_ID),
+    ).toBeNull();
+  });
+
+  it("keeps the badge while another copy's source is still building", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.indicatorA.show("Rebuilding a…", undefined, "a");
+      globalThis.indicatorB.show("Rebuilding b…", undefined, "b");
+      globalThis.indicatorB.hide("b");
+    });
+    expect(
+      await page.evaluate(
+        (id) => document.getElementById(id) !== null,
+        INDICATOR_ID,
+      ),
+    ).toBe(true);
+
+    await page.evaluate(() => globalThis.indicatorA.hide("a"));
+    expect(
+      await page.evaluate(
+        (id) => document.getElementById(id) !== null,
+        INDICATOR_ID,
+      ),
+    ).toBe(false);
+  });
+
+  it("ignores hiding an unknown source and still removes unconditionally", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.indicatorA.show("Rebuilding…", undefined, "a");
+      globalThis.indicatorA.hide("unknown");
+    });
+    expect(
+      await page.evaluate(
+        (id) => document.getElementById(id) !== null,
+        INDICATOR_ID,
+      ),
+    ).toBe(true);
+
+    // Without a source the badge is removed even with builds pending.
+    await page.evaluate(() => globalThis.indicatorA.hide());
+    expect(
+      await page.evaluate(
+        (id) => document.getElementById(id) !== null,
+        INDICATOR_ID,
+      ),
+    ).toBe(false);
+  });
+
+  it("fills state fields missing from an older copy's shape", async () => {
+    await start();
+    // An older package version created a leaner shared state before the
+    // bundles load.
+    await page.evaluateOnNewDocument((key) => {
+      globalThis[key] = { host: null };
+    }, INDICATOR_STATE_KEY);
+    await page.goto(hotApp.url);
+
+    const count = await page.evaluate((id) => {
+      globalThis.indicatorA.show("Rebuilding…");
+      return document.querySelectorAll(`#${id}`).length;
+    }, INDICATOR_ID);
+
+    expect(count).toBe(1);
   });
 });
