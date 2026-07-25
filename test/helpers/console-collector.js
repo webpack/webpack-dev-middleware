@@ -45,16 +45,20 @@ function collectConsole(page) {
 
 /**
  * Strip the run-specific parts (timings, temp fixture paths) so browser
- * console output can be snapshotted.
+ * console output can be snapshotted. Network-error noise emitted by the
+ * browser itself ("Failed to load resource: …") is dropped — how many of
+ * those a severed connection produces depends on reconnect timing.
  * @param {string[]} messages raw console messages
  * @returns {string[]} normalized messages
  */
 function normalizeConsole(messages) {
-  return messages.map((text) =>
-    text
-      .replaceAll(/\d+\s?ms/g, "Xms")
-      .replaceAll(/[^\s(]*wdm-e2e-[^/\s]*/g, "<fixture>"),
-  );
+  return messages
+    .filter((text) => !text.startsWith("Failed to load resource"))
+    .map((text) =>
+      text
+        .replaceAll(/\d+\s?ms/g, "Xms")
+        .replaceAll(/[^\s(]*wdm-e2e-[^/\s]*/g, "<fixture>"),
+    );
 }
 
 module.exports = collectConsole;

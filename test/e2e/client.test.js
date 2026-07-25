@@ -1,4 +1,4 @@
-import collectConsole from "../helpers/console-collector";
+import collectConsole, { normalizeConsole } from "../helpers/console-collector";
 import createHotApp from "../helpers/hot-app";
 import runBrowser from "../helpers/run-browser";
 
@@ -165,6 +165,77 @@ describe("hot client (browser)", () => {
 
     await waitForAppText(page, "v2");
     expect(await readReloadMarker(page)).toBe(true);
+
+    // The whole story in one place: connect, silent gap while the server was
+    // down, reconnect, and the catch-up sync applying the missed build.
+    await console_.waitFor("App is up to date");
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
+  });
+
+  it("watchdog-reconnects a silent connection and stays armed afterwards", async () => {
+    app = await createHotApp({
+      query: "?timeout=1000",
+      code: acceptedApp("v1"),
+      // A heartbeat far beyond the client timeout leaves the connection open
+      // but silent, so only the inactivity watchdog can trigger reconnects.
+      hot: { heartbeat: 3600000 },
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+
+    // Three connects = the initial one plus two watchdog cycles: the second
+    // proves the watchdog fires on pure silence (no error event involved),
+    // the third that it re-arms after a reconnect instead of dying with the
+    // first clearInterval.
+    await console_.waitForCount("connected", 3);
+
+    // Nothing but connects: the silent cycles produce no other output. The
+    // snapshot is taken before the edit — the watchdog keeps cycling, so any
+    // later cut would race with the next reconnect.
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
+
+    // The reconnected connection still delivers updates.
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    expect(
+      await page.evaluate(() => document.getElementById("app").textContent),
+    ).toBe("v2");
+  });
+
+  it("reconnects manually with setOptionsAndConnect() after disconnect()", async () => {
+    app = await createHotApp({
+      code: `
+        globalThis.hotClient = require(${JSON.stringify(CLIENT_ENTRY)});
+        document.getElementById("app").textContent = "v1";
+        if (module.hot) {
+          module.hot.accept();
+        }
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    // disconnect() drops the cached wrapper, so a manual connect starts a
+    // fresh connection on the same path.
+    await page.evaluate(() => {
+      globalThis.hotClient.disconnect();
+      globalThis.hotClient.setOptionsAndConnect({});
+    });
+    await console_.waitForCount("connected", 2);
+
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+    await console_.waitFor("App is up to date");
+
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
   });
 
   it("routes server publish() payloads to subscribe handlers", async () => {
