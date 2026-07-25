@@ -10,6 +10,20 @@ You may need an appropriate loader to handle this file type, currently no loader
 ]
 `;
 
+exports[`client logging (browser) logging=log adds the collapsed per-module detail 1`] = `
+[
+  "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] bundle rebuilding (<fixture>/app.js changed)",
+  "[webpack-dev-middleware] bundle rebuilt in Xms",
+  "[webpack-dev-middleware] Checking for updates on the server...",
+  "[webpack-dev-middleware] Hot updated 1 modules.",
+  "[webpack-dev-middleware] Updated modules:",
+  "[webpack-dev-middleware]  - ./app.js",
+  "console.groupEnd",
+  "[webpack-dev-middleware] App is up to date.",
+]
+`;
+
 exports[`client logging (browser) logging=none silences the whole cycle 1`] = `[]`;
 
 exports[`client logging (browser) logging=warn keeps warnings only 1`] = `

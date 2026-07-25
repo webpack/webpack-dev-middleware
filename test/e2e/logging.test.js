@@ -70,6 +70,24 @@ describe("client logging (browser)", () => {
     expect(normalizeConsole(console_.messages)).toMatchSnapshot();
   });
 
+  it("logging=log adds the collapsed per-module detail", async () => {
+    hotApp = await createHotApp({ query: "?logging=log", code: app("v1") });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    hotApp.edit(app("v2"));
+    await waitForAppText(page, "v2");
+    await console_.waitFor("App is up to date");
+
+    // Includes the "Updated modules:" collapsed group and its " - ./app.js"
+    // entry, which the info level gates off.
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
+  });
+
   it("logging=none silences the whole cycle", async () => {
     hotApp = await createHotApp({ query: "?logging=none", code: app("v1") });
     ({ page, browser } = await runBrowser());

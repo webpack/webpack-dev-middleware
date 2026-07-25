@@ -115,17 +115,6 @@ describe("client", () => {
       jest.restoreAllMocks();
     });
 
-    it("logs the changed file on building messages", () => {
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({ action: "building", file: "/src/index.js" }),
-      );
-      expect(
-        console.info.mock.calls.some(([msg]) =>
-          msg.includes("rebuilding (/src/index.js changed)"),
-        ),
-      ).toBe(true);
-    });
-
     it("calls subscribeAll handler on default messages", () => {
       const spy = jest.fn();
       client.subscribeAll(spy);
