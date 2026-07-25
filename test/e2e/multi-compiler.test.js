@@ -190,8 +190,8 @@ describe("multi-compiler (browser)", () => {
     const secondPage = await frame.evaluate(() => document.body.textContent);
     const union = firstPage + secondPage;
 
-    expect(union).toContain("> broken app");
-    expect(union).toContain("> broken widget");
+    expect(union).toContain("broken app {{{");
+    expect(union).toContain("broken widget {{{");
   });
 
   it("keeps one bundle's overlay errors while a sibling rebuilds successfully", async () => {

@@ -300,7 +300,7 @@ describe("error overlay (browser)", () => {
 
     // Both errors also reach the console, joined into a single error call —
     // snapshotted once the second one's code frame is in.
-    await console_.waitFor("> broken b");
+    await console_.waitFor("broken b {{{");
     expect(normalizeConsole(console_.messages)).toMatchSnapshot();
 
     // One problem at a time, with a counter.
@@ -315,6 +315,77 @@ describe("error overlay (browser)", () => {
 
     expect(await frame.evaluate(() => document.body.textContent)).toContain(
       "2 / 2",
+    );
+  });
+
+  it("accumulates runtime errors and pages between them", async () => {
+    hotApp = await createHotApp({
+      code: `
+        document.getElementById("app").textContent = "v1";
+        globalThis.boom = (message) => {
+          setTimeout(() => {
+            throw new Error(message);
+          }, 0);
+        };
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await page.waitForFunction(
+      () => document.getElementById("app")?.textContent === "v1",
+    );
+
+    await page.evaluate(() => globalThis.boom("boom-one"));
+    const frame = await waitForOverlay(page);
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("boom-one"),
+    );
+
+    // A second error joins the pager; the newest one is shown.
+    await page.evaluate(() => globalThis.boom("boom-two"));
+    await frame.waitForFunction(
+      () =>
+        document.body.textContent.includes("boom-two") &&
+        document.body.textContent.includes("2 / 2"),
+    );
+
+    // The previous error stays reachable.
+    await frame.click('[aria-label="Previous problem"]');
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("boom-one"),
+    );
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "1 / 2",
+    );
+  });
+
+  it("shows unhandled promise rejections", async () => {
+    hotApp = await createHotApp({
+      // The rejection must originate from the page's own script so the
+      // unhandledrejection event carries the real reason.
+      code: `
+        document.getElementById("app").textContent = "v1";
+        globalThis.rejectSoon = (message) => {
+          setTimeout(() => {
+            Promise.reject(new Error(message));
+          }, 0);
+        };
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await page.waitForFunction(
+      () => document.getElementById("app")?.textContent === "v1",
+    );
+
+    await page.evaluate(() => globalThis.rejectSoon("rejected-boom"));
+
+    const frame = await waitForOverlay(page);
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "rejected-boom",
     );
   });
 

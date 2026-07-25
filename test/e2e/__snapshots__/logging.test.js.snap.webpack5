@@ -5,8 +5,10 @@ exports[`client logging (browser) logging=error keeps errors only 1`] = `
   "[webpack-dev-middleware] bundle has 1 errors",
   "[webpack-dev-middleware] ./app.js 1:7
 Module parse failed: Unexpected token (1:7)
+File was parsed as module type 'javascript/auto'.
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> broken {{{",
+> 1 | broken {{{
+    |        ^",
 ]
 `;
 

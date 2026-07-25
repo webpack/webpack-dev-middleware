@@ -133,50 +133,6 @@ describe("overlay", () => {
   });
 
   describe("runtime errors", () => {
-    it("shows uncaught errors in the overlay and accumulates them", () => {
-      configureOverlay({ catchRuntimeError: true });
-
-      globalThis.dispatchEvent(
-        new ErrorEvent("error", {
-          error: new Error("boom-runtime"),
-          message: "boom-runtime",
-        }),
-      );
-
-      expect(getOverlay()).not.toBeNull();
-      expect(getCard().textContent).toContain(
-        "Uncaught runtime error: boom-runtime",
-      );
-
-      globalThis.dispatchEvent(
-        new ErrorEvent("error", {
-          error: new Error("boom-2"),
-          message: "boom-2",
-        }),
-      );
-
-      // With pagination (default) the newest runtime error is shown, and the
-      // previous one stays reachable.
-      expect(getCard().textContent).toContain("boom-2");
-      expect(getCard().textContent).toContain("2 / 2");
-
-      getOverlay().contentDocument.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "ArrowLeft" }),
-      );
-      expect(getCard().textContent).toContain("boom-runtime");
-    });
-
-    it("shows unhandled promise rejections", () => {
-      configureOverlay({ catchRuntimeError: true });
-
-      const event = new Event("unhandledrejection");
-      /** @type {EXPECTED_ANY} */ (event).reason = new Error("rejected-boom");
-      globalThis.dispatchEvent(event);
-
-      expect(getOverlay()).not.toBeNull();
-      expect(getCard().textContent).toContain("rejected-boom");
-    });
-
     it("ignores errors already caught by a React error boundary", () => {
       configureOverlay({ catchRuntimeError: true });
 
