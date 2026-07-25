@@ -559,16 +559,17 @@ function wdm(compiler, options = {}, isPlugin = false) {
       }
     };
 
-    if (isMultipleCompiler(compiler)) {
-      // TODO improve on webpack side - add an option `watching(s)` for MultiCompiler
+    if (compiler.watching) {
+      // Reuse the active watching session instead of starting a second one
+      // (exposed on `MultiCompiler` since webpack 5.109).
+      context.watching = compiler.watching;
+    } else if (isMultipleCompiler(compiler)) {
       context.watching = compiler.watch(
         compiler.compilers.map(
           (compiler) => compiler.options.watchOptions || {},
         ),
         errorHandler,
       );
-    } else if (compiler.watching) {
-      context.watching = compiler.watching;
     } else {
       context.watching = compiler.watch(
         compiler.options.watchOptions || {},

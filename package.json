@@ -87,7 +87,7 @@
     "router": "^2.2.0",
     "supertest": "^7.0.0",
     "typescript": "^6.0.2",
-    "webpack": "^5.101.0"
+    "webpack": "^5.109.0"
   },
   "peerDependencies": {
     "webpack": "^5.101.0"
