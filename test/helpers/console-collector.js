@@ -57,7 +57,13 @@ function normalizeConsole(messages) {
     .map((text) =>
       text
         .replaceAll(/\d+\s?ms/g, "Xms")
-        .replaceAll(/[^\s(]*wdm-e2e-[^/\s]*/g, "<fixture>"),
+        .replaceAll(/[^\s(]*wdm-e2e-[^/\s]*/g, "<fixture>")
+        // The invalid hook sometimes reports the watched directory instead of
+        // the file (polling watcher) — collapse both forms.
+        .replaceAll(
+          /rebuilding \(<fixture>\S* changed\)/g,
+          "rebuilding (<fixture> changed)",
+        ),
     );
 }
 

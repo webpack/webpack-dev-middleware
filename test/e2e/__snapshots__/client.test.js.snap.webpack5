@@ -14,7 +14,7 @@ exports[`hot client (browser) reconnects manually with setOptionsAndConnect() af
 [
   "[webpack-dev-middleware] connected",
   "[webpack-dev-middleware] connected",
-  "[webpack-dev-middleware] bundle rebuilding (<fixture>/app.js changed)",
+  "[webpack-dev-middleware] bundle rebuilding (<fixture> changed)",
   "[webpack-dev-middleware] bundle rebuilt in Xms",
   "[webpack-dev-middleware] Checking for updates on the server...",
   "[webpack-dev-middleware] Hot updated 1 modules.",
