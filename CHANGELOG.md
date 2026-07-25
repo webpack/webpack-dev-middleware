@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.1.0
+
+### Minor Changes
+
+- Reuse an already active `MultiCompiler` watching session instead of starting a duplicate one (requires webpack >= 5.109). (by [@bjohansebas](https://github.com/bjohansebas) in [#2371](https://github.com/webpack/webpack-dev-middleware/pull/2371))
+
 ## 8.0.4
 
 ### Patch Changes
