@@ -503,10 +503,14 @@ In the webpack configuration, swap the client entry (`HotModuleReplacementPlugin
 
 ```js
 // Before
-entry: ["webpack-hot-middleware/client?timeout=20000", "./src/app.js"],
+module.exports = {
+  entry: ["webpack-hot-middleware/client?timeout=20000", "./src/app.js"],
+};
 
 // After
-entry: ["webpack-dev-middleware/client?timeout=20000", "./src/app.js"],
+module.exports = {
+  entry: ["webpack-dev-middleware/client?timeout=20000", "./src/app.js"],
+};
 ```
 
 Option mapping:
