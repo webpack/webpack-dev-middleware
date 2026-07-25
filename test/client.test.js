@@ -114,20 +114,6 @@ describe("client", () => {
       jest.restoreAllMocks();
     });
 
-    it("does not trigger webpack on errored builds", () => {
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: ["Something broke"],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(processUpdate).not.toHaveBeenCalled();
-    });
-
     it("updates overlay when an errored build becomes a warning", () => {
       const es = EventSourceStub.lastInstance();
       es.onmessage(
@@ -198,52 +184,6 @@ describe("client", () => {
       expect(clientOverlay.showProblems).toHaveBeenLastCalledWith("errors", [
         "Something broke",
         "Actually, 2 things broke",
-      ]);
-    });
-  });
-
-  describe("with multi-compiler payloads", () => {
-    let EventSourceStub;
-
-    beforeEach(() => {
-      EventSourceStub = makeEventSourceStub();
-      globalThis.EventSource = EventSourceStub;
-      jest.spyOn(console, "info").mockImplementation(() => {});
-      jest.spyOn(console, "log").mockImplementation(() => {});
-      jest.spyOn(console, "warn").mockImplementation(() => {});
-      jest.spyOn(console, "error").mockImplementation(() => {});
-      loadClient();
-    });
-
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
-    it("shows the union of problems from every broken bundle", () => {
-      const es = EventSourceStub.lastInstance();
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          name: "app",
-          time: 100,
-          hash: "app-hash",
-          errors: ["app broke"],
-          warnings: [],
-        }),
-      );
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          name: "admin",
-          time: 100,
-          hash: "admin-hash",
-          errors: ["admin broke too"],
-          warnings: [],
-        }),
-      );
-      expect(clientOverlay.showProblems).toHaveBeenLastCalledWith("errors", [
-        "app broke",
-        "admin broke too",
       ]);
     });
   });

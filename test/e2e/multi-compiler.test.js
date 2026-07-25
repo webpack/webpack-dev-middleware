@@ -151,6 +151,49 @@ describe("multi-compiler (browser)", () => {
     expect(normalizeConsole(console_.messages)).toMatchSnapshot();
   });
 
+  it("shows the union of problems from every broken bundle", async () => {
+    app = await createHotApp({
+      apps: [
+        { name: "app", code: bundleApp("app", "app-v1") },
+        { name: "widget", code: bundleApp("widget", "widget-v1") },
+      ],
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(app.url);
+    await waitForText(page, "out-app", "app-v1");
+    await waitForText(page, "out-widget", "widget-v1");
+
+    app.edit("app", "broken app {{{");
+    app.edit("widget", "broken widget {{{");
+
+    const handle = await page.waitForSelector(`#${OVERLAY_ID}`, {
+      timeout: 30000,
+    });
+    const frame = await handle.contentFrame();
+
+    // Both bundles' problems share the overlay: the pager counts the union
+    // (one problem per page; which bundle finishes breaking first varies).
+    await frame.waitForFunction(
+      () => document.body.textContent.includes("1 / 2"),
+      { timeout: 30000 },
+    );
+
+    const firstPage = await frame.evaluate(() => document.body.textContent);
+
+    await frame.click('[aria-label="Next problem"]');
+    await frame.waitForFunction(
+      () => document.body.textContent.includes("2 / 2"),
+      { timeout: 30000 },
+    );
+
+    const secondPage = await frame.evaluate(() => document.body.textContent);
+    const union = firstPage + secondPage;
+
+    expect(union).toContain("> broken app");
+    expect(union).toContain("> broken widget");
+  });
+
   it("keeps one bundle's overlay errors while a sibling rebuilds successfully", async () => {
     app = await createHotApp({
       apps: [
