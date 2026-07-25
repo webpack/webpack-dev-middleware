@@ -19,9 +19,11 @@ asset bundle.js x KiB [emitted] (name: main)
 
 ERROR in ./broken.js 1:3
 Module parse failed: Unexpected token (1:3)
+File was parsed as module type 'javascript/auto'.
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|
+> 1 |1()2()3()
+| ^
+2 |
 
 broken (webpack x.x.x) compiled with 1 error in x ms
 
@@ -37,7 +39,7 @@ success:
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -53,9 +55,11 @@ exports[`logging plugin should logging in multi-compiler and respect the "stats"
 
 ERROR in ./broken.js 1:3
 Module parse failed: Unexpected token (1:3)
+File was parsed as module type 'javascript/auto'.
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|
+> 1 |1()2()3()
+| ^
+2 |
 
 webpack x.x.x compiled with 1 error in x ms
 
@@ -69,7 +73,7 @@ webpack x.x.x compiled with 1 warning in x ms
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -85,9 +89,11 @@ exports[`logging plugin should logging in multi-compiler and respect the "stats"
 
 ERROR in ./broken.js 1:3
 Module parse failed: Unexpected token (1:3)
+File was parsed as module type 'javascript/auto'.
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|
+> 1 |1()2()3()
+| ^
+2 |
 
 webpack x.x.x compiled with 1 error in x ms
 
@@ -113,7 +119,7 @@ webpack x.x.x compiled successfully in x ms
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -129,9 +135,11 @@ exports[`logging plugin should logging in multi-compiler and respect the "stats"
 
 ERROR in ./broken.js 1:3
 Module parse failed: Unexpected token (1:3)
+File was parsed as module type 'javascript/auto'.
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|
+> 1 |1()2()3()
+| ^
+2 |
 
 webpack x.x.x compiled with 1 error in x ms
 
@@ -145,7 +153,7 @@ webpack x.x.x compiled with 1 warning in x ms
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -256,7 +264,7 @@ webpack/runtime/hasOwnProperty shorthand x bytes {main} [code generated]
 webpack/runtime/make namespace object x bytes {main} [code generated]
 [no exports]
 [used exports unknown]
-webpack/runtime/publicPath x KiB {main} [code generated]
+webpack/runtime/publicPath x bytes {main} [code generated]
 [no exports]
 [used exports unknown]
 cacheable modules x bytes
@@ -282,7 +290,7 @@ exports[`logging plugin should logging on successfully build in multi-compiler m
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -440,7 +448,7 @@ exports[`logging plugin should logging on successfully multi-compiler build usin
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -458,7 +466,7 @@ exports[`logging plugin should logging on successfully multi-compiler build usin
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -476,7 +484,7 @@ exports[`logging plugin should logging on successfully multi-compiler build usin
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -494,7 +502,7 @@ exports[`logging plugin should logging on successfully multi-compiler build usin
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -512,7 +520,7 @@ exports[`logging plugin should logging on successfully multi-compiler build usin
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -530,7 +538,7 @@ exports[`logging plugin should logging on successfully multi-compiler build usin
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -547,17 +555,21 @@ exports[`logging plugin should logging on unsuccessful build in multi-compiler: 
 exports[`logging plugin should logging on unsuccessful build in multi-compiler: stdout 1`] = `
 "ERROR in ./broken.js 1:3
 Module parse failed: Unexpected token (1:3)
+File was parsed as module type 'javascript/auto'.
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|
+> 1 |1()2()3()
+| ^
+2 |
 
 webpack compiled with 1 error
 
 ERROR in ./broken.js 1:3
 Module parse failed: Unexpected token (1:3)
+File was parsed as module type 'javascript/auto'.
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|
+> 1 |1()2()3()
+| ^
+2 |
 
 webpack compiled with 1 error"
 `;
@@ -567,9 +579,11 @@ exports[`logging plugin should logging on unsuccessful build: stderr 1`] = `""`;
 exports[`logging plugin should logging on unsuccessful build: stdout 1`] = `
 "ERROR in ./broken.js 1:3
 Module parse failed: Unexpected token (1:3)
+File was parsed as module type 'javascript/auto'.
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|
+> 1 |1()2()3()
+| ^
+2 |
 
 webpack compiled with 1 error"
 `;
@@ -605,9 +619,11 @@ asset bundle.js x KiB [emitted] (name: main)
 
 ERROR in ./broken.js 1:3
 Module parse failed: Unexpected token (1:3)
+File was parsed as module type 'javascript/auto'.
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|
+> 1 |1()2()3()
+| ^
+2 |
 
 broken (webpack x.x.x) compiled with 1 error in x ms
 
@@ -623,7 +639,7 @@ success:
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -639,9 +655,11 @@ exports[`logging standalone should logging in multi-compiler and respect the "st
 
 ERROR in ./broken.js 1:3
 Module parse failed: Unexpected token (1:3)
+File was parsed as module type 'javascript/auto'.
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|
+> 1 |1()2()3()
+| ^
+2 |
 
 webpack x.x.x compiled with 1 error in x ms
 
@@ -655,7 +673,7 @@ webpack x.x.x compiled with 1 warning in x ms
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -671,9 +689,11 @@ exports[`logging standalone should logging in multi-compiler and respect the "st
 
 ERROR in ./broken.js 1:3
 Module parse failed: Unexpected token (1:3)
+File was parsed as module type 'javascript/auto'.
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|
+> 1 |1()2()3()
+| ^
+2 |
 
 webpack x.x.x compiled with 1 error in x ms
 
@@ -699,7 +719,7 @@ webpack x.x.x compiled successfully in x ms
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -715,9 +735,11 @@ exports[`logging standalone should logging in multi-compiler and respect the "st
 
 ERROR in ./broken.js 1:3
 Module parse failed: Unexpected token (1:3)
+File was parsed as module type 'javascript/auto'.
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|
+> 1 |1()2()3()
+| ^
+2 |
 
 webpack x.x.x compiled with 1 error in x ms
 
@@ -731,7 +753,7 @@ webpack x.x.x compiled with 1 warning in x ms
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -842,7 +864,7 @@ webpack/runtime/hasOwnProperty shorthand x bytes {main} [code generated]
 webpack/runtime/make namespace object x bytes {main} [code generated]
 [no exports]
 [used exports unknown]
-webpack/runtime/publicPath x KiB {main} [code generated]
+webpack/runtime/publicPath x bytes {main} [code generated]
 [no exports]
 [used exports unknown]
 cacheable modules x bytes
@@ -868,7 +890,7 @@ exports[`logging standalone should logging on successfully build in multi-compil
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -955,7 +977,7 @@ webpack/runtime/hasOwnProperty shorthand x bytes {main} [code generated]
 webpack/runtime/make namespace object x bytes {main} [code generated]
 [no exports]
 [used exports unknown]
-webpack/runtime/publicPath x KiB {main} [code generated]
+webpack/runtime/publicPath x bytes {main} [code generated]
 [no exports]
 [used exports unknown]
 cacheable modules x bytes
@@ -1041,7 +1063,7 @@ exports[`logging standalone should logging on successfully multi-compiler build 
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -1059,7 +1081,7 @@ exports[`logging standalone should logging on successfully multi-compiler build 
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x bytes x modules
+runtime modules x KiB x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -1086,17 +1108,21 @@ exports[`logging standalone should logging on unsuccessful build in multi-compil
 exports[`logging standalone should logging on unsuccessful build in multi-compiler: stdout 1`] = `
 "ERROR in ./broken.js 1:3
 Module parse failed: Unexpected token (1:3)
+File was parsed as module type 'javascript/auto'.
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|
+> 1 |1()2()3()
+| ^
+2 |
 
 webpack compiled with 1 error
 
 ERROR in ./broken.js 1:3
 Module parse failed: Unexpected token (1:3)
+File was parsed as module type 'javascript/auto'.
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|
+> 1 |1()2()3()
+| ^
+2 |
 
 webpack compiled with 1 error"
 `;
@@ -1106,9 +1132,11 @@ exports[`logging standalone should logging on unsuccessful build: stderr 1`] = `
 exports[`logging standalone should logging on unsuccessful build: stdout 1`] = `
 "ERROR in ./broken.js 1:3
 Module parse failed: Unexpected token (1:3)
+File was parsed as module type 'javascript/auto'.
 You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
-> 1()2()3()
-|
+> 1 |1()2()3()
+| ^
+2 |
 
 webpack compiled with 1 error"
 `;

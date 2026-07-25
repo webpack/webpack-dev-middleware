@@ -6947,3 +6947,16 @@ describe.each([
     });
   });
 });
+
+describe("watching reuse", () => {
+  it("reuses an already active MultiWatching", (done) => {
+    const compiler = getCompiler(webpackMultiConfig);
+    const watching = compiler.watch({}, () => {});
+    const instance = middleware(compiler);
+
+    expect(instance.context.watching).toBe(watching);
+    expect(compiler.watching).toBe(watching);
+
+    instance.close(done);
+  });
+});
