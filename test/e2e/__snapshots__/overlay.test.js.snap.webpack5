@@ -1,0 +1,16 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`error overlay (browser) paginates multiple problems with a counter 1`] = `
+[
+  "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] bundle has 2 errors",
+  "[webpack-dev-middleware] ./a.js 1:7
+Module parse failed: Unexpected token (1:7)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> broken a {{{
+./b.js 1:7
+Module parse failed: Unexpected token (1:7)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> broken b {{{",
+]
+`;

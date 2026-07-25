@@ -1,4 +1,4 @@
-import collectConsole from "../helpers/console-collector";
+import collectConsole, { normalizeConsole } from "../helpers/console-collector";
 import createHotApp from "../helpers/hot-app";
 import runBrowser from "../helpers/run-browser";
 
@@ -169,6 +169,76 @@ describe("error overlay (browser)", () => {
 
     expect(text).toContain("WARNING");
     expect(text).toContain("Critical dependency");
+
+    // A build without the warning clears the overlay again.
+    hotApp.edit(app("fixed"));
+    await waitForNoOverlay(page);
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it('overlay={"warnings":false} suppresses warnings (dev-server shape)', async () => {
+    hotApp = await createHotApp({
+      query: '?overlay={"warnings":false}',
+      code: `
+        document.getElementById("app").textContent = "v1";
+        const dep = "./nothing";
+        try {
+          require(dep);
+        } catch (err) {
+          // expected
+        }
+        if (module.hot) {
+          module.hot.accept();
+        }
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    // The warning still reaches the console — just not the DOM.
+    await console_.waitFor("Critical dependency");
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it("applies a warnings filter function from the query (dev-server parity)", async () => {
+    hotApp = await createHotApp({
+      query:
+        '?overlay={"warnings":"function(message){return message.includes(`a.js`)}"}',
+      // Two warning-producing modules; the filter keeps only a.js's warning.
+      code: `
+        document.getElementById("app").textContent = "v1";
+        try {
+          require("./a");
+        } catch (err) {
+          // expected
+        }
+        try {
+          require("./b");
+        } catch (err) {
+          // expected
+        }
+        if (module.hot) {
+          module.hot.accept();
+        }
+      `,
+      files: {
+        "a.js":
+          'const depA = "./nothing"; try { require(depA); } catch (err) {}',
+        "b.js":
+          'const depB = "./nothing"; try { require(depB); } catch (err) {}',
+      },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    const frame = await waitForOverlay(page);
+    const text = await frame.evaluate(() => document.body.textContent);
+
+    expect(text).toContain("./a.js");
+    expect(text).not.toContain("./b.js");
   });
 
   it("paginates multiple problems with a counter", async () => {
@@ -193,10 +263,16 @@ describe("error overlay (browser)", () => {
       },
     });
     ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
 
     await page.goto(hotApp.url);
 
     const frame = await waitForOverlay(page);
+
+    // Both errors also reach the console, joined into a single error call —
+    // snapshotted once the second one's code frame is in.
+    await console_.waitFor("> broken b");
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
 
     // One problem at a time, with a counter.
     await frame.waitForFunction(() =>

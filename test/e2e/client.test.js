@@ -242,6 +242,10 @@ describe("hot client (browser)", () => {
     app = await createHotApp({
       code: `
         const hotClient = require(${JSON.stringify(CLIENT_ENTRY)});
+        globalThis.__all = [];
+        hotClient.subscribeAll((payload) => {
+          globalThis.__all.push(payload.action);
+        });
         hotClient.subscribe((payload) => {
           globalThis.__custom = payload;
         });
@@ -269,6 +273,13 @@ describe("hot client (browser)", () => {
     expect(await page.evaluate(() => globalThis.__custom.action)).toBe(
       "my-event",
     );
+
+    // subscribeAll saw both the protocol traffic (the connect-time sync) and
+    // the custom payload; subscribe saw only the custom one.
+    const all = await page.evaluate(() => globalThis.__all);
+
+    expect(all).toContain("sync");
+    expect(all).toContain("my-event");
   });
 
   it("disconnect() during the reconnect window cancels the pending reconnect", async () => {

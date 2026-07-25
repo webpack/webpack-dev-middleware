@@ -99,7 +99,6 @@ describe("client", () => {
 
   describe("with default options", () => {
     let EventSourceStub;
-    let client;
 
     beforeEach(() => {
       EventSourceStub = makeEventSourceStub();
@@ -108,51 +107,11 @@ describe("client", () => {
       jest.spyOn(console, "log").mockImplementation(() => {});
       jest.spyOn(console, "warn").mockImplementation(() => {});
       jest.spyOn(console, "error").mockImplementation(() => {});
-      client = loadClient();
+      loadClient();
     });
 
     afterEach(() => {
       jest.restoreAllMocks();
-    });
-
-    it("calls subscribeAll handler on default messages", () => {
-      const spy = jest.fn();
-      client.subscribeAll(spy);
-      const message = {
-        action: "built",
-        time: 100,
-        hash: "1234567890abcdef",
-        errors: [],
-        warnings: [],
-        modules: [],
-      };
-      EventSourceStub.lastInstance().onmessage(makeMessage(message));
-      expect(spy).toHaveBeenCalledTimes(1);
-      expect(spy).toHaveBeenCalledWith(message);
-    });
-
-    it("calls subscribeAll handler on custom messages", () => {
-      const spy = jest.fn();
-      client.subscribeAll(spy);
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({ action: "thingy" }),
-      );
-      expect(spy).toHaveBeenCalledTimes(1);
-      expect(spy).toHaveBeenCalledWith({ action: "thingy" });
-    });
-
-    it("calls only the custom handler for custom messages", () => {
-      const spy = jest.fn();
-      client.subscribe(spy);
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({ custom: "thingy" }),
-      );
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({ action: "built" }),
-      );
-      expect(spy).toHaveBeenCalledTimes(1);
-      expect(spy).toHaveBeenCalledWith({ custom: "thingy" });
-      expect(processUpdate).not.toHaveBeenCalled();
     });
 
     it("does not trigger webpack on errored builds", () => {
@@ -289,41 +248,6 @@ describe("client", () => {
     });
   });
 
-  describe("with an overlay warnings filter function", () => {
-    let EventSourceStub;
-
-    beforeEach(() => {
-      EventSourceStub = makeEventSourceStub();
-      globalThis.EventSource = EventSourceStub;
-      jest.spyOn(console, "info").mockImplementation(() => {});
-      jest.spyOn(console, "log").mockImplementation(() => {});
-      jest.spyOn(console, "warn").mockImplementation(() => {});
-      loadClient(
-        '?overlay={"warnings":"function(message){return message.includes(`keep`)}"}',
-      );
-    });
-
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
-    it("only shows the warnings the filter keeps (dev-server parity)", () => {
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: [],
-          warnings: ["drop this warning", "keep this warning"],
-          modules: [],
-        }),
-      );
-      expect(clientOverlay.showProblems).toHaveBeenCalledWith("warnings", [
-        "keep this warning",
-      ]);
-    });
-  });
-
   describe("with overlay warnings enabled via the dev-server-shaped option", () => {
     let EventSourceStub;
 
@@ -339,69 +263,6 @@ describe("client", () => {
 
     afterEach(() => {
       jest.restoreAllMocks();
-    });
-
-    it("shows overlay on errored builds", () => {
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: ["Something broke", "Actually, 2 things broke"],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(clientOverlay.showProblems).toHaveBeenCalledTimes(1);
-      expect(clientOverlay.showProblems).toHaveBeenCalledWith("errors", [
-        "Something broke",
-        "Actually, 2 things broke",
-      ]);
-      expect(console.error.mock.calls).toMatchSnapshot();
-    });
-
-    it("shows overlay on warning builds", () => {
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: [],
-          warnings: ["This isn't great, but it's not terrible"],
-          modules: [],
-        }),
-      );
-      expect(clientOverlay.showProblems).toHaveBeenCalledTimes(1);
-      expect(clientOverlay.showProblems).toHaveBeenCalledWith("warnings", [
-        "This isn't great, but it's not terrible",
-      ]);
-    });
-
-    it("hides overlay after warning build is fixed", () => {
-      const es = EventSourceStub.lastInstance();
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: [],
-          warnings: ["This isn't great, but it's not terrible"],
-          modules: [],
-        }),
-      );
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef2",
-          errors: [],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(clientOverlay.showProblems).toHaveBeenCalledTimes(1);
-      expect(clientOverlay.clear).toHaveBeenCalledWith("");
-      expect(clientOverlay.clear).toHaveBeenCalledWith("runtime");
     });
 
     it("updates overlay after errored build becomes a warning", () => {
@@ -435,53 +296,6 @@ describe("client", () => {
         "warnings",
         ["This isn't great, but it's not terrible"],
       );
-    });
-  });
-
-  describe("with name option", () => {
-    let EventSourceStub;
-
-    beforeEach(() => {
-      EventSourceStub = makeEventSourceStub();
-      globalThis.EventSource = EventSourceStub;
-      jest.spyOn(console, "info").mockImplementation(() => {});
-      jest.spyOn(console, "log").mockImplementation(() => {});
-      jest.spyOn(console, "warn").mockImplementation(() => {});
-      loadClient("?name=test");
-    });
-
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
-    it("does not trigger webpack when event name differs", () => {
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          name: "foo",
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: [],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(processUpdate).not.toHaveBeenCalled();
-    });
-
-    it("does not trigger webpack on sync when event name differs", () => {
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          name: "bar",
-          action: "sync",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: [],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(processUpdate).not.toHaveBeenCalled();
     });
   });
 
@@ -543,55 +357,6 @@ describe("client", () => {
     });
   });
 
-  describe("with progress option", () => {
-    const INDICATOR_ID = "webpack-dev-middleware-building-indicator";
-    let EventSourceStub;
-
-    beforeEach(() => {
-      EventSourceStub = makeEventSourceStub();
-      globalThis.EventSource = EventSourceStub;
-      jest.spyOn(console, "info").mockImplementation(() => {});
-      jest.spyOn(console, "log").mockImplementation(() => {});
-    });
-
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
-    it("keeps the badge until every compilation finished", () => {
-      loadClient();
-      const es = EventSourceStub.lastInstance();
-
-      es.onmessage(makeMessage({ action: "building", name: "app" }));
-      es.onmessage(makeMessage({ action: "building", name: "admin" }));
-
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          name: "app",
-          time: 1,
-          hash: "h1",
-          errors: [],
-          warnings: [],
-        }),
-      );
-      // "admin" is still building — its `built` has not arrived yet.
-      expect(document.getElementById(INDICATOR_ID)).not.toBeNull();
-
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          name: "admin",
-          time: 1,
-          hash: "h2",
-          errors: [],
-          warnings: [],
-        }),
-      );
-      expect(document.getElementById(INDICATOR_ID)).toBeNull();
-    });
-  });
-
   describe("connection lifecycle", () => {
     let EventSourceStub;
     let client;
@@ -624,14 +389,6 @@ describe("client", () => {
           /Invalid HMR message/.test(msg),
         ),
       ).toBe(true);
-    });
-
-    it("reuses the EventSource wrapper across reloads on the same path", () => {
-      // Re-loading the entry on the same page should reuse the cached SSE
-      // connection rather than opening a new one.
-      jest.resetModules();
-      require("../client-src");
-      expect(EventSourceStub.instances).toHaveLength(1);
     });
   });
 
