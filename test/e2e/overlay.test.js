@@ -106,6 +106,35 @@ describe("error overlay (browser)", () => {
     expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
   });
 
+  it("dismisses on backdrop and close-button clicks, but not inside the card", async () => {
+    hotApp = await createHotApp({ code: app("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    hotApp.edit("broken for clicks {{{");
+    let frame = await waitForOverlay(page);
+
+    // Clicking inside the card keeps the overlay open…
+    await frame.click(`#${OVERLAY_ID}-card`);
+    expect(await page.$(`#${OVERLAY_ID}`)).not.toBeNull();
+
+    // …clicking the backdrop (top-left corner, away from the centered card)
+    // dismisses it.
+    const body = await frame.$("body");
+    await body.click({ offset: { x: 5, y: 5 } });
+    await waitForNoOverlay(page);
+
+    // A reload brings the overlay back through the catch-up sync — dismiss
+    // it again through the close (×) button.
+    await page.reload();
+    frame = await waitForOverlay(page);
+    await frame.click('[aria-label="Close"]');
+    await waitForNoOverlay(page);
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
   it("catches runtime errors and renders their message as text, not markup", async () => {
     hotApp = await createHotApp({
       // The error must be thrown from the page's own script — errors raised

@@ -132,28 +132,6 @@ describe("overlay", () => {
     });
   });
 
-  describe("dismiss", () => {
-    it("closes when clicking the backdrop", () => {
-      showProblems("errors", ["boom"]);
-      getOverlay().contentDocument.body.click();
-      expect(getOverlay()).toBeNull();
-    });
-
-    it("stays open when clicking inside the card", () => {
-      showProblems("errors", ["boom"]);
-      getCard().click();
-      expect(getOverlay()).not.toBeNull();
-    });
-
-    it("closes when clicking the close button", () => {
-      showProblems("errors", ["boom"]);
-      const closeButton = getCard().querySelector("button");
-      expect(closeButton).not.toBeNull();
-      closeButton.click();
-      expect(getOverlay()).toBeNull();
-    });
-  });
-
   describe("runtime errors", () => {
     it("shows uncaught errors in the overlay and accumulates them", () => {
       configureOverlay({ catchRuntimeError: true });
