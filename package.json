@@ -49,7 +49,7 @@
     "build:code": "babel src -d dist --copy-files",
     "build:client": "babel client-src -d client --copy-files",
     "build": "npm-run-all -p \"build:**\"",
-    "test:only": "node --experimental-vm-modules ./node_modules/jest-cli/bin/jest --testPathIgnorePatterns \"/test/e2e/\"",
+    "test:only": "node --experimental-vm-modules ./node_modules/jest-cli/bin/jest",
     "test:e2e": "node --experimental-vm-modules ./node_modules/jest-cli/bin/jest test/e2e --runInBand",
     "test:watch": "npm run test:only -- --watch",
     "test:coverage": "npm run test:only -- --collectCoverageFrom=\"src/**/*.js\" --coverage",
