@@ -313,6 +313,29 @@ function parseHttpDate(date) {
   return typeof timestamp === "number" ? timestamp : Number.NaN;
 }
 
+describe("watching reuse", () => {
+  it("reuses an already active Watching", (done) => {
+    const compiler = getCompiler(webpackConfig);
+    const watching = compiler.watch({}, () => {});
+    const instance = middleware(compiler);
+
+    expect(instance.context.watching).toBe(watching);
+
+    instance.close(done);
+  });
+
+  it("reuses an already active MultiWatching", (done) => {
+    const compiler = getCompiler(webpackMultiConfig);
+    const watching = compiler.watch({}, () => {});
+    const instance = middleware(compiler);
+
+    expect(instance.context.watching).toBe(watching);
+    expect(compiler.watching).toBe(watching);
+
+    instance.close(done);
+  });
+});
+
 describe.each([
   ["connect", connect],
   ["express", express],
@@ -6945,18 +6968,5 @@ describe.each([
         });
       });
     });
-  });
-});
-
-describe("watching reuse", () => {
-  it("reuses an already active MultiWatching", (done) => {
-    const compiler = getCompiler(webpackMultiConfig);
-    const watching = compiler.watch({}, () => {});
-    const instance = middleware(compiler);
-
-    expect(instance.context.watching).toBe(watching);
-    expect(compiler.watching).toBe(watching);
-
-    instance.close(done);
   });
 });
