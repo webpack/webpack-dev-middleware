@@ -145,6 +145,7 @@ function createEventSourceWrapper() {
   let timer;
   /** @type {ReturnType<typeof setTimeout>} */
   let reconnectTimer;
+  let closed = false;
 
   const handleOnline = () => {
     log.info("connected");
@@ -162,18 +163,30 @@ function createEventSourceWrapper() {
   };
 
   /**
-   * Close the connection and stop the activity timer without scheduling a
-   * reconnection. A reconnection that is already pending is cancelled too, so
-   * closing during the reconnect window really is final.
+   * Tear the current connection down without deciding whether it is final.
    */
-  const close = () => {
+  const stop = () => {
     clearInterval(timer);
     clearTimeout(reconnectTimer);
     source.close();
   };
 
+  /**
+   * Close for good: no reconnection is scheduled, a pending one is cancelled,
+   * and error events already queued behind the close (the EventSource fires
+   * one when its connection dies) can no longer resurrect the wrapper.
+   */
+  const close = () => {
+    closed = true;
+    stop();
+  };
+
   const handleDisconnect = () => {
-    close();
+    if (closed) {
+      return;
+    }
+
+    stop();
     reconnectTimer = setTimeout(init, /** @type {number} */ (options.timeout));
   };
 

@@ -45,12 +45,6 @@ describe("overlay", () => {
   });
 
   describe("showProblems", () => {
-    it("mounts the overlay on the document body", () => {
-      expect(getOverlay()).toBeNull();
-      showProblems("errors", ["./a.js 1:1\nboom"]);
-      expect(getOverlay()).not.toBeNull();
-    });
-
     it("renders an ERROR badge in the error color for errors", () => {
       showProblems("errors", ["boom"]);
       const badge = getCard().querySelector("span");
@@ -133,25 +127,12 @@ describe("overlay", () => {
   });
 
   describe("clear", () => {
-    it("removes the overlay from the DOM", () => {
-      showProblems("errors", ["boom"]);
-      expect(getOverlay()).not.toBeNull();
-      clear();
-      expect(getOverlay()).toBeNull();
-    });
-
     it("is a no-op when nothing is shown", () => {
       expect(() => clear()).not.toThrow();
     });
   });
 
   describe("dismiss", () => {
-    it("closes when pressing Escape", () => {
-      showProblems("errors", ["boom"]);
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-      expect(getOverlay()).toBeNull();
-    });
-
     it("closes when clicking the backdrop", () => {
       showProblems("errors", ["boom"]);
       getOverlay().contentDocument.body.click();

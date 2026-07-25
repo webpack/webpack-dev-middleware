@@ -1,0 +1,32 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`client logging (browser) logging=error keeps errors only 1`] = `
+[
+  "[webpack-dev-middleware] bundle has 1 errors",
+  "[webpack-dev-middleware] ./app.js 1:7
+Module parse failed: Unexpected token (1:7)
+You may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders
+> broken {{{",
+]
+`;
+
+exports[`client logging (browser) logging=none silences the whole cycle 1`] = `[]`;
+
+exports[`client logging (browser) logging=warn keeps warnings only 1`] = `
+[
+  "[webpack-dev-middleware] bundle has 1 warnings",
+  "[webpack-dev-middleware] ./app.js 5:10-22
+Critical dependency: the request of a dependency is an expression",
+]
+`;
+
+exports[`client logging (browser) logs a full update cycle at the default info level, with the prefix 1`] = `
+[
+  "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] bundle rebuilding (<fixture>/app.js changed)",
+  "[webpack-dev-middleware] bundle rebuilt in Xms",
+  "[webpack-dev-middleware] Checking for updates on the server...",
+  "[webpack-dev-middleware] Hot updated 1 modules.",
+  "[webpack-dev-middleware] App is up to date.",
+]
+`;

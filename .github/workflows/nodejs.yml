@@ -56,7 +56,7 @@ jobs:
         run: if [ -n "$(git status types --porcelain)" ]; then echo "Missing types. Update types by running 'npm run build:types'"; exit 1; else echo "All types are valid"; fi
 
   test:
-    name: Test - ${{ matrix.os }} - Node v${{ matrix.node-version }}, Webpack ${{ matrix.webpack-version }}
+    name: Test - ${{ matrix.os }} - Node v${{ matrix.node-version }}, Webpack ${{ matrix.webpack-version }} (${{ matrix.shard }})
 
     strategy:
       fail-fast: false
@@ -64,11 +64,12 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         node-version: [20.x, 22.x, 24.x, 25.x]
         webpack-version: [latest]
+        shard: ["1/4", "2/4", "3/4", "4/4"]
 
     runs-on: ${{ matrix.os }}
 
     concurrency:
-      group: test-${{ matrix.os }}-v${{ matrix.node-version }}-${{ matrix.webpack-version }}-${{ github.ref }}
+      group: test-${{ matrix.os }}-v${{ matrix.node-version }}-${{ matrix.webpack-version }}-${{ matrix.shard }}-${{ github.ref }}
       cancel-in-progress: true
 
     steps:
@@ -84,9 +85,33 @@ jobs:
         run: npm ci
 
       - name: Run tests for webpack version ${{ matrix.webpack-version }}
-        run: npm run test:coverage -- --ci
+        run: npm run test:coverage -- --ci --shard=${{ matrix.shard }}
+
+      - name: Run browser e2e tests
+        run: npm run test:e2e -- --ci --shard=${{ matrix.shard }}
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-${{ matrix.os }}-${{ matrix.node-version }}-${{ strategy.job-index }}
+          path: coverage/lcov.info
+
+  upload-coverage:
+    name: Upload coverage to codecov
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: coverage-*
+          path: coverage
 
       - name: Submit coverage data to codecov
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          directory: coverage

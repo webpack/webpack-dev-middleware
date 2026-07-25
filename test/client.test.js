@@ -115,57 +115,6 @@ describe("client", () => {
       jest.restoreAllMocks();
     });
 
-    it("connects to /__webpack_hmr", () => {
-      expect(EventSourceStub.instances).toHaveLength(1);
-      expect(EventSourceStub.instances[0].url).toBe("/__webpack_hmr");
-    });
-
-    it("triggers webpack on successful builds", () => {
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: [],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(processUpdate).toHaveBeenCalledTimes(1);
-    });
-
-    it("passes reload:true to the updater by default", () => {
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: [],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(processUpdate).toHaveBeenCalledWith(
-        "1234567890abcdef",
-        expect.objectContaining({ reload: true }),
-        undefined,
-      );
-    });
-
-    it("triggers webpack on successful syncs", () => {
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "sync",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: [],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(processUpdate).toHaveBeenCalledTimes(1);
-    });
-
     it("logs the changed file on building messages", () => {
       EventSourceStub.lastInstance().onmessage(
         makeMessage({ action: "building", file: "/src/index.js" }),
@@ -231,52 +180,6 @@ describe("client", () => {
       expect(processUpdate).not.toHaveBeenCalled();
     });
 
-    it("shows overlay on errored builds", () => {
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: ["Something broke", "Actually, 2 things broke"],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(clientOverlay.showProblems).toHaveBeenCalledTimes(1);
-      expect(clientOverlay.showProblems).toHaveBeenCalledWith("errors", [
-        "Something broke",
-        "Actually, 2 things broke",
-      ]);
-      expect(console.error.mock.calls).toMatchSnapshot();
-    });
-
-    it("hides overlay after errored build is fixed", () => {
-      const es = EventSourceStub.lastInstance();
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: ["Something broke", "Actually, 2 things broke"],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef2",
-          errors: [],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(clientOverlay.showProblems).toHaveBeenCalledTimes(1);
-      expect(clientOverlay.clear).toHaveBeenCalledWith("");
-      expect(clientOverlay.clear).toHaveBeenCalledWith("runtime");
-    });
-
     it("updates overlay when an errored build becomes a warning", () => {
       const es = EventSourceStub.lastInstance();
       es.onmessage(
@@ -319,24 +222,6 @@ describe("client", () => {
         }),
       );
       expect(processUpdate).toHaveBeenCalledTimes(1);
-    });
-
-    it("shows overlay on warning builds by default (dev-server parity)", () => {
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: [],
-          warnings: ["This isn't great, but it's not terrible"],
-          modules: [],
-        }),
-      );
-      expect(clientOverlay.showProblems).toHaveBeenCalledWith("warnings", [
-        "This isn't great, but it's not terrible",
-      ]);
-      // Warnings also surface through the logger.
-      expect(console.warn.mock.calls).toMatchSnapshot();
     });
 
     it("shows overlay after warning build becomes an error", () => {
@@ -384,127 +269,6 @@ describe("client", () => {
 
     afterEach(() => {
       jest.restoreAllMocks();
-    });
-
-    it("keeps one bundle's errors when another bundle succeeds", () => {
-      const es = EventSourceStub.lastInstance();
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          name: "app",
-          time: 100,
-          hash: "app-hash",
-          errors: ["app broke"],
-          warnings: [],
-        }),
-      );
-      expect(clientOverlay.showProblems).toHaveBeenLastCalledWith("errors", [
-        "app broke",
-      ]);
-
-      // A clean build from another bundle must not wipe app's errors.
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          name: "admin",
-          time: 100,
-          hash: "admin-hash",
-          errors: [],
-          warnings: [],
-        }),
-      );
-      expect(clientOverlay.clear).not.toHaveBeenCalled();
-      expect(clientOverlay.showProblems).toHaveBeenLastCalledWith("errors", [
-        "app broke",
-      ]);
-
-      // Fixing the broken bundle finally clears the overlay.
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          name: "app",
-          time: 100,
-          hash: "app-hash-2",
-          errors: [],
-          warnings: [],
-        }),
-      );
-      expect(clientOverlay.clear).toHaveBeenCalledWith("");
-      expect(clientOverlay.clear).toHaveBeenCalledWith("runtime");
-    });
-
-    it("re-logs the same error text after the bundle's own successful build", () => {
-      const es = EventSourceStub.lastInstance();
-      const brokenPayload = {
-        action: "built",
-        name: "app",
-        time: 100,
-        hash: "app-hash",
-        errors: ["app broke"],
-        warnings: [],
-      };
-      es.onmessage(makeMessage(brokenPayload));
-
-      const appLogs = () =>
-        console.error.mock.calls.filter((call) =>
-          call.join(" ").includes("app broke"),
-        ).length;
-      const before = appLogs();
-
-      expect(before).toBeGreaterThan(0);
-
-      // The bundle's own success drops its console cache…
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          name: "app",
-          time: 100,
-          hash: "app-hash-2",
-          errors: [],
-          warnings: [],
-        }),
-      );
-      // …so breaking again with the exact same text logs again.
-      es.onmessage(makeMessage({ ...brokenPayload, hash: "app-hash-3" }));
-
-      expect(appLogs()).toBe(before * 2);
-    });
-
-    it("does not re-log a bundle's unchanged errors when a sibling succeeds", () => {
-      const es = EventSourceStub.lastInstance();
-      const appPayload = {
-        action: "sync",
-        name: "app",
-        time: 100,
-        hash: "app-hash",
-        errors: ["app broke"],
-        warnings: [],
-      };
-      es.onmessage(makeMessage(appPayload));
-
-      const appLogs = () =>
-        console.error.mock.calls.filter((call) =>
-          call.join(" ").includes("app broke"),
-        ).length;
-      const before = appLogs();
-
-      expect(before).toBeGreaterThan(0);
-
-      // A clean sibling build clears only its own console cache, so
-      // re-publishing app's identical errors stays de-duplicated.
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          name: "admin",
-          time: 100,
-          hash: "admin-hash",
-          errors: [],
-          warnings: [],
-        }),
-      );
-      es.onmessage(makeMessage(appPayload));
-
-      expect(appLogs()).toBe(before);
     });
 
     it("shows the union of problems from every broken bundle", () => {
@@ -732,41 +496,6 @@ describe("client", () => {
     });
   });
 
-  describe("with reload disabled", () => {
-    let EventSourceStub;
-
-    beforeEach(() => {
-      EventSourceStub = makeEventSourceStub();
-      globalThis.EventSource = EventSourceStub;
-      jest.spyOn(console, "info").mockImplementation(() => {});
-      jest.spyOn(console, "log").mockImplementation(() => {});
-      jest.spyOn(console, "warn").mockImplementation(() => {});
-      loadClient("?reload=false");
-    });
-
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
-    it("passes reload:false to the updater", () => {
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: [],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(processUpdate).toHaveBeenCalledWith(
-        "1234567890abcdef",
-        expect.objectContaining({ reload: false }),
-        undefined,
-      );
-    });
-  });
-
   describe("with overlay runtime/trusted-types options", () => {
     it("forwards them to the overlay factory", () => {
       globalThis.EventSource = makeEventSourceStub();
@@ -838,63 +567,6 @@ describe("client", () => {
 
     afterEach(() => {
       jest.restoreAllMocks();
-    });
-
-    it("shows the badge while building and hides it when built", () => {
-      loadClient();
-      const es = EventSourceStub.lastInstance();
-
-      es.onmessage(makeMessage({ action: "building", file: "/src/a.js" }));
-
-      const host = document.getElementById(INDICATOR_ID);
-
-      expect(host).not.toBeNull();
-      expect(host.shadowRoot.textContent).toContain("Rebuilding");
-      expect(host.shadowRoot.textContent).toContain("/src/a.js");
-
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          time: 1,
-          hash: "h",
-          errors: [],
-          warnings: [],
-        }),
-      );
-
-      expect(document.getElementById(INDICATOR_ID)).toBeNull();
-    });
-
-    it("updates the badge with progress events", () => {
-      loadClient();
-      const es = EventSourceStub.lastInstance();
-
-      es.onmessage(makeMessage({ action: "building" }));
-      es.onmessage(
-        makeMessage({ action: "progress", percent: 42, message: "building" }),
-      );
-
-      const host = document.getElementById(INDICATOR_ID);
-
-      expect(host.shadowRoot.textContent).toContain("42%");
-
-      // The progress ring replaces the pulsing dot and reflects the percent.
-      const [, ringValue] = host.shadowRoot.querySelectorAll("circle");
-      const length = 2 * Math.PI * 6;
-
-      expect(Number(ringValue.getAttribute("stroke-dashoffset"))).toBeCloseTo(
-        length * (1 - 42 / 100),
-        3,
-      );
-    });
-
-    it("does not show the badge when progress is disabled", () => {
-      loadClient("?progress=false");
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({ action: "building" }),
-      );
-
-      expect(document.getElementById(INDICATOR_ID)).toBeNull();
     });
 
     it("keeps the badge until every compilation finished", () => {
@@ -995,21 +667,6 @@ describe("client", () => {
       expect(EventSourceStub.instances).toHaveLength(2);
     });
 
-    it("disconnect() closes the connection and does not reconnect", () => {
-      jest.useFakeTimers({ doNotFake: ["nextTick"] });
-      delete globalThis.__wdmEventSourceWrapper;
-      EventSourceStub.instances.length = 0;
-      client = loadClient();
-
-      const [first] = EventSourceStub.instances;
-      client.disconnect();
-
-      expect(first.closed).toBe(true);
-      // Neither the watchdog nor a reconnect timer may re-open it.
-      jest.advanceTimersByTime(60 * 1000);
-      expect(EventSourceStub.instances).toHaveLength(1);
-    });
-
     it("keeps the inactivity watchdog after a reconnect", () => {
       jest.useFakeTimers({ doNotFake: ["nextTick"] });
       delete globalThis.__wdmEventSourceWrapper;
@@ -1031,20 +688,20 @@ describe("client", () => {
       expect(EventSourceStub.instances).toHaveLength(3);
     });
 
-    it("disconnect() during the reconnect window cancels the pending reconnect", () => {
+    it("ignores error events that arrive after disconnect()", () => {
       jest.useFakeTimers({ doNotFake: ["nextTick"] });
       delete globalThis.__wdmEventSourceWrapper;
       EventSourceStub.instances.length = 0;
       const freshClient = loadClient();
 
-      // A connection error schedules a reconnect `timeout` (20s) out.
       const [first] = EventSourceStub.instances;
-      first.dispatch("error", {});
-      expect(first.closed).toBe(true);
-
-      // Disconnecting inside that window must cancel it — nothing may reopen.
       freshClient.disconnect();
+
+      // An EventSource fires a queued error when its connection dies — it
+      // must not resurrect the closed wrapper by scheduling a reconnect.
+      first.dispatch("error", {});
       jest.advanceTimersByTime(60 * 1000);
+
       expect(EventSourceStub.instances).toHaveLength(1);
     });
 
@@ -1057,87 +714,6 @@ describe("client", () => {
       client.setOptionsAndConnect({});
       expect(EventSourceStub.instances).toHaveLength(2);
       expect(EventSourceStub.lastInstance().closed).toBe(false);
-    });
-  });
-
-  describe("with logging option", () => {
-    let EventSourceStub;
-
-    beforeEach(() => {
-      EventSourceStub = makeEventSourceStub();
-      globalThis.EventSource = EventSourceStub;
-      jest.spyOn(console, "info").mockImplementation(() => {});
-      jest.spyOn(console, "warn").mockImplementation(() => {});
-      jest.spyOn(console, "error").mockImplementation(() => {});
-    });
-
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
-    it("emits info-level logs (including the [webpack-dev-middleware] prefix) by default", () => {
-      loadClient();
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: [],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(console.info.mock.calls).toMatchSnapshot();
-    });
-
-    it("logging=none silences every level", () => {
-      loadClient("?logging=none");
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: ["boom"],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(console.info).not.toHaveBeenCalled();
-      expect(console.warn).not.toHaveBeenCalled();
-      expect(console.error).not.toHaveBeenCalled();
-    });
-
-    it("logging=warn silences info but keeps warn", () => {
-      loadClient("?logging=warn");
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: [],
-          warnings: ["something"],
-          modules: [],
-        }),
-      );
-      expect(console.info).not.toHaveBeenCalled();
-      expect(console.warn.mock.calls).toMatchSnapshot();
-    });
-
-    it("logging=error silences info and warn but keeps error", () => {
-      loadClient("?logging=error");
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: ["boom"],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(console.info).not.toHaveBeenCalled();
-      expect(console.warn).not.toHaveBeenCalled();
-      expect(console.error.mock.calls).toMatchSnapshot();
     });
   });
 

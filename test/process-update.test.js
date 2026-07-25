@@ -146,18 +146,6 @@ describe("process-update", () => {
     });
   });
 
-  it("checks and applies an update when the hash differs", async () => {
-    applyUpdate("new-hash", { reload: true });
-    globalThis.__webpack_hash__ = "new-hash";
-    await flushPromises();
-
-    const hot = getHot();
-
-    expect(hot.check).toHaveBeenCalledWith(false);
-    expect(hot.apply).toHaveBeenCalledTimes(1);
-    expect(reloadPage).not.toHaveBeenCalled();
-  });
-
   it("does not check when already up to date", () => {
     applyUpdate("current-hash", { reload: true });
 
@@ -215,22 +203,6 @@ describe("process-update", () => {
     await flushPromises();
 
     expect(reloadPage).not.toHaveBeenCalled();
-  });
-
-  it("reloads when modules could not be hot updated (unaccepted)", async () => {
-    applyUpdate = loadApplyUpdate(
-      makeFakeHot({
-        checkResult: ["./a.js", "./b.js"],
-        // Only one of the two updated modules was renewed.
-        applyImpl: () => Promise.resolve(["./a.js"]),
-      }),
-    );
-
-    applyUpdate("new-hash", { reload: true });
-    globalThis.__webpack_hash__ = "new-hash";
-    await flushPromises();
-
-    expect(reloadPage).toHaveBeenCalledTimes(1);
   });
 
   it("reloads when the runtime reports a failure status", async () => {
