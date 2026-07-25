@@ -162,6 +162,7 @@ describe("indicator shared state across bundled copies (browser)", () => {
 
   const start = async () => {
     hotApp = await createHotApp({
+      query: "?progress=false",
       apps: [
         { name: "a", code: exposeIndicator("indicatorA") },
         { name: "b", code: exposeIndicator("indicatorB") },
