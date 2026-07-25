@@ -303,3 +303,190 @@ describe("error overlay (browser)", () => {
     expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
   });
 });
+
+describe("overlay shared state across bundled copies (browser)", () => {
+  const OVERLAY_ENTRY = require.resolve("../../client-src/overlay.js");
+  const OVERLAY_STATE_KEY = "__webpack_dev_middleware_hot_overlay_state__";
+  const CARD_ID = `${OVERLAY_ID}-card`;
+
+  let hotApp;
+  let browser;
+  let page;
+
+  /**
+   * Two real bundled copies of the overlay module — one per compilation —
+   * exposed as globals so the tests can drive both from the page.
+   * @param {string} globalName global to expose the copy under
+   * @returns {string} app source
+   */
+  const exposeOverlay = (globalName) =>
+    `globalThis.${globalName} = require(${JSON.stringify(OVERLAY_ENTRY)});`;
+
+  const start = async () => {
+    hotApp = await createHotApp({
+      // overlay=false keeps the real hot clients from reporting into the
+      // overlay these tests drive themselves.
+      query: "?overlay=false",
+      apps: [
+        { name: "a", code: exposeOverlay("overlayA") },
+        { name: "b", code: exposeOverlay("overlayB") },
+      ],
+    });
+    ({ page, browser } = await runBrowser());
+  };
+
+  /**
+   * @returns {Promise<import("puppeteer").Frame>} the overlay iframe's frame
+   */
+  const overlayFrame = async () => {
+    const handle = await page.waitForSelector(`#${OVERLAY_ID}`, {
+      timeout: 30000,
+    });
+
+    return handle.contentFrame();
+  };
+
+  afterEach(async () => {
+    // try/finally: a rejected browser.close() must not leak the watcher,
+    // the server, and the temp dir behind it.
+    try {
+      if (browser) {
+        await browser.close();
+      }
+    } finally {
+      browser = undefined;
+      if (hotApp) {
+        const closing = hotApp;
+        hotApp = undefined;
+        await closing.close();
+      }
+    }
+  });
+
+  it("shows the problems of two copies in the same overlay", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["boom from copy A"]);
+      globalThis.overlayB.showProblems("errors", ["boom from copy B"], "b");
+    });
+
+    // One iframe: the second copy adopted it instead of stacking another,
+    // and both sources are paginated together in the union.
+    expect(
+      await page.evaluate(() => document.querySelectorAll("iframe").length),
+    ).toBe(1);
+
+    const frame = await overlayFrame();
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "boom from copy A",
+    );
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "1 / 2",
+    );
+
+    await frame.click('[aria-label="Next problem"]');
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("boom from copy B"),
+    );
+
+    // The state is shared both ways: dismissing from the first copy removes
+    // the overlay the second copy rendered into.
+    await page.evaluate(() => globalThis.overlayA.clear());
+    expect(
+      await page.evaluate(() => document.querySelectorAll("iframe").length),
+    ).toBe(0);
+  });
+
+  it("prefers one copy's errors over another copy's warnings", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["boom from copy A"]);
+      globalThis.overlayB.showProblems(
+        "warnings",
+        ["careful from copy B"],
+        "b",
+      );
+    });
+
+    const frame = await overlayFrame();
+    const errorRed = "rgb(255, 51, 72)";
+    const warningYellow = "rgb(255, 211, 14)";
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "boom from copy A",
+    );
+    expect(await frame.evaluate(() => document.body.textContent)).not.toContain(
+      "careful from copy B",
+    );
+    expect(
+      await frame.evaluate(
+        (id) => document.getElementById(id).style.borderTopColor,
+        CARD_ID,
+      ),
+    ).toBe(errorRed);
+
+    // Once the erroring source recovers, the warnings surface.
+    await page.evaluate(() => globalThis.overlayA.clear(""));
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("careful from copy B"),
+    );
+    expect(
+      await frame.evaluate(
+        (id) => document.getElementById(id).style.borderTopColor,
+        CARD_ID,
+      ),
+    ).toBe(warningYellow);
+  });
+
+  it("does not re-render when a copy clears a source that reported nothing", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["a", "b"], "x");
+    });
+
+    const frame = await overlayFrame();
+
+    await frame.evaluate((id) => {
+      globalThis.__cardChild = document.getElementById(id).firstElementChild;
+    }, CARD_ID);
+
+    // What the reporter does on every clean build of its own bundle.
+    await page.evaluate(() => globalThis.overlayB.clear("never-reported"));
+
+    // Same DOM nodes — the card the other copy is showing was not rebuilt.
+    expect(
+      await frame.evaluate(
+        (id) =>
+          globalThis.__cardChild ===
+          document.getElementById(id).firstElementChild,
+        CARD_ID,
+      ),
+    ).toBe(true);
+    expect(await page.$(`#${OVERLAY_ID}`)).not.toBeNull();
+  });
+
+  it("fills state fields missing from an older copy's shape", async () => {
+    await start();
+    // An older package version created a leaner shared state before the
+    // bundles load.
+    await page.evaluateOnNewDocument((key) => {
+      globalThis[key] = { frame: null, card: null };
+    }, OVERLAY_STATE_KEY);
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["boom"], "newer");
+    });
+
+    expect(
+      await page.evaluate(() => document.querySelectorAll("iframe").length),
+    ).toBe(1);
+  });
+});
