@@ -52,6 +52,14 @@ describe("error overlay (browser)", () => {
           )?.style.color,
       ),
     ).toBe("rgb(141, 214, 249)");
+    // The offending code-frame line is highlighted.
+    expect(
+      await frame.evaluate(() =>
+        [...document.querySelectorAll("span")].some(
+          (span) => span.style.color === "rgb(255, 107, 107)",
+        ),
+      ),
+    ).toBe(true);
 
     // webpack's own "See https://…" is linkified into a safe new-tab link.
     expect(
@@ -81,6 +89,32 @@ describe("error overlay (browser)", () => {
       { timeout: 30000 },
     );
     expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it("re-mounts the overlay after something wiped it from the DOM", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    hotApp.edit("broken and wiped {{{");
+    await waitForOverlay(page);
+
+    // A framework re-rendering the page removes the iframe behind our back.
+    await page.evaluate(
+      (id) => document.getElementById(id).remove(),
+      OVERLAY_ID,
+    );
+
+    // An unchanged rebuild re-publishes the identical problem set — the
+    // unchanged-set guard must re-mount instead of skipping the render.
+    hotApp.instance.invalidate();
+
+    const frame = await waitForOverlay(page);
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("Module parse failed"),
+    );
+    expect(await page.$(`#${OVERLAY_ID}`)).not.toBeNull();
   });
 
   it("dismisses the overlay when pressing Escape on the host page", async () => {
@@ -640,6 +674,37 @@ describe("error overlay (browser)", () => {
     expect(await frame.$("[data-open-file]")).toBeNull();
   });
 
+  it("applies custom card styles and ansi colors from the query", async () => {
+    hotApp = await createHotApp({
+      query:
+        '?overlay={"styles":{"maxWidth":"500px"},"ansiColors":{"red":"00ff00"}}',
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    hotApp.edit("broken in green {{{");
+    const frame = await waitForOverlay(page);
+
+    // The remapped red drives the problem color; the style override lands
+    // on the card.
+    expect(
+      await frame.evaluate((id) => {
+        const card = document.getElementById(id);
+        return {
+          maxWidth: card.style.maxWidth,
+          border: card.style.borderTopColor,
+          badge: card.querySelector("span").style.backgroundColor,
+        };
+      }, CARD_ID),
+    ).toEqual({
+      maxWidth: "500px",
+      border: "rgb(0, 255, 0)",
+      badge: "rgb(0, 255, 0)",
+    });
+  });
+
   it("renders under an enforced Trusted Types CSP with the configured policy", async () => {
     hotApp = await createHotApp({
       query: '?overlay={"trustedTypesPolicyName":"wdm-test"}',
@@ -917,6 +982,8 @@ describe("overlay shared state across bundled copies (browser)", () => {
 
   it("fills state fields missing from an older copy's shape", async () => {
     await start();
+    // Clearing with nothing shown is a no-op (a throw would reject here).
+    await page.evaluate(() => globalThis.overlayA?.clear());
     // An older package version created a leaner shared state before the
     // bundles load.
     await page.evaluateOnNewDocument((key) => {
