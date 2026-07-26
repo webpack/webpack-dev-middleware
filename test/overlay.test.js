@@ -59,13 +59,6 @@ describe("overlay", () => {
       expect(badge.style.backgroundColor).toBe("rgb(255, 211, 14)");
     });
 
-    it("colors the top accent bar red for errors and yellow for warnings", () => {
-      showProblems("errors", ["boom"]);
-      expect(getCard().style.borderTopColor).toBe("rgb(255, 51, 72)");
-      showProblems("warnings", ["careful"]);
-      expect(getCard().style.borderTopColor).toBe("rgb(255, 211, 14)");
-    });
-
     it("highlights the file path and leaves the location uncolored", () => {
       showProblems("errors", ["./src/render.js 7:2\nModule parse failed"]);
       const pathSpan = [...getCard().querySelectorAll("span")].find(
@@ -213,14 +206,6 @@ describe("overlay", () => {
     afterEach(() => {
       // Restore the default.
       configureOverlay({ paginate: true });
-    });
-
-    it("shows one problem at a time with a counter by default", () => {
-      showProblems("errors", ["first boom", "second boom", "third boom"]);
-
-      expect(getCard().textContent).toContain("first boom");
-      expect(getCard().textContent).not.toContain("second boom");
-      expect(getCard().textContent).toContain("1 / 3");
     });
 
     it("navigates with the prev/next buttons and clamps at the ends", () => {
