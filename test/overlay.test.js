@@ -75,24 +75,6 @@ describe("overlay", () => {
       expect(findSpanByColor("rgb(255, 107, 107)")).toBeDefined();
     });
 
-    it("turns URLs into links that open in a new tab", () => {
-      showProblems("errors", ["See https://webpack.js.org/concepts#loaders"]);
-      const link = getCard().querySelector("a");
-      expect(link).not.toBeNull();
-      expect(link.getAttribute("href")).toBe(
-        "https://webpack.js.org/concepts#loaders",
-      );
-      expect(link.getAttribute("target")).toBe("_blank");
-      expect(link.getAttribute("rel")).toBe("noopener noreferrer");
-    });
-
-    it("keeps trailing punctuation out of the link href", () => {
-      showProblems("errors", ["Docs: https://example.com/a."]);
-      const link = getCard().querySelector("a");
-      expect(link.getAttribute("href")).toBe("https://example.com/a");
-      expect(getCard().textContent).toContain("https://example.com/a.");
-    });
-
     it("re-mounts the overlay when the iframe was removed without clear()", () => {
       showProblems("errors", ["boom"]);
       // A framework wiping `document.body` removes the iframe behind our back.

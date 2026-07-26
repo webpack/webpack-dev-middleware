@@ -79,6 +79,24 @@ describe("error overlay (browser)", () => {
 
     expect(text).toContain("Module parse failed");
 
+    // webpack's own "See https://…" is linkified into a safe new-tab link.
+    expect(
+      await frame.evaluate(() => {
+        const link = document.querySelector("a");
+        return (
+          link && {
+            href: link.getAttribute("href"),
+            target: link.getAttribute("target"),
+            rel: link.getAttribute("rel"),
+          }
+        );
+      }),
+    ).toEqual({
+      href: "https://webpack.js.org/concepts#loaders",
+      target: "_blank",
+      rel: "noopener noreferrer",
+    });
+
     hotApp.edit(app("fixed"));
     await waitForNoOverlay(page);
 
@@ -162,13 +180,22 @@ describe("error overlay (browser)", () => {
 
     // The message doubles as an XSS probe: it must render as text.
     await page.evaluate(() => {
-      globalThis.boom('runtime boom <img src=x onerror="window.__xss=1">');
+      globalThis.boom(
+        'runtime boom <img src=x onerror="window.__xss=1"> See https://example.com/a.',
+      );
     });
 
     const frame = await waitForOverlay(page);
     const text = await frame.evaluate(() => document.body.textContent);
 
     expect(text).toContain("runtime boom");
+    // Linkified with the sentence-ending dot kept out of the href.
+    expect(
+      await frame.evaluate(() =>
+        document.querySelector("a")?.getAttribute("href"),
+      ),
+    ).toBe("https://example.com/a");
+    expect(text).toContain("https://example.com/a.");
     expect(
       await frame.evaluate(() => document.querySelector("img") !== null),
     ).toBe(false);
