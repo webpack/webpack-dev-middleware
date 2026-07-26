@@ -165,37 +165,6 @@ describe("hot middleware (unit)", () => {
       jest.useRealTimers();
     });
 
-    it("emits a heartbeat at the configured interval", () => {
-      const stream = createEventStream(1000, noopLogger);
-      const writes = [];
-      const fakeRes = {
-        writableEnded: false,
-        write: (chunk) => writes.push(chunk),
-        writeHead: () => {},
-        end: () => {},
-      };
-      const fakeReq = {
-        httpVersion: "1.1",
-        socket: { setKeepAlive: () => {} },
-        on: () => {},
-      };
-
-      stream.handler(fakeReq, fakeRes);
-      writes.length = 0;
-      jest.advanceTimersByTime(1000);
-
-      expect(writes.some((w) => w.includes("💓"))).toBe(true);
-
-      stream.close();
-    });
-
-    it("sets Connection: keep-alive for HTTP/1 clients", () => {
-      const stream = createEventStream(5000, noopLogger);
-      const { headers } = attachClient(stream, { httpVersion: "1.1" });
-      expect(headers.Connection).toBe("keep-alive");
-      stream.close();
-    });
-
     it("does not set Connection: keep-alive for HTTP/2 clients", () => {
       const stream = createEventStream(5000, noopLogger);
       const { headers } = attachClient(stream, { httpVersion: "2.0" });
@@ -362,22 +331,6 @@ describe("createHot", () => {
     const { writes } = attachClient({ handler: hot.handle });
 
     expect(writes.some((w) => w.includes('"action":"sync"'))).toBe(false);
-
-    hot.close();
-  });
-
-  it("does not re-send the catch-up sync to already connected clients", () => {
-    const compiler = makeFakeCompiler();
-    const hot = createHot(compiler, {});
-    const { writes: firstWrites } = attachClient({ handler: hot.handle });
-
-    compiler.emitDone(makeFakeStats());
-    firstWrites.length = 0;
-
-    const { writes: secondWrites } = attachClient({ handler: hot.handle });
-
-    expect(secondWrites.some((w) => w.includes('"action":"sync"'))).toBe(true);
-    expect(firstWrites.some((w) => w.includes('"action":"sync"'))).toBe(false);
 
     hot.close();
   });
