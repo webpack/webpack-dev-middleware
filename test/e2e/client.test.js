@@ -266,6 +266,65 @@ describe("hot client (browser)", () => {
     expect(normalizeConsole(console_.messages)).toMatchSnapshot();
   });
 
+  it("rebuilds on instance.invalidate() and syncs connected pages as a no-op", async () => {
+    app = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+    await plantReloadMarker(page);
+
+    // A server-side invalidate with unchanged sources: the rebuild reaches
+    // the browser, and its unchanged hash arrives as a sync the client
+    // applies as a no-op (a `built` here would 404 on the missing manifest).
+    const rebuilt = app.nextBuild();
+    app.instance.invalidate();
+    await rebuilt;
+    await console_.waitFor("bundle rebuilding");
+
+    // Give the sync a beat to land before pinning that nothing changed.
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
+
+    expect(
+      await page.evaluate(() => document.getElementById("app").textContent),
+    ).toBe("v1");
+    expect(await readReloadMarker(page)).toBe(true);
+  });
+
+  it("keeps the page alive after instance.close()", async () => {
+    app = await createHotApp({
+      query: "?timeout=1000",
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+    await plantReloadMarker(page);
+
+    // Closing the middleware ends the SSE stream; the client falls into its
+    // reconnect loop against an endpoint that no longer speaks SSE.
+    await new Promise((resolve) => {
+      app.instance.close(resolve);
+    });
+
+    // A few reconnect windows later the page is still running untouched.
+    await new Promise((resolve) => {
+      setTimeout(resolve, 2500);
+    });
+
+    expect(
+      await page.evaluate(() => document.getElementById("app").textContent),
+    ).toBe("v1");
+    expect(await readReloadMarker(page)).toBe(true);
+  });
+
   it("routes server publish() payloads to subscribe handlers", async () => {
     app = await createHotApp({
       code: `
