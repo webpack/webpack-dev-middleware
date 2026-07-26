@@ -313,8 +313,55 @@ describe("error overlay (browser)", () => {
       document.body.textContent.includes("2 / 2"),
     );
 
+    // Real keyboard navigation — the frame has focus after the click.
+    await page.keyboard.press("ArrowLeft");
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("1 / 2"),
+    );
+    await page.keyboard.press("ArrowRight");
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("2 / 2"),
+    );
+
     expect(await frame.evaluate(() => document.body.textContent)).toContain(
       "2 / 2",
+    );
+  });
+
+  it("shows the full problem list when paginate=false", async () => {
+    hotApp = await createHotApp({
+      query: '?overlay={"paginate":false}',
+      code: `
+        try {
+          require("./a");
+        } catch (err) {
+          // expected
+        }
+        try {
+          require("./b");
+        } catch (err) {
+          // expected
+        }
+      `,
+      files: {
+        "a.js": "broken a {{{",
+        "b.js": "broken b {{{",
+      },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    const frame = await waitForOverlay(page);
+    await frame.waitForFunction(
+      () =>
+        document.body.textContent.includes("broken a {{{") &&
+        document.body.textContent.includes("broken b {{{"),
+    );
+
+    // Both problems at once, no pager.
+    expect(await frame.evaluate(() => document.body.textContent)).not.toContain(
+      "1 / 2",
     );
   });
 
@@ -453,7 +500,12 @@ describe("overlay shared state across bundled copies (browser)", () => {
    * @returns {string} app source
    */
   const exposeOverlay = (globalName) =>
-    `globalThis.${globalName} = require(${JSON.stringify(OVERLAY_ENTRY)});`;
+    `globalThis.${globalName} = require(${JSON.stringify(OVERLAY_ENTRY)});
+     globalThis.boom = (message) => {
+       setTimeout(() => {
+         throw new Error(message);
+       }, 0);
+     };`;
 
   const start = async () => {
     hotApp = await createHotApp({
@@ -603,6 +655,32 @@ describe("overlay shared state across bundled copies (browser)", () => {
       ),
     ).toBe(true);
     expect(await page.$(`#${OVERLAY_ID}`)).not.toBeNull();
+  });
+
+  it("honors the runtime filter configured by a later copy", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    // The first copy attaches the window listeners; a runtime error lands in
+    // the overlay, proving they are live.
+    await page.evaluate(() => {
+      globalThis.overlayA.default({ catchRuntimeError: true });
+      globalThis.boom("caught-by-A");
+    });
+    await page.waitForSelector(`#${OVERLAY_ID}`, { timeout: 30000 });
+    await page.evaluate(() => globalThis.overlayA.clear());
+
+    // A later copy swaps in a rejecting filter — the listeners the first
+    // copy attached must honor it.
+    await page.evaluate(() => {
+      globalThis.overlayB.default({ catchRuntimeError: () => false });
+      globalThis.boom("filtered-out");
+    });
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
   });
 
   it("fills state fields missing from an older copy's shape", async () => {

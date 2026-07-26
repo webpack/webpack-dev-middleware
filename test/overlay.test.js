@@ -170,30 +170,6 @@ describe("overlay", () => {
       expect(getCard().textContent).not.toContain("boom-before");
       expect(getCard().textContent).not.toContain("1 / 2");
     });
-
-    it("honors the runtime filter configured by a later copy", () => {
-      // The window listeners were attached by this copy…
-      configureOverlay({ catchRuntimeError: true });
-
-      // …but the filter comes from a second bundled copy of the module.
-      jest.resetModules();
-
-      const laterCopy = require("../client-src/overlay");
-
-      laterCopy.default({ catchRuntimeError: () => false });
-
-      globalThis.dispatchEvent(
-        new ErrorEvent("error", {
-          error: new Error("filtered-out"),
-          message: "filtered-out",
-        }),
-      );
-
-      expect(getOverlay()).toBeNull();
-
-      // Restore the plain-boolean configuration for the remaining tests.
-      configureOverlay({ catchRuntimeError: true });
-    });
   });
 
   describe("open in editor", () => {
@@ -274,20 +250,6 @@ describe("overlay", () => {
       expect(getCard().textContent).toContain("first boom");
     });
 
-    it("navigates with the arrow keys", () => {
-      showProblems("errors", ["first boom", "second boom"]);
-
-      getOverlay().contentDocument.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "ArrowRight" }),
-      );
-      expect(getCard().textContent).toContain("second boom");
-
-      getOverlay().contentDocument.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "ArrowLeft" }),
-      );
-      expect(getCard().textContent).toContain("first boom");
-    });
-
     it("resets to the first page on a new problem set", () => {
       showProblems("errors", ["first boom", "second boom"]);
 
@@ -312,15 +274,6 @@ describe("overlay", () => {
 
       expect(getCard().textContent).toContain("second boom");
       expect(getCard().textContent).toContain("2 / 2");
-    });
-
-    it("shows the full list when disabled", () => {
-      configureOverlay({ paginate: false });
-      showProblems("errors", ["first boom", "second boom"]);
-
-      expect(getCard().textContent).toContain("first boom");
-      expect(getCard().textContent).toContain("second boom");
-      expect(getCard().textContent).not.toContain("1 / 2");
     });
   });
 
