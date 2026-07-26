@@ -97,11 +97,8 @@ describe("multi-compiler (browser)", () => {
   });
 
   it("logs per-bundle lifecycles and deduplicates warning re-logs on sibling builds", async () => {
-    // Warnings (unlike build errors) do not block applying updates or force
-    // reloads, which keeps the console sequence deterministic enough to
-    // snapshot. The `require(<expression>)` produces webpack's "Critical
-    // dependency" warning; the template keeps it on a fixed line so the
-    // warning text is identical across edits.
+    // Warnings do not block applies or force reloads; the fixed-position
+    // `require(<expression>)` keeps the warning text identical across edits.
     const widgetWithWarning = (text) => `
       let el = document.getElementById("out-widget");
       if (!el) {
@@ -121,10 +118,12 @@ describe("multi-compiler (browser)", () => {
       }
     `;
 
+    // The widget starts clean: an empty catch-up sync cannot vary the
+    // sequence (a still-evaluating bundle may miss it entirely).
     app = await createHotApp({
       apps: [
         { name: "app", code: bundleApp("app", "app-v1") },
-        { name: "widget", code: widgetWithWarning("widget-v1") },
+        { name: "widget", code: bundleApp("widget", "widget-v1") },
       ],
     });
     ({ page, browser } = await runBrowser());
@@ -133,20 +132,22 @@ describe("multi-compiler (browser)", () => {
     await page.goto(app.url);
     await waitForText(page, "out-app", "app-v1");
     await waitForText(page, "out-widget", "widget-v1");
-    // The widget's warning arrives with the connect-time sync, logged once.
-    await console_.waitFor("Critical dependency");
+    await console_.waitFor("connected");
 
-    // A sibling's clean rebuild must NOT re-log the widget's unchanged
-    // warning (the console cache is per bundle).
-    app.edit("app", bundleApp("app", "app-v2"));
-    await waitForText(page, "out-app", "app-v2");
+    app.edit("widget", widgetWithWarning("widget-v1b"));
+    await waitForText(page, "out-widget", "widget-v1b");
+    await console_.waitFor("Critical dependency");
     await console_.waitFor("App is up to date");
 
-    // The widget's own rebuild drops its cache, so the identical warning
-    // text is logged again.
+    // A sibling's clean rebuild must not re-log the widget's warning.
+    app.edit("app", bundleApp("app", "app-v2"));
+    await waitForText(page, "out-app", "app-v2");
+    await console_.waitForCount("App is up to date", 2);
+
+    // The widget's own rebuild drops its cache: same text logs again.
     app.edit("widget", widgetWithWarning("widget-v2"));
     await waitForText(page, "out-widget", "widget-v2");
-    await console_.waitForCount("App is up to date", 2);
+    await console_.waitForCount("App is up to date", 3);
 
     expect(normalizeConsole(console_.messages)).toMatchSnapshot();
   });
