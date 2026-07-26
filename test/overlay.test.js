@@ -93,13 +93,6 @@ describe("overlay", () => {
       expect(getCard().textContent).toContain("https://example.com/a.");
     });
 
-    it("shows a dismiss hint", () => {
-      showProblems("errors", ["boom"]);
-      expect(getCard().textContent).toContain(
-        "Click outside, press Esc, or fix the code to dismiss.",
-      );
-    });
-
     it("re-mounts the overlay when the iframe was removed without clear()", () => {
       showProblems("errors", ["boom"]);
       // A framework wiping `document.body` removes the iframe behind our back.

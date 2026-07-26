@@ -98,7 +98,12 @@ describe("error overlay (browser)", () => {
     await page.goto(hotApp.url);
 
     hotApp.edit("also broken {{{");
-    await waitForOverlay(page);
+    const frame = await waitForOverlay(page);
+
+    // The card advertises exactly what this test is about to do.
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "Click outside, press Esc, or fix the code to dismiss.",
+    );
 
     await page.keyboard.press("Escape");
     await waitForNoOverlay(page);
