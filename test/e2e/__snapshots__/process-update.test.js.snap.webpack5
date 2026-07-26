@@ -1,5 +1,12 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`update processing (browser) ignores a sibling's failed catch-up once the own sync locks the name 1`] = `
+[
+  "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] Checking for updates on the server...",
+]
+`;
+
 exports[`update processing (browser) ignores sibling bundles once the own compilation is identified 1`] = `
 [
   "[webpack-dev-middleware] connected",

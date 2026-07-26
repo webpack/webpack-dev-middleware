@@ -156,6 +156,105 @@ describe("update processing (browser)", () => {
     expect(normalizeConsole(console_.messages)).toMatchSnapshot();
   });
 
+  it("ignores a sibling's failed catch-up once the own sync locks the name", async () => {
+    app = await createHotApp({
+      code: `
+        globalThis.getHash = () => __webpack_hash__;
+        document.getElementById("app").textContent = "v1";
+        if (module.hot) {
+          module.hot.accept();
+        }
+      `,
+      // The sibling's manifest lookup is held open long enough for the own
+      // sync to lock the compilation name first.
+      setup: (server) => {
+        server.get(/\.hot-update\.json$/, (_req, res) => {
+          setTimeout(() => {
+            res.status(404).end();
+          }, 300);
+        });
+      },
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+    await page.evaluate(() => {
+      globalThis.__notReloaded = true;
+    });
+
+    const currentHash = await page.evaluate(() => globalThis.getHash());
+
+    // Connect-time catch-up: the sibling arrives first and starts a check
+    // against a manifest that was never emitted…
+    app.instance.context.hot.publish({
+      action: "sync",
+      name: "admin",
+      time: 1,
+      hash: "0000000000000000",
+      errors: [],
+      warnings: [],
+    });
+    // …and the own sync locks the name before that check resolves.
+    app.instance.context.hot.publish({
+      action: "sync",
+      name: "app",
+      time: 1,
+      hash: currentHash,
+      errors: [],
+      warnings: [],
+    });
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 1500);
+    });
+
+    // The failed sibling check is discarded instead of reloading.
+    expect(await page.evaluate(() => globalThis.__notReloaded)).toBe(true);
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
+  });
+
+  it("logs a failed check without reloading when the update chunk is missing", async () => {
+    app = await createHotApp({
+      code: acceptedApp("v1"),
+      // A manifest pointing at an update chunk nobody can serve: the real
+      // runtime rejects with a ChunkLoadError but never reaches a failure
+      // status, so the client logs and stays put.
+      setup: (server) => {
+        server.get(/\.hot-update\.json$/, (_req, res) => {
+          res.json({ c: ["main"], r: [], m: [] });
+        });
+        server.get(/\.hot-update\.js$/, (_req, res) => {
+          res.status(404).end();
+        });
+      },
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+    await page.evaluate(() => {
+      globalThis.__notReloaded = true;
+    });
+
+    app.instance.context.hot.publish({
+      action: "built",
+      name: "",
+      time: 1,
+      hash: "0000000000000000",
+      errors: [],
+      warnings: [],
+    });
+
+    await console_.waitFor("Update check failed");
+
+    expect(await page.evaluate(() => globalThis.__notReloaded)).toBe(true);
+  });
+
   it("logs the disabled HMR runtime once and never reloads", async () => {
     app = await createHotApp({
       code: 'document.getElementById("app").textContent = "v1";',

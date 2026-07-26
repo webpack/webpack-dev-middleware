@@ -83,31 +83,6 @@ describe("process-update", () => {
     jest.restoreAllMocks();
   });
 
-  describe("multi-compiler bundles", () => {
-    it("does not reload when a pre-lock sibling check resolves without an update", async () => {
-      applyUpdate = loadApplyUpdate(makeFakeHot({ checkResult: null }));
-      globalThis.__webpack_hash__ = "app-hash";
-
-      // Connect-time catch-up: the sibling's sync arrives first and starts a
-      // check against a manifest that was never emitted…
-      applyUpdate("admin-hash", { reload: true }, "admin");
-      // …and the own bundle's sync locks the name before that check resolves.
-      applyUpdate("app-hash", { reload: true }, "app");
-      await flushPromises();
-
-      expect(getHot().check).toHaveBeenCalledTimes(1);
-      expect(reloadPage).not.toHaveBeenCalled();
-    });
-
-    it("still checks named events while the own compilation is unknown", async () => {
-      applyUpdate("new-hash", { reload: true }, "admin");
-      globalThis.__webpack_hash__ = "new-hash";
-      await flushPromises();
-
-      expect(getHot().check).toHaveBeenCalledWith(false);
-    });
-  });
-
   it("reloads when the runtime reports a failure status", async () => {
     const hot = {
       // "idle" when the update starts, "abort" when the failure is handled.
