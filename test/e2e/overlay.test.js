@@ -261,6 +261,41 @@ describe("error overlay (browser)", () => {
     await console_.waitFor("Critical dependency");
 
     expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
+  });
+
+  it("keeps warnings out of the payload with hot.statsOptions", async () => {
+    hotApp = await createHotApp({
+      // The README's documented recipe: keep warnings in the build output
+      // but out of the SSE payload entirely.
+      hot: { statsOptions: { warnings: false } },
+      code: `
+        document.getElementById("app").textContent = "v1";
+        const dep = "./nothing";
+        try {
+          require(dep);
+        } catch (err) {
+          // expected
+        }
+        if (module.hot) {
+          module.hot.accept();
+        }
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await console_.waitFor("connected");
+
+    // The sync arrived (connected implies it); give rendering a beat.
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+    // Just the connect — the warning never entered the payload.
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
   });
 
   it("applies a warnings filter function from the query (dev-server parity)", async () => {

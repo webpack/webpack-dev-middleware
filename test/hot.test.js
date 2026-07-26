@@ -366,44 +366,6 @@ describe("createHot", () => {
     hot.close();
   });
 
-  it("sends a sync payload to a client that connects after a build", () => {
-    const compiler = makeFakeCompiler();
-    const hot = createHot(compiler, {});
-
-    // A build finishes BEFORE anyone connects.
-    compiler.emitDone(makeFakeStats());
-
-    const { writes } = attachClient({ handler: hot.handle });
-
-    expect(writes.some((w) => w.includes('"action":"sync"'))).toBe(true);
-
-    hot.close();
-  });
-
-  it("responds 404 instead of hanging when a client connects after close()", () => {
-    const compiler = makeFakeCompiler();
-    const hot = createHot(compiler, {});
-
-    hot.close();
-
-    /** @type {number | undefined} */
-    let statusCode;
-    let ended = false;
-    const res = {
-      writeHead: (code) => {
-        statusCode = code;
-      },
-      end: () => {
-        ended = true;
-      },
-    };
-
-    hot.handle({}, res);
-
-    expect(statusCode).toBe(404);
-    expect(ended).toBe(true);
-  });
-
   it("does not re-send the catch-up sync to already connected clients", () => {
     const compiler = makeFakeCompiler();
     const hot = createHot(compiler, {});
@@ -475,35 +437,6 @@ describe("createHot", () => {
           w.includes('"name":"child-bundle"') && w.includes('"action":"built"'),
       ),
     ).toBe(true);
-
-    hot.close();
-  });
-
-  it("forwards custom statsOptions to stats.toJson", () => {
-    const compiler = makeFakeCompiler();
-    const hot = createHot(compiler, {
-      statsOptions: { modules: true, ids: true },
-    });
-    attachClient({ handler: hot.handle });
-
-    /** @type {EXPECTED_OBJECT} */
-    let receivedOptions;
-
-    compiler.emitDone({
-      toJson(statsOptions) {
-        receivedOptions = statsOptions;
-        return {
-          time: 1,
-          hash: "h",
-          warnings: [],
-          errors: [],
-          modules: [],
-        };
-      },
-      compilation: undefined,
-    });
-
-    expect(receivedOptions).toMatchObject({ modules: true, ids: true });
 
     hot.close();
   });

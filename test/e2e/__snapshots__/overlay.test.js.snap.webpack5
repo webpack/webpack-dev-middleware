@@ -1,5 +1,20 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`error overlay (browser) keeps warnings out of the payload with hot.statsOptions 1`] = `
+[
+  "[webpack-dev-middleware] connected",
+]
+`;
+
+exports[`error overlay (browser) overlay={"warnings":false} suppresses warnings (dev-server shape) 1`] = `
+[
+  "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] bundle has 1 warnings",
+  "[webpack-dev-middleware] ./app.js 5:10-22
+Critical dependency: the request of a dependency is an expression",
+]
+`;
+
 exports[`error overlay (browser) paginates multiple problems with a counter 1`] = `
 [
   "[webpack-dev-middleware] connected",
