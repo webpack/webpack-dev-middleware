@@ -121,6 +121,22 @@ function boomApp(text) {
 }
 
 /**
+ * Click inside a frame through raw mouse input: the element's position comes
+ * from the DOM domain (no main-world evaluate, which can stall CDP on slow
+ * Windows runners after navigations).
+ * @param {import("puppeteer").Page} page page owning the frame
+ * @param {import("puppeteer").Frame} frame frame
+ * @param {string} selector element selector
+ * @returns {Promise<void>} resolved after the click
+ */
+async function clickInFrame(page, frame, selector) {
+  const handle = await frame.waitForSelector(selector, { timeout: 30000 });
+  const point = await handle.clickablePoint();
+
+  await page.mouse.click(point.x, point.y);
+}
+
+/**
  * Tear a test's browser and hot-app down; a rejected browser.close() must
  * not leak the watcher, the server, and the temp dir behind it.
  * @param {import("puppeteer").Browser=} browser browser
@@ -150,6 +166,7 @@ module.exports = {
   OVERLAY_ID,
   acceptedApp,
   boomApp,
+  clickInFrame,
   closeE2e,
   unacceptedApp,
   waitForAppText,

@@ -4,6 +4,7 @@ import {
   OVERLAY_ID,
   acceptedApp,
   boomApp,
+  clickInFrame,
   closeE2e,
   waitForAppText,
   waitForNoOverlay,
@@ -96,7 +97,7 @@ describe("error overlay (browser)", () => {
     let frame = await waitForOverlay(page);
 
     // Clicking inside the card keeps the overlay open…
-    await frame.click(`#${OVERLAY_ID}-card`);
+    await clickInFrame(page, frame, `#${CARD_ID}`);
     expect(await page.$(`#${OVERLAY_ID}`)).not.toBeNull();
 
     // …clicking the backdrop (top-left corner, away from the centered card)
@@ -108,7 +109,7 @@ describe("error overlay (browser)", () => {
     // it again through the close (×) button.
     await page.reload();
     frame = await waitForOverlay(page);
-    await frame.click('[aria-label="Close"]');
+    await clickInFrame(page, frame, '[aria-label="Close"]');
     await waitForNoOverlay(page);
 
     expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
