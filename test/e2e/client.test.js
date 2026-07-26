@@ -329,6 +329,56 @@ describe("hot client (browser)", () => {
     expect(await readReloadMarker(page)).toBe(true);
   });
 
+  it("applies updates that carry warnings", async () => {
+    const warningApp = (text) => `
+      document.getElementById("app").textContent = ${JSON.stringify(text)};
+      const dep = "./nothing";
+      try {
+        require(dep);
+      } catch (err) {
+        // expected
+      }
+      if (module.hot) {
+        module.hot.accept();
+      }
+    `;
+
+    app = await createHotApp({ code: warningApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await plantReloadMarker(page);
+
+    // Warnings do not block HMR: the update lands without a reload.
+    app.edit(warningApp("v2"));
+    await waitForAppText(page, "v2");
+
+    expect(await readReloadMarker(page)).toBe(true);
+  });
+
+  it("connects through a dynamic public path", async () => {
+    app = await createHotApp({
+      publicPath: "/assets/",
+      hot: { path: "/assets/__webpack_hmr" },
+      query: "?dynamicPublicPath=true&path=/__webpack_hmr",
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    // __webpack_public_path__ ("/assets/") + the path option's basename.
+    await console_.waitFor("connected");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    expect(await readReloadMarker(page)).toBe(true);
+  });
+
   it("routes server publish() payloads to subscribe handlers", async () => {
     app = await createHotApp({
       code: `

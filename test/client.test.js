@@ -23,14 +23,6 @@ jest.mock("../client-src/overlay", () => {
 });
 
 /**
- * @param {EXPECTED_ANY} obj message payload
- * @returns {{ data: string }} fake SSE event
- */
-function makeMessage(obj) {
-  return { data: typeof obj === "string" ? obj : JSON.stringify(obj) };
-}
-
-/**
  * Stub `EventSource` so each test can drive `message`/`error`/`open` events.
  * @returns {EXPECTED_ANY} fake constructor + last instance accessor
  */
@@ -97,168 +89,6 @@ describe("client", () => {
     jest.useRealTimers();
   });
 
-  describe("with default options", () => {
-    let EventSourceStub;
-
-    beforeEach(() => {
-      EventSourceStub = makeEventSourceStub();
-      globalThis.EventSource = EventSourceStub;
-      jest.spyOn(console, "info").mockImplementation(() => {});
-      jest.spyOn(console, "log").mockImplementation(() => {});
-      jest.spyOn(console, "warn").mockImplementation(() => {});
-      jest.spyOn(console, "error").mockImplementation(() => {});
-      loadClient();
-    });
-
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
-    it("updates overlay when an errored build becomes a warning", () => {
-      const es = EventSourceStub.lastInstance();
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: ["Something broke", "Actually, 2 things broke"],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef2",
-          errors: [],
-          warnings: ["This isn't great, but it's not terrible"],
-          modules: [],
-        }),
-      );
-      expect(clientOverlay.showProblems).toHaveBeenCalledTimes(2);
-      expect(clientOverlay.showProblems).toHaveBeenLastCalledWith("warnings", [
-        "This isn't great, but it's not terrible",
-      ]);
-      // The overlay content is replaced, not dismissed.
-      expect(clientOverlay.clear).not.toHaveBeenCalled();
-    });
-
-    it("triggers webpack on warning builds", () => {
-      EventSourceStub.lastInstance().onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: [],
-          warnings: ["This isn't great, but it's not terrible"],
-          modules: [],
-        }),
-      );
-      expect(processUpdate).toHaveBeenCalledTimes(1);
-    });
-
-    it("shows overlay after warning build becomes an error", () => {
-      const es = EventSourceStub.lastInstance();
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: [],
-          warnings: ["This isn't great, but it's not terrible"],
-          modules: [],
-        }),
-      );
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef2",
-          errors: ["Something broke", "Actually, 2 things broke"],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      expect(clientOverlay.showProblems).toHaveBeenCalledTimes(2);
-      expect(clientOverlay.showProblems).toHaveBeenLastCalledWith("errors", [
-        "Something broke",
-        "Actually, 2 things broke",
-      ]);
-    });
-  });
-
-  describe("with overlay warnings enabled via the dev-server-shaped option", () => {
-    let EventSourceStub;
-
-    beforeEach(() => {
-      EventSourceStub = makeEventSourceStub();
-      globalThis.EventSource = EventSourceStub;
-      jest.spyOn(console, "info").mockImplementation(() => {});
-      jest.spyOn(console, "log").mockImplementation(() => {});
-      jest.spyOn(console, "warn").mockImplementation(() => {});
-      jest.spyOn(console, "error").mockImplementation(() => {});
-      loadClient('?overlay={"warnings":true}');
-    });
-
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
-    it("updates overlay after errored build becomes a warning", () => {
-      const es = EventSourceStub.lastInstance();
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef",
-          errors: ["Something broke"],
-          warnings: [],
-          modules: [],
-        }),
-      );
-      es.onmessage(
-        makeMessage({
-          action: "built",
-          time: 100,
-          hash: "1234567890abcdef2",
-          errors: [],
-          warnings: ["This isn't great, but it's not terrible"],
-          modules: [],
-        }),
-      );
-      expect(clientOverlay.showProblems).toHaveBeenCalledTimes(2);
-      expect(clientOverlay.showProblems).toHaveBeenNthCalledWith(1, "errors", [
-        "Something broke",
-      ]);
-      expect(clientOverlay.showProblems).toHaveBeenNthCalledWith(
-        2,
-        "warnings",
-        ["This isn't great, but it's not terrible"],
-      );
-    });
-  });
-
-  describe("with overlay runtime/trusted-types options", () => {
-    it("forwards them to the overlay factory", () => {
-      globalThis.EventSource = makeEventSourceStub();
-
-      loadClient(
-        '?overlay={"runtimeErrors":false,"trustedTypesPolicyName":"webpack#overlay","openEditorEndpoint":"/__open-editor"}',
-      );
-
-      const overlayFactory = require("../client-src/overlay");
-
-      expect(overlayFactory).toHaveBeenCalledWith(
-        expect.objectContaining({
-          catchRuntimeError: false,
-          trustedTypesPolicyName: "webpack#overlay",
-          openEditorEndpoint: "/__open-editor",
-        }),
-      );
-    });
-  });
-
   describe("with dynamicPublicPath", () => {
     let EventSourceStub;
 
@@ -272,12 +102,6 @@ describe("client", () => {
     afterEach(() => {
       delete globalThis.__webpack_public_path__;
       jest.restoreAllMocks();
-    });
-
-    it("appends the SSE path to the public path like webpack appends filenames", () => {
-      globalThis.__webpack_public_path__ = "/assets/";
-      loadClient("?dynamicPublicPath=true");
-      expect(EventSourceStub.lastInstance().url).toBe("/assets/__webpack_hmr");
     });
 
     it("preserves intentional double slashes inside the public path", () => {

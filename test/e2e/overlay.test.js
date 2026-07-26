@@ -237,6 +237,111 @@ describe("error overlay (browser)", () => {
     expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
   });
 
+  it("escalates a warning overlay to an error overlay", async () => {
+    hotApp = await createHotApp({
+      code: `
+        document.getElementById("app").textContent = "v1";
+        const dep = "./nothing";
+        try {
+          require(dep);
+        } catch (err) {
+          // expected
+        }
+        if (module.hot) {
+          module.hot.accept();
+        }
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    const frame = await waitForOverlay(page);
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("Critical dependency"),
+    );
+
+    // The build breaks: the same overlay now shows the error instead.
+    hotApp.edit("broken after warning {{{");
+    await frame.waitForFunction(
+      () =>
+        document.body.textContent.includes("Module parse failed") &&
+        !document.body.textContent.includes("Critical dependency"),
+    );
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "ERROR",
+    );
+  });
+
+  it("turns an error overlay into a warning overlay on partial recovery", async () => {
+    hotApp = await createHotApp({ code: "broken from the start {{{" });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForOverlay(page);
+
+    // Recovering into a warning-carrying build replaces the error content
+    // (possibly via the reload fallback, which re-syncs the warning). The
+    // overlay is read through the page realm so a reload cannot detach it.
+    hotApp.edit(`
+        document.getElementById("app").textContent = "v1";
+        const dep = "./nothing";
+        try {
+          require(dep);
+        } catch (err) {
+          // expected
+        }
+        if (module.hot) {
+          module.hot.accept();
+        }
+      `);
+    await page.waitForFunction(
+      (id) => {
+        const body = document.getElementById(id)?.contentDocument?.body;
+        return (
+          body &&
+          body.textContent.includes("Critical dependency") &&
+          !body.textContent.includes("Module parse failed")
+        );
+      },
+      { timeout: 30000, polling: 100 },
+      OVERLAY_ID,
+    );
+    expect(
+      await page.evaluate(
+        (id) => document.getElementById(id).contentDocument.body.textContent,
+        OVERLAY_ID,
+      ),
+    ).toContain("WARNING");
+  });
+
+  it('overlay={"runtimeErrors":false} leaves runtime errors uncaught', async () => {
+    hotApp = await createHotApp({
+      query: '?overlay={"runtimeErrors":false}',
+      code: `
+        document.getElementById("app").textContent = "v1";
+        globalThis.boom = (message) => {
+          setTimeout(() => {
+            throw new Error(message);
+          }, 0);
+        };
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await page.waitForFunction(
+      () => document.getElementById("app")?.textContent === "v1",
+    );
+
+    await page.evaluate(() => globalThis.boom("uncaught boom"));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
   it('overlay={"warnings":false} suppresses warnings (dev-server shape)', async () => {
     hotApp = await createHotApp({
       query: '?overlay={"warnings":false}',

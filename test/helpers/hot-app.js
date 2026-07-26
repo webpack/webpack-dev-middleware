@@ -24,9 +24,10 @@ function pageHtml(scripts) {
  * @param {string} dir fixture directory
  * @param {string} appFile entry file
  * @param {string} query extra client query ("?..." or "")
+ * @param {string=} publicPath output public path
  * @returns {EXPECTED_ANY} webpack configuration
  */
-function makeConfig(name, dir, appFile, query) {
+function makeConfig(name, dir, appFile, query, publicPath = "/") {
   const clientQuery = name
     ? `?name=${name}${query ? `&${query.replace(/^\?/, "")}` : ""}`
     : query;
@@ -39,7 +40,7 @@ function makeConfig(name, dir, appFile, query) {
     output: {
       path: path.join(dir, "dist"),
       filename: name ? `${name}.js` : "main.js",
-      publicPath: "/",
+      publicPath,
       // Both compilations share a context dir; without distinct uniqueNames
       // their runtimes would fight over the same global hot-update callback
       // and updates would fail with ChunkLoadError.
@@ -66,7 +67,7 @@ function makeConfig(name, dir, appFile, query) {
  * app becomes a named compilation whose client connects with `?name=<name>`
  * and renders from `<name>.js`. `pageHeaders` are sent with the HTML page
  * (e.g. a Content-Security-Policy).
- * @param {{ query?: string, code?: string, files?: Record<string, string>, apps?: { name: string, code: string }[], hot?: EXPECTED_ANY, pageHeaders?: Record<string, string> }} options options
+ * @param {{ query?: string, code?: string, files?: Record<string, string>, apps?: { name: string, code: string }[], hot?: EXPECTED_ANY, pageHeaders?: Record<string, string>, publicPath?: string }} options options
  * @returns {Promise<EXPECTED_ANY>} handles for the running app
  */
 async function createHotApp({
@@ -76,6 +77,7 @@ async function createHotApp({
   apps,
   hot = true,
   pageHeaders = {},
+  publicPath = "/",
 }) {
   const dir = fs.mkdtempSync(
     path.join(fs.realpathSync.native(os.tmpdir()), "wdm-e2e-"),
@@ -117,8 +119,8 @@ async function createHotApp({
     } else {
       entryFiles[""] = path.join(dir, "app.js");
       fs.writeFileSync(entryFiles[""], /** @type {string} */ (code));
-      config = makeConfig("", dir, entryFiles[""], query);
-      scripts = ["/main.js"];
+      config = makeConfig("", dir, entryFiles[""], query, publicPath);
+      scripts = [`${publicPath}main.js`];
     }
 
     const compiler = webpack(config);
