@@ -1,5 +1,12 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`hot client (browser) rebuilds on instance.invalidate() and syncs connected pages as a no-op 1`] = `
+[
+  "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] bundle rebuilding",
+]
+`;
+
 exports[`hot client (browser) reconnects after a server restart and syncs up on missed builds 1`] = `
 [
   "[webpack-dev-middleware] connected",

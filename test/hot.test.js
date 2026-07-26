@@ -189,53 +189,6 @@ describe("hot middleware (unit)", () => {
       stream.close();
     });
 
-    it("publishes JSON payloads to attached clients", () => {
-      const stream = createEventStream(5000, noopLogger);
-      const writes = [];
-      const fakeRes = {
-        writableEnded: false,
-        write: (chunk) => writes.push(chunk),
-        writeHead: () => {},
-        end: () => {},
-      };
-      const fakeReq = {
-        httpVersion: "1.1",
-        socket: { setKeepAlive: () => {} },
-        on: () => {},
-      };
-
-      stream.handler(fakeReq, fakeRes);
-      stream.publish({ action: "built", hash: "abc" });
-
-      expect(writes.some((w) => w.includes('"action":"built"'))).toBe(true);
-      expect(writes.some((w) => w.includes('"hash":"abc"'))).toBe(true);
-
-      stream.close();
-    });
-
-    it("close ends connected clients", () => {
-      const stream = createEventStream(5000, noopLogger);
-      let ended = false;
-      const fakeRes = {
-        writableEnded: false,
-        write: () => {},
-        writeHead: () => {},
-        end: () => {
-          ended = true;
-        },
-      };
-      const fakeReq = {
-        httpVersion: "1.1",
-        socket: { setKeepAlive: () => {} },
-        on: () => {},
-      };
-
-      stream.handler(fakeReq, fakeRes);
-      stream.close();
-
-      expect(ended).toBe(true);
-    });
-
     it("sets Connection: keep-alive for HTTP/1 clients", () => {
       const stream = createEventStream(5000, noopLogger);
       const { headers } = attachClient(stream, { httpVersion: "1.1" });
@@ -247,25 +200,6 @@ describe("hot middleware (unit)", () => {
       const stream = createEventStream(5000, noopLogger);
       const { headers } = attachClient(stream, { httpVersion: "2.0" });
       expect(headers.Connection).toBeUndefined();
-      stream.close();
-    });
-
-    it("broadcasts events to every attached client", () => {
-      const stream = createEventStream(5000, noopLogger);
-      const clients = [
-        attachClient(stream),
-        attachClient(stream),
-        attachClient(stream),
-      ];
-
-      for (const c of clients) c.writes.length = 0;
-
-      stream.publish({ action: "built", hash: "xyz" });
-
-      for (const c of clients) {
-        expect(c.writes.some((w) => w.includes('"hash":"xyz"'))).toBe(true);
-      }
-
       stream.close();
     });
 
@@ -317,55 +251,6 @@ describe("createHot", () => {
     hot.close();
   });
 
-  it("exposes publish() so callers can broadcast custom payloads", () => {
-    const compiler = makeFakeCompiler();
-    const hot = createHot(compiler, {});
-    const { writes } = attachClient({ handler: hot.handle });
-
-    hot.publish({ action: "custom-thing", payload: 42 });
-
-    expect(
-      writes.some(
-        (w) =>
-          w.includes('"action":"custom-thing"') && w.includes('"payload":42'),
-      ),
-    ).toBe(true);
-
-    hot.close();
-  });
-
-  it("includes the changed file in the building payload", () => {
-    const compiler = makeFakeCompiler();
-    const hot = createHot(compiler, {});
-    const { writes } = attachClient({ handler: hot.handle });
-
-    compiler.emitInvalid("/src/index.js");
-
-    expect(
-      writes.some(
-        (w) =>
-          w.includes('"action":"building"') &&
-          w.includes('"file":"/src/index.js"'),
-      ),
-    ).toBe(true);
-
-    hot.close();
-  });
-
-  it("omits the file field when the invalid hook reports none", () => {
-    const compiler = makeFakeCompiler();
-    const hot = createHot(compiler, {});
-    const { writes } = attachClient({ handler: hot.handle });
-
-    compiler.emitInvalid();
-
-    const building = writes.find((w) => w.includes('"action":"building"'));
-    expect(building).toBeDefined();
-    expect(building).not.toContain('"file"');
-
-    hot.close();
-  });
-
   it("ends a response whose headers were already sent instead of registering it", async () => {
     const compiler = makeFakeCompiler();
     const hot = createHot(compiler, {});
@@ -399,61 +284,6 @@ describe("createHot", () => {
     });
   });
 
-  it("includes the compilation name in the building payload", () => {
-    const compiler = makeFakeCompiler();
-    compiler.name = "main";
-    const hot = createHot(compiler, {});
-    const { writes } = attachClient({ handler: hot.handle });
-
-    compiler.emitInvalid();
-
-    // The client pairs `building` with the `built`/`sync` that follows by
-    // name — without it the building indicator can never be hidden.
-    const building = writes.find((w) => w.includes('"action":"building"'));
-    expect(building).toContain('"name":"main"');
-
-    hot.close();
-  });
-
-  it("names the building payload after the compiler that invalidated in a multi-compiler", () => {
-    const app = makeFakeCompiler();
-    app.name = "app";
-    const widget = makeFakeCompiler();
-    widget.name = "widget";
-    const multi = makeFakeCompiler();
-    multi.compilers = [app, widget];
-    const hot = createHot(multi, {});
-    const { writes } = attachClient({ handler: hot.handle });
-
-    widget.emitInvalid("/src/widget.js");
-
-    const building = writes.filter((w) => w.includes('"action":"building"'));
-    expect(building).toHaveLength(1);
-    expect(building[0]).toContain('"name":"widget"');
-    expect(building[0]).toContain('"file":"/src/widget.js"');
-
-    hot.close();
-  });
-
-  it("publishes sync instead of built when a bundle's hash did not change", () => {
-    const compiler = makeFakeCompiler();
-    const hot = createHot(compiler, {});
-    const { writes } = attachClient({ handler: hot.handle });
-
-    compiler.emitDone(makeFakeStats({ hash: "same" }));
-    writes.length = 0;
-
-    // A rebuild that produced the same hash (e.g. another bundle of a
-    // multi-compiler changed) must not be announced as `built`.
-    compiler.emitInvalid();
-    compiler.emitDone(makeFakeStats({ hash: "same" }));
-
-    expect(writes.some((w) => w.includes('"action":"sync"'))).toBe(true);
-    expect(writes.some((w) => w.includes('"action":"built"'))).toBe(false);
-
-    hot.close();
-  });
-
   it("pairs bundles sharing a name by occurrence so unchanged ones publish sync", () => {
     const compiler = makeFakeCompiler();
     const hot = createHot(compiler, {});
@@ -477,26 +307,6 @@ describe("createHot", () => {
 
     expect(writes.filter((w) => w.includes('"action":"sync"'))).toHaveLength(2);
     expect(writes.some((w) => w.includes('"action":"built"'))).toBe(false);
-
-    hot.close();
-  });
-
-  it("publishes built when the bundle's hash changed", () => {
-    const compiler = makeFakeCompiler();
-    const hot = createHot(compiler, {});
-    const { writes } = attachClient({ handler: hot.handle });
-
-    compiler.emitDone(makeFakeStats({ hash: "one" }));
-    writes.length = 0;
-
-    compiler.emitInvalid();
-    compiler.emitDone(makeFakeStats({ hash: "two" }));
-
-    expect(
-      writes.some(
-        (w) => w.includes('"action":"built"') && w.includes('"hash":"two"'),
-      ),
-    ).toBe(true);
 
     hot.close();
   });

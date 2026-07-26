@@ -289,6 +289,10 @@ describe("hot client (browser)", () => {
       setTimeout(resolve, 500);
     });
 
+    // Two lines only: no file on the building event (nothing triggered it)
+    // and a sync so uneventful it does not even log.
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
+
     expect(
       await page.evaluate(() => document.getElementById("app").textContent),
     ).toBe("v1");
