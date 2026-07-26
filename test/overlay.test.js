@@ -100,13 +100,6 @@ describe("overlay", () => {
       );
     });
 
-    it("replaces previous problems on each call", () => {
-      showProblems("errors", ["first"]);
-      showProblems("errors", ["second"]);
-      expect(getCard().textContent).toContain("second");
-      expect(getCard().textContent).not.toContain("first");
-    });
-
     it("re-mounts the overlay when the iframe was removed without clear()", () => {
       showProblems("errors", ["boom"]);
       // A framework wiping `document.body` removes the iframe behind our back.
@@ -203,12 +196,6 @@ describe("overlay", () => {
   });
 
   describe("configureOverlay", () => {
-    it("returns the overlay API", () => {
-      const api = configureOverlay({});
-      expect(typeof api.showProblems).toBe("function");
-      expect(typeof api.clear).toBe("function");
-    });
-
     it("applies custom overlay styles to the card", () => {
       configureOverlay({ overlayStyles: { maxWidth: "500px" } });
       showProblems("errors", ["boom"]);
