@@ -35,6 +35,12 @@ exports[`hot client (browser) reconnects manually with setOptionsAndConnect() af
 ]
 `;
 
+exports[`hot client (browser) warns and stays connectionless without EventSource support 1`] = `
+[
+  "[webpack-dev-middleware] webpack-dev-middleware's hot client requires EventSource to work. Include a polyfill if you want to support this browser: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events#Tools",
+]
+`;
+
 exports[`hot client (browser) warns on malformed frames without breaking the page 1`] = `
 [
   "[webpack-dev-middleware] connected",

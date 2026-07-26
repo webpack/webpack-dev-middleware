@@ -298,6 +298,77 @@ describe("hot client (browser)", () => {
     expect(await readReloadMarker(page)).toBe(true);
   });
 
+  it("builds the SSE url from the runtime public path, slashes intact", async () => {
+    app = await createHotApp({
+      query: "?autoConnect=false",
+      code: `
+        globalThis.hotClient = require(${JSON.stringify(CLIENT_ENTRY)});
+        globalThis.setPublicPath = (value) => {
+          __webpack_public_path__ = value;
+        };
+        document.getElementById("app").textContent = "v1";
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+
+    /** @type {string[]} */
+    const requested = [];
+    page.on("request", (request) => {
+      requested.push(request.url());
+    });
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+
+    // The runtime public path is picked up at connect time — intentional
+    // double slashes survive, a trailing slash does not double up.
+    await page.evaluate(() => {
+      globalThis.setPublicPath("https://host//rewritten/");
+      globalThis.hotClient.setOptionsAndConnect({
+        dynamicPublicPath: "true",
+        path: "/__webpack_hmr",
+      });
+    });
+    await page.evaluate(() => {
+      globalThis.setPublicPath("https://localhost:3000/assets/");
+      globalThis.hotClient.setOptionsAndConnect({
+        dynamicPublicPath: "true",
+        path: "/__webpack_hmr",
+      });
+    });
+
+    const start = Date.now();
+    while (
+      Date.now() - start < 30000 &&
+      !(
+        requested.includes("https://host//rewritten/__webpack_hmr") &&
+        requested.includes("https://localhost:3000/assets/__webpack_hmr")
+      )
+    ) {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 100);
+      });
+    }
+
+    expect(requested).toContain("https://host//rewritten/__webpack_hmr");
+    expect(requested).toContain("https://localhost:3000/assets/__webpack_hmr");
+  });
+
+  it("warns and stays connectionless without EventSource support", async () => {
+    app = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.evaluateOnNewDocument(() => {
+      delete globalThis.EventSource;
+    });
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("requires EventSource");
+
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
+  });
+
   it("connects through a dynamic public path", async () => {
     app = await createHotApp({
       publicPath: "/assets/",
