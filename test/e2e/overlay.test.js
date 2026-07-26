@@ -37,6 +37,22 @@ describe("error overlay (browser)", () => {
 
     expect(text).toContain("Module parse failed");
 
+    // The badge and the highlighted file path, as rendered.
+    expect(
+      await frame.evaluate(() => {
+        const badge = document.querySelector("span");
+        return { text: badge.textContent, color: badge.style.backgroundColor };
+      }),
+    ).toEqual({ text: "ERROR", color: "rgb(255, 51, 72)" });
+    expect(
+      await frame.evaluate(
+        () =>
+          [...document.querySelectorAll("span")].find(
+            (span) => span.textContent === "./app.js",
+          )?.style.color,
+      ),
+    ).toBe("rgb(141, 214, 249)");
+
     // webpack's own "See https://…" is linkified into a safe new-tab link.
     expect(
       await frame.evaluate(() => {
@@ -238,6 +254,11 @@ describe("error overlay (browser)", () => {
 
     expect(text).toContain("WARNING");
     expect(text).toContain("Critical dependency");
+    expect(
+      await frame.evaluate(
+        () => document.querySelector("span").style.backgroundColor,
+      ),
+    ).toBe("rgb(255, 211, 14)");
 
     // A build without the warning clears the overlay again.
     hotApp.edit(acceptedApp("fixed"));

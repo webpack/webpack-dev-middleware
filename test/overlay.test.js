@@ -45,31 +45,6 @@ describe("overlay", () => {
   });
 
   describe("showProblems", () => {
-    it("renders an ERROR badge in the error color for errors", () => {
-      showProblems("errors", ["boom"]);
-      const badge = getCard().querySelector("span");
-      expect(badge.textContent).toBe("ERROR");
-      expect(badge.style.backgroundColor).toBe("rgb(255, 51, 72)");
-    });
-
-    it("renders a WARNING badge in the warning color for warnings", () => {
-      showProblems("warnings", ["careful"]);
-      const badge = getCard().querySelector("span");
-      expect(badge.textContent).toBe("WARNING");
-      expect(badge.style.backgroundColor).toBe("rgb(255, 211, 14)");
-    });
-
-    it("highlights the file path and leaves the location uncolored", () => {
-      showProblems("errors", ["./src/render.js 7:2\nModule parse failed"]);
-      const pathSpan = [...getCard().querySelectorAll("span")].find(
-        (span) => span.textContent === "./src/render.js",
-      );
-      expect(pathSpan).toBeDefined();
-      expect(pathSpan.style.color).toBe("rgb(141, 214, 249)");
-      // The `7:2` location is rendered as plain text, not inside the span.
-      expect(getCard().textContent).toContain("./src/render.js 7:2");
-    });
-
     it("highlights the offending code-frame line", () => {
       showProblems("errors", ["./a.js 1:1\n> 1 | const x =\n  | ^"]);
       expect(findSpanByColor("rgb(255, 107, 107)")).toBeDefined();
