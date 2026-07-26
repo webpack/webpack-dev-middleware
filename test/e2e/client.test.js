@@ -38,7 +38,9 @@ function waitForAppText(page, text) {
   return page
     .waitForFunction(
       (expected) => document.getElementById("app")?.textContent === expected,
-      { timeout: 30000 },
+      // Interval polling: the default requestAnimationFrame polling freezes
+      // on hidden pages (e.g. the backgrounded tab in the two-page test).
+      { timeout: 30000, polling: 100 },
       text,
     )
     .then(() => {});
@@ -106,13 +108,19 @@ describe("hot client (browser)", () => {
     app = await createHotApp({ code: acceptedApp("v1") });
     ({ page, browser } = await runBrowser());
     const pageTwo = await runPage(browser);
+    const consoleOne = collectConsole(page);
+    const consoleTwo = collectConsole(pageTwo);
 
     await page.goto(app.url);
     await pageTwo.goto(app.url);
     await waitForAppText(page, "v1");
     await waitForAppText(pageTwo, "v1");
+    // Both pages must be attached before the build, so what they receive is
+    // the broadcast — not their own catch-up sync.
+    await consoleOne.waitFor("connected");
+    await consoleTwo.waitFor("connected");
 
-    // One edit, one publish  ed build — every connected page applies it.
+    // One edit, one published build — every connected page applies it.
     app.edit(acceptedApp("v2"));
     await waitForAppText(page, "v2");
     await waitForAppText(pageTwo, "v2");
