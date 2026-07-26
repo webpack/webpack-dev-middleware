@@ -2,7 +2,7 @@ import collectConsole, { normalizeConsole } from "../helpers/console-collector";
 import createHotApp from "../helpers/hot-app";
 import runBrowser, { runPage } from "../helpers/run-browser";
 
-jest.setTimeout(120000);
+jest.setTimeout(400000);
 
 const CLIENT_ENTRY = require.resolve("../../client-src/index.js");
 

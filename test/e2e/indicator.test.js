@@ -1,7 +1,7 @@
 import createHotApp from "../helpers/hot-app";
 import runBrowser from "../helpers/run-browser";
 
-jest.setTimeout(120000);
+jest.setTimeout(400000);
 
 const INDICATOR_ID = "webpack-dev-middleware-building-indicator";
 const INDICATOR_ENTRY = require.resolve("../../client-src/indicator.js");

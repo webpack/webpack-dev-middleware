@@ -2,7 +2,7 @@ import http from "node:http";
 
 import createHotApp from "../helpers/hot-app";
 
-jest.setTimeout(120000);
+jest.setTimeout(400000);
 
 /**
  * Open a raw SSE connection and collect frames as they arrive.

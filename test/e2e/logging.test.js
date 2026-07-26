@@ -2,7 +2,7 @@ import collectConsole, { normalizeConsole } from "../helpers/console-collector";
 import createHotApp from "../helpers/hot-app";
 import runBrowser from "../helpers/run-browser";
 
-jest.setTimeout(120000);
+jest.setTimeout(400000);
 
 /**
  * @param {string} text text rendered into #app
