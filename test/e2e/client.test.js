@@ -320,6 +320,65 @@ describe("hot client (browser)", () => {
     expect(await readReloadMarker(page)).toBe(true);
   });
 
+  it("keeps heartbeats away from subscribers and the console", async () => {
+    app = await createHotApp({
+      hot: { heartbeat: 100 },
+      code: `
+        const hotClient = require(${JSON.stringify(CLIENT_ENTRY)});
+        globalThis.__all = [];
+        hotClient.subscribeAll((payload) => {
+          globalThis.__all.push(payload.action);
+        });
+        document.getElementById("app").textContent = "v1";
+        if (module.hot) {
+          module.hot.accept();
+        }
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    // Several heartbeat periods pass...
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
+
+    // ...and none of them reached the subscribers (only the catch-up sync
+    // did) or the console.
+    expect(await page.evaluate(() => globalThis.__all)).toEqual(["sync"]);
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
+  });
+
+  it("warns on malformed frames without breaking the page", async () => {
+    app = await createHotApp({
+      query: "?path=/__fake_hmr",
+      code: acceptedApp("v1"),
+      // A rogue SSE endpoint feeding the real EventSource a non-JSON frame.
+      setup: (server) => {
+        server.get("/__fake_hmr", (_req, res) => {
+          res.writeHead(200, { "Content-Type": "text/event-stream" });
+          res.write("\n");
+          res.write("data: not-json{\n\n");
+        });
+      },
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("Invalid HMR message");
+
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
+    expect(
+      await page.evaluate(() => document.getElementById("app").textContent),
+    ).toBe("v1");
+  });
+
   it("routes server publish() payloads to subscribe handlers", async () => {
     app = await createHotApp({
       code: `

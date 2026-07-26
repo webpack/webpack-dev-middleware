@@ -121,41 +121,6 @@ describe("client", () => {
     });
   });
 
-  describe("connection lifecycle", () => {
-    let EventSourceStub;
-    let client;
-
-    beforeEach(() => {
-      EventSourceStub = makeEventSourceStub();
-      globalThis.EventSource = EventSourceStub;
-      jest.spyOn(console, "info").mockImplementation(() => {});
-      jest.spyOn(console, "log").mockImplementation(() => {});
-      jest.spyOn(console, "warn").mockImplementation(() => {});
-      client = loadClient();
-    });
-
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
-    it("ignores heartbeat messages", () => {
-      const handler = jest.fn();
-      client.subscribeAll(handler);
-      EventSourceStub.lastInstance().dispatch("message", { data: "💓" });
-      expect(handler).not.toHaveBeenCalled();
-      expect(processUpdate).not.toHaveBeenCalled();
-    });
-
-    it("warns on invalid JSON", () => {
-      EventSourceStub.lastInstance().dispatch("message", { data: "not-json{" });
-      expect(
-        console.warn.mock.calls.some(([msg]) =>
-          /Invalid HMR message/.test(msg),
-        ),
-      ).toBe(true);
-    });
-  });
-
   describe("with no EventSource", () => {
     beforeEach(() => {
       delete globalThis.EventSource;

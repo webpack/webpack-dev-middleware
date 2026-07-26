@@ -1,5 +1,11 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`hot client (browser) keeps heartbeats away from subscribers and the console 1`] = `
+[
+  "[webpack-dev-middleware] connected",
+]
+`;
+
 exports[`hot client (browser) rebuilds on instance.invalidate() and syncs connected pages as a no-op 1`] = `
 [
   "[webpack-dev-middleware] connected",
@@ -29,10 +35,18 @@ exports[`hot client (browser) reconnects manually with setOptionsAndConnect() af
 ]
 `;
 
+exports[`hot client (browser) warns on malformed frames without breaking the page 1`] = `
+[
+  "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] Invalid HMR message: not-json{
+SyntaxError: Unexpected token 'o', "not-json{" is not valid JSON",
+]
+`;
+
 exports[`hot client (browser) watchdog-reconnects a silent connection and stays armed afterwards 1`] = `
 [
   "[webpack-dev-middleware] connected",
-  "[webpack-dev-middleware] connected",
-  "[webpack-dev-middleware] connected",
+    "[webpack-dev-middleware] connected",
+    "[webpack-dev-middleware] connected",
 ]
 `;
