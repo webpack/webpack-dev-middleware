@@ -101,8 +101,7 @@ describe("error overlay (browser)", () => {
 
     // …clicking the backdrop (top-left corner, away from the centered card)
     // dismisses it.
-    const body = await frame.$("body");
-    await body.click({ offset: { x: 5, y: 5 } });
+    await page.mouse.click(5, 5);
     await waitForNoOverlay(page);
 
     // A reload brings the overlay back through the catch-up sync — dismiss
