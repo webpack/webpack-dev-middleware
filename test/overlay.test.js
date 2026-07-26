@@ -133,43 +133,6 @@ describe("overlay", () => {
     });
   });
 
-  describe("open in editor", () => {
-    afterEach(() => {
-      configureOverlay({ openEditorEndpoint: "" });
-      delete globalThis.fetch;
-    });
-
-    it("makes file chips clickable and calls the configured endpoint", () => {
-      // eslint-disable-next-line jest/prefer-spy-on -- jsdom does not define fetch
-      globalThis.fetch = jest.fn(() => Promise.resolve());
-      configureOverlay({ openEditorEndpoint: "/__open-editor" });
-      showProblems("errors", ["./src/render.js 7:2\nModule parse failed"]);
-
-      const chip = /** @type {Document} */ (
-        getOverlay().contentDocument
-      ).querySelector("[data-open-file]");
-
-      expect(chip).not.toBeNull();
-      expect(chip.getAttribute("data-open-file")).toBe("./src/render.js:7:2");
-
-      chip.click();
-
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        `/__open-editor?fileName=${encodeURIComponent("./src/render.js:7:2")}`,
-      );
-    });
-
-    it("does not mark file chips when no endpoint is configured", () => {
-      showProblems("errors", ["./src/render.js 7:2\nModule parse failed"]);
-
-      expect(
-        /** @type {Document} */ (getOverlay().contentDocument).querySelector(
-          "[data-open-file]",
-        ),
-      ).toBeNull();
-    });
-  });
-
   describe("configureOverlay", () => {
     it("applies custom overlay styles to the card", () => {
       configureOverlay({ overlayStyles: { maxWidth: "500px" } });

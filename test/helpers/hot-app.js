@@ -67,7 +67,7 @@ function makeConfig(name, dir, appFile, query, publicPath = "/") {
  * app becomes a named compilation whose client connects with `?name=<name>`
  * and renders from `<name>.js`. `pageHeaders` are sent with the HTML page
  * (e.g. a Content-Security-Policy).
- * @param {{ query?: string, code?: string, files?: Record<string, string>, apps?: { name: string, code: string }[], hot?: EXPECTED_ANY, pageHeaders?: Record<string, string>, publicPath?: string }} options options
+ * @param {{ query?: string, code?: string, files?: Record<string, string>, apps?: { name: string, code: string }[], hot?: EXPECTED_ANY, pageHeaders?: Record<string, string>, publicPath?: string, setup?: (server: EXPECTED_ANY) => void }} options options
  * @returns {Promise<EXPECTED_ANY>} handles for the running app
  */
 async function createHotApp({
@@ -78,6 +78,7 @@ async function createHotApp({
   hot = true,
   pageHeaders = {},
   publicPath = "/",
+  setup,
 }) {
   const dir = fs.mkdtempSync(
     path.join(fs.realpathSync.native(os.tmpdir()), "wdm-e2e-"),
@@ -145,6 +146,11 @@ async function createHotApp({
       }
       res.end(pageHtml(scripts));
     });
+    if (setup) {
+      // Extra routes (e.g. an open-editor endpoint) mount before the
+      // middleware.
+      setup(app);
+    }
     app.use(instance);
 
     /**

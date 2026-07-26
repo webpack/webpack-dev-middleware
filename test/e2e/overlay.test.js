@@ -494,6 +494,59 @@ describe("error overlay (browser)", () => {
     );
   });
 
+  it("opens the clicked file reference through the configured endpoint", async () => {
+    /** @type {string[]} */
+    const opened = [];
+
+    hotApp = await createHotApp({
+      query: '?overlay={"openEditorEndpoint":"/__open-editor"}',
+      code: acceptedApp("v1"),
+      setup: (server) => {
+        server.get("/__open-editor", (req, res) => {
+          opened.push(String(req.query.fileName));
+          res.end();
+        });
+      },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    hotApp.edit("broken for the editor {{{");
+    const frame = await waitForOverlay(page);
+    const chip = await frame.waitForSelector("[data-open-file]", {
+      timeout: 30000,
+    });
+
+    // The chip carries webpack's real file:line:column reference, and
+    // clicking it reaches the server-side route.
+    expect(await chip.evaluate((el) => el.getAttribute("data-open-file"))).toBe(
+      "./app.js:1:7",
+    );
+
+    await chip.click();
+    const start = Date.now();
+    while (opened.length === 0 && Date.now() - start < 30000) {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 50);
+      });
+    }
+
+    expect(opened).toEqual(["./app.js:1:7"]);
+  });
+
+  it("does not mark file chips when no endpoint is configured", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    hotApp.edit("broken without editor {{{");
+    const frame = await waitForOverlay(page);
+
+    expect(await frame.$("[data-open-file]")).toBeNull();
+  });
+
   it("renders under an enforced Trusted Types CSP with the configured policy", async () => {
     hotApp = await createHotApp({
       query: '?overlay={"trustedTypesPolicyName":"wdm-test"}',
