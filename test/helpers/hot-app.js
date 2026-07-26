@@ -25,9 +25,17 @@ function pageHtml(scripts) {
  * @param {string} appFile entry file
  * @param {string} query extra client query ("?..." or "")
  * @param {string=} publicPath output public path
+ * @param {boolean=} hmrPlugin include HotModuleReplacementPlugin
  * @returns {EXPECTED_ANY} webpack configuration
  */
-function makeConfig(name, dir, appFile, query, publicPath = "/") {
+function makeConfig(
+  name,
+  dir,
+  appFile,
+  query,
+  publicPath = "/",
+  hmrPlugin = true,
+) {
   const clientQuery = name
     ? `?name=${name}${query ? `&${query.replace(/^\?/, "")}` : ""}`
     : query;
@@ -46,7 +54,7 @@ function makeConfig(name, dir, appFile, query, publicPath = "/") {
       // and updates would fail with ChunkLoadError.
       ...(name ? { uniqueName: name } : {}),
     },
-    plugins: [new webpack.HotModuleReplacementPlugin()],
+    plugins: hmrPlugin ? [new webpack.HotModuleReplacementPlugin()] : [],
     infrastructureLogging: { level: "none" },
     stats: "none",
     devtool: false,
@@ -67,7 +75,7 @@ function makeConfig(name, dir, appFile, query, publicPath = "/") {
  * app becomes a named compilation whose client connects with `?name=<name>`
  * and renders from `<name>.js`. `pageHeaders` are sent with the HTML page
  * (e.g. a Content-Security-Policy).
- * @param {{ query?: string, code?: string, files?: Record<string, string>, apps?: { name: string, code: string }[], hot?: EXPECTED_ANY, pageHeaders?: Record<string, string>, publicPath?: string, setup?: (server: EXPECTED_ANY) => void }} options options
+ * @param {{ query?: string, code?: string, files?: Record<string, string>, apps?: { name: string, code: string }[], hot?: EXPECTED_ANY, pageHeaders?: Record<string, string>, publicPath?: string, setup?: (server: EXPECTED_ANY) => void, hmrPlugin?: boolean }} options options
  * @returns {Promise<EXPECTED_ANY>} handles for the running app
  */
 async function createHotApp({
@@ -79,6 +87,7 @@ async function createHotApp({
   pageHeaders = {},
   publicPath = "/",
   setup,
+  hmrPlugin = true,
 }) {
   const dir = fs.mkdtempSync(
     path.join(fs.realpathSync.native(os.tmpdir()), "wdm-e2e-"),
@@ -120,7 +129,14 @@ async function createHotApp({
     } else {
       entryFiles[""] = path.join(dir, "app.js");
       fs.writeFileSync(entryFiles[""], /** @type {string} */ (code));
-      config = makeConfig("", dir, entryFiles[""], query, publicPath);
+      config = makeConfig(
+        "",
+        dir,
+        entryFiles[""],
+        query,
+        publicPath,
+        hmrPlugin,
+      );
       scripts = [`${publicPath}main.js`];
     }
 

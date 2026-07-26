@@ -1,0 +1,30 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`update processing (browser) ignores sibling bundles once the own compilation is identified 1`] = `
+[
+  "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] bundle 'admin' rebuilt in Xms",
+]
+`;
+
+exports[`update processing (browser) logs the disabled HMR runtime once and never reloads 1`] = `
+[
+  "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] [HMR] Hot Module Replacement is disabled. Add HotModuleReplacementPlugin to the webpack configuration.",
+  "[webpack-dev-middleware] bundle rebuilt in Xms",
+  "[webpack-dev-middleware] bundle rebuilt in Xms",
+]
+`;
+
+exports[`update processing (browser) stays on the broken state when reload=false and an accept handler throws 1`] = `
+[
+  "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] bundle rebuilding (<fixture> changed)",
+  "[webpack-dev-middleware] bundle rebuilt in Xms",
+  "[webpack-dev-middleware] Checking for updates on the server...",
+  "[webpack-dev-middleware] JSHandle@error",
+  "[webpack-dev-middleware] Ignored an error while updating module ./app.js (accept-errored)",
+  "[webpack-dev-middleware] Hot updated 1 modules.",
+  "[webpack-dev-middleware] App is up to date.",
+]
+`;

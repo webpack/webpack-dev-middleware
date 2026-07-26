@@ -83,45 +83,7 @@ describe("process-update", () => {
     jest.restoreAllMocks();
   });
 
-  it("logs an error once when the HMR runtime is disabled", () => {
-    applyUpdate = loadApplyUpdate(undefined);
-
-    expect(() => applyUpdate("h1", { reload: true })).not.toThrow();
-    applyUpdate("h2", { reload: true });
-
-    const runtimeErrors = console.error.mock.calls.filter((call) =>
-      call.join(" ").includes("Hot Module Replacement is disabled"),
-    );
-
-    expect(runtimeErrors).toHaveLength(1);
-    expect(reloadPage).not.toHaveBeenCalled();
-  });
-
   describe("multi-compiler bundles", () => {
-    it("ignores events from sibling bundles once the own compilation is identified", async () => {
-      // The `sync` sent on connect carries the bundle's own hash and locks the name.
-      applyUpdate("current-hash", { reload: true }, "app");
-
-      const hot = getHot();
-
-      expect(hot.check).not.toHaveBeenCalled();
-
-      // A sibling bundle rebuilds with a hash this runtime can never match.
-      applyUpdate("admin-hash", { reload: true }, "admin");
-      await flushPromises();
-
-      expect(hot.check).not.toHaveBeenCalled();
-      expect(reloadPage).not.toHaveBeenCalled();
-
-      // The own bundle rebuilding still applies the update.
-      applyUpdate("app-hash-2", { reload: true }, "app");
-      globalThis.__webpack_hash__ = "app-hash-2";
-      await flushPromises();
-
-      expect(hot.check).toHaveBeenCalledWith(false);
-      expect(hot.apply).toHaveBeenCalledTimes(1);
-    });
-
     it("does not reload when a pre-lock sibling check resolves without an update", async () => {
       applyUpdate = loadApplyUpdate(makeFakeHot({ checkResult: null }));
       globalThis.__webpack_hash__ = "app-hash";
@@ -144,65 +106,6 @@ describe("process-update", () => {
 
       expect(getHot().check).toHaveBeenCalledWith(false);
     });
-  });
-
-  it("does not check when already up to date", () => {
-    applyUpdate("current-hash", { reload: true });
-
-    expect(getHot().check).not.toHaveBeenCalled();
-  });
-
-  it("reloads when the update cannot be found (server restart)", async () => {
-    applyUpdate = loadApplyUpdate(makeFakeHot({ checkResult: null }));
-
-    applyUpdate("new-hash", { reload: true });
-    await flushPromises();
-
-    expect(reloadPage).toHaveBeenCalledTimes(1);
-  });
-
-  it("reloads when an accept handler errors during apply (onErrored)", async () => {
-    applyUpdate = loadApplyUpdate(
-      makeFakeHot({
-        applyImpl: (applyOptions) => {
-          applyOptions.onErrored({
-            error: new Error("accept handler failed"),
-            moduleId: "./a.js",
-            type: "accept-errored",
-          });
-
-          return Promise.resolve(["./a.js"]);
-        },
-      }),
-    );
-
-    applyUpdate("new-hash", { reload: true });
-    globalThis.__webpack_hash__ = "new-hash";
-    await flushPromises();
-
-    expect(reloadPage).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not reload on errored apply when reload is disabled", async () => {
-    applyUpdate = loadApplyUpdate(
-      makeFakeHot({
-        applyImpl: (applyOptions) => {
-          applyOptions.onErrored({
-            error: new Error("accept handler failed"),
-            moduleId: "./a.js",
-            type: "accept-errored",
-          });
-
-          return Promise.resolve(["./a.js"]);
-        },
-      }),
-    );
-
-    applyUpdate("new-hash", { reload: false });
-    globalThis.__webpack_hash__ = "new-hash";
-    await flushPromises();
-
-    expect(reloadPage).not.toHaveBeenCalled();
   });
 
   it("reloads when the runtime reports a failure status", async () => {
