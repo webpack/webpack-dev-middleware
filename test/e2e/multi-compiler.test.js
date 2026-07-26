@@ -1,10 +1,9 @@
 import collectConsole, { normalizeConsole } from "../helpers/console-collector";
+import { OVERLAY_ID, closeE2e, waitForText } from "../helpers/e2e";
 import createHotApp from "../helpers/hot-app";
 import runBrowser from "../helpers/run-browser";
 
 jest.setTimeout(400000);
-
-const OVERLAY_ID = "webpack-dev-middleware-hot-overlay";
 
 /**
  * Each bundle renders into its own div so the page shows both compilations
@@ -28,44 +27,13 @@ function bundleApp(name, text) {
   `;
 }
 
-/**
- * @param {import("puppeteer").Page} page page
- * @param {string} id element id
- * @param {string} text expected text
- * @returns {Promise<void>} resolved when rendered
- */
-function waitForText(page, id, text) {
-  return page
-    .waitForFunction(
-      (elementId, expected) =>
-        document.getElementById(elementId)?.textContent === expected,
-      { timeout: 30000 },
-      id,
-      text,
-    )
-    .then(() => {});
-}
-
 describe("multi-compiler (browser)", () => {
   let app;
   let browser;
   let page;
 
   afterEach(async () => {
-    // try/finally: a rejected browser.close() must not leak the watcher,
-    // the server, and the temp dir behind it.
-    try {
-      if (browser) {
-        await browser.close();
-      }
-    } finally {
-      browser = undefined;
-      if (app) {
-        const closing = app;
-        app = undefined;
-        await closing.close();
-      }
-    }
+    ({ browser, app } = await closeE2e(browser, app));
   });
 
   it("updates only the bundle that changed, without reloading the page", async () => {

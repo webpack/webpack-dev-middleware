@@ -10,7 +10,7 @@ exports[`error overlay (browser) overlay={"warnings":false} suppresses warnings 
 [
   "[webpack-dev-middleware] connected",
   "[webpack-dev-middleware] bundle has 1 warnings",
-  "[webpack-dev-middleware] ./app.js 5:10-22
+  "[webpack-dev-middleware] ./app.js 5:6-18
 Critical dependency: the request of a dependency is an expression",
 ]
 `;

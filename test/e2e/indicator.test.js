@@ -1,24 +1,16 @@
+import {
+  INDICATOR_ID,
+  acceptedApp,
+  closeE2e,
+  waitForAppText,
+} from "../helpers/e2e";
 import createHotApp from "../helpers/hot-app";
 import runBrowser from "../helpers/run-browser";
 
 jest.setTimeout(400000);
 
-const INDICATOR_ID = "webpack-dev-middleware-building-indicator";
 const INDICATOR_ENTRY = require.resolve("../../client-src/indicator.js");
 const INDICATOR_STATE_KEY = "__webpack_dev_middleware_hot_indicator_state__";
-
-/**
- * @param {string} text text rendered into #app
- * @returns {string} app source
- */
-function app(text) {
-  return `
-    document.getElementById("app").textContent = ${JSON.stringify(text)};
-    if (module.hot) {
-      module.hot.accept();
-    }
-  `;
-}
 
 /**
  * Watch for the badge from inside the page — it only exists for the duration
@@ -52,52 +44,24 @@ async function installBadgeSampler(page) {
   }, INDICATOR_ID);
 }
 
-/**
- * @param {import("puppeteer").Page} page page
- * @param {string} text expected #app text
- * @returns {Promise<void>} resolved when rendered
- */
-function waitForAppText(page, text) {
-  return page
-    .waitForFunction(
-      (expected) => document.getElementById("app")?.textContent === expected,
-      { timeout: 30000 },
-      text,
-    )
-    .then(() => {});
-}
-
 describe("building indicator (browser)", () => {
   let hotApp;
   let browser;
   let page;
 
   afterEach(async () => {
-    // try/finally: a rejected browser.close() must not leak the watcher,
-    // the server, and the temp dir behind it.
-    try {
-      if (browser) {
-        await browser.close();
-      }
-    } finally {
-      browser = undefined;
-      if (hotApp) {
-        const closing = hotApp;
-        hotApp = undefined;
-        await closing.close();
-      }
-    }
+    ({ browser, app: hotApp } = await closeE2e(browser, hotApp));
   });
 
   it("shows the badge during a rebuild and removes it afterwards", async () => {
-    hotApp = await createHotApp({ code: app("v1") });
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
     ({ page, browser } = await runBrowser());
 
     await page.goto(hotApp.url);
     await waitForAppText(page, "v1");
     await installBadgeSampler(page);
 
-    hotApp.edit(app("v2"));
+    hotApp.edit(acceptedApp("v2"));
     await waitForAppText(page, "v2");
 
     expect(await page.evaluate(() => globalThis.__badgeSeen)).toBe(true);
@@ -111,7 +75,7 @@ describe("building indicator (browser)", () => {
 
   it("shows the compilation percentage when hot.progress is enabled", async () => {
     hotApp = await createHotApp({
-      code: app("v1"),
+      code: acceptedApp("v1"),
       hot: { progress: true },
     });
     ({ page, browser } = await runBrowser());
@@ -120,7 +84,7 @@ describe("building indicator (browser)", () => {
     await waitForAppText(page, "v1");
     await installBadgeSampler(page);
 
-    hotApp.edit(app("v2"));
+    hotApp.edit(acceptedApp("v2"));
     await waitForAppText(page, "v2");
 
     const texts = await page.evaluate(() => globalThis.__badgeTexts);
@@ -131,7 +95,7 @@ describe("building indicator (browser)", () => {
   it("never appears when progress=false", async () => {
     hotApp = await createHotApp({
       query: "?progress=false",
-      code: app("v1"),
+      code: acceptedApp("v1"),
     });
     ({ page, browser } = await runBrowser());
 
@@ -139,7 +103,7 @@ describe("building indicator (browser)", () => {
     await waitForAppText(page, "v1");
     await installBadgeSampler(page);
 
-    hotApp.edit(app("v2"));
+    hotApp.edit(acceptedApp("v2"));
     await waitForAppText(page, "v2");
 
     expect(await page.evaluate(() => globalThis.__badgeSeen)).toBe(false);
@@ -172,20 +136,7 @@ describe("indicator shared state across bundled copies (browser)", () => {
   };
 
   afterEach(async () => {
-    // try/finally: a rejected browser.close() must not leak the watcher,
-    // the server, and the temp dir behind it.
-    try {
-      if (browser) {
-        await browser.close();
-      }
-    } finally {
-      browser = undefined;
-      if (hotApp) {
-        const closing = hotApp;
-        hotApp = undefined;
-        await closing.close();
-      }
-    }
+    ({ browser, app: hotApp } = await closeE2e(browser, hotApp));
   });
 
   it("drives a single badge from a second bundled copy", async () => {

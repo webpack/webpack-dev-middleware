@@ -1,49 +1,19 @@
 import collectConsole, { normalizeConsole } from "../helpers/console-collector";
+import {
+  CARD_ID,
+  OVERLAY_ID,
+  acceptedApp,
+  boomApp,
+  closeE2e,
+  waitForAppText,
+  waitForNoOverlay,
+  waitForOverlay,
+  warningApp,
+} from "../helpers/e2e";
 import createHotApp from "../helpers/hot-app";
 import runBrowser from "../helpers/run-browser";
 
 jest.setTimeout(400000);
-
-const OVERLAY_ID = "webpack-dev-middleware-hot-overlay";
-
-/**
- * @param {string} text text rendered into #app
- * @returns {string} app source
- */
-function app(text) {
-  return `
-    document.getElementById("app").textContent = ${JSON.stringify(text)};
-    if (module.hot) {
-      module.hot.accept();
-    }
-  `;
-}
-
-/**
- * @param {import("puppeteer").Page} page page
- * @returns {Promise<import("puppeteer").Frame>} the overlay iframe's frame
- */
-async function waitForOverlay(page) {
-  const handle = await page.waitForSelector(`#${OVERLAY_ID}`, {
-    timeout: 30000,
-  });
-
-  return handle.contentFrame();
-}
-
-/**
- * @param {import("puppeteer").Page} page page
- * @returns {Promise<void>} resolved once the overlay is gone
- */
-function waitForNoOverlay(page) {
-  return page
-    .waitForFunction(
-      (id) => document.getElementById(id) === null,
-      { timeout: 30000 },
-      OVERLAY_ID,
-    )
-    .then(() => {});
-}
 
 describe("error overlay (browser)", () => {
   let hotApp;
@@ -51,24 +21,11 @@ describe("error overlay (browser)", () => {
   let page;
 
   afterEach(async () => {
-    // try/finally: a rejected browser.close() must not leak the watcher,
-    // the server, and the temp dir behind it.
-    try {
-      if (browser) {
-        await browser.close();
-      }
-    } finally {
-      browser = undefined;
-      if (hotApp) {
-        const closing = hotApp;
-        hotApp = undefined;
-        await closing.close();
-      }
-    }
+    ({ browser, app: hotApp } = await closeE2e(browser, hotApp));
   });
 
   it("shows build errors and clears when the build recovers", async () => {
-    hotApp = await createHotApp({ code: app("v1") });
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
     ({ page, browser } = await runBrowser());
 
     await page.goto(hotApp.url);
@@ -97,7 +54,7 @@ describe("error overlay (browser)", () => {
       rel: "noopener noreferrer",
     });
 
-    hotApp.edit(app("fixed"));
+    hotApp.edit(acceptedApp("fixed"));
     await waitForNoOverlay(page);
 
     // The recovery build also applies (directly or via the full-reload
@@ -110,7 +67,7 @@ describe("error overlay (browser)", () => {
   });
 
   it("dismisses the overlay when pressing Escape on the host page", async () => {
-    hotApp = await createHotApp({ code: app("v1") });
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
     ({ page, browser } = await runBrowser());
 
     await page.goto(hotApp.url);
@@ -130,7 +87,7 @@ describe("error overlay (browser)", () => {
   });
 
   it("dismisses on backdrop and close-button clicks, but not inside the card", async () => {
-    hotApp = await createHotApp({ code: app("v1") });
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
     ({ page, browser } = await runBrowser());
 
     await page.goto(hotApp.url);
@@ -162,21 +119,12 @@ describe("error overlay (browser)", () => {
     hotApp = await createHotApp({
       // The error must be thrown from the page's own script — errors raised
       // inside evaluate() surface to window.onerror as opaque "Script error".
-      code: `
-        document.getElementById("app").textContent = "v1";
-        globalThis.boom = (message) => {
-          setTimeout(() => {
-            throw new Error(message);
-          }, 0);
-        };
-      `,
+      code: boomApp("v1"),
     });
     ({ page, browser } = await runBrowser());
 
     await page.goto(hotApp.url);
-    await page.waitForFunction(
-      () => document.getElementById("app")?.textContent === "v1",
-    );
+    await waitForAppText(page, "v1");
 
     // The message doubles as an XSS probe: it must render as text.
     await page.evaluate(() => {
@@ -207,18 +155,7 @@ describe("error overlay (browser)", () => {
     hotApp = await createHotApp({
       // `require(<expression>)` produces webpack's "Critical dependency"
       // warning without failing the build.
-      code: `
-        document.getElementById("app").textContent = "v1";
-        const dep = "./nothing";
-        try {
-          require(dep);
-        } catch (err) {
-          // expected — the request cannot be resolved at runtime
-        }
-        if (module.hot) {
-          module.hot.accept();
-        }
-      `,
+      code: warningApp("v1"),
     });
     ({ page, browser } = await runBrowser());
 
@@ -232,25 +169,14 @@ describe("error overlay (browser)", () => {
     expect(text).toContain("Critical dependency");
 
     // A build without the warning clears the overlay again.
-    hotApp.edit(app("fixed"));
+    hotApp.edit(acceptedApp("fixed"));
     await waitForNoOverlay(page);
     expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
   });
 
   it("escalates a warning overlay to an error overlay", async () => {
     hotApp = await createHotApp({
-      code: `
-        document.getElementById("app").textContent = "v1";
-        const dep = "./nothing";
-        try {
-          require(dep);
-        } catch (err) {
-          // expected
-        }
-        if (module.hot) {
-          module.hot.accept();
-        }
-      `,
+      code: warningApp("v1"),
     });
     ({ page, browser } = await runBrowser());
 
@@ -318,21 +244,12 @@ describe("error overlay (browser)", () => {
   it('overlay={"runtimeErrors":false} leaves runtime errors uncaught', async () => {
     hotApp = await createHotApp({
       query: '?overlay={"runtimeErrors":false}',
-      code: `
-        document.getElementById("app").textContent = "v1";
-        globalThis.boom = (message) => {
-          setTimeout(() => {
-            throw new Error(message);
-          }, 0);
-        };
-      `,
+      code: boomApp("v1"),
     });
     ({ page, browser } = await runBrowser());
 
     await page.goto(hotApp.url);
-    await page.waitForFunction(
-      () => document.getElementById("app")?.textContent === "v1",
-    );
+    await waitForAppText(page, "v1");
 
     await page.evaluate(() => globalThis.boom("uncaught boom"));
     await new Promise((resolve) => {
@@ -345,18 +262,7 @@ describe("error overlay (browser)", () => {
   it('overlay={"warnings":false} suppresses warnings (dev-server shape)', async () => {
     hotApp = await createHotApp({
       query: '?overlay={"warnings":false}',
-      code: `
-        document.getElementById("app").textContent = "v1";
-        const dep = "./nothing";
-        try {
-          require(dep);
-        } catch (err) {
-          // expected
-        }
-        if (module.hot) {
-          module.hot.accept();
-        }
-      `,
+      code: warningApp("v1"),
     });
     ({ page, browser } = await runBrowser());
     const console_ = collectConsole(page);
@@ -374,18 +280,7 @@ describe("error overlay (browser)", () => {
       // The README's documented recipe: keep warnings in the build output
       // but out of the SSE payload entirely.
       hot: { statsOptions: { warnings: false } },
-      code: `
-        document.getElementById("app").textContent = "v1";
-        const dep = "./nothing";
-        try {
-          require(dep);
-        } catch (err) {
-          // expected
-        }
-        if (module.hot) {
-          module.hot.accept();
-        }
-      `,
+      code: warningApp("v1"),
     });
     ({ page, browser } = await runBrowser());
     const console_ = collectConsole(page);
@@ -542,21 +437,12 @@ describe("error overlay (browser)", () => {
 
   it("accumulates runtime errors and pages between them", async () => {
     hotApp = await createHotApp({
-      code: `
-        document.getElementById("app").textContent = "v1";
-        globalThis.boom = (message) => {
-          setTimeout(() => {
-            throw new Error(message);
-          }, 0);
-        };
-      `,
+      code: boomApp("v1"),
     });
     ({ page, browser } = await runBrowser());
 
     await page.goto(hotApp.url);
-    await page.waitForFunction(
-      () => document.getElementById("app")?.textContent === "v1",
-    );
+    await waitForAppText(page, "v1");
 
     await page.evaluate(() => globalThis.boom("boom-one"));
     const frame = await waitForOverlay(page);
@@ -598,9 +484,7 @@ describe("error overlay (browser)", () => {
     ({ page, browser } = await runBrowser());
 
     await page.goto(hotApp.url);
-    await page.waitForFunction(
-      () => document.getElementById("app")?.textContent === "v1",
-    );
+    await waitForAppText(page, "v1");
 
     await page.evaluate(() => globalThis.rejectSoon("rejected-boom"));
 
@@ -614,7 +498,7 @@ describe("error overlay (browser)", () => {
   it("renders under an enforced Trusted Types CSP with the configured policy", async () => {
     hotApp = await createHotApp({
       query: '?overlay={"trustedTypesPolicyName":"wdm-test"}',
-      code: app("v1"),
+      code: acceptedApp("v1"),
       // Real enforcement, which jsdom cannot do: every HTML sink must go
       // through the "wdm-test" policy or Chrome throws. The about:blank
       // overlay iframe inherits this policy from the page.
@@ -626,9 +510,7 @@ describe("error overlay (browser)", () => {
     ({ page, browser } = await runBrowser());
 
     await page.goto(hotApp.url);
-    await page.waitForFunction(
-      () => document.getElementById("app")?.textContent === "v1",
-    );
+    await waitForAppText(page, "v1");
 
     hotApp.edit("broken by csp {{{");
 
@@ -645,7 +527,10 @@ describe("error overlay (browser)", () => {
   });
 
   it("does not appear when overlay=false", async () => {
-    hotApp = await createHotApp({ query: "?overlay=false", code: app("v1") });
+    hotApp = await createHotApp({
+      query: "?overlay=false",
+      code: acceptedApp("v1"),
+    });
     ({ page, browser } = await runBrowser());
     const console_ = collectConsole(page);
 
@@ -662,7 +547,6 @@ describe("error overlay (browser)", () => {
 describe("overlay shared state across bundled copies (browser)", () => {
   const OVERLAY_ENTRY = require.resolve("../../client-src/overlay.js");
   const OVERLAY_STATE_KEY = "__webpack_dev_middleware_hot_overlay_state__";
-  const CARD_ID = `${OVERLAY_ID}-card`;
 
   let hotApp;
   let browser;
@@ -707,20 +591,7 @@ describe("overlay shared state across bundled copies (browser)", () => {
   };
 
   afterEach(async () => {
-    // try/finally: a rejected browser.close() must not leak the watcher,
-    // the server, and the temp dir behind it.
-    try {
-      if (browser) {
-        await browser.close();
-      }
-    } finally {
-      browser = undefined;
-      if (hotApp) {
-        const closing = hotApp;
-        hotApp = undefined;
-        await closing.close();
-      }
-    }
+    ({ browser, app: hotApp } = await closeE2e(browser, hotApp));
   });
 
   it("shows the problems of two copies in the same overlay", async () => {

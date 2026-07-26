@@ -31,7 +31,7 @@ exports[`client logging (browser) logging=none silences the whole cycle 1`] = `[
 exports[`client logging (browser) logging=warn keeps warnings only 1`] = `
 [
   "[webpack-dev-middleware] bundle has 1 warnings",
-  "[webpack-dev-middleware] ./app.js 5:10-22
+  "[webpack-dev-middleware] ./app.js 5:6-18
 Critical dependency: the request of a dependency is an expression",
 ]
 `;

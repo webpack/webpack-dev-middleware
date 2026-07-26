@@ -1,50 +1,17 @@
 import collectConsole, { normalizeConsole } from "../helpers/console-collector";
+import {
+  acceptedApp,
+  closeE2e,
+  unacceptedApp,
+  waitForAppText,
+  warningApp,
+} from "../helpers/e2e";
 import createHotApp from "../helpers/hot-app";
 import runBrowser, { runPage } from "../helpers/run-browser";
 
 jest.setTimeout(400000);
 
 const CLIENT_ENTRY = require.resolve("../../client-src/index.js");
-
-/**
- * A self-accepting module: HMR updates re-run it in place.
- * @param {string} text text rendered into #app
- * @returns {string} app source
- */
-function acceptedApp(text) {
-  return `
-    document.getElementById("app").textContent = ${JSON.stringify(text)};
-    if (module.hot) {
-      module.hot.accept();
-    }
-  `;
-}
-
-/**
- * A module that never accepts updates — applying one needs a full reload.
- * @param {string} text text rendered into #app
- * @returns {string} app source
- */
-function unacceptedApp(text) {
-  return `document.getElementById("app").textContent = ${JSON.stringify(text)};`;
-}
-
-/**
- * @param {import("puppeteer").Page} page page
- * @param {string} text expected #app text
- * @returns {Promise<void>} resolved when rendered
- */
-function waitForAppText(page, text) {
-  return page
-    .waitForFunction(
-      (expected) => document.getElementById("app")?.textContent === expected,
-      // Interval polling: the default requestAnimationFrame polling freezes
-      // on hidden pages (e.g. the backgrounded tab in the two-page test).
-      { timeout: 30000, polling: 100 },
-      text,
-    )
-    .then(() => {});
-}
 
 /**
  * Plant a marker that survives HMR but not a navigation.
@@ -71,20 +38,7 @@ describe("hot client (browser)", () => {
   let page;
 
   afterEach(async () => {
-    // try/finally: a rejected browser.close() must not leak the watcher,
-    // the server, and the temp dir behind it.
-    try {
-      if (browser) {
-        await browser.close();
-      }
-    } finally {
-      browser = undefined;
-      if (app) {
-        const closing = app;
-        app = undefined;
-        await closing.close();
-      }
-    }
+    ({ browser, app } = await closeE2e(browser, app));
   });
 
   it("connects and applies an update without reloading the page", async () => {
@@ -330,19 +284,6 @@ describe("hot client (browser)", () => {
   });
 
   it("applies updates that carry warnings", async () => {
-    const warningApp = (text) => `
-      document.getElementById("app").textContent = ${JSON.stringify(text)};
-      const dep = "./nothing";
-      try {
-        require(dep);
-      } catch (err) {
-        // expected
-      }
-      if (module.hot) {
-        module.hot.accept();
-      }
-    `;
-
     app = await createHotApp({ code: warningApp("v1") });
     ({ page, browser } = await runBrowser());
 
