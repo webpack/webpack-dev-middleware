@@ -151,6 +151,77 @@ describe("error overlay (browser)", () => {
     expect(await frame.evaluate(() => globalThis.__xss)).toBeUndefined();
   });
 
+  it("ignores errors already caught by a React error boundary", async () => {
+    hotApp = await createHotApp({
+      // The function name lands in the real stack — the same marker React's
+      // dev build leaves on errors its boundaries already handled.
+      code: `
+        document.getElementById("app").textContent = "v1";
+        globalThis.boomThroughBoundary = (message) => {
+          function invokeGuardedCallbackDev() {
+            throw new Error(message);
+          }
+          setTimeout(invokeGuardedCallbackDev, 0);
+        };
+        globalThis.boom = (message) => {
+          setTimeout(() => {
+            throw new Error(message);
+          }, 0);
+        };
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    await page.evaluate(() => globalThis.boomThroughBoundary("handled"));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+
+    // The listeners are live: a plain error still lands in the overlay.
+    await page.evaluate(() => globalThis.boom("unhandled"));
+    const frame = await waitForOverlay(page);
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "unhandled",
+    );
+  });
+
+  it("resets the runtime slot on a clean build", async () => {
+    hotApp = await createHotApp({ code: boomApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    await page.evaluate(() => globalThis.boom("boom-before"));
+    let frame = await waitForOverlay(page);
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("boom-before"),
+    );
+
+    // A clean rebuild clears the accumulated runtime errors through the
+    // reporter…
+    hotApp.edit(boomApp("v2"));
+    await waitForAppText(page, "v2");
+    await waitForNoOverlay(page);
+
+    // …so the next error starts a fresh slot instead of paging after the
+    // old one.
+    await page.evaluate(() => globalThis.boom("boom-after"));
+    frame = await waitForOverlay(page);
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("boom-after"),
+    );
+
+    const text = await frame.evaluate(() => document.body.textContent);
+
+    expect(text).not.toContain("boom-before");
+    expect(text).not.toContain("1 / 2");
+  });
+
   it("shows build warnings (dev-server parity)", async () => {
     hotApp = await createHotApp({
       // `require(<expression>)` produces webpack's "Critical dependency"

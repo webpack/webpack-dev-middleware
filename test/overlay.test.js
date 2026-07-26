@@ -93,46 +93,6 @@ describe("overlay", () => {
     });
   });
 
-  describe("runtime errors", () => {
-    it("ignores errors already caught by a React error boundary", () => {
-      configureOverlay({ catchRuntimeError: true });
-
-      const error = new Error("boundary");
-      error.stack =
-        "Error: boundary\n at invokeGuardedCallbackDev (react-dom.js:1:1)";
-      globalThis.dispatchEvent(new ErrorEvent("error", { error }));
-
-      expect(getOverlay()).toBeNull();
-    });
-
-    it("resets the accumulation when the runtime slot is cleared", () => {
-      configureOverlay({ catchRuntimeError: true });
-
-      globalThis.dispatchEvent(
-        new ErrorEvent("error", {
-          error: new Error("boom-before"),
-          message: "boom-before",
-        }),
-      );
-      expect(getCard().textContent).toContain("boom-before");
-
-      // What the reporter does on a clean build.
-      clear("runtime");
-      expect(getOverlay()).toBeNull();
-
-      globalThis.dispatchEvent(
-        new ErrorEvent("error", {
-          error: new Error("boom-after"),
-          message: "boom-after",
-        }),
-      );
-
-      expect(getCard().textContent).toContain("boom-after");
-      expect(getCard().textContent).not.toContain("boom-before");
-      expect(getCard().textContent).not.toContain("1 / 2");
-    });
-  });
-
   describe("configureOverlay", () => {
     it("applies custom overlay styles to the card", () => {
       configureOverlay({ overlayStyles: { maxWidth: "500px" } });
