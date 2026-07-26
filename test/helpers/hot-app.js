@@ -235,6 +235,30 @@ async function createHotApp({
       },
 
       /**
+       * Wait until the watcher goes quiet — spurious startup rebuilds (file
+       * timestamp granularity, fsevents) broadcast syncs that pollute
+       * frame-level assertions.
+       * @param {number=} quietMs how long without builds counts as quiet
+       * @returns {Promise<void>} resolved when no build happened for quietMs
+       */
+      async settle(quietMs = 1000) {
+        for (;;) {
+          const built = await Promise.race([
+            new Promise((resolve) => {
+              buildWaiters.push(() => resolve(true));
+            }),
+            new Promise((resolve) => {
+              setTimeout(() => resolve(false), quietMs);
+            }),
+          ]);
+
+          if (!built) {
+            return;
+          }
+        }
+      },
+
+      /**
        * Stop only the HTTP server (the compiler keeps watching), severing
        * every open connection so clients see a disconnect.
        * @returns {Promise<void>} resolved when closed

@@ -94,6 +94,9 @@ describe("SSE protocol (raw)", () => {
 
   it("catch-up syncs only the newly connecting client", async () => {
     app = await createHotApp({ code: "document.title = 'x';" });
+    // A spurious startup rebuild would broadcast a legitimate sync to every
+    // client and fake a re-sent catch-up.
+    await app.settle();
 
     const early = await openSseReader(`${app.url}__webpack_hmr`);
     readers.push(early);
