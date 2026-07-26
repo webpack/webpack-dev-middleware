@@ -324,29 +324,6 @@ describe("overlay", () => {
     });
   });
 
-  describe("trusted types", () => {
-    afterEach(() => {
-      delete globalThis.trustedTypes;
-    });
-
-    it("creates a policy with the configured name and renders through it", () => {
-      globalThis.trustedTypes = {
-        createPolicy: jest.fn((name, rules) => ({
-          createHTML: rules.createHTML,
-        })),
-      };
-
-      configureOverlay({ trustedTypesPolicyName: "custom#policy" });
-      showProblems("errors", ["boom"]);
-
-      expect(globalThis.trustedTypes.createPolicy).toHaveBeenCalledWith(
-        "custom#policy",
-        expect.objectContaining({ createHTML: expect.any(Function) }),
-      );
-      expect(getCard().textContent).toContain("boom");
-    });
-  });
-
   describe("configureOverlay", () => {
     it("returns the overlay API", () => {
       const api = configureOverlay({});

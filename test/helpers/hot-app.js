@@ -64,8 +64,9 @@ function makeConfig(name, dir, appFile, query) {
  * (appended to the client entry) and `files` (extra fixture files by relative
  * name). Multi-compiler mode: pass `apps: [{ name, code }]` instead — each
  * app becomes a named compilation whose client connects with `?name=<name>`
- * and renders from `<name>.js`.
- * @param {{ query?: string, code?: string, files?: Record<string, string>, apps?: { name: string, code: string }[], hot?: EXPECTED_ANY }} options options
+ * and renders from `<name>.js`. `pageHeaders` are sent with the HTML page
+ * (e.g. a Content-Security-Policy).
+ * @param {{ query?: string, code?: string, files?: Record<string, string>, apps?: { name: string, code: string }[], hot?: EXPECTED_ANY, pageHeaders?: Record<string, string> }} options options
  * @returns {Promise<EXPECTED_ANY>} handles for the running app
  */
 async function createHotApp({
@@ -74,6 +75,7 @@ async function createHotApp({
   files = {},
   apps,
   hot = true,
+  pageHeaders = {},
 }) {
   const dir = fs.mkdtempSync(
     path.join(fs.realpathSync.native(os.tmpdir()), "wdm-e2e-"),
@@ -136,6 +138,9 @@ async function createHotApp({
 
     app.get("/", (_req, res) => {
       res.setHeader("Content-Type", "text/html");
+      for (const [name, value] of Object.entries(pageHeaders)) {
+        res.setHeader(name, value);
+      }
       res.end(pageHtml(scripts));
     });
     app.use(instance);

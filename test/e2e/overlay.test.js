@@ -389,6 +389,39 @@ describe("error overlay (browser)", () => {
     );
   });
 
+  it("renders under an enforced Trusted Types CSP with the configured policy", async () => {
+    hotApp = await createHotApp({
+      query: '?overlay={"trustedTypesPolicyName":"wdm-test"}',
+      code: app("v1"),
+      // Real enforcement, which jsdom cannot do: every HTML sink must go
+      // through the "wdm-test" policy or Chrome throws. The about:blank
+      // overlay iframe inherits this policy from the page.
+      pageHeaders: {
+        "Content-Security-Policy":
+          "require-trusted-types-for 'script'; trusted-types wdm-test",
+      },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await page.waitForFunction(
+      () => document.getElementById("app")?.textContent === "v1",
+    );
+
+    hotApp.edit("broken by csp {{{");
+
+    // The overlay renders — proof that every innerHTML write went through
+    // the configured policy (a raw write, or a policy under any other name,
+    // would have thrown under this CSP).
+    const frame = await waitForOverlay(page);
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("Module parse failed"),
+    );
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "broken by csp",
+    );
+  });
+
   it("does not appear when overlay=false", async () => {
     hotApp = await createHotApp({ query: "?overlay=false", code: app("v1") });
     ({ page, browser } = await runBrowser());
