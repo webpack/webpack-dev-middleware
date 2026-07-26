@@ -202,66 +202,6 @@ describe("overlay", () => {
     });
   });
 
-  describe("pagination", () => {
-    afterEach(() => {
-      // Restore the default.
-      configureOverlay({ paginate: true });
-    });
-
-    it("navigates with the prev/next buttons and clamps at the ends", () => {
-      showProblems("errors", ["first boom", "second boom"]);
-
-      const next = [...getCard().querySelectorAll("button")].find(
-        (button) => button.getAttribute("aria-label") === "Next problem",
-      );
-
-      next.click();
-      expect(getCard().textContent).toContain("second boom");
-      expect(getCard().textContent).toContain("2 / 2");
-
-      // Clamped at the last page.
-      const nextAgain = [...getCard().querySelectorAll("button")].find(
-        (button) => button.getAttribute("aria-label") === "Next problem",
-      );
-
-      nextAgain.click();
-      expect(getCard().textContent).toContain("2 / 2");
-
-      const prev = [...getCard().querySelectorAll("button")].find(
-        (button) => button.getAttribute("aria-label") === "Previous problem",
-      );
-
-      prev.click();
-      expect(getCard().textContent).toContain("first boom");
-    });
-
-    it("resets to the first page on a new problem set", () => {
-      showProblems("errors", ["first boom", "second boom"]);
-
-      getOverlay().contentDocument.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "ArrowRight" }),
-      );
-      showProblems("errors", ["new first", "new second", "new third"]);
-
-      expect(getCard().textContent).toContain("new first");
-      expect(getCard().textContent).toContain("1 / 3");
-    });
-
-    it("keeps the current page when the same problems are re-published", () => {
-      showProblems("errors", ["first boom", "second boom"]);
-
-      getOverlay().contentDocument.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "ArrowRight" }),
-      );
-      expect(getCard().textContent).toContain("2 / 2");
-
-      showProblems("errors", ["first boom", "second boom"]);
-
-      expect(getCard().textContent).toContain("second boom");
-      expect(getCard().textContent).toContain("2 / 2");
-    });
-  });
-
   describe("configureOverlay", () => {
     it("returns the overlay API", () => {
       const api = configureOverlay({});

@@ -323,6 +323,9 @@ describe("error overlay (browser)", () => {
       document.body.textContent.includes("2 / 2"),
     );
 
+    // Clamped at the last page.
+    await frame.click('[aria-label="Next problem"]');
+    await page.keyboard.press("ArrowRight");
     expect(await frame.evaluate(() => document.body.textContent)).toContain(
       "2 / 2",
     );
@@ -681,6 +684,47 @@ describe("overlay shared state across bundled copies (browser)", () => {
     });
 
     expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it("resets the page for a new problem set and keeps it for a re-publish", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["first boom", "second boom"]);
+    });
+    const frame = await overlayFrame();
+    await frame.click('[aria-label="Next problem"]');
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("2 / 2"),
+    );
+
+    // Re-publishing the same problems (every clean rebuild does) keeps the
+    // page the user navigated to…
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["first boom", "second boom"]);
+    });
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("2 / 2"),
+    );
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "second boom",
+    );
+
+    // …while a different set starts back at the first page.
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", [
+        "new first",
+        "new second",
+        "new third",
+      ]);
+    });
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("1 / 3"),
+    );
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "new first",
+    );
   });
 
   it("fills state fields missing from an older copy's shape", async () => {
