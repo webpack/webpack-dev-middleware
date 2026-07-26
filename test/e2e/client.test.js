@@ -1,6 +1,6 @@
 import collectConsole, { normalizeConsole } from "../helpers/console-collector";
 import createHotApp from "../helpers/hot-app";
-import runBrowser from "../helpers/run-browser";
+import runBrowser, { runPage } from "../helpers/run-browser";
 
 jest.setTimeout(120000);
 
@@ -100,6 +100,26 @@ describe("hot client (browser)", () => {
     await waitForAppText(page, "v2");
 
     expect(await readReloadMarker(page)).toBe(true);
+  });
+
+  it("broadcasts one build to every connected page", async () => {
+    app = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+    const pageTwo = await runPage(browser);
+
+    await page.goto(app.url);
+    await pageTwo.goto(app.url);
+    await waitForAppText(page, "v1");
+    await waitForAppText(pageTwo, "v1");
+
+    // One edit, one publish  ed build — every connected page applies it.
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+    await waitForAppText(pageTwo, "v2");
+
+    expect(
+      await pageTwo.evaluate(() => document.getElementById("app").textContent),
+    ).toBe("v2");
   });
 
   it("falls back to a full reload when the update is not accepted", async () => {

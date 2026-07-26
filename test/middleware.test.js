@@ -7299,13 +7299,26 @@ describe.each([
 
         await waitUntilValid(instance);
 
-        const [first, second] = await Promise.all([
-          readSseEvents(server, "/__webpack_hmr"),
-          readSseEvents(server, "/__webpack_hmr"),
+        const events = Promise.all([
+          readSseEvents(server, "/__webpack_hmr", 1500),
+          readSseEvents(server, "/__webpack_hmr", 1500),
         ]);
 
-        expect(first.some((event) => event.action === "sync")).toBe(true);
-        expect(second.some((event) => event.action === "sync")).toBe(true);
+        // Broadcast while both clients are attached — the connect-time sync
+        // alone is written per client and would make this pass vacuously.
+        await new Promise((resolve) => {
+          setTimeout(resolve, 300);
+        });
+        instance.context.hot.publish({ action: "broadcast-check" });
+
+        const [first, second] = await events;
+
+        expect(first.some((event) => event.action === "broadcast-check")).toBe(
+          true,
+        );
+        expect(second.some((event) => event.action === "broadcast-check")).toBe(
+          true,
+        );
       });
     });
   });
