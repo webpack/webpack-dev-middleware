@@ -20,3 +20,4 @@ Thumbs.db
 *.sublime-workspace
 yarn.lock
 /test/fixtures/js3
+/coverage-e2e

@@ -88,13 +88,15 @@ jobs:
         run: npm run test:coverage -- --ci --shard=${{ matrix.shard }}
 
       - name: Run browser e2e tests
-        run: npm run test:e2e -- --ci --shard=${{ matrix.shard }}
+        run: npm run test:e2e -- --ci --shard=${{ matrix.shard }} --collectCoverageFrom="src/**/*.js" --coverage --coverageDirectory=coverage-e2e
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: coverage-${{ matrix.os }}-${{ matrix.node-version }}-${{ strategy.job-index }}
-          path: coverage/lcov.info
+          path: |
+            coverage/lcov.info
+            coverage-e2e/lcov.info
 
   upload-coverage:
     name: Upload coverage to codecov
