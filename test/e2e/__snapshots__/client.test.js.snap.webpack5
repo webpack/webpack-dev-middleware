@@ -52,7 +52,7 @@ SyntaxError: Unexpected token 'o', "not-json{" is not valid JSON",
 exports[`hot client (browser) watchdog-reconnects a silent connection and stays armed afterwards 1`] = `
 [
   "[webpack-dev-middleware] connected",
-    "[webpack-dev-middleware] connected",
-    "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] connected",
 ]
 `;

@@ -175,9 +175,9 @@ describe("hot client (browser)", () => {
     await console_.waitForCount("connected", 3);
 
     // Nothing but connects: the silent cycles produce no other output. The
-    // snapshot is taken before the edit — the watchdog keeps cycling, so any
-    // later cut would race with the next reconnect.
-    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
+    // watchdog keeps cycling, so only the first three are pinned — a fourth
+    // may already have landed.
+    expect(normalizeConsole(console_.messages).slice(0, 3)).toMatchSnapshot();
 
     // The reconnected connection still delivers updates.
     app.edit(acceptedApp("v2"));
