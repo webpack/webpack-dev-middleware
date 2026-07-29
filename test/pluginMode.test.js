@@ -13,9 +13,14 @@ describe("plugin mode", () => {
     it("should not throw and call the callback when the host is not watching", (done) => {
       const compiler = getCompiler(webpackConfig);
       const instance = middleware(compiler, {}, true);
+      const warnSpy = jest
+        .spyOn(instance.context.logger, "warn")
+        .mockImplementation();
 
       instance.close((error) => {
         expect(error).toBeNull();
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+        expect(warnSpy.mock.calls[0][0]).toMatchSnapshot("warning");
 
         done();
       });
@@ -25,11 +30,16 @@ describe("plugin mode", () => {
       const compiler = getCompiler(webpackConfig);
       const watching = compiler.watch({}, () => {});
       const instance = middleware(compiler, {}, true);
+      const warnSpy = jest
+        .spyOn(instance.context.logger, "warn")
+        .mockImplementation();
 
       instance.waitUntilValid(() => {
         instance.close((error) => {
           expect(error).toBeNull();
           expect(watching.closed).toBe(false);
+          expect(warnSpy).toHaveBeenCalledTimes(1);
+          expect(warnSpy.mock.calls[0][0]).toMatchSnapshot("warning");
 
           watching.close(done);
         });

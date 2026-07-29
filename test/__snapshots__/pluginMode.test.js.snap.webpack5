@@ -1,0 +1,5 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`plugin mode close method should not close the watching owned by the host: warning 1`] = `"The \`close\` method was called, but there is no own \`watching\` instance to close. When using the middleware as a plugin, the host owns watching, so use \`compiler.close()\` instead."`;
+
+exports[`plugin mode close method should not throw and call the callback when the host is not watching: warning 1`] = `"The \`close\` method was called, but there is no own \`watching\` instance to close. When using the middleware as a plugin, the host owns watching, so use \`compiler.close()\` instead."`;
