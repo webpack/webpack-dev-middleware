@@ -9,6 +9,37 @@ jest.spyOn(globalThis.console, "log").mockImplementation();
 // webpack-dev-server, etc.) owns `compiler.watch()`, so the middleware has no
 // `watching` of its own
 describe("plugin mode", () => {
+  describe("invalidate method", () => {
+    it("should invalidate the watching owned by the host", (done) => {
+      const compiler = getCompiler(webpackConfig);
+      const watching = compiler.watch({}, () => {});
+      const instance = middleware(compiler, {}, true);
+      const invalidateSpy = jest.spyOn(watching, "invalidate");
+
+      instance.waitUntilValid(() => {
+        instance.invalidate();
+
+        expect(invalidateSpy).toHaveBeenCalledTimes(1);
+
+        watching.close(done);
+      });
+    });
+
+    it("should not throw and warn when the host is not watching", () => {
+      const compiler = getCompiler(webpackConfig);
+      const instance = middleware(compiler, {}, true);
+      const warnSpy = jest
+        .spyOn(instance.context.logger, "warn")
+        .mockImplementation();
+
+      expect(() => {
+        instance.invalidate();
+      }).not.toThrow();
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy.mock.calls[0][0]).toMatchSnapshot("warning");
+    });
+  });
+
   describe("close method", () => {
     it("should not throw and call the callback when the host is not watching", (done) => {
       const compiler = getCompiler(webpackConfig);
