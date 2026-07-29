@@ -122,8 +122,9 @@ export default function applyUpdate(hash, options, name) {
    * @param {(string | number)[] | null | undefined} renewedModules ids of modules that were successfully renewed
    */
   function logUpdates(updatedModules, renewedModules) {
+    const renewedIds = new Set(renewedModules || []);
     const unacceptedModules = updatedModules.filter(
-      (moduleId) => !renewedModules || !renewedModules.includes(moduleId),
+      (moduleId) => !renewedIds.has(moduleId),
     );
 
     if (unacceptedModules.length > 0) {
