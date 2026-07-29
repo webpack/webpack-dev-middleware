@@ -606,6 +606,9 @@ function wdm(compiler, options = {}, isPlugin = false) {
     // For plugin usage the host (webpack-cli, webpack-dev-server, etc.) owns `compiler.watch()`,
     // so there is no `watching` of our own to close (`compiler.close()` on the host handles it)
     if (!filledContext.watching) {
+      filledContext.logger.warn(
+        "The `close` method was called, but there is no own `watching` instance to close. When using the middleware as a plugin, the host owns watching, so use `compiler.close()` instead.",
+      );
       callback(null);
       return;
     }
