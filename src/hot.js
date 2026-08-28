@@ -36,6 +36,7 @@
 /**
  * @typedef {object} EventStream
  * @property {(req: IncomingMessage, res: ServerResponse) => void} handler attach a new client
+ * @property {() => boolean} hasClients true when at least one client is connected
  * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
  * @property {(res: ServerResponse, payload: Payload | { action: string }) => void} publishTo publish a payload to a single client
  * @property {() => void} close end every client and stop the heartbeat
@@ -79,26 +80,47 @@ function createEventStream(heartbeat, logger) {
     }
   };
 
-  const interval = setInterval(() => {
-    everyClient((client) => {
-      client.write("data: 💓\n\n");
-    });
-  }, heartbeat);
+  // Runs only while clients are connected: started with the first client,
+  // stopped with the last one.
+  /** @type {ReturnType<typeof setInterval> | null} */
+  let interval = null;
 
-  // Don't block process exit on the heartbeat timer.
-  if (typeof interval.unref === "function") {
-    interval.unref();
-  }
+  const startHeartbeat = () => {
+    if (interval !== null) {
+      return;
+    }
+
+    interval = setInterval(() => {
+      everyClient((client) => {
+        client.write("data: 💓\n\n");
+      });
+    }, heartbeat);
+
+    // Don't block process exit on the heartbeat timer.
+    if (typeof interval.unref === "function") {
+      interval.unref();
+    }
+  };
+
+  const stopHeartbeat = () => {
+    if (interval !== null) {
+      clearInterval(interval);
+      interval = null;
+    }
+  };
 
   return {
     close() {
-      clearInterval(interval);
+      stopHeartbeat();
       everyClient((client) => {
         if (!client.writableEnded) {
           client.end();
         }
       });
       clients = new Map();
+    },
+    hasClients() {
+      return clients.size > 0;
     },
     handler(req, res) {
       // A response another middleware already started can no longer become an
@@ -135,6 +157,7 @@ function createEventStream(heartbeat, logger) {
 
       const id = clientId++;
       clients.set(id, res);
+      startHeartbeat();
       logger.log(`Client connected (${clients.size} active)`);
 
       req.on("close", () => {
@@ -142,10 +165,20 @@ function createEventStream(heartbeat, logger) {
           res.end();
         }
         clients.delete(id);
+
+        if (clients.size === 0) {
+          stopHeartbeat();
+        }
+
         logger.log(`Client disconnected (${clients.size} active)`);
       });
     },
     publish(payload) {
+      // With no clients connected there is nothing to serialize for.
+      if (clients.size === 0) {
+        return;
+      }
+
       const frame = `data: ${JSON.stringify(payload)}\n\n`;
 
       everyClient((client) => {
@@ -261,6 +294,23 @@ function bundlePayload(stats, action) {
  * @param {EventStream} eventStream event stream
  */
 function publishBundles(bundles, previousBundles, eventStream) {
+  // Grouped once up front so pairing stays linear with many child compilers.
+  /** @type {Map<string, StatsCompilation[]>} */
+  const previousByName = new Map();
+
+  if (previousBundles !== null) {
+    for (const bundle of previousBundles) {
+      const name = bundle.name || "";
+      const group = previousByName.get(name);
+
+      if (group) {
+        group.push(bundle);
+      } else {
+        previousByName.set(name, [bundle]);
+      }
+    }
+  }
+
   /** @type {Map<string, number>} */
   const occurrences = new Map();
 
@@ -277,10 +327,8 @@ function publishBundles(bundles, previousBundles, eventStream) {
       if (name) {
         const occurrence = occurrences.get(name) || 0;
         occurrences.set(name, occurrence + 1);
-        previous =
-          previousBundles.filter((bundle) => (bundle.name || "") === name)[
-            occurrence
-          ] || null;
+        const group = previousByName.get(name);
+        previous = (group && group[occurrence]) || null;
       } else {
         previous = previousBundles[index] || null;
       }
@@ -331,9 +379,13 @@ function createHot(compiler, userOptions) {
 
     // Published only when the rounded percent changes to keep the stream small.
     new webpack.ProgressPlugin((percent, message) => {
+      if (closed || !eventStream.hasClients()) {
+        return;
+      }
+
       const rounded = Math.round(percent * 100);
 
-      if (closed || rounded === lastProgressPercent) {
+      if (rounded === lastProgressPercent) {
         return;
       }
 
