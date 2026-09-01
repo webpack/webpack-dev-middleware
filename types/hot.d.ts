@@ -56,7 +56,7 @@ declare const HOT_DEFAULT_HEARTBEAT: number;
  * @typedef {object} HotOptions
  * @property {string=} path the path the SSE endpoint is served at
  * @property {number=} heartbeat heartbeat interval in milliseconds
- * @property {StatsOptions=} statsOptions webpack stats options used when serializing compilation results
+ * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
  * @property {boolean=} progress publish compilation progress events to the clients
  */
 /**
@@ -165,7 +165,7 @@ type HotOptions = {
    */
   heartbeat?: number | undefined;
   /**
-   * webpack stats options used when serializing compilation results
+   * deprecated, removed in the next major release — webpack stats options used when serializing compilation results
    */
   statsOptions?: StatsOptions | undefined;
   /**

@@ -16,7 +16,7 @@
  * @typedef {object} HotOptions
  * @property {string=} path the path the SSE endpoint is served at
  * @property {number=} heartbeat heartbeat interval in milliseconds
- * @property {StatsOptions=} statsOptions webpack stats options used when serializing compilation results
+ * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
  * @property {boolean=} progress publish compilation progress events to the clients
  */
 
@@ -224,6 +224,7 @@ function toBundles(statsResult, statsOptions) {
     all: false,
     errors: true,
     warnings: true,
+    // TODO in the next major release remove `statsOptions` and this spread
     ...statsOptions,
     // Not negotiable, whatever `statsOptions` asks for: without `hash` the
     // client has nothing to compare and stops applying updates, without
@@ -323,6 +324,7 @@ function createHot(compiler, userOptions) {
   const { statsOptions } = options;
   const logger = compiler.getInfrastructureLogger("webpack-dev-middleware");
 
+  // TODO in the next major release remove `statsOptions` and this warning
   if (statsOptions) {
     logger.warn(
       "The 'hot.statsOptions' option is deprecated and will be removed in the next major release. The payload's fields are fixed, so there is nothing left to configure: filter warnings with webpack's 'ignoreWarnings' or on the client with '?overlay={\"warnings\":false}'.",
