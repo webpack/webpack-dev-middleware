@@ -330,6 +330,15 @@ const compiler = webpack({
 middleware(compiler, { hot: true });
 ```
 
+The object form accepts these options:
+
+|                  Name                  |   Type    |      Default       | Description                                                      |
+| :------------------------------------: | :-------: | :----------------: | :--------------------------------------------------------------- |
+|         **[`path`](#hotpath)**         | `string`  | `'/__webpack_hmr'` | Path the SSE endpoint is served at.                              |
+|    **[`heartbeat`](#hotheartbeat)**    | `number`  |      `10000`       | Interval (in milliseconds) between keep-alive frames.            |
+|     **[`progress`](#hotprogress)**     | `boolean` |      `false`       | Publish compilation progress events to the clients.              |
+| **[`statsOptions`](#hotstatsoptions)** | `object`  |    `undefined`     | Webpack stats options used when serializing compilation results. |
+
 #### `hot.path`
 
 Type: `String`
@@ -342,12 +351,12 @@ Path the SSE endpoint is served at. Must start with a slash and match the `path`
 Type: `Number`
 Default: `10000`
 
-Heartbeat interval (in milliseconds) used to keep the SSE connection alive when no compilation events are produced.
+Heartbeat interval (in milliseconds) used to keep the SSE connection alive when no compilation events are produced. Must be `1` or greater.
 
 #### `hot.progress`
 
 Type: `Boolean`
-Default: `undefined`
+Default: `false`
 
 Publish compilation progress events (`{ action: "progress", percent, message }`) to the clients using webpack's `ProgressPlugin`. The bundled client shows the percentage in its building badge (see the client `progress` option).
 
@@ -379,6 +388,12 @@ entry: [
   "./src/app.js",
 ];
 ```
+
+The runtime ships as ES5 and uses no built-in newer than ES5, apart from
+`EventSource` and `Promise` (which HMR itself needs), so it runs in old
+browsers too — set [`target`](https://webpack.js.org/configuration/target/) to
+`["web", "es5"]` in your configuration so webpack emits its own runtime as ES5
+as well.
 
 ### Client options
 
