@@ -7033,6 +7033,25 @@ describe.each([
       );
     });
 
+    it("does not open a stream for a HEAD request to the hot path", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: true },
+      );
+
+      // A HEAD request cannot read a body: intercepting it would hand it one
+      // and leave the connection hanging. It falls through to the middleware,
+      // which has nothing to serve at that path.
+      const response = await req.head("/__webpack_hmr");
+
+      expect(response.headers["content-type"] || "").not.toMatch(
+        /text\/event-stream/,
+      );
+    });
+
     if (name === "hono") {
       it("replaces headers left by earlier middleware on the SSE handshake", async () => {
         const compiler = getCompiler(webpackConfig);

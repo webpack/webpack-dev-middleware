@@ -227,7 +227,13 @@ function applyStyle(element, style) {
  * @param {HTMLElement} root subtree to normalize
  */
 function normalizeInlineStyles(root) {
-  for (const element of root.querySelectorAll("[style]")) {
+  // Indexed rather than `for...of`: a `NodeList` is not iterable in an ES5
+  // browser, and the loop babel compiles it into throws on one.
+  const elements = root.querySelectorAll("[style]");
+
+  for (let index = 0; index < elements.length; index++) {
+    const element = elements[index];
+
     /** @type {EXPECTED_ANY} */ (element).style.cssText =
       element.getAttribute("style");
   }

@@ -497,9 +497,12 @@ function processMessage(obj) {
           `bundle ${obj.name ? `'${obj.name}' ` : ""}rebuilt in ${obj.time}ms`,
         );
       }
+      // Not a `return`: a sibling bundle's event is still delivered to a
+      // `subscribeAll` handler, which is documented to see every message.
       if (obj.name && options.name && obj.name !== options.name) {
-        return;
+        break;
       }
+
       let shouldApply = true;
       if (obj.errors.length > 0) {
         if (reporter) reporter.problems("errors", obj);
@@ -531,10 +534,23 @@ function processMessage(obj) {
   }
 }
 
+// Path this copy of the client subscribed to, so a `setOptionsAndConnect`
+// call after the automatic connect does not add a second listener (every
+// message would be processed twice) while a call that changed `path` still
+// subscribes to the new connection.
+/** @type {string | undefined} */
+let subscribedPath;
+
 /**
  * Subscribe the message handler to the shared event source wrapper.
  */
 function connect() {
+  if (subscribedPath === options.path) {
+    return;
+  }
+
+  subscribedPath = /** @type {string} */ (options.path);
+
   getEventSourceWrapper().addMessageListener((event) => {
     if (event.data === "💓") {
       return;
@@ -567,6 +583,8 @@ export function disconnect() {
     wrappers[path].close();
     delete wrappers[path];
   }
+
+  subscribedPath = undefined;
 }
 
 // Bootstrap: parse query string overrides, then connect (if enabled).

@@ -193,6 +193,46 @@ describe("client", () => {
       expect(spy).toHaveBeenCalledWith(message);
     });
 
+    it("does not process a message twice when connecting again", () => {
+      // `autoConnect` already subscribed this copy; connecting again must not
+      // add a second listener to the shared wrapper.
+      client.setOptionsAndConnect({});
+
+      EventSourceStub.lastInstance().onmessage(
+        makeMessage({
+          action: "built",
+          time: 100,
+          hash: "1234567890abcdef",
+          errors: [],
+          warnings: [],
+          modules: [],
+        }),
+      );
+
+      expect(processUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    it("subscribes again when the path changed", () => {
+      client.setOptionsAndConnect({ path: "/__other_hmr" });
+
+      const source = EventSourceStub.lastInstance();
+
+      expect(source.url).toBe("/__other_hmr");
+
+      source.onmessage(
+        makeMessage({
+          action: "built",
+          time: 100,
+          hash: "1234567890abcdef",
+          errors: [],
+          warnings: [],
+          modules: [],
+        }),
+      );
+
+      expect(processUpdate).toHaveBeenCalledTimes(1);
+    });
+
     it("calls subscribeAll handler on custom messages", () => {
       const spy = jest.fn();
       client.subscribeAll(spy);
@@ -728,6 +768,30 @@ describe("client", () => {
           modules: [],
         }),
       );
+      expect(processUpdate).not.toHaveBeenCalled();
+    });
+
+    it("still delivers an event for another bundle to subscribeAll", () => {
+      const spy = jest.fn();
+      const client = loadClient("?name=test");
+
+      client.subscribeAll(spy);
+
+      const message = {
+        name: "foo",
+        action: "built",
+        time: 100,
+        hash: "1234567890abcdef",
+        errors: [],
+        warnings: [],
+        modules: [],
+      };
+
+      EventSourceStub.lastInstance().onmessage(makeMessage(message));
+
+      // The name filter decides which bundle applies the update, not which
+      // messages a subscriber sees.
+      expect(spy).toHaveBeenCalledWith(message);
       expect(processUpdate).not.toHaveBeenCalled();
     });
   });
