@@ -39,7 +39,7 @@ success:
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -73,7 +73,7 @@ webpack x.x.x compiled with 1 warning in x ms
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -119,7 +119,7 @@ webpack x.x.x compiled successfully in x ms
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -153,7 +153,7 @@ webpack x.x.x compiled with 1 warning in x ms
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -290,7 +290,7 @@ exports[`logging plugin should logging on successfully build in multi-compiler m
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -448,7 +448,7 @@ exports[`logging plugin should logging on successfully multi-compiler build usin
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -466,7 +466,7 @@ exports[`logging plugin should logging on successfully multi-compiler build usin
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -484,7 +484,7 @@ exports[`logging plugin should logging on successfully multi-compiler build usin
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -502,7 +502,7 @@ exports[`logging plugin should logging on successfully multi-compiler build usin
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -520,7 +520,7 @@ exports[`logging plugin should logging on successfully multi-compiler build usin
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -538,7 +538,7 @@ exports[`logging plugin should logging on successfully multi-compiler build usin
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -639,7 +639,7 @@ success:
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -673,7 +673,7 @@ webpack x.x.x compiled with 1 warning in x ms
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -719,7 +719,7 @@ webpack x.x.x compiled successfully in x ms
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -753,7 +753,7 @@ webpack x.x.x compiled with 1 warning in x ms
 asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -890,7 +890,7 @@ exports[`logging standalone should logging on successfully build in multi-compil
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -1063,7 +1063,7 @@ exports[`logging standalone should logging on successfully multi-compiler build 
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]
@@ -1081,7 +1081,7 @@ exports[`logging standalone should logging on successfully multi-compiler build 
 "asset bundle.js x KiB [emitted] (name: main)
 asset svg.svg x KiB [emitted] [from: svg.svg] (auxiliary name: main)
 asset index.html x bytes [emitted] [from: index.html] (auxiliary name: main)
-runtime modules x KiB x modules
+runtime modules x bytes x modules
 cacheable modules x bytes
 ./foo.js x bytes [built] [code generated]
 ./svg.svg x bytes [built] [code generated]

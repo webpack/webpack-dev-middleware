@@ -8,7 +8,7 @@ export = wdm;
  * @returns {API<RequestInternal, ResponseInternal>} webpack dev middleware
  */
 declare function wdm<
-  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("node:http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 >(
   compiler: Compiler | MultiCompiler,
@@ -99,7 +99,7 @@ declare function hapiWrapper<
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow wrapper
  */
 declare function koaWrapper<
-  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("node:http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 >(
   compiler: Compiler | MultiCompiler,
@@ -115,7 +115,7 @@ declare function koaWrapper<
  * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono wrapper
  */
 declare function honoWrapper<
-  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("node:http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 >(
   compiler: Compiler | MultiCompiler,
@@ -154,7 +154,7 @@ type Watching = Compiler["watching"];
 type MultiWatching = ReturnType<MultiCompiler["watch"]>;
 type OutputFileSystem = import("webpack").OutputFileSystem & {
   createReadStream?: typeof fs.createReadStream;
-  statSync: fs.StatSyncFn;
+  statSync: typeof fs.statSync;
   readFileSync: typeof fs.readFileSync;
 };
 type Logger = ReturnType<Compiler["getInfrastructureLogger"]>;
@@ -170,7 +170,7 @@ type ResponseData = {
   byteLength: number;
 };
 type ModifyResponseData<
-  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("node:http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 > = (
   req: RequestInternal,
@@ -179,7 +179,7 @@ type ModifyResponseData<
   byteLength: number,
 ) => ResponseData;
 type Context<
-  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("node:http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 > = {
   /**
@@ -220,7 +220,7 @@ type Context<
   hot?: HotInstance | undefined;
 };
 type FilledContext<
-  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("node:http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 > = WithoutUndefined<Context<RequestInternal, ResponseInternal>, "watching">;
 type NormalizedHeaders =
@@ -230,7 +230,7 @@ type NormalizedHeaders =
       value: number | string;
     }[];
 type Headers<
-  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("node:http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 > =
   | NormalizedHeaders
@@ -241,7 +241,7 @@ type Headers<
     ) => void | undefined | NormalizedHeaders)
   | undefined;
 type Options<
-  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("node:http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 > = {
   /**
@@ -292,8 +292,7 @@ type Options<
    * modify response data
    */
   modifyResponseData?:
-    | ModifyResponseData<RequestInternal, ResponseInternal>
-    | undefined;
+    ModifyResponseData<RequestInternal, ResponseInternal> | undefined;
   /**
    * options to generate etag header
    */
@@ -330,7 +329,7 @@ type Options<
   hot?: (boolean | HotOptions) | undefined;
 };
 type Middleware<
-  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("node:http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 > = (
   req: RequestInternal,
@@ -369,7 +368,7 @@ type AdditionalMethods<
   context: Context<RequestInternal, ResponseInternal>;
 };
 type API<
-  RequestInternal extends IncomingMessage = import("http").IncomingMessage,
+  RequestInternal extends IncomingMessage = import("node:http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 > = Middleware<RequestInternal, ResponseInternal> &
   AdditionalMethods<RequestInternal, ResponseInternal>;
