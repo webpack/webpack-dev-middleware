@@ -518,46 +518,9 @@ hide(); // without a source: removed unconditionally
 
 ## Migrating from webpack-hot-middleware
 
-The `hot` option replaces [`webpack-hot-middleware`](https://github.com/webpack-contrib/webpack-hot-middleware): one middleware serves the assets and the SSE endpoint, and the client runtime ships under `webpack-dev-middleware/client`. The endpoint (`/__webpack_hmr`), the event stream, and the client query-string API stay compatible, so migrating is mostly renaming.
+The `hot` option replaces [`webpack-hot-middleware`](https://github.com/webpack/webpack-hot-middleware): one middleware serves the assets and the SSE endpoint, and the client runtime ships under `webpack-dev-middleware/client`. The endpoint (`/__webpack_hmr`), the event stream, and the client query-string API stay compatible, so migrating is mostly renaming.
 
-On the server, remove `webpack-hot-middleware` and enable `hot` instead:
-
-```js
-// Before
-app.use(webpackDevMiddleware(compiler));
-app.use(webpackHotMiddleware(compiler, { heartbeat: 2000 }));
-
-// After
-app.use(webpackDevMiddleware(compiler, { hot: { heartbeat: 2000 } }));
-```
-
-In the webpack configuration, swap the client entry (`HotModuleReplacementPlugin` stays):
-
-```js
-// Before
-module.exports = {
-  entry: ["webpack-hot-middleware/client?timeout=20000", "./src/app.js"],
-};
-
-// After
-module.exports = {
-  entry: ["webpack-dev-middleware/client?timeout=20000", "./src/app.js"],
-};
-```
-
-Option mapping:
-
-| webpack-hot-middleware                                               | webpack-dev-middleware                                                                                                                       |
-| :------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
-| server `path`, `heartbeat`                                           | `hot.path`, `hot.heartbeat` (unchanged)                                                                                                      |
-| server `log`, `logLevel`                                             | Removed — the middleware logs through the compiler's [infrastructure logger](https://webpack.js.org/configuration/infrastructurelogging/).   |
-| server `statsOptions`                                                | `hot.statsOptions` (object form only)                                                                                                        |
-| client `path`, `timeout`, `name`, `autoConnect`, `dynamicPublicPath` | Unchanged.                                                                                                                                   |
-| client `reload`                                                      | Unchanged, but the default flipped to `true` — pass `reload=false` to keep the old HMR-only behavior.                                        |
-| client `noInfo`, `quiet`                                             | `logging` (`quiet=true` → `logging=none`, `noInfo=true` → `logging=warn`).                                                                   |
-| client `overlay`, `overlayWarnings`, `overlayStyles`, `ansiColors`   | A single `overlay` value: a boolean, or an object with `errors`, `warnings`, `styles`, `ansiColors` (see [client options](#client-options)). |
-
-The programmatic client API keeps the same names (`subscribe`, `subscribeAll`, `useCustomOverlay`, `setOptionsAndConnect`), and adds `disconnect()`. On the server, `webpackHotMiddleware.publish(...)` becomes `instance.context.hot.publish(...)`.
+See [migration-from-webpack-hot-middleware.md](migration-from-webpack-hot-middleware.md) — it walks the whole move: prerequisites, the server and webpack-configuration changes, every option mapped, the behavior differences worth knowing, the other frameworks, troubleshooting, and a checklist.
 
 ## HMR notes and troubleshooting
 
