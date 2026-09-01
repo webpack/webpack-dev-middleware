@@ -187,6 +187,73 @@ describe("hot middleware (unit)", () => {
       ]);
     });
 
+    it("takes the payload's diagnostics from the stats option", () => {
+      /** @type {EXPECTED_OBJECT} */
+      let requested;
+      /** @type {EXPECTED_OBJECT} */
+      let resolvedFrom;
+      const stats = {
+        toJson: (options) => {
+          requested = options;
+          return { hash: "abc" };
+        },
+        compilation: {
+          createStatsOptions: (option) => {
+            resolvedFrom = option;
+            return { errors: true, warnings: false };
+          },
+        },
+      };
+
+      toBundles(
+        /** @type {EXPECTED_OBJECT} */ (stats),
+        undefined,
+        "errors-only",
+      );
+
+      // Presets are webpack's to interpret, so the option goes to it as given.
+      expect(resolvedFrom).toBe("errors-only");
+      expect(requested).toMatchObject({ errors: true, warnings: false });
+    });
+
+    it("reports both when no stats option is set", () => {
+      /** @type {EXPECTED_OBJECT} */
+      let requested;
+      const stats = {
+        toJson: (options) => {
+          requested = options;
+          return { hash: "abc" };
+        },
+        compilation: { createStatsOptions: () => ({}) },
+      };
+
+      toBundles(/** @type {EXPECTED_OBJECT} */ (stats), undefined, undefined);
+
+      expect(requested).toMatchObject({ errors: true, warnings: true });
+    });
+
+    it("lets the deprecated statsOptions win over the stats option", () => {
+      /** @type {EXPECTED_OBJECT} */
+      let requested;
+      const stats = {
+        toJson: (options) => {
+          requested = options;
+          return { hash: "abc" };
+        },
+        compilation: {
+          createStatsOptions: () => ({ errors: true, warnings: false }),
+        },
+      };
+
+      toBundles(
+        /** @type {EXPECTED_OBJECT} */ (stats),
+        { warnings: true },
+        "errors-only",
+      );
+
+      expect(requested).toMatchObject({ warnings: true });
+    });
+
     it("keeps the fields the client needs, whatever statsOptions asks for", () => {
       /** @type {EXPECTED_OBJECT} */
       let requested;

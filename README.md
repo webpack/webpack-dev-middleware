@@ -318,7 +318,7 @@ middleware(compiler, {
 Type: `Boolean | Object`
 Default: `false`
 
-Enables hot module replacement by serving a [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) endpoint that publishes the webpack compiler's `building`, `built` and `sync` events to connected clients. When `true`, defaults are used; pass an object to customise. Use this option together with the browser runtime shipped as `webpack-dev-middleware/client`.
+Enables hot module replacement by serving a [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) endpoint that publishes the webpack compiler's `building`, `built` and `sync` events to connected clients. Whether those events carry errors and warnings follows the [`stats`](#stats) option, so one setting governs what a build reports in the terminal and in the browser — `stats: "errors-only"` keeps warnings out of both, and `stats: false` keeps both out. When `true`, defaults are used; pass an object to customise. Use this option together with the browser runtime shipped as `webpack-dev-middleware/client`.
 
 ```js
 const webpack = require("webpack");
@@ -367,7 +367,7 @@ Default: `undefined`
 
 > [!WARNING]
 >
-> Deprecated, and removed in the next major release. The payload carries a fixed set of fields (`name`, `action`, `time`, `hash`, `errors`, `warnings`), so there is nothing left worth configuring — asking for more only costs time on every rebuild, since the extra stats are computed and then dropped. To keep warnings away from clients, use webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings) or the client's `?overlay={"warnings":false}`.
+> Deprecated, and removed in the next major release. The payload carries a fixed set of fields (`name`, `action`, `time`, `hash`, `errors`, `warnings`), and which diagnostics it reports now follows the [`stats`](#stats) option, so there is nothing left worth configuring here — asking for more only costs time on every rebuild, since the extra stats are computed and then dropped. For the browser console, use the client's [`logging`](#client-options) and [`overlay`](#client-overlay-options); to drop a warning everywhere at once, webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings).
 
 Webpack stats options used when serializing compilation results for the SSE payload. Merged over the middleware's base options and forwarded to `stats.toJson(...)`. Only the object form is accepted — presets (`"errors-only"`) and booleans cannot be merged.
 
@@ -542,12 +542,11 @@ server over HTTP/2 if you need many simultaneous tabs.
 
 ### Filtering warnings
 
-Two layers, from build to presentation:
+Three layers, from build to presentation:
 
-- webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings) removes them from the stats, so clients never receive them.
-- On the client, `?overlay={"warnings":false}` hides them from the overlay and `?logging=error` from the console.
-
-The deprecated [`hot.statsOptions`](#hotstatsoptions) still keeps them out of the payload until it is removed, but these two outlive it.
+- webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings) removes them from the stats, so nothing reports them anywhere.
+- The middleware's [`stats`](#stats) option decides what a build reports, in the terminal and in the SSE payload alike: `stats: "errors-only"` keeps warnings out of both.
+- On the client, `?overlay={"warnings":false}` hides them from the overlay and `?logging=error` from the console, per page rather than per server.
 
 ### Paths and public paths
 

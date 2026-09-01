@@ -9,11 +9,13 @@ export = createHot;
 /**
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {HotOptions | true} userOptions options
+ * @param {MiddlewareStatsOption=} statsOption the middleware's `stats` option, which decides whether a payload carries errors and warnings
  * @returns {HotInstance} hot instance
  */
 declare function createHot(
   compiler: Compiler | MultiCompiler,
   userOptions: HotOptions | true,
+  statsOption?: MiddlewareStatsOption | undefined,
 ): HotInstance;
 declare namespace createHot {
   export {
@@ -36,6 +38,7 @@ declare namespace createHot {
     IncomingMessage,
     ServerResponse,
     StatsOptions,
+    MiddlewareStatsOption,
     HotOptions,
     Payload,
     EventStream,
@@ -52,6 +55,7 @@ declare const HOT_DEFAULT_HEARTBEAT: number;
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index.js").ServerResponse} ServerResponse */
 /** @typedef {import("webpack").StatsOptions} StatsOptions */
+/** @typedef {import("webpack").Configuration["stats"]} MiddlewareStatsOption */
 /**
  * @typedef {object} HotOptions
  * @property {string=} path the path the SSE endpoint is served at
@@ -114,12 +118,14 @@ declare function publishBundles(
 ): void;
 /**
  * @param {Stats | MultiStats} statsResult stats result
- * @param {StatsOptions | undefined} statsOptions stats options
+ * @param {StatsOptions | undefined} statsOptions deprecated `hot.statsOptions`
+ * @param {MiddlewareStatsOption=} statsOption the middleware's `stats` option
  * @returns {StatsCompilation[]} normalized per-bundle stats
  */
 declare function toBundles(
   statsResult: Stats | MultiStats,
   statsOptions: StatsOptions | undefined,
+  statsOption?: MiddlewareStatsOption | undefined,
 ): StatsCompilation[];
 type HotInstance = {
   /**
@@ -155,6 +161,7 @@ type StatsError = import("webpack").StatsError;
 type IncomingMessage = import("./index.js").IncomingMessage;
 type ServerResponse = import("./index.js").ServerResponse;
 type StatsOptions = import("webpack").StatsOptions;
+type MiddlewareStatsOption = import("webpack").Configuration["stats"];
 type HotOptions = {
   /**
    * the path the SSE endpoint is served at
