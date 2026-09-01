@@ -16,16 +16,6 @@
   },
   "license": "MIT",
   "author": "Tobias Koppers @sokra",
-  "exports": {
-    ".": {
-      "types": "./types/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./client": "./client/index.js",
-    "./client/indicator": "./client/indicator.js",
-    "./client/overlay": "./client/overlay.js",
-    "./package.json": "./package.json"
-  },
   "main": "dist/index.js",
   "types": "types/index.d.ts",
   "files": [
@@ -68,7 +58,6 @@
   "devDependencies": {
     "@babel/cli": "^7.16.7",
     "@babel/core": "^7.16.7",
-    "@babel/plugin-transform-runtime": "^7.29.0",
     "@babel/preset-env": "^7.16.7",
     "@changesets/cli": "^2.30.0",
     "@changesets/get-github-info": "^0.8.0",
