@@ -332,12 +332,12 @@ middleware(compiler, { hot: true });
 
 The object form accepts these options:
 
-|                  Name                  |   Type    |      Default       | Description                                                      |
-| :------------------------------------: | :-------: | :----------------: | :--------------------------------------------------------------- |
-|         **[`path`](#hotpath)**         | `string`  | `'/__webpack_hmr'` | Path the SSE endpoint is served at.                              |
-|    **[`heartbeat`](#hotheartbeat)**    | `number`  |      `10000`       | Interval (in milliseconds) between keep-alive frames.            |
-|     **[`progress`](#hotprogress)**     | `boolean` |      `false`       | Publish compilation progress events to the clients.              |
-| **[`statsOptions`](#hotstatsoptions)** | `object`  |    `undefined`     | Webpack stats options used when serializing compilation results. |
+|                  Name                  |   Type    |      Default       | Description                                                                  |
+| :------------------------------------: | :-------: | :----------------: | :--------------------------------------------------------------------------- |
+|         **[`path`](#hotpath)**         | `string`  | `'/__webpack_hmr'` | Path the SSE endpoint is served at.                                          |
+|    **[`heartbeat`](#hotheartbeat)**    | `number`  |      `10000`       | Interval (in milliseconds) between keep-alive frames.                        |
+|     **[`progress`](#hotprogress)**     | `boolean` |      `false`       | Publish compilation progress events to the clients.                          |
+| **[`statsOptions`](#hotstatsoptions)** | `object`  |    `undefined`     | Deprecated. Webpack stats options used when serializing compilation results. |
 
 #### `hot.path`
 
@@ -365,7 +365,13 @@ Publish compilation progress events (`{ action: "progress", percent, message }`)
 Type: `Object`
 Default: `undefined`
 
-Webpack stats options used when serializing compilation results for the SSE payload. Merged over the middleware's base options and forwarded to `stats.toJson(...)`. Only the object form is accepted — presets (`"errors-only"`) and booleans cannot be merged. By default only the minimal stats needed by the client are requested (`hash`, `timings`, `errors`, `warnings`) to avoid slowing down rebuilds.
+> [!WARNING]
+>
+> Deprecated, and removed in the next major release. The payload carries a fixed set of fields (`name`, `action`, `time`, `hash`, `errors`, `warnings`), so there is nothing left worth configuring — asking for more only costs time on every rebuild, since the extra stats are computed and then dropped. To keep warnings away from clients, use webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings) or the client's `?overlay={"warnings":false}`.
+
+Webpack stats options used when serializing compilation results for the SSE payload. Merged over the middleware's base options and forwarded to `stats.toJson(...)`. Only the object form is accepted — presets (`"errors-only"`) and booleans cannot be merged.
+
+`hash`, `timings` and `children` are not configurable: the client compares `hash` against its own bundle's to decide whether an update applies, `timings` carries the build time it reports, and `children` would replace the bundle's hash with a child compilation's — so those three keep their values whatever this option asks for.
 
 ## Hot Module Replacement client
 
@@ -536,10 +542,9 @@ server over HTTP/2 if you need many simultaneous tabs.
 
 ### Filtering warnings
 
-Three layers, from build to presentation:
+Two layers, from build to presentation:
 
 - webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings) removes them from the stats, so clients never receive them.
-- `hot: { statsOptions: { warnings: false } }` keeps them in the build output but out of the SSE payload.
 - On the client, `?overlay={"warnings":false}` hides them from the overlay and `?logging=error` from the console.
 
 ### Paths and public paths

@@ -204,7 +204,7 @@
               "type": "boolean"
             },
             "statsOptions": {
-              "description": "Webpack stats options used when serializing compilation results.",
+              "description": "Deprecated, will be removed in the next major release. Webpack stats options used when serializing compilation results, except the fields the client requires.",
               "type": "object",
               "additionalProperties": true
             }

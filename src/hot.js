@@ -215,22 +215,6 @@ function normalizeStats(stats, statsOptions) {
 }
 
 /**
- * @param {StatsCompilation} stats normalized stats
- * @returns {StatsCompilation[]} extracted bundles
- */
-function extractBundles(stats) {
-  if (stats.modules) {
-    return [stats];
-  }
-
-  if (stats.children && stats.children.length > 0) {
-    return stats.children;
-  }
-
-  return [stats];
-}
-
-/**
  * @param {Stats | MultiStats} statsResult stats result
  * @param {StatsOptions | undefined} statsOptions stats options
  * @returns {StatsCompilation[]} normalized per-bundle stats
@@ -238,21 +222,26 @@ function extractBundles(stats) {
 function toBundles(statsResult, statsOptions) {
   const resultStatsOptions = {
     all: false,
-    hash: true,
-    timings: true,
     errors: true,
     warnings: true,
     ...statsOptions,
+    // Not negotiable, whatever `statsOptions` asks for: without `hash` the
+    // client has nothing to compare and stops applying updates, without
+    // `timings` it reports `undefined` build times, and with `children` the
+    // payload would carry a child compilation's hash instead of the bundle's.
+    hash: true,
+    timings: true,
+    children: false,
   };
 
   // Multi-compiler stats have stats for each child compiler.
   if ("stats" in statsResult) {
-    return statsResult.stats.flatMap((stats) =>
-      extractBundles(normalizeStats(stats, resultStatsOptions)),
+    return statsResult.stats.map((stats) =>
+      normalizeStats(stats, resultStatsOptions),
     );
   }
 
-  return extractBundles(normalizeStats(statsResult, resultStatsOptions));
+  return [normalizeStats(statsResult, resultStatsOptions)];
 }
 
 /**
@@ -333,6 +322,12 @@ function createHot(compiler, userOptions) {
   const heartbeat = options.heartbeat ?? HOT_DEFAULT_HEARTBEAT;
   const { statsOptions } = options;
   const logger = compiler.getInfrastructureLogger("webpack-dev-middleware");
+
+  if (statsOptions) {
+    logger.warn(
+      "The 'hot.statsOptions' option is deprecated and will be removed in the next major release. The payload's fields are fixed, so there is nothing left to configure: filter warnings with webpack's 'ignoreWarnings' or on the client with '?overlay={\"warnings\":false}'.",
+    );
+  }
 
   let eventStream = createEventStream(heartbeat, logger);
   logger.log(`Hot module replacement enabled, serving events at "${path}"`);
