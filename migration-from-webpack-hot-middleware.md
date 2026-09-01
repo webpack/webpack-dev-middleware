@@ -55,7 +55,7 @@ browser runtime ships in the same package under `webpack-dev-middleware/client`.
 A version that predates the option rejects it at startup rather than ignoring
 it, so a missed upgrade is loud:
 
-```
+```text
 Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options has an unknown property 'hot'. These properties are valid:
    object { mimeTypes?, mimeTypeDefault?, ... }
