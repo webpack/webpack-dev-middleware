@@ -115,14 +115,14 @@ exports[`validation should throw an error on the "hot" option with "{"statsOptio
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot.statsOptions should be an object:
    object { … }
-   -> Deprecated, will be removed in the next major release. Webpack stats options used when serializing compilation results, except the fields the client requires."
+   -> Deprecated, do not use, will be removed in the next major release. Use the \`stats\` option instead, which decides whether a payload carries errors and warnings."
 `;
 
 exports[`validation should throw an error on the "hot" option with "{"statsOptions":true}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot.statsOptions should be an object:
    object { … }
-   -> Deprecated, will be removed in the next major release. Webpack stats options used when serializing compilation results, except the fields the client requires."
+   -> Deprecated, do not use, will be removed in the next major release. Use the \`stats\` option instead, which decides whether a payload carries errors and warnings."
 `;
 
 exports[`validation should throw an error on the "hot" option with "{"unknown":true}" value 1`] = `

@@ -332,12 +332,12 @@ middleware(compiler, { hot: true });
 
 The object form accepts these options:
 
-|                  Name                  |   Type    |      Default       | Description                                                                  |
-| :------------------------------------: | :-------: | :----------------: | :--------------------------------------------------------------------------- |
-|         **[`path`](#hotpath)**         | `string`  | `'/__webpack_hmr'` | Path the SSE endpoint is served at.                                          |
-|    **[`heartbeat`](#hotheartbeat)**    | `number`  |      `10000`       | Interval (in milliseconds) between keep-alive frames.                        |
-|     **[`progress`](#hotprogress)**     | `boolean` |      `false`       | Publish compilation progress events to the clients.                          |
-| **[`statsOptions`](#hotstatsoptions)** | `object`  |    `undefined`     | Deprecated. Webpack stats options used when serializing compilation results. |
+|                  Name                  |   Type    |      Default       | Description                                           |
+| :------------------------------------: | :-------: | :----------------: | :---------------------------------------------------- |
+|         **[`path`](#hotpath)**         | `string`  | `'/__webpack_hmr'` | Path the SSE endpoint is served at.                   |
+|    **[`heartbeat`](#hotheartbeat)**    | `number`  |      `10000`       | Interval (in milliseconds) between keep-alive frames. |
+|     **[`progress`](#hotprogress)**     | `boolean` |      `false`       | Publish compilation progress events to the clients.   |
+| **[`statsOptions`](#hotstatsoptions)** | `object`  |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).       |
 
 #### `hot.path`
 
@@ -362,16 +362,20 @@ Publish compilation progress events (`{ action: "progress", percent, message }`)
 
 #### `hot.statsOptions`
 
-Type: `Object`
-Default: `undefined`
-
 > [!WARNING]
 >
-> Deprecated, and removed in the next major release. The payload carries a fixed set of fields (`name`, `action`, `time`, `hash`, `errors`, `warnings`), and which diagnostics it reports now follows the [`stats`](#stats) option, so there is nothing left worth configuring here — asking for more only costs time on every rebuild, since the extra stats are computed and then dropped. For the browser console, use the client's [`logging`](#client-options) and [`overlay`](#client-overlay-options); to drop a warning everywhere at once, webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings).
+> Deprecated, and removed in the next major release. Do not use it.
 
-Webpack stats options used when serializing compilation results for the SSE payload. Merged over the middleware's base options and forwarded to `stats.toJson(...)`. Only the object form is accepted — presets (`"errors-only"`) and booleans cannot be merged.
+Use these instead:
 
-`hash`, `timings` and `children` are not configurable: the client compares `hash` against its own bundle's to decide whether an update applies, `timings` carries the build time it reports, and `children` would replace the bundle's hash with a child compilation's — so those three keep their values whatever this option asks for. Every other key still applies until the option is removed.
+| To                                                              | Use                                                                                              |
+| :-------------------------------------------------------------- | :----------------------------------------------------------------------------------------------- |
+| decide what a build reports, in the terminal and in the payload | [`stats`](#stats)                                                                                |
+| quiet the browser console alone                                 | the client's [`logging`](#client-options)                                                        |
+| hide problems from the overlay alone                            | the client's [`overlay`](#client-overlay-options)                                                |
+| drop a warning everywhere at once                               | webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings) |
+
+Values still passed here apply until the option is removed, except `hash`, `timings` and `children`, which are ignored: the client compares `hash` against its own bundle's to decide whether an update applies, `timings` carries the build time it reports, and `children` would replace the bundle's hash with a child compilation's, so a page would reload instead of updating.
 
 ## Hot Module Replacement client
 
