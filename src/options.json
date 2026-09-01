@@ -204,7 +204,7 @@
               "type": "boolean"
             },
             "statsOptions": {
-              "description": "Webpack stats options used when serializing compilation results.",
+              "description": "Deprecated, do not use, will be removed in the next major release. Use the `stats` option instead, which decides whether a payload carries errors and warnings.",
               "type": "object",
               "additionalProperties": true
             }

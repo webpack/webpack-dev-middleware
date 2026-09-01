@@ -155,12 +155,12 @@ module.exports = [
 
 ### Server options
 
-| webpack-hot-middleware | webpack-dev-middleware                                                                                                                                                                   |
-| :--------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `path`                 | `hot.path` — unchanged (`/__webpack_hmr`). Must start with `/` and carry no query string or fragment; an invalid value is now rejected at startup instead of silently never matching.    |
-| `heartbeat`            | `hot.heartbeat` — unchanged (`10000`). Must be `1` or greater.                                                                                                                           |
-| `statsOptions`         | `hot.statsOptions` — object form only. Presets (`"errors-only"`) and booleans are rejected, because the value is merged over the middleware's own base options.                          |
-| `log`                  | Removed. The middleware logs through the compiler's [infrastructure logger](https://webpack.js.org/configuration/infrastructurelogging/); use `infrastructureLogging.level` to quiet it. |
+| webpack-hot-middleware | webpack-dev-middleware                                                                                                                                                                                                                                                                                                                  |
+| :--------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`                 | `hot.path` — unchanged (`/__webpack_hmr`). Must start with `/` and carry no query string or fragment; an invalid value is now rejected at startup instead of silently never matching.                                                                                                                                                   |
+| `heartbeat`            | `hot.heartbeat` — unchanged (`10000`). Must be `1` or greater.                                                                                                                                                                                                                                                                          |
+| `statsOptions`         | The middleware's [`stats`](README.md#stats) option, which decides whether the payload carries errors and warnings just as it decides what the terminal prints — `stats: "errors-only"` keeps warnings out of both. (There is a `hot.statsOptions`, but it is deprecated and removed in the next major release: do not migrate onto it.) |
+| `log`                  | Removed. The middleware logs through the compiler's [infrastructure logger](https://webpack.js.org/configuration/infrastructurelogging/); use `infrastructureLogging.level` to quiet it.                                                                                                                                                |
 
 New: [`hot.progress`](README.md#hotprogress) publishes compilation progress to
 the clients.

@@ -318,7 +318,7 @@ middleware(compiler, {
 Type: `Boolean | Object`
 Default: `false`
 
-Enables hot module replacement by serving a [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) endpoint that publishes the webpack compiler's `building`, `built` and `sync` events to connected clients. When `true`, defaults are used; pass an object to customise. Use this option together with the browser runtime shipped as `webpack-dev-middleware/client`.
+Enables hot module replacement by serving a [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) endpoint that publishes the webpack compiler's `building`, `built` and `sync` events to connected clients. Whether those events carry errors and warnings follows the [`stats`](#stats) option, so one setting governs what a build reports in the terminal and in the browser — `stats: "errors-only"` keeps warnings out of both, and `stats: false` keeps both out. When `true`, defaults are used; pass an object to customise. Use this option together with the browser runtime shipped as `webpack-dev-middleware/client`.
 
 ```js
 const webpack = require("webpack");
@@ -332,12 +332,12 @@ middleware(compiler, { hot: true });
 
 The object form accepts these options:
 
-|                  Name                  |   Type    |      Default       | Description                                                      |
-| :------------------------------------: | :-------: | :----------------: | :--------------------------------------------------------------- |
-|         **[`path`](#hotpath)**         | `string`  | `'/__webpack_hmr'` | Path the SSE endpoint is served at.                              |
-|    **[`heartbeat`](#hotheartbeat)**    | `number`  |      `10000`       | Interval (in milliseconds) between keep-alive frames.            |
-|     **[`progress`](#hotprogress)**     | `boolean` |      `false`       | Publish compilation progress events to the clients.              |
-| **[`statsOptions`](#hotstatsoptions)** | `object`  |    `undefined`     | Webpack stats options used when serializing compilation results. |
+|                  Name                  |   Type    |      Default       | Description                                           |
+| :------------------------------------: | :-------: | :----------------: | :---------------------------------------------------- |
+|         **[`path`](#hotpath)**         | `string`  | `'/__webpack_hmr'` | Path the SSE endpoint is served at.                   |
+|    **[`heartbeat`](#hotheartbeat)**    | `number`  |      `10000`       | Interval (in milliseconds) between keep-alive frames. |
+|     **[`progress`](#hotprogress)**     | `boolean` |      `false`       | Publish compilation progress events to the clients.   |
+| **[`statsOptions`](#hotstatsoptions)** | `object`  |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).       |
 
 #### `hot.path`
 
@@ -362,10 +362,20 @@ Publish compilation progress events (`{ action: "progress", percent, message }`)
 
 #### `hot.statsOptions`
 
-Type: `Object`
-Default: `undefined`
+> [!WARNING]
+>
+> Deprecated, and removed in the next major release. Do not use it.
 
-Webpack stats options used when serializing compilation results for the SSE payload. Merged over the middleware's base options and forwarded to `stats.toJson(...)`. Only the object form is accepted — presets (`"errors-only"`) and booleans cannot be merged. By default only the minimal stats needed by the client are requested (`hash`, `timings`, `errors`, `warnings`) to avoid slowing down rebuilds.
+Use these instead:
+
+| To                                                              | Use                                                                                              |
+| :-------------------------------------------------------------- | :----------------------------------------------------------------------------------------------- |
+| decide what a build reports, in the terminal and in the payload | [`stats`](#stats)                                                                                |
+| quiet the browser console alone                                 | the client's [`logging`](#client-options)                                                        |
+| hide problems from the overlay alone                            | the client's [`overlay`](#client-overlay-options)                                                |
+| drop a warning everywhere at once                               | webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings) |
+
+Values still passed here apply until the option is removed, except `hash`, `timings` and `children`, which are ignored: the client compares `hash` against its own bundle's to decide whether an update applies, `timings` carries the build time it reports, and `children` would replace the bundle's hash with a child compilation's, so a page would reload instead of updating.
 
 ## Hot Module Replacement client
 
@@ -538,9 +548,9 @@ server over HTTP/2 if you need many simultaneous tabs.
 
 Three layers, from build to presentation:
 
-- webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings) removes them from the stats, so clients never receive them.
-- `hot: { statsOptions: { warnings: false } }` keeps them in the build output but out of the SSE payload.
-- On the client, `?overlay={"warnings":false}` hides them from the overlay and `?logging=error` from the console.
+- webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings) removes them from the stats, so nothing reports them anywhere.
+- The middleware's [`stats`](#stats) option decides what a build reports, in the terminal and in the SSE payload alike: `stats: "errors-only"` keeps warnings out of both.
+- On the client, `?overlay={"warnings":false}` hides them from the overlay and `?logging=error` from the console, per page rather than per server.
 
 ### Paths and public paths
 

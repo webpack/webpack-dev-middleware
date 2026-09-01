@@ -13,7 +13,7 @@ jest.spyOn(globalThis.console, "log").mockImplementation();
 /** @typedef {any} EXPECTED_OBJECT */
 
 /** @type {EXPECTED_OBJECT} */
-const noopLogger = { log() {} };
+const noopLogger = { log() {}, warn() {} };
 
 /**
  * Build a minimal compiler-like object so we can drive `invalid`/`done` from
@@ -173,21 +173,109 @@ describe("hot middleware (unit)", () => {
       ).toEqual([expect.objectContaining({ name: "app", hash: "abc" })]);
     });
 
-    it("reports each child of a compilation that has them", () => {
-      // A parent compilation carries no modules of its own — its children are
-      // the bundles clients have to be told about.
+    it("publishes the compilation's own hash, not a child compilation's", () => {
       const stats = makeFakeStats({
-        modules: undefined,
-        children: [
-          { name: "app", hash: "one" },
-          { name: "admin", hash: "two" },
-        ],
+        hash: "parent",
+        children: [{ name: "child-one", hash: "child" }],
       });
 
-      expect(toBundles(stats, undefined)).toEqual([
-        { name: "app", hash: "one" },
-        { name: "admin", hash: "two" },
+      // `children` is forced off, but a plugin's child compilation must not
+      // reach the payload even when webpack reports one: the client compares
+      // the hash it is given against its own bundle's.
+      expect(toBundles(stats, { children: true })).toEqual([
+        expect.objectContaining({ hash: "parent" }),
       ]);
+    });
+
+    it("takes the payload's diagnostics from the stats option", () => {
+      /** @type {EXPECTED_OBJECT} */
+      let requested;
+      /** @type {EXPECTED_OBJECT} */
+      let resolvedFrom;
+      const stats = {
+        toJson: (options) => {
+          requested = options;
+          return { hash: "abc" };
+        },
+        compilation: {
+          createStatsOptions: (option) => {
+            resolvedFrom = option;
+            return { errors: true, warnings: false };
+          },
+        },
+      };
+
+      toBundles(
+        /** @type {EXPECTED_OBJECT} */ (stats),
+        undefined,
+        "errors-only",
+      );
+
+      // Presets are webpack's to interpret, so the option goes to it as given.
+      expect(resolvedFrom).toBe("errors-only");
+      expect(requested).toMatchObject({ errors: true, warnings: false });
+    });
+
+    it("reports both when no stats option is set", () => {
+      /** @type {EXPECTED_OBJECT} */
+      let requested;
+      const stats = {
+        toJson: (options) => {
+          requested = options;
+          return { hash: "abc" };
+        },
+        compilation: { createStatsOptions: () => ({}) },
+      };
+
+      toBundles(/** @type {EXPECTED_OBJECT} */ (stats), undefined, undefined);
+
+      expect(requested).toMatchObject({ errors: true, warnings: true });
+    });
+
+    it("lets the deprecated statsOptions win over the stats option", () => {
+      /** @type {EXPECTED_OBJECT} */
+      let requested;
+      const stats = {
+        toJson: (options) => {
+          requested = options;
+          return { hash: "abc" };
+        },
+        compilation: {
+          createStatsOptions: () => ({ errors: true, warnings: false }),
+        },
+      };
+
+      toBundles(
+        /** @type {EXPECTED_OBJECT} */ (stats),
+        { warnings: true },
+        "errors-only",
+      );
+
+      expect(requested).toMatchObject({ warnings: true });
+    });
+
+    it("keeps the fields the client needs, whatever statsOptions asks for", () => {
+      /** @type {EXPECTED_OBJECT} */
+      let requested;
+      const stats = {
+        toJson: (options) => {
+          requested = options;
+          return { hash: "abc" };
+        },
+        compilation: undefined,
+      };
+
+      toBundles(/** @type {EXPECTED_OBJECT} */ (stats), {
+        hash: false,
+        timings: false,
+        children: true,
+      });
+
+      expect(requested).toMatchObject({
+        hash: true,
+        timings: true,
+        children: false,
+      });
     });
   });
 
@@ -769,6 +857,33 @@ describe("createHot", () => {
           w.includes('"name":"child-bundle"') && w.includes('"action":"built"'),
       ),
     ).toBe(true);
+
+    hot.close();
+  });
+
+  it("warns that statsOptions is deprecated", () => {
+    const warnings = [];
+    const compiler = makeFakeCompiler({
+      log() {},
+      warn: (m) => warnings.push(m),
+    });
+    const hot = createHot(compiler, { statsOptions: { warnings: false } });
+
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("'hot.statsOptions' option is deprecated");
+
+    hot.close();
+  });
+
+  it("does not warn when statsOptions is not used", () => {
+    const warnings = [];
+    const compiler = makeFakeCompiler({
+      log() {},
+      warn: (m) => warnings.push(m),
+    });
+    const hot = createHot(compiler, {});
+
+    expect(warnings).toHaveLength(0);
 
     hot.close();
   });

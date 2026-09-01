@@ -28,6 +28,7 @@ import webpackConfig from "./fixtures/webpack.config";
 import webpackConfigImmutable from "./fixtures/webpack.immutable.config";
 import webpackPublicPathConfig from "./fixtures/webpack.public-path.config";
 import webpackQueryStringConfig from "./fixtures/webpack.querystring.config";
+import webpackWarningConfig from "./fixtures/webpack.warning.config";
 import webpackWatchOptionsConfig from "./fixtures/webpack.watch-options.config";
 import getCompiler from "./helpers/getCompiler";
 
@@ -7183,6 +7184,43 @@ describe.each([
         expect(sync).toBeDefined();
         expect(typeof sync.hash).toBe("string");
         expect(sync.errors).toEqual([]);
+      });
+
+      it("drops warnings from the payload when the stats option does", async () => {
+        const compiler = getCompiler(webpackWarningConfig);
+        [server, req, instance] = await frameworkFactory(
+          name,
+          framework,
+          compiler,
+          { hot: true, stats: "errors-only" },
+        );
+
+        await waitUntilValid(instance);
+
+        const events = await readSseEvents(server, "/__webpack_hmr");
+        const sync = events.find((event) => event.action === "sync");
+
+        // One option decides what a build reports, in the terminal and here.
+        expect(sync).toBeDefined();
+        expect(sync.warnings).toEqual([]);
+      });
+
+      it("keeps warnings in the payload by default", async () => {
+        const compiler = getCompiler(webpackWarningConfig);
+        [server, req, instance] = await frameworkFactory(
+          name,
+          framework,
+          compiler,
+          { hot: true },
+        );
+
+        await waitUntilValid(instance);
+
+        const events = await readSseEvents(server, "/__webpack_hmr");
+        const sync = events.find((event) => event.action === "sync");
+
+        expect(sync).toBeDefined();
+        expect(sync.warnings.length).toBeGreaterThan(0);
       });
 
       it("sends a sync event per compilation for a MultiCompiler", async () => {

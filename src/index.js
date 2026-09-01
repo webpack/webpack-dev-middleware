@@ -515,7 +515,11 @@ function wdm(compiler, options = {}, isPlugin = false) {
   compiler.hooks.done.tap(PLUGIN_NAME, done);
 
   if (options.hot) {
-    context.hot = createHot(compiler, options.hot === true ? {} : options.hot);
+    context.hot = createHot(
+      compiler,
+      options.hot === true ? {} : options.hot,
+      options.stats,
+    );
   }
 
   const compilersToModify = isMultipleCompiler(compiler)
