@@ -85,6 +85,34 @@ describe("validation", () => {
       success: [true, false],
       failure: ["foo", 0],
     },
+    hot: {
+      success: [
+        true,
+        false,
+        {},
+        { path: "/__hmr" },
+        { heartbeat: 1000 },
+        { statsOptions: { all: false } },
+      ],
+      failure: [
+        "foo",
+        0,
+        { path: "" },
+        // Would validate but never match a request: pathnames always start
+        // with a slash, and carry no query string or fragment.
+        { path: "hmr" },
+        { path: "/__hmr?client=1" },
+        { path: "/__hmr#section" },
+        { heartbeat: -1 },
+        // 0 would silently fall back to the default interval — reject it.
+        { heartbeat: 0 },
+        { unknown: true },
+        // Presets and booleans cannot be merged over the middleware's base
+        // stats options — only the object form is accepted.
+        { statsOptions: "errors-only" },
+        { statsOptions: true },
+      ],
+    },
   };
 
   // eslint-disable-next-line jsdoc/reject-any-type

@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    // No node types and an ES5 `lib`: the client is browser code compiled to
+    // ES5, so a post-ES5 built-in (`Object.values`, `flatMap`, ...) has to be
+    // an error here rather than a runtime failure in an old browser.
+    "target": "esnext",
+    "lib": ["es5", "dom", "webworker", "es2022.error"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "types": ["webpack/module"],
+    "skipDefaultLibCheck": true,
+    "esModuleInterop": true
+  },
+  "include": ["./client-src/**/*"]
+}

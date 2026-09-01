@@ -6,7 +6,8 @@ logs
 npm-debug.log*
 .eslintcache
 .cspellcache
-/dist
+/client
+dist
 /local
 /reports
 /test/outputs

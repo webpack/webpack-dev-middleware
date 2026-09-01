@@ -4,6 +4,8 @@ const { finished } = require("node:stream");
 
 const mime = require("mime-types");
 
+const { pathMatch: hotPathMatch } = require("./hot");
+
 const {
   createReadStreamOrReadFile,
   destroyStream,
@@ -376,6 +378,22 @@ function ready(context, callback, req) {
  */
 function wrapper(context) {
   return async function middleware(req, res, next) {
+    // Intercept the Server-Sent Events handshake when the `hot` option is
+    // enabled. `GET` only: a `HEAD` (or any other method) would be handed a
+    // body and left hanging on a stream it cannot read.
+    if (
+      context.hot &&
+      getRequestMethod(req) === "GET" &&
+      hotPathMatch(getRequestURL(req), context.hot.path)
+    ) {
+      try {
+        context.hot.handle(req, res);
+      } catch (error) {
+        return next(/** @type {NodeJS.ErrnoException} */ (error));
+      }
+      return;
+    }
+
     /**
      * @param {NodeJS.ErrnoException=} err an error
      * @returns {Promise<void>}
