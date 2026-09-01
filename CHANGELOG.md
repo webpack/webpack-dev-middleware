@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.2.0
+
+### Minor Changes
+
+- Added a `hot` option that enables hot module replacement, replacing the need for `webpack-hot-middleware`. Pass `hot: true` to enable with defaults, or `hot: { path, heartbeat, progress, statsOptions }` to customize. The client runtime ships with the package and is added as a webpack entry. (by [@bjohansebas](https://github.com/bjohansebas) in [#2322](https://github.com/webpack/webpack-dev-middleware/pull/2322))
+
 ## 8.1.1
 
 ### Patch Changes
