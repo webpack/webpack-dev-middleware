@@ -823,6 +823,12 @@ describe("client", () => {
         "https://localhost:3000/assets/__webpack_hmr",
       );
     });
+
+    it("keeps the plain path when explicitly disabled", () => {
+      globalThis.__webpack_public_path__ = "/assets/";
+      loadClient("?dynamicPublicPath=false");
+      expect(EventSourceStub.lastInstance().url).toBe("/__webpack_hmr");
+    });
   });
 
   describe("with progress option", () => {
@@ -971,6 +977,21 @@ describe("client", () => {
       jest.resetModules();
       require("../client-src");
       expect(EventSourceStub.instances).toHaveLength(1);
+    });
+
+    it("ignores a timeout that is not a number", () => {
+      jest.useFakeTimers({ doNotFake: ["nextTick"] });
+      delete globalThis.__wdmEventSourceWrapper;
+      EventSourceStub.instances.length = 0;
+      loadClient("?timeout=soon");
+
+      const [first] = EventSourceStub.instances;
+
+      // `Number("soon")` is `NaN`, and every comparison against it is false —
+      // the watchdog would never report the connection as dead. The default
+      // (20s) has to be kept instead.
+      jest.advanceTimersByTime(30 * 1000);
+      expect(first.closed).toBe(true);
     });
 
     it("closes and re-opens the connection on timeout", () => {

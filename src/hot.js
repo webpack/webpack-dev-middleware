@@ -71,11 +71,15 @@ function createEventStream(heartbeat, logger) {
   let clients = new Map();
 
   /**
+   * Run the callback for every client that can still be written to — a
+   * response ended between two `close` events would throw on write.
    * @param {(client: ServerResponse) => void} fn each client callback
    */
   const everyClient = (fn) => {
     for (const client of clients.values()) {
-      fn(client);
+      if (!client.writableEnded) {
+        fn(client);
+      }
     }
   };
 
@@ -94,9 +98,7 @@ function createEventStream(heartbeat, logger) {
     close() {
       clearInterval(interval);
       everyClient((client) => {
-        if (!client.writableEnded) {
-          client.end();
-        }
+        client.end();
       });
       clients = new Map();
     },
@@ -137,13 +139,26 @@ function createEventStream(heartbeat, logger) {
       clients.set(id, res);
       logger.log(`Client connected (${clients.size} active)`);
 
-      req.on("close", () => {
+      const disconnect = () => {
+        if (!clients.has(id)) {
+          return;
+        }
+
         if (!res.writableEnded) {
           res.end();
         }
+
         clients.delete(id);
         logger.log(`Client disconnected (${clients.size} active)`);
-      });
+      };
+
+      req.on("close", disconnect);
+
+      // A request that died before the handshake finished never emits `close`
+      // again, so it would stay in `clients` forever.
+      if (req.destroyed) {
+        disconnect();
+      }
     },
     publish(payload) {
       const frame = `data: ${JSON.stringify(payload)}\n\n`;
@@ -153,6 +168,10 @@ function createEventStream(heartbeat, logger) {
       });
     },
     publishTo(res, payload) {
+      if (res.writableEnded) {
+        return;
+      }
+
       res.write(`data: ${JSON.stringify(payload)}\n\n`);
     },
   };

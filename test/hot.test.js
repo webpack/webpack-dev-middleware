@@ -236,6 +236,37 @@ describe("hot middleware (unit)", () => {
       expect(ended).toBe(true);
     });
 
+    it("skips clients whose response already ended", () => {
+      const stream = createEventStream(5000, noopLogger);
+      const { res, writes } = attachClient(stream);
+
+      // The response was ended by something else (a shutting down server, a
+      // proxy) and `close` has not been dispatched yet — writing to it throws.
+      res.end();
+      writes.length = 0;
+
+      stream.publish({ action: "built", hash: "abc" });
+
+      expect(writes).toHaveLength(0);
+
+      stream.close();
+    });
+
+    it("drops a client whose request was already destroyed", () => {
+      const messages = [];
+      const stream = createEventStream(5000, {
+        log: (message) => messages.push(message),
+      });
+
+      attachClient(stream, { destroyed: true });
+
+      // `close` never fires for a request that is already gone, so the client
+      // has to be dropped by the handshake itself.
+      expect(messages).toContain("Client disconnected (0 active)");
+
+      stream.close();
+    });
+
     it("sets Connection: keep-alive for HTTP/1 clients", () => {
       const stream = createEventStream(5000, noopLogger);
       const { headers } = attachClient(stream, { httpVersion: "1.1" });
