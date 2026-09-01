@@ -4,6 +4,7 @@ import createHot, {
   createEventStream,
   formatErrors,
   pathMatch,
+  toBundles,
 } from "../src/hot";
 
 jest.spyOn(globalThis.console, "log").mockImplementation();
@@ -156,6 +157,40 @@ describe("hot middleware (unit)", () => {
     });
   });
 
+  describe("toBundles", () => {
+    it("reports one bundle for a single compilation", () => {
+      expect(toBundles(makeFakeStats({ name: "app" }), undefined)).toEqual([
+        expect.objectContaining({ name: "app", hash: "abc" }),
+      ]);
+    });
+
+    it("reports the compilation itself when it has neither modules nor children", () => {
+      expect(
+        toBundles(
+          makeFakeStats({ modules: undefined, name: "app" }),
+          undefined,
+        ),
+      ).toEqual([expect.objectContaining({ name: "app", hash: "abc" })]);
+    });
+
+    it("reports each child of a compilation that has them", () => {
+      // A parent compilation carries no modules of its own — its children are
+      // the bundles clients have to be told about.
+      const stats = makeFakeStats({
+        modules: undefined,
+        children: [
+          { name: "app", hash: "one" },
+          { name: "admin", hash: "two" },
+        ],
+      });
+
+      expect(toBundles(stats, undefined)).toEqual([
+        { name: "app", hash: "one" },
+        { name: "admin", hash: "two" },
+      ]);
+    });
+  });
+
   describe("createEventStream", () => {
     beforeEach(() => {
       jest.useFakeTimers();
@@ -236,6 +271,20 @@ describe("hot middleware (unit)", () => {
       expect(ended).toBe(true);
     });
 
+    it("does not catch a client up on a response that already ended", () => {
+      const stream = createEventStream(5000, noopLogger);
+      const { res, writes } = attachClient(stream);
+
+      res.end();
+      writes.length = 0;
+
+      stream.publishTo(res, { action: "sync", hash: "abc" });
+
+      expect(writes).toHaveLength(0);
+
+      stream.close();
+    });
+
     it("skips clients whose response already ended", () => {
       const stream = createEventStream(5000, noopLogger);
       const { res, writes } = attachClient(stream);
@@ -248,6 +297,30 @@ describe("hot middleware (unit)", () => {
       stream.publish({ action: "built", hash: "abc" });
 
       expect(writes).toHaveLength(0);
+
+      stream.close();
+    });
+
+    it("reports a client disconnecting once, however often close fires", () => {
+      const messages = [];
+      const stream = createEventStream(5000, {
+        log: (message) => messages.push(message),
+      });
+      /** @type {() => void} */
+      let closeHandler = () => {};
+
+      attachClient(stream, {
+        on: (event, fn) => {
+          if (event === "close") closeHandler = fn;
+        },
+      });
+
+      closeHandler();
+      closeHandler();
+
+      expect(
+        messages.filter((message) => message.startsWith("Client disconnected")),
+      ).toEqual(["Client disconnected (0 active)"]);
 
       stream.close();
     });
