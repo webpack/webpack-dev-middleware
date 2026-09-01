@@ -327,7 +327,7 @@ function createHot(compiler, userOptions) {
   // TODO in the next major release remove `statsOptions` and this warning
   if (statsOptions) {
     logger.warn(
-      "The 'hot.statsOptions' option is deprecated and will be removed in the next major release. The payload's fields are fixed, so there is nothing left to configure: filter warnings with webpack's 'ignoreWarnings' or on the client with '?overlay={\"warnings\":false}'.",
+      "The 'hot.statsOptions' option is deprecated and will be removed in the next major release. Until then it still applies, apart from 'hash', 'timings' and 'children', which the client needs to apply an update. Prefer webpack's 'ignoreWarnings', or the client's '?overlay={\"warnings\":false}', for keeping warnings away from clients.",
     );
   }
 

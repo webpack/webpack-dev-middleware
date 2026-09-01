@@ -371,7 +371,7 @@ Default: `undefined`
 
 Webpack stats options used when serializing compilation results for the SSE payload. Merged over the middleware's base options and forwarded to `stats.toJson(...)`. Only the object form is accepted — presets (`"errors-only"`) and booleans cannot be merged.
 
-`hash`, `timings` and `children` are not configurable: the client compares `hash` against its own bundle's to decide whether an update applies, `timings` carries the build time it reports, and `children` would replace the bundle's hash with a child compilation's — so those three keep their values whatever this option asks for.
+`hash`, `timings` and `children` are not configurable: the client compares `hash` against its own bundle's to decide whether an update applies, `timings` carries the build time it reports, and `children` would replace the bundle's hash with a child compilation's — so those three keep their values whatever this option asks for. Every other key still applies until the option is removed.
 
 ## Hot Module Replacement client
 
@@ -546,6 +546,8 @@ Two layers, from build to presentation:
 
 - webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings) removes them from the stats, so clients never receive them.
 - On the client, `?overlay={"warnings":false}` hides them from the overlay and `?logging=error` from the console.
+
+The deprecated [`hot.statsOptions`](#hotstatsoptions) still keeps them out of the payload until it is removed, but these two outlive it.
 
 ### Paths and public paths
 
