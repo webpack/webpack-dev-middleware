@@ -332,6 +332,107 @@ function linkify(html) {
 }
 
 /**
+ * Compute the union of every source's problems. Errors from any source take
+ * precedence over warnings, mirroring the reporter's per-bundle behavior.
+ * @returns {{ type: "errors" | "warnings", lines: string[] } | null} union
+ */
+function computeProblemsUnion() {
+  /** @type {{ type: "errors" | "warnings", lines: string[] }[]} */
+  const slots = [];
+
+  for (const source of Object.keys(state.problemsBySource)) {
+    slots.push(state.problemsBySource[source]);
+  }
+
+  if (slots.length === 0) {
+    return null;
+  }
+
+  /** @type {string[]} */
+  const errorLines = [];
+  /** @type {string[]} */
+  const allLines = [];
+
+  for (const slot of slots) {
+    if (slot.type === "errors") {
+      errorLines.push(...slot.lines);
+    }
+
+    allLines.push(...slot.lines);
+  }
+
+  return errorLines.length > 0
+    ? { type: "errors", lines: errorLines }
+    : { type: "warnings", lines: allLines };
+}
+
+/**
+ * Re-render the card. Late-bound to `renderProblems` below: the listeners
+ * `ensureOverlay` attaches re-render, and rendering needs the card
+ * `ensureOverlay` creates, so one of the two directions cannot be a direct
+ * call.
+ * @type {() => void}
+ */
+let render = () => {};
+
+/**
+ * Clamp the page index and re-render.
+ * @param {number} index requested page index
+ */
+function goToPage(index) {
+  if (!state.currentProblems) {
+    return;
+  }
+
+  state.pageIndex = Math.min(
+    state.currentProblems.lines.length - 1,
+    Math.max(0, index),
+  );
+  render();
+}
+
+/**
+ * Remove one source's problems, or the whole overlay.
+ * @param {string=} source when given, only that source's problems are
+ * dropped and the overlay re-renders the remaining union; without it the
+ * overlay is dismissed entirely (Escape, backdrop, close button)
+ */
+export function clear(source) {
+  if (source !== undefined) {
+    // The reporter clears its slots on every clean build — when the source
+    // never reported anything there is nothing to drop, and re-rendering
+    // would needlessly rebuild the card another client is showing.
+    if (!Object.prototype.hasOwnProperty.call(state.problemsBySource, source)) {
+      return;
+    }
+
+    delete state.problemsBySource[source];
+
+    const union = computeProblemsUnion();
+
+    state.currentProblems = union;
+
+    if (union) {
+      state.pageIndex = Math.min(state.pageIndex, union.lines.length - 1);
+      render();
+
+      return;
+    }
+  }
+
+  if (state.frame && state.frame.parentNode) {
+    /** @type {ParentNode & Node} */
+    (state.frame.parentNode).removeChild(state.frame);
+  }
+
+  state.frame = null;
+  state.card = null;
+  state.problemsBySource = {};
+  state.currentProblems = null;
+  state.pageIndex = 0;
+}
+
+/**
  * Create (or return) the overlay iframe and the card inside it.
  * @returns {HTMLElement | null} the card element, or null when the frame
  * document is not available
@@ -372,13 +473,13 @@ function ensureOverlay() {
   state.frame.id = OVERLAY_ID;
   state.frame.src = "about:blank";
   applyStyle(state.frame, backdropStyles);
-  document.body.append(state.frame);
+  document.body.appendChild(state.frame);
 
   // A same-origin `about:blank` document is available synchronously.
   const frameDocument = state.frame.contentDocument;
 
   if (!frameDocument || !frameDocument.body) {
-    state.frame.remove();
+    document.body.removeChild(state.frame);
     state.frame = null;
 
     return null;
@@ -421,7 +522,7 @@ function ensureOverlay() {
         ? target.closest("[data-open-file]")
         : null;
 
-    if (opener && openEditorEndpoint) {
+    if (opener && openEditorEndpoint && typeof fetch === "function") {
       fetch(
         `${openEditorEndpoint}?fileName=${encodeURIComponent(
           opener.getAttribute("data-open-file"),
@@ -434,90 +535,9 @@ function ensureOverlay() {
   state.card = frameDocument.createElement("div");
   state.card.id = CARD_ID;
   applyStyle(state.card, styles);
-  frameDocument.body.append(state.card);
+  frameDocument.body.appendChild(state.card);
 
   return state.card;
-}
-
-/**
- * Compute the union of every source's problems. Errors from any source take
- * precedence over warnings, mirroring the reporter's per-bundle behavior.
- * @returns {{ type: "errors" | "warnings", lines: string[] } | null} union
- */
-function computeProblemsUnion() {
-  const slots = Object.values(state.problemsBySource);
-
-  if (slots.length === 0) {
-    return null;
-  }
-
-  const errorLines = slots
-    .filter((slot) => slot.type === "errors")
-    .flatMap((slot) => slot.lines);
-
-  if (errorLines.length > 0) {
-    return { type: "errors", lines: errorLines };
-  }
-
-  return {
-    type: "warnings",
-    lines: slots.flatMap((slot) => slot.lines),
-  };
-}
-
-/**
- * @param {"errors" | "warnings"} type problem type
- * @param {string[]} lines messages to render
- * @param {string=} source who reports them — each source (e.g. this client,
- * the webpack-dev-server client, the runtime error capture) keeps its own
- * slot and the overlay renders the union of every slot
- */
-export function showProblems(type, lines, source = "") {
-  state.problemsBySource[source] = { type, lines: [...lines] };
-
-  const union =
-    /** @type {{ type: "errors" | "warnings", lines: string[] }} */
-    (computeProblemsUnion());
-
-  // Re-publishing an identical set (e.g. another bundle of a multi-compiler
-  // synced) must not reset the page the user is reading.
-  const unchanged =
-    state.currentProblems !== null &&
-    state.frame !== null &&
-    // The frame may have been detached without `clear()` (e.g. a framework
-    // wiping `document.body`) — an identical set must still re-mount it.
-    state.frame.parentNode !== null &&
-    state.currentProblems.type === union.type &&
-    state.currentProblems.lines.length === union.lines.length &&
-    state.currentProblems.lines.every(
-      (line, index) => line === union.lines[index],
-    );
-
-  state.currentProblems = union;
-
-  if (unchanged) {
-    return;
-  }
-
-  // Each new problem set starts at its first page.
-  state.pageIndex = 0;
-  renderProblems();
-}
-
-/**
- * Clamp the page index and re-render.
- * @param {number} index requested page index
- */
-function goToPage(index) {
-  if (!state.currentProblems) {
-    return;
-  }
-
-  state.pageIndex = Math.min(
-    state.currentProblems.lines.length - 1,
-    Math.max(0, index),
-  );
-  renderProblems();
 }
 
 /**
@@ -553,7 +573,7 @@ function renderProblems() {
   closeButton.addEventListener("click", () => {
     clear();
   });
-  card.append(closeButton);
+  card.appendChild(closeButton);
 
   const visible = paginated ? [lines[state.pageIndex]] : lines;
 
@@ -629,13 +649,12 @@ function renderProblems() {
     counter.textContent = `${state.pageIndex + 1} / ${lines.length}`;
     applyStyle(counter, { color: "#f2f2f2" });
 
-    nav.append(
-      makeNavButton("‹", -1, "Previous problem"),
-      counter,
-      makeNavButton("›", 1, "Next problem"),
-    );
-    header.append(badge, nav);
-    card.append(header);
+    nav.appendChild(makeNavButton("‹", -1, "Previous problem"));
+    nav.appendChild(counter);
+    nav.appendChild(makeNavButton("›", 1, "Next problem"));
+    header.appendChild(badge);
+    header.appendChild(nav);
+    card.appendChild(header);
   }
 
   for (const line of visible) {
@@ -659,7 +678,7 @@ function renderProblems() {
     div.style.marginBottom = "20px";
     setHTML(div, paginated ? msg : `${problemType(type)} in ${msg}`);
     normalizeInlineStyles(div);
-    card.append(div);
+    card.appendChild(div);
   }
 
   const hint = frameDocument.createElement("div");
@@ -673,47 +692,48 @@ function renderProblems() {
   hint.textContent = paginated
     ? "Use ‹ › or the arrow keys to navigate. Click outside, press Esc, or fix the code to dismiss."
     : "Click outside, press Esc, or fix the code to dismiss.";
-  card.append(hint);
+  card.appendChild(hint);
 }
 
+render = renderProblems;
+
 /**
- * Remove one source's problems, or the whole overlay.
- * @param {string=} source when given, only that source's problems are
- * dropped and the overlay re-renders the remaining union; without it the
- * overlay is dismissed entirely (Escape, backdrop, close button)
+ * @param {"errors" | "warnings"} type problem type
+ * @param {string[]} lines messages to render
+ * @param {string=} source who reports them — each source (e.g. this client,
+ * the webpack-dev-server client, the runtime error capture) keeps its own
+ * slot and the overlay renders the union of every slot
  */
-export function clear(source) {
-  if (source !== undefined) {
-    // The reporter clears its slots on every clean build — when the source
-    // never reported anything there is nothing to drop, and re-rendering
-    // would needlessly rebuild the card another client is showing.
-    if (!Object.prototype.hasOwnProperty.call(state.problemsBySource, source)) {
-      return;
-    }
+export function showProblems(type, lines, source = "") {
+  state.problemsBySource[source] = { type, lines: [...lines] };
 
-    delete state.problemsBySource[source];
+  const union =
+    /** @type {{ type: "errors" | "warnings", lines: string[] }} */
+    (computeProblemsUnion());
 
-    const union = computeProblemsUnion();
+  // Re-publishing an identical set (e.g. another bundle of a multi-compiler
+  // synced) must not reset the page the user is reading.
+  const unchanged =
+    state.currentProblems !== null &&
+    state.frame !== null &&
+    // The frame may have been detached without `clear()` (e.g. a framework
+    // wiping `document.body`) — an identical set must still re-mount it.
+    state.frame.parentNode !== null &&
+    state.currentProblems.type === union.type &&
+    state.currentProblems.lines.length === union.lines.length &&
+    state.currentProblems.lines.every(
+      (line, index) => line === union.lines[index],
+    );
 
-    state.currentProblems = union;
+  state.currentProblems = union;
 
-    if (union) {
-      state.pageIndex = Math.min(state.pageIndex, union.lines.length - 1);
-      renderProblems();
-
-      return;
-    }
+  if (unchanged) {
+    return;
   }
 
-  if (state.frame && state.frame.parentNode) {
-    state.frame.remove();
-  }
-
-  state.frame = null;
-  state.card = null;
-  state.problemsBySource = {};
-  state.currentProblems = null;
+  // Each new problem set starts at its first page.
   state.pageIndex = 0;
+  renderProblems();
 }
 
 /**
@@ -726,7 +746,7 @@ function handleRuntimeError(error, fallbackMessage) {
   if (
     error &&
     error.stack &&
-    error.stack.includes("invokeGuardedCallbackDev")
+    error.stack.indexOf("invokeGuardedCallbackDev") !== -1
   ) {
     return;
   }

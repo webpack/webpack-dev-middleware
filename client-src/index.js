@@ -1,5 +1,14 @@
 /* global __resourceQuery, __webpack_public_path__ */
 
+// This file is bundled by webpack into a browser bundle, so it is compiled to
+// ES5 (see `babel.config.js`) and sticks to ES5 runtime APIs — `EventSource`
+// and `Promise` (both required by HMR itself) are the only exceptions.
+
+// TODO in the next major release add an `exports` field to package.json
+// (`.`, `./client`, `./client/indicator`, `./client/overlay`, `./package.json`).
+// Adding it now is a breaking change: it would hide every other path of the
+// package (e.g. `webpack-dev-middleware/dist/...`) from existing users.
+
 import * as indicator from "./indicator.js";
 import configureOverlay from "./overlay.js";
 import applyUpdate from "./process-update.js";
@@ -48,6 +57,37 @@ const options = {
 };
 
 /**
+ * Parse the entry's resource query. Hand-rolled (rather than through
+ * `URLSearchParams`, which an ES5 browser does not have) with the same
+ * decoding: `+` is a space and values are percent-decoded.
+ * @param {string} query resource query, starting with `?`
+ * @returns {Record<string, string>} query parameters
+ */
+function parseQuery(query) {
+  /** @type {Record<string, string>} */
+  const parameters = {};
+
+  /**
+   * @param {string} value raw value
+   * @returns {string} decoded value
+   */
+  const decode = (value) => decodeURIComponent(value.replace(/\+/g, " "));
+
+  for (const pair of query.slice(1).split("&")) {
+    if (!pair) {
+      continue;
+    }
+
+    const separator = pair.indexOf("=");
+
+    parameters[decode(separator === -1 ? pair : pair.slice(0, separator))] =
+      separator === -1 ? "" : decode(pair.slice(separator + 1));
+  }
+
+  return parameters;
+}
+
+/**
  * Turn the string values that `errors`/`warnings`/`runtimeErrors` may carry
  * in the resource query into filter functions (same behavior as
  * webpack-dev-server).
@@ -84,7 +124,15 @@ function setOverrides(overrides) {
     options.autoConnect = overrides.autoConnect === "true";
   }
   if (overrides.path) options.path = overrides.path;
-  if (overrides.timeout) options.timeout = Number(overrides.timeout);
+  if (overrides.timeout) {
+    const timeout = Number(overrides.timeout);
+
+    // A non-numeric value would make the watchdog fire in a loop (`NaN` never
+    // compares greater), so it is ignored rather than applied.
+    if (timeout > 0) {
+      options.timeout = timeout;
+    }
+  }
   if (overrides.overlay) {
     // Same value shape as webpack-dev-server's `client.overlay`: a boolean or
     // a JSON object with `errors`, `warnings`, `runtimeErrors` (booleans or
@@ -119,7 +167,7 @@ function setOverrides(overrides) {
     options.progress = overrides.progress !== "false";
   }
 
-  if (overrides.dynamicPublicPath) {
+  if (overrides.dynamicPublicPath && overrides.dynamicPublicPath !== "false") {
     // `path` is appended like a filename (no leading slash); the public path
     // itself is not normalized.
     options.path = __webpack_public_path__ + options.path.replace(/^\//, "");
@@ -172,17 +220,21 @@ function createEventSourceWrapper() {
     source.close();
   };
 
-  const handleDisconnect = () => {
-    close();
-    reconnectTimer = setTimeout(init, /** @type {number} */ (options.timeout));
-  };
-
   /**
    * Open the EventSource connection and (re)start the inactivity watchdog —
-   * `handleDisconnect` stops the watchdog, so a reconnected source has to
-   * bring its own.
+   * disconnecting stops the watchdog, so a reconnected source has to bring its
+   * own. The disconnect handler belongs to one connection, so it is created
+   * here rather than shared between reconnections.
    */
-  function init() {
+  const init = () => {
+    const handleDisconnect = () => {
+      close();
+      reconnectTimer = setTimeout(
+        init,
+        /** @type {number} */ (options.timeout),
+      );
+    };
+
     source = new window.EventSource(/** @type {string} */ (options.path));
     source.addEventListener("open", handleOnline);
     source.addEventListener("error", handleDisconnect);
@@ -201,7 +253,7 @@ function createEventSourceWrapper() {
       },
       /** @type {number} */ (options.timeout) / 2,
     );
-  }
+  };
 
   init();
 
@@ -229,44 +281,6 @@ function getEventSourceWrapper() {
     window[WRAPPER_KEY][path] = createEventSourceWrapper();
   }
   return window[WRAPPER_KEY][path];
-}
-
-/**
- * Subscribe the message handler to the shared event source wrapper.
- */
-function connect() {
-  getEventSourceWrapper().addMessageListener((event) => {
-    if (event.data === "💓") {
-      return;
-    }
-    try {
-      processMessage(JSON.parse(event.data));
-    } catch (err) {
-      log.warn(`Invalid HMR message: ${event.data}\n${err}`);
-    }
-  });
-}
-
-/**
- * @param {Record<string, string>} overrides overrides
- */
-export function setOptionsAndConnect(overrides) {
-  setOverrides(overrides);
-  connect();
-}
-
-/**
- * Close the SSE connection for the current path and stop reconnecting. A
- * later `setOptionsAndConnect` call opens a fresh connection.
- */
-export function disconnect() {
-  const path = /** @type {string} */ (options.path);
-  const wrappers = window[WRAPPER_KEY];
-
-  if (wrappers && wrappers[path]) {
-    wrappers[path].close();
-    delete wrappers[path];
-  }
 }
 
 // eslint-disable-next-line jsdoc/reject-any-type
@@ -305,15 +319,16 @@ function createReporter() {
   }
 
   // Console de-duplication cache, keyed per bundle name and type so interleaved
-  // multi-compiler payloads do not defeat it.
-  /** @type {Map<string, string>} */
-  const previousProblems = new Map();
+  // multi-compiler payloads do not defeat it. A null-prototype object rather
+  // than a `Map`, which an ES5 browser does not have.
+  /** @type {Record<string, string>} */
+  const previousProblems = Object.create(null);
 
   // Live problems per compilation name. A multi-compiler publishes one event
   // per bundle; a success from one bundle must not wipe another bundle's
   // still-valid errors from the overlay.
-  /** @type {Map<string, { errors: string[], warnings: string[] }>} */
-  const problemsByName = new Map();
+  /** @type {Record<string, { errors: string[], warnings: string[] }>} */
+  const problemsByName = Object.create(null);
 
   /**
    * Resolve the show/hide/filter setting for a problem type. Same resolution
@@ -353,7 +368,9 @@ function createReporter() {
     /** @type {string[]} */
     const warnings = [];
 
-    for (const entry of problemsByName.values()) {
+    for (const name of Object.keys(problemsByName)) {
+      const entry = problemsByName[name];
+
       errors.push(...filterForOverlay("errors", entry.errors));
       warnings.push(...filterForOverlay("warnings", entry.warnings));
     }
@@ -382,10 +399,10 @@ function createReporter() {
   const logProblems = (type, obj) => {
     const cacheKey = `${obj.name || ""}|${type}`;
     const newProblems = obj[type].map(stripAnsi).join("\n");
-    if (previousProblems.get(cacheKey) === newProblems) {
+    if (previousProblems[cacheKey] === newProblems) {
       return;
     }
-    previousProblems.set(cacheKey, newProblems);
+    previousProblems[cacheKey] = newProblems;
 
     const name = obj.name ? `'${obj.name}' ` : "";
     const title = `bundle ${name}has ${obj[type].length} ${type}`;
@@ -401,19 +418,19 @@ function createReporter() {
   return {
     cleanProblemsCache(name) {
       // Scoped to one bundle so a sibling's unchanged problems do not re-log.
-      previousProblems.delete(`${name}|errors`);
-      previousProblems.delete(`${name}|warnings`);
+      delete previousProblems[`${name}|errors`];
+      delete previousProblems[`${name}|warnings`];
     },
     problems(type, obj) {
       logProblems(type, obj);
-      problemsByName.set(obj.name || "", {
+      problemsByName[obj.name || ""] = {
         errors: obj.errors || [],
         warnings: obj.warnings || [],
-      });
+      };
       return renderOverlay();
     },
     success(obj) {
-      problemsByName.delete((obj && obj.name) || "");
+      delete problemsByName[(obj && obj.name) || ""];
       renderOverlay();
     },
     useCustomOverlay(customOverlay) {
@@ -514,15 +531,47 @@ function processMessage(obj) {
   }
 }
 
+/**
+ * Subscribe the message handler to the shared event source wrapper.
+ */
+function connect() {
+  getEventSourceWrapper().addMessageListener((event) => {
+    if (event.data === "💓") {
+      return;
+    }
+    try {
+      processMessage(JSON.parse(event.data));
+    } catch (err) {
+      log.warn(`Invalid HMR message: ${event.data}\n${err}`);
+    }
+  });
+}
+
+/**
+ * @param {Record<string, string>} overrides overrides
+ */
+export function setOptionsAndConnect(overrides) {
+  setOverrides(overrides);
+  connect();
+}
+
+/**
+ * Close the SSE connection for the current path and stop reconnecting. A
+ * later `setOptionsAndConnect` call opens a fresh connection.
+ */
+export function disconnect() {
+  const path = /** @type {string} */ (options.path);
+  const wrappers = window[WRAPPER_KEY];
+
+  if (wrappers && wrappers[path]) {
+    wrappers[path].close();
+    delete wrappers[path];
+  }
+}
+
 // Bootstrap: parse query string overrides, then connect (if enabled).
 if (typeof __resourceQuery === "string" && __resourceQuery.length > 0) {
-  const params = [...new URLSearchParams(__resourceQuery.slice(1))];
-  /** @type {Record<string, string>} */
-  const overrides = {};
-  for (const [key, value] of params) {
-    overrides[key] = value;
-  }
-  setOverrides(overrides);
+  setOverrides(parseQuery(__resourceQuery));
 }
 
 if (typeof window !== "undefined") {
