@@ -518,7 +518,7 @@ hide(); // without a source: removed unconditionally
 
 ## Migrating from webpack-hot-middleware
 
-The `hot` option replaces [`webpack-hot-middleware`](https://github.com/webpack/webpack-hot-middleware): one middleware serves the assets and the SSE endpoint, and the client runtime ships under `webpack-dev-middleware/client`. The endpoint (`/__webpack_hmr`), the event stream, and the client query-string API stay compatible, so migrating is mostly renaming.
+The `hot` option replaces [`webpack-hot-middleware`](https://github.com/webpack/webpack-hot-middleware): one middleware serves the assets and the SSE endpoint, and the client runtime ships under `webpack-dev-middleware/client`. The endpoint (`/__webpack_hmr`) and its Server-Sent Events transport are unchanged, so the browser reaches the new server the same way; the payloads, option names and a few defaults need a look.
 
 See [migration-from-webpack-hot-middleware.md](migration-from-webpack-hot-middleware.md) — it walks the whole move: prerequisites, the server and webpack-configuration changes, every option mapped, the behavior differences worth knowing, the other frameworks, troubleshooting, and a checklist.
 

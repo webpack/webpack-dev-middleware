@@ -5,9 +5,11 @@
 Server-Sent Events endpoint that drives the browser, so `webpack-hot-middleware`
 is no longer needed alongside it.
 
-The wire format is unchanged — the same `/__webpack_hmr` endpoint, the same event
-stream, the same client query-string API — so most migrations are two renames and
-a check of the option names below.
+The endpoint (`/__webpack_hmr`) and its Server-Sent Events transport are
+unchanged, so the browser reaches the new server the same way it reached the old
+one. The payloads, the option names and a few defaults are not identical:
+[section 5](#5-behavior-differences-to-expect) lists what changed, and the tables
+in [section 4](#4-map-your-options) map every option across.
 
 **Contents**
 
@@ -28,24 +30,36 @@ a check of the option names below.
 it runs on much older setups than `webpack-dev-middleware` does. Check these
 first:
 
-| Requirement            | Needed                                            |
-| :--------------------- | :------------------------------------------------ |
-| Node.js                | >= 20.9.0                                         |
-| webpack                | ^5.101.0                                          |
-| webpack-dev-middleware | a release that includes `hot` (see the CHANGELOG) |
-| Configuration          | `HotModuleReplacementPlugin`, as before           |
+| Requirement            | Needed                                       |
+| :--------------------- | :------------------------------------------- |
+| Node.js                | >= 20.9.0                                    |
+| webpack                | ^5.101.0                                     |
+| webpack-dev-middleware | a version that has `hot` (see the CHANGELOG) |
+| Configuration          | `HotModuleReplacementPlugin`, as before      |
 
 If you are pinned to an older Node.js or to webpack 4, stay on
 `webpack-hot-middleware` for now.
 
 ## 1. Swap the packages
 
+Removing the old package does not upgrade the one that replaces it, so do both:
+
 ```console
 npm uninstall webpack-hot-middleware
+npm install --save-dev webpack-dev-middleware@latest
 ```
 
-Nothing to install: `hot` is part of `webpack-dev-middleware`, and the browser
-runtime ships in the same package under `webpack-dev-middleware/client`.
+Nothing else to install: `hot` is part of `webpack-dev-middleware`, and the
+browser runtime ships in the same package under `webpack-dev-middleware/client`.
+
+A version that predates the option rejects it at startup rather than ignoring
+it, so a missed upgrade is loud:
+
+```
+Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options has an unknown property 'hot'. These properties are valid:
+   object { mimeTypes?, mimeTypeDefault?, ... }
+```
 
 ## 2. Server: one middleware instead of two
 
