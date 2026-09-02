@@ -24,5 +24,10 @@ export default defineConfig([
   {
     files: ["client-src/**/*"],
     extends: [configs["browser-outdated-recommended-module"]],
+    rules: {
+      // Function declarations are hoisted; allow referencing them ahead of
+      // their definition for readability.
+      "no-use-before-define": ["error", { functions: false }],
+    },
   },
 ]);

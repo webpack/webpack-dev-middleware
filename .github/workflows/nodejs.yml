@@ -5,10 +5,12 @@ on:
     branches:
       - main
       - next
+      - hot-middleware
   pull_request:
     branches:
       - main
       - next
+      - hot-middleware
 
 permissions:
   contents: read
@@ -84,7 +86,73 @@ jobs:
       - name: Run tests for webpack version ${{ matrix.webpack-version }}
         run: npm run test:coverage -- --ci
 
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-${{ matrix.os }}-${{ matrix.node-version }}-${{ strategy.job-index }}
+          path: coverage/lcov.info
+
+  client:
+    name: Client - ubuntu-latest - Node lts/*
+
+    # The browser suite drives a real Chromium, so it reports the same thing on
+    # every OS and node version. One job runs it, off the matrix.
+    runs-on: ubuntu-latest
+
+    concurrency:
+      group: client-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: lts/*
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run browser e2e tests
+        # E2E_COVERAGE instruments the hot client as webpack bundles it, so the
+        # browser reports what these tests exercised in `client-src`; the flags
+        # measure `src` in this process.
+        run: npm run test:e2e -- --ci --collectCoverageFrom="src/**/*.js" --coverage --coverageDirectory=coverage-e2e
+        env:
+          E2E_COVERAGE: "1"
+
+      - name: Collect hot client coverage from the browser
+        run: npm run coverage:client
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-client
+          path: |
+            coverage-e2e/lcov.info
+            coverage-client/lcov.info
+
+  upload-coverage:
+    name: Upload coverage to codecov
+    needs: [test, client]
+    # Without this, one red job skips the upload and codecov gets nothing for
+    # the run — exactly when the report is worth reading.
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: coverage-*
+          path: coverage
+
       - name: Submit coverage data to codecov
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          directory: coverage

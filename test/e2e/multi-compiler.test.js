@@ -1,0 +1,207 @@
+import collectConsole, { normalizeConsole } from "../helpers/console-collector";
+import { OVERLAY_ID, closeE2e, waitForText } from "../helpers/e2e";
+import createHotApp from "../helpers/hot-app";
+import runBrowser from "../helpers/run-browser";
+
+jest.setTimeout(400000);
+
+/**
+ * Each bundle renders into its own div so the page shows both compilations
+ * side by side.
+ * @param {string} name bundle name
+ * @param {string} text rendered text
+ * @returns {string} app source
+ */
+function bundleApp(name, text) {
+  return `
+    let el = document.getElementById("out-${name}");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "out-${name}";
+      document.body.append(el);
+    }
+    el.textContent = ${JSON.stringify(text)};
+    if (module.hot) {
+      module.hot.accept();
+    }
+  `;
+}
+
+describe("multi-compiler (browser)", () => {
+  let app;
+  let browser;
+  let page;
+
+  afterEach(async () => {
+    ({ browser, app } = await closeE2e(browser, app));
+  });
+
+  it("updates only the bundle that changed, without reloading the page", async () => {
+    app = await createHotApp({
+      apps: [
+        { name: "app", code: bundleApp("app", "app-v1") },
+        { name: "widget", code: bundleApp("widget", "widget-v1") },
+      ],
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(app.url);
+    await waitForText(page, "out-app", "app-v1");
+    await waitForText(page, "out-widget", "widget-v1");
+    await page.evaluate(() => {
+      globalThis.__notReloaded = true;
+    });
+
+    app.edit("widget", bundleApp("widget", "widget-v2"));
+    await waitForText(page, "out-widget", "widget-v2");
+
+    // The sibling bundle was left alone and nothing reloaded — the unchanged
+    // bundle's event is a `sync` its own client applies as a no-op, and the
+    // `?name=` filter keeps the widget's `built` away from the app's client.
+    expect(
+      await page.evaluate(() => document.getElementById("out-app").textContent),
+    ).toBe("app-v1");
+    expect(await page.evaluate(() => globalThis.__notReloaded)).toBe(true);
+  });
+
+  it("logs per-bundle lifecycles and deduplicates warning re-logs on sibling builds", async () => {
+    // Warnings do not block applies or force reloads; the fixed-position
+    // `require(<expression>)` keeps the warning text identical across edits.
+    const widgetWithWarning = (text) => `
+      let el = document.getElementById("out-widget");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "out-widget";
+        document.body.append(el);
+      }
+      el.textContent = ${JSON.stringify(text)};
+      const dep = "./nothing";
+      try {
+        require(dep);
+      } catch (err) {
+        // expected
+      }
+      if (module.hot) {
+        module.hot.accept();
+      }
+    `;
+
+    // The widget starts clean: an empty catch-up sync cannot vary the
+    // sequence (a still-evaluating bundle may miss it entirely).
+    app = await createHotApp({
+      apps: [
+        { name: "app", code: bundleApp("app", "app-v1") },
+        { name: "widget", code: bundleApp("widget", "widget-v1") },
+      ],
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForText(page, "out-app", "app-v1");
+    await waitForText(page, "out-widget", "widget-v1");
+    await console_.waitFor("connected");
+
+    app.edit("widget", widgetWithWarning("widget-v1b"));
+    await waitForText(page, "out-widget", "widget-v1b");
+    await console_.waitFor("Critical dependency");
+    await console_.waitFor("App is up to date");
+
+    // A sibling's clean rebuild must not re-log the widget's warning.
+    app.edit("app", bundleApp("app", "app-v2"));
+    await waitForText(page, "out-app", "app-v2");
+    await console_.waitForCount("App is up to date", 2);
+
+    // Nor does the widget's own rebuild: the cache is keyed by name and type
+    // and holds the problem text, so an unchanged warning stays logged once.
+    app.edit("widget", widgetWithWarning("widget-v2"));
+    await waitForText(page, "out-widget", "widget-v2");
+    await console_.waitForCount("App is up to date", 3);
+
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
+  });
+
+  it("shows the union of problems from every broken bundle", async () => {
+    app = await createHotApp({
+      apps: [
+        { name: "app", code: bundleApp("app", "app-v1") },
+        { name: "widget", code: bundleApp("widget", "widget-v1") },
+      ],
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(app.url);
+    await waitForText(page, "out-app", "app-v1");
+    await waitForText(page, "out-widget", "widget-v1");
+
+    app.edit("app", "broken app {{{");
+    app.edit("widget", "broken widget {{{");
+
+    const handle = await page.waitForSelector(`#${OVERLAY_ID}`, {
+      timeout: 30000,
+    });
+    const frame = await handle.contentFrame();
+
+    // Both bundles' problems share the overlay: the pager counts the union
+    // (one problem per page; which bundle finishes breaking first varies).
+    await frame.waitForFunction(
+      () => document.body.textContent.includes("1 / 2"),
+      { timeout: 30000 },
+    );
+
+    const firstPage = await frame.evaluate(() => document.body.textContent);
+
+    await frame.click('[aria-label="Next problem"]');
+    await frame.waitForFunction(
+      () => document.body.textContent.includes("2 / 2"),
+      { timeout: 30000 },
+    );
+
+    const secondPage = await frame.evaluate(() => document.body.textContent);
+    const union = firstPage + secondPage;
+
+    expect(union).toContain("broken app {{{");
+    expect(union).toContain("broken widget {{{");
+  });
+
+  it("keeps one bundle's overlay errors while a sibling rebuilds successfully", async () => {
+    app = await createHotApp({
+      apps: [
+        { name: "app", code: bundleApp("app", "app-v1") },
+        { name: "widget", code: bundleApp("widget", "widget-v1") },
+      ],
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(app.url);
+    await waitForText(page, "out-app", "app-v1");
+
+    app.edit("widget", "broken widget {{{");
+    const handle = await page.waitForSelector(`#${OVERLAY_ID}`, {
+      timeout: 30000,
+    });
+    const frame = await handle.contentFrame();
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "Module parse failed",
+    );
+
+    // A sibling's successful rebuild applies its update but must not wipe the
+    // widget's problems from the shared overlay.
+    app.edit("app", bundleApp("app", "app-v2"));
+    await waitForText(page, "out-app", "app-v2");
+
+    expect(await page.$(`#${OVERLAY_ID}`)).not.toBeNull();
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "Module parse failed",
+    );
+
+    app.edit("widget", bundleApp("widget", "widget-v2"));
+    await page.waitForFunction(
+      (id) => document.getElementById(id) === null,
+      { timeout: 30000 },
+      OVERLAY_ID,
+    );
+    await waitForText(page, "out-widget", "widget-v2");
+  });
+});

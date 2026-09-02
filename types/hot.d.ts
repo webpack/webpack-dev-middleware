@@ -78,6 +78,7 @@ declare const HOT_DEFAULT_HEARTBEAT: number;
 /**
  * @typedef {object} EventStream
  * @property {(req: IncomingMessage, res: ServerResponse) => void} handler attach a new client
+ * @property {() => boolean} hasClients true when at least one client is connected
  * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
  * @property {(res: ServerResponse, payload: Payload | { action: string }) => void} publishTo publish a payload to a single client
  * @property {() => void} close end every client and stop the heartbeat
@@ -223,6 +224,10 @@ type EventStream = {
    * attach a new client
    */
   handler: (req: IncomingMessage, res: ServerResponse) => void;
+  /**
+   * true when at least one client is connected
+   */
+  hasClients: () => boolean;
   /**
    * publish a payload to every client
    */

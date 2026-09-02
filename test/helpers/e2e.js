@@ -1,0 +1,209 @@
+/* global document -- evaluated inside the browser via waitForFunction */
+const { harvest } = require("./browser-coverage");
+
+const OVERLAY_ID = "webpack-dev-middleware-hot-overlay";
+const CARD_ID = `${OVERLAY_ID}-card`;
+const INDICATOR_ID = "webpack-dev-middleware-building-indicator";
+const OVERLAY_STATE_KEY = "__webpack_dev_middleware_hot_overlay_state__";
+
+/**
+ * Wait until the client has attached its `error` and `unhandledrejection`
+ * listeners. The app rendering does not imply it: the listeners go on during
+ * the client's own setup, so an error thrown before that lands nowhere and
+ * the overlay never appears. Gate every runtime-error test on this.
+ * @param {import("puppeteer").Page} page page
+ * @returns {Promise<void>} resolved once the listeners are attached
+ */
+function waitForRuntimeListeners(page) {
+  return page
+    .waitForFunction(
+      (key) =>
+        Boolean(
+          globalThis[key] && globalThis[key].runtimeListenersAttached === true,
+        ),
+      { timeout: 30000, polling: 100 },
+      OVERLAY_STATE_KEY,
+    )
+    .then(() => {});
+}
+
+/**
+ * @param {import("puppeteer").Page} page page
+ * @param {string} id element id
+ * @param {string} text expected text
+ * @returns {Promise<void>} resolved when rendered
+ */
+function waitForText(page, id, text) {
+  return page
+    .waitForFunction(
+      (elementId, expected) =>
+        document.getElementById(elementId)?.textContent === expected,
+      // Interval polling: the default requestAnimationFrame polling freezes
+      // on hidden pages (e.g. a backgrounded tab).
+      { timeout: 30000, polling: 100 },
+      id,
+      text,
+    )
+    .then(() => {});
+}
+
+/**
+ * @param {import("puppeteer").Page} page page
+ * @param {string} text expected #app text
+ * @returns {Promise<void>} resolved when rendered
+ */
+function waitForAppText(page, text) {
+  return waitForText(page, "app", text);
+}
+
+/**
+ * @param {import("puppeteer").Page} page page
+ * @returns {Promise<import("puppeteer").Frame>} the overlay iframe's frame
+ */
+async function waitForOverlay(page) {
+  const handle = await page.waitForSelector(`#${OVERLAY_ID}`, {
+    timeout: 30000,
+  });
+
+  return handle.contentFrame();
+}
+
+/**
+ * @param {import("puppeteer").Page} page page
+ * @returns {Promise<void>} resolved once the overlay is gone
+ */
+function waitForNoOverlay(page) {
+  return page
+    .waitForFunction(
+      (id) => document.getElementById(id) === null,
+      { timeout: 30000, polling: 100 },
+      OVERLAY_ID,
+    )
+    .then(() => {});
+}
+
+/**
+ * A self-accepting module: HMR updates re-run it in place.
+ * @param {string} text text rendered into #app
+ * @returns {string} app source
+ */
+function acceptedApp(text) {
+  return `
+    document.getElementById("app").textContent = ${JSON.stringify(text)};
+    if (module.hot) {
+      module.hot.accept();
+    }
+  `;
+}
+
+/**
+ * A module that never accepts updates — applying one needs a full reload.
+ * @param {string} text text rendered into #app
+ * @returns {string} app source
+ */
+function unacceptedApp(text) {
+  return `document.getElementById("app").textContent = ${JSON.stringify(text)};`;
+}
+
+/**
+ * Self-accepting and carrying webpack's "Critical dependency" warning — the
+ * fixed-position `require(<expression>)` keeps the warning text identical
+ * across edits.
+ * @param {string} text text rendered into #app
+ * @returns {string} app source
+ */
+function warningApp(text) {
+  return `
+    document.getElementById("app").textContent = ${JSON.stringify(text)};
+    const dep = "./nothing";
+    try {
+      require(dep);
+    } catch (err) {
+      // expected
+    }
+    if (module.hot) {
+      module.hot.accept();
+    }
+  `;
+}
+
+/**
+ * Exposes a boom(message) helper that throws from the page's own script —
+ * errors raised inside evaluate() reach window.onerror as "Script error".
+ * @param {string} text text rendered into #app
+ * @returns {string} app source
+ */
+function boomApp(text) {
+  return `
+    document.getElementById("app").textContent = ${JSON.stringify(text)};
+    globalThis.boom = (message) => {
+      setTimeout(() => {
+        throw new Error(message);
+      }, 0);
+    };
+  `;
+}
+
+/**
+ * Click inside a frame through raw mouse input: the element's position comes
+ * from the DOM domain (no main-world evaluate, which can stall CDP on slow
+ * Windows runners after navigations).
+ * @param {import("puppeteer").Page} page page owning the frame
+ * @param {import("puppeteer").Frame} frame frame
+ * @param {string} selector element selector
+ * @returns {Promise<void>} resolved after the click
+ */
+async function clickInFrame(page, frame, selector) {
+  const handle = await frame.waitForSelector(selector, { timeout: 30000 });
+  const point = await handle.clickablePoint();
+
+  await page.mouse.click(point.x, point.y);
+}
+
+/**
+ * Tear a test's browser and hot-app down; a rejected browser.close() must
+ * not leak the watcher, the server, and the temp dir behind it.
+ * @param {import("puppeteer").Browser=} browser browser
+ * @param {EXPECTED_ANY=} app hot app
+ * @returns {Promise<{ browser: undefined, app: undefined }>} cleared slots
+ */
+async function closeE2e(browser, app) {
+  try {
+    // The client's counters live in the page, so they have to be read before
+    // the browser takes them down with it. A failed read must still not keep
+    // the browser alive, or it outlives the test that started it.
+    await harvest(browser);
+  } finally {
+    try {
+      if (browser) {
+        await browser.close();
+      }
+    } finally {
+      if (app) {
+        await app.close();
+      }
+    }
+  }
+
+  return { browser: undefined, app: undefined };
+}
+
+// eslint-disable-next-line jsdoc/reject-any-type
+/** @typedef {any} EXPECTED_ANY */
+
+module.exports = {
+  CARD_ID,
+  INDICATOR_ID,
+  OVERLAY_ID,
+  acceptedApp,
+  boomApp,
+  clickInFrame,
+  closeE2e,
+  unacceptedApp,
+  waitForAppText,
+  waitForNoOverlay,
+  waitForOverlay,
+  waitForRuntimeListeners,
+  waitForText,
+  warningApp,
+};

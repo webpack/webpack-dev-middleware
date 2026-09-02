@@ -3,6 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 
+// Every test boots webpack from scratch in a child process; the first, cold
+// one can exceed the global 20s limit on a loaded machine.
+jest.setTimeout(60000);
+
 function extractErrorEntry(string) {
   const matches = string.match(/error:\s\D[^:||\n||\r]+/gim);
 

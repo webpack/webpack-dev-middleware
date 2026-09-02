@@ -157,6 +157,9 @@ const OVERLAY_STATE_KEY = "__webpack_dev_middleware_hot_overlay_state__";
 
 /** @type {OverlayState} */
 const state = (() => {
+  // The browser suite cannot produce a document-less environment; this is the
+  // guard for a server-side import of the bundle.
+  /* istanbul ignore next -- @preserve */
   if (typeof window === "undefined") {
     return createOverlayState();
   }
@@ -448,6 +451,8 @@ function ensureOverlay() {
     return state.card;
   }
 
+  // Only reachable from a script running before <body> exists.
+  /* istanbul ignore next -- @preserve */
   if (!document.body) {
     return null;
   }
@@ -484,6 +489,8 @@ function ensureOverlay() {
   // A same-origin `about:blank` document is available synchronously.
   const frameDocument = state.frame.contentDocument;
 
+  // A same-origin about:blank frame always has a document by this point.
+  /* istanbul ignore next -- @preserve */
   if (!frameDocument || !frameDocument.body) {
     document.body.removeChild(state.frame);
     state.frame = null;

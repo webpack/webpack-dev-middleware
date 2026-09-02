@@ -193,6 +193,9 @@ function createEventSourceWrapper() {
   let timer;
   /** @type {ReturnType<typeof setTimeout>} */
   let reconnectTimer;
+  // Set once the wrapper is closed for good, so an `error` event the
+  // EventSource had already queued cannot schedule a reconnection after it.
+  let closed = false;
 
   const handleOnline = () => {
     log.info("connected");
@@ -215,6 +218,7 @@ function createEventSourceWrapper() {
    * closing during the reconnect window really is final.
    */
   const close = () => {
+    closed = true;
     clearInterval(timer);
     clearTimeout(reconnectTimer);
     source.close();
@@ -227,7 +231,13 @@ function createEventSourceWrapper() {
    * here rather than shared between reconnections.
    */
   const init = () => {
+    closed = false;
+
     const handleDisconnect = () => {
+      if (closed) {
+        return;
+      }
+
       close();
       reconnectTimer = setTimeout(
         init,

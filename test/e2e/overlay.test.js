@@ -1,0 +1,1095 @@
+import collectConsole, { normalizeConsole } from "../helpers/console-collector";
+import {
+  CARD_ID,
+  OVERLAY_ID,
+  acceptedApp,
+  boomApp,
+  clickInFrame,
+  closeE2e,
+  waitForAppText,
+  waitForNoOverlay,
+  waitForOverlay,
+  waitForRuntimeListeners,
+  warningApp,
+} from "../helpers/e2e";
+import createHotApp from "../helpers/hot-app";
+import runBrowser from "../helpers/run-browser";
+
+jest.setTimeout(400000);
+
+describe("error overlay (browser)", () => {
+  let hotApp;
+  let browser;
+  let page;
+
+  afterEach(async () => {
+    ({ browser, app: hotApp } = await closeE2e(browser, hotApp));
+  });
+
+  it("stays out of the way when the query disables it", async () => {
+    // The empty pair is deliberate: the client parses its own query, and an
+    // `&&` must not become a parameter.
+    hotApp = await createHotApp({
+      code: acceptedApp("v1"),
+      query: "?overlay=false&&logging=info",
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    hotApp.edit("this is not valid javascript {{{");
+
+    // The build breaks either way; only the overlay is suppressed. Waiting
+    // for the client to report the failure keeps this off a bare timeout.
+    await console_.waitFor("has 1 errors");
+
+    expect(
+      await page.evaluate(
+        (id) => document.getElementById(id) === null,
+        OVERLAY_ID,
+      ),
+    ).toBe(true);
+  });
+
+  it("treats an unparsable overlay value as enabled", async () => {
+    // Not JSON, so it falls back to "anything but the literal false is on".
+    hotApp = await createHotApp({
+      code: acceptedApp("v1"),
+      query: "?overlay=on",
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    hotApp.edit("this is not valid javascript {{{");
+    const frame = await waitForOverlay(page);
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "Module parse failed",
+    );
+  });
+
+  it("shows build errors and clears when the build recovers", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    hotApp.edit("this is not valid javascript {{{");
+    const frame = await waitForOverlay(page);
+    const text = await frame.evaluate(() => document.body.textContent);
+
+    expect(text).toContain("Module parse failed");
+
+    // The badge and the highlighted file path, as rendered.
+    expect(
+      await frame.evaluate(() => {
+        const badge = document.querySelector("span");
+        return { text: badge.textContent, color: badge.style.backgroundColor };
+      }),
+    ).toEqual({ text: "ERROR", color: "rgb(255, 51, 72)" });
+    expect(
+      await frame.evaluate(
+        () =>
+          [...document.querySelectorAll("span")].find(
+            (span) => span.textContent === "./app.js",
+          )?.style.color,
+      ),
+    ).toBe("rgb(141, 214, 249)");
+    // The offending code-frame line is highlighted.
+    expect(
+      await frame.evaluate(() =>
+        [...document.querySelectorAll("span")].some(
+          (span) => span.style.color === "rgb(255, 107, 107)",
+        ),
+      ),
+    ).toBe(true);
+
+    // webpack's own "See https://…" is linkified into a safe new-tab link.
+    expect(
+      await frame.evaluate(() => {
+        const link = document.querySelector("a");
+        return (
+          link && {
+            href: link.getAttribute("href"),
+            target: link.getAttribute("target"),
+            rel: link.getAttribute("rel"),
+          }
+        );
+      }),
+    ).toEqual({
+      href: "https://webpack.js.org/concepts#loaders",
+      target: "_blank",
+      rel: "noopener noreferrer",
+    });
+
+    hotApp.edit(acceptedApp("fixed"));
+    await waitForNoOverlay(page);
+
+    // The recovery build also applies (directly or via the full-reload
+    // fallback, depending on how webpack chained the broken build's hashes).
+    await page.waitForFunction(
+      () => document.getElementById("app")?.textContent === "fixed",
+      { timeout: 30000 },
+    );
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it("re-mounts the overlay after something wiped it from the DOM", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    hotApp.edit("broken and wiped {{{");
+    await waitForOverlay(page);
+
+    // A framework re-rendering the page removes the iframe behind our back.
+    await page.evaluate(
+      (id) => document.getElementById(id).remove(),
+      OVERLAY_ID,
+    );
+
+    // An unchanged rebuild re-publishes the identical problem set — the
+    // unchanged-set guard must re-mount instead of skipping the render.
+    hotApp.instance.invalidate();
+
+    const frame = await waitForOverlay(page);
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("Module parse failed"),
+    );
+    expect(await page.$(`#${OVERLAY_ID}`)).not.toBeNull();
+  });
+
+  it("dismisses the overlay when pressing Escape on the host page", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    hotApp.edit("also broken {{{");
+    const frame = await waitForOverlay(page);
+
+    // The card advertises exactly what this test is about to do.
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "Click outside, press Esc, or fix the code to dismiss.",
+    );
+
+    await page.keyboard.press("Escape");
+    await waitForNoOverlay(page);
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it("dismisses on backdrop and close-button clicks, but not inside the card", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    hotApp.edit("broken for clicks {{{");
+    let frame = await waitForOverlay(page);
+
+    // Clicking inside the card keeps the overlay open…
+    await clickInFrame(page, frame, `#${CARD_ID}`);
+    expect(await page.$(`#${OVERLAY_ID}`)).not.toBeNull();
+
+    // …clicking the backdrop (top-left corner, away from the centered card)
+    // dismisses it.
+    await page.mouse.click(5, 5);
+    await waitForNoOverlay(page);
+
+    // A reload brings the overlay back through the catch-up sync — dismiss
+    // it again through the close (×) button.
+    await page.reload();
+    frame = await waitForOverlay(page);
+    await clickInFrame(page, frame, '[aria-label="Close"]');
+    await waitForNoOverlay(page);
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it("ignores an error event carrying neither an error nor a message", async () => {
+    hotApp = await createHotApp({ code: boomApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await waitForRuntimeListeners(page);
+
+    // Some browsers and extensions emit a bare `error` event with nothing to
+    // report; there is no overlay to show for it.
+    await page.evaluate(() => {
+      globalThis.dispatchEvent(new ErrorEvent("error", {}));
+    });
+
+    // Checked before the real error: a blank overlay created here would be
+    // reused by it, and the assertion below would pass either way.
+    expect(
+      await page.evaluate(
+        (id) => document.getElementById(id) === null,
+        OVERLAY_ID,
+      ),
+    ).toBe(true);
+
+    // A real error still gets through, which also proves the listener is live
+    // rather than the empty event having torn it down.
+    await page.evaluate(() => {
+      globalThis.boom("a real one");
+    });
+
+    const frame = await waitForOverlay(page);
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "a real one",
+    );
+  });
+
+  it("catches runtime errors and renders their message as text, not markup", async () => {
+    hotApp = await createHotApp({
+      // The error must be thrown from the page's own script — errors raised
+      // inside evaluate() surface to window.onerror as opaque "Script error".
+      code: boomApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await waitForRuntimeListeners(page);
+
+    // The message doubles as an XSS probe: it must render as text.
+    await page.evaluate(() => {
+      globalThis.boom(
+        'runtime boom <img src=x onerror="window.__xss=1"> See https://example.com/a.',
+      );
+    });
+
+    const frame = await waitForOverlay(page);
+    const text = await frame.evaluate(() => document.body.textContent);
+
+    expect(text).toContain("runtime boom");
+    // Linkified with the sentence-ending dot kept out of the href.
+    expect(
+      await frame.evaluate(() =>
+        document.querySelector("a")?.getAttribute("href"),
+      ),
+    ).toBe("https://example.com/a");
+    expect(text).toContain("https://example.com/a.");
+    expect(
+      await frame.evaluate(() => document.querySelector("img") !== null),
+    ).toBe(false);
+    // The onerror payload would run in the iframe's realm — check it there.
+    expect(await frame.evaluate(() => globalThis.__xss)).toBeUndefined();
+  });
+
+  it("ignores errors already caught by a React error boundary", async () => {
+    hotApp = await createHotApp({
+      // The function name lands in the real stack — the same marker React's
+      // dev build leaves on errors its boundaries already handled.
+      code: `
+        document.getElementById("app").textContent = "v1";
+        globalThis.boomThroughBoundary = (message) => {
+          function invokeGuardedCallbackDev() {
+            throw new Error(message);
+          }
+          setTimeout(invokeGuardedCallbackDev, 0);
+        };
+        globalThis.boom = (message) => {
+          setTimeout(() => {
+            throw new Error(message);
+          }, 0);
+        };
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await waitForRuntimeListeners(page);
+
+    await page.evaluate(() => globalThis.boomThroughBoundary("handled"));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+
+    // The listeners are live: a plain error still lands in the overlay.
+    await page.evaluate(() => globalThis.boom("unhandled"));
+    const frame = await waitForOverlay(page);
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "unhandled",
+    );
+  });
+
+  it("resets the runtime slot on a clean build", async () => {
+    hotApp = await createHotApp({ code: boomApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await waitForRuntimeListeners(page);
+
+    await page.evaluate(() => globalThis.boom("boom-before"));
+    let frame = await waitForOverlay(page);
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("boom-before"),
+    );
+
+    // A clean rebuild clears the accumulated runtime errors through the
+    // reporter…
+    hotApp.edit(boomApp("v2"));
+    await waitForAppText(page, "v2");
+    await waitForNoOverlay(page);
+    // The fixture does not accept updates, so that was a full reload: the
+    // listeners are attached again, and racing them fails the same way.
+    await waitForRuntimeListeners(page);
+
+    // …so the next error starts a fresh slot instead of paging after the
+    // old one.
+    await page.evaluate(() => globalThis.boom("boom-after"));
+    frame = await waitForOverlay(page);
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("boom-after"),
+    );
+
+    const text = await frame.evaluate(() => document.body.textContent);
+
+    expect(text).not.toContain("boom-before");
+    expect(text).not.toContain("1 / 2");
+  });
+
+  it("shows build warnings (dev-server parity)", async () => {
+    hotApp = await createHotApp({
+      // `require(<expression>)` produces webpack's "Critical dependency"
+      // warning without failing the build.
+      code: warningApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    // The warning arrives with the connect-time sync — no rebuild needed.
+    const frame = await waitForOverlay(page);
+    const text = await frame.evaluate(() => document.body.textContent);
+
+    expect(text).toContain("WARNING");
+    expect(text).toContain("Critical dependency");
+    expect(
+      await frame.evaluate(
+        () => document.querySelector("span").style.backgroundColor,
+      ),
+    ).toBe("rgb(255, 211, 14)");
+
+    // A build without the warning clears the overlay again.
+    hotApp.edit(acceptedApp("fixed"));
+    await waitForNoOverlay(page);
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it("escalates a warning overlay to an error overlay", async () => {
+    hotApp = await createHotApp({
+      code: warningApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    const frame = await waitForOverlay(page);
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("Critical dependency"),
+    );
+
+    // The build breaks: the same overlay now shows the error instead.
+    hotApp.edit("broken after warning {{{");
+    await frame.waitForFunction(
+      () =>
+        document.body.textContent.includes("Module parse failed") &&
+        !document.body.textContent.includes("Critical dependency"),
+    );
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "ERROR",
+    );
+  });
+
+  it("turns an error overlay into a warning overlay on partial recovery", async () => {
+    hotApp = await createHotApp({ code: "broken from the start {{{" });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForOverlay(page);
+
+    // Recovering into a warning-carrying build replaces the error content
+    // (possibly via the reload fallback, which re-syncs the warning). The
+    // overlay is read through the page realm so a reload cannot detach it.
+    hotApp.edit(`
+        document.getElementById("app").textContent = "v1";
+        const dep = "./nothing";
+        try {
+          require(dep);
+        } catch (err) {
+          // expected
+        }
+        if (module.hot) {
+          module.hot.accept();
+        }
+      `);
+    await page.waitForFunction(
+      (id) => {
+        const body = document.getElementById(id)?.contentDocument?.body;
+        return (
+          body &&
+          body.textContent.includes("Critical dependency") &&
+          !body.textContent.includes("Module parse failed")
+        );
+      },
+      { timeout: 30000, polling: 100 },
+      OVERLAY_ID,
+    );
+    expect(
+      await page.evaluate(
+        (id) => document.getElementById(id).contentDocument.body.textContent,
+        OVERLAY_ID,
+      ),
+    ).toContain("WARNING");
+  });
+
+  it('overlay={"runtimeErrors":false} leaves runtime errors uncaught', async () => {
+    hotApp = await createHotApp({
+      query: '?overlay={"runtimeErrors":false}',
+      code: boomApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    // No gate here on purpose: this configuration never attaches the runtime
+    // listeners, which is the whole point of the test.
+
+    await page.evaluate(() => globalThis.boom("uncaught boom"));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it('overlay={"warnings":false} suppresses warnings (dev-server shape)', async () => {
+    hotApp = await createHotApp({
+      query: '?overlay={"warnings":false}',
+      code: warningApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    // The warning still reaches the console — just not the DOM.
+    await console_.waitFor("Critical dependency");
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
+  });
+
+  it("keeps warnings out of the payload with hot.statsOptions", async () => {
+    hotApp = await createHotApp({
+      // The README's documented recipe: keep warnings in the build output
+      // but out of the SSE payload entirely.
+      hot: { statsOptions: { warnings: false } },
+      code: warningApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await console_.waitFor("connected");
+
+    // The sync arrived (connected implies it); give rendering a beat.
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+    // Just the connect — the warning never entered the payload.
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
+  });
+
+  it("applies a warnings filter function from the query (dev-server parity)", async () => {
+    hotApp = await createHotApp({
+      query:
+        '?overlay={"warnings":"function(message){return message.includes(`a.js`)}"}',
+      // Two warning-producing modules; the filter keeps only a.js's warning.
+      code: `
+        document.getElementById("app").textContent = "v1";
+        try {
+          require("./a");
+        } catch (err) {
+          // expected
+        }
+        try {
+          require("./b");
+        } catch (err) {
+          // expected
+        }
+        if (module.hot) {
+          module.hot.accept();
+        }
+      `,
+      files: {
+        "a.js":
+          'const depA = "./nothing"; try { require(depA); } catch (err) {}',
+        "b.js":
+          'const depB = "./nothing"; try { require(depB); } catch (err) {}',
+      },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    const frame = await waitForOverlay(page);
+    const text = await frame.evaluate(() => document.body.textContent);
+
+    expect(text).toContain("./a.js");
+    expect(text).not.toContain("./b.js");
+  });
+
+  it("paginates multiple problems with a counter", async () => {
+    hotApp = await createHotApp({
+      // try/catch: the emitted modules re-throw their parse error at require
+      // time, and an uncaught throw would add a third, runtime-error problem.
+      code: `
+        try {
+          require("./a");
+        } catch (err) {
+          // expected
+        }
+        try {
+          require("./b");
+        } catch (err) {
+          // expected
+        }
+      `,
+      files: {
+        "a.js": "broken a {{{",
+        "b.js": "broken b {{{",
+      },
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+
+    const frame = await waitForOverlay(page);
+
+    // Both errors also reach the console, joined into a single error call —
+    // snapshotted once the second one's code frame is in.
+    await console_.waitFor("broken b {{{");
+    expect(normalizeConsole(console_.messages)).toMatchSnapshot();
+
+    // One problem at a time, with a counter.
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("1 / 2"),
+    );
+
+    await frame.click('[aria-label="Next problem"]');
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("2 / 2"),
+    );
+
+    // Real keyboard navigation — the frame has focus after the click.
+    await page.keyboard.press("ArrowLeft");
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("1 / 2"),
+    );
+    await page.keyboard.press("ArrowRight");
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("2 / 2"),
+    );
+
+    // Clamped at the last page.
+    await frame.click('[aria-label="Next problem"]');
+    await page.keyboard.press("ArrowRight");
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "2 / 2",
+    );
+  });
+
+  it("shows the full problem list when paginate=false", async () => {
+    hotApp = await createHotApp({
+      query: '?overlay={"paginate":false}',
+      code: `
+        try {
+          require("./a");
+        } catch (err) {
+          // expected
+        }
+        try {
+          require("./b");
+        } catch (err) {
+          // expected
+        }
+      `,
+      files: {
+        "a.js": "broken a {{{",
+        "b.js": "broken b {{{",
+      },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    const frame = await waitForOverlay(page);
+    await frame.waitForFunction(
+      () =>
+        document.body.textContent.includes("broken a {{{") &&
+        document.body.textContent.includes("broken b {{{"),
+    );
+
+    // Both problems at once, no pager.
+    expect(await frame.evaluate(() => document.body.textContent)).not.toContain(
+      "1 / 2",
+    );
+  });
+
+  it("accumulates runtime errors and pages between them", async () => {
+    hotApp = await createHotApp({
+      code: boomApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await waitForRuntimeListeners(page);
+
+    await page.evaluate(() => globalThis.boom("boom-one"));
+    const frame = await waitForOverlay(page);
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("boom-one"),
+    );
+
+    // A second error joins the pager; the newest one is shown.
+    await page.evaluate(() => globalThis.boom("boom-two"));
+    await frame.waitForFunction(
+      () =>
+        document.body.textContent.includes("boom-two") &&
+        document.body.textContent.includes("2 / 2"),
+    );
+
+    // The previous error stays reachable.
+    await frame.click('[aria-label="Previous problem"]');
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("boom-one"),
+    );
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "1 / 2",
+    );
+  });
+
+  it("shows unhandled promise rejections", async () => {
+    hotApp = await createHotApp({
+      // The rejection must originate from the page's own script so the
+      // unhandledrejection event carries the real reason.
+      code: `
+        document.getElementById("app").textContent = "v1";
+        globalThis.rejectSoon = (message) => {
+          setTimeout(() => {
+            Promise.reject(new Error(message));
+          }, 0);
+        };
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await waitForRuntimeListeners(page);
+
+    await page.evaluate(() => globalThis.rejectSoon("rejected-boom"));
+
+    const frame = await waitForOverlay(page);
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "rejected-boom",
+    );
+  });
+
+  it("opens the clicked file reference through the configured endpoint", async () => {
+    /** @type {string[]} */
+    const opened = [];
+
+    hotApp = await createHotApp({
+      query: '?overlay={"openEditorEndpoint":"/__open-editor"}',
+      code: acceptedApp("v1"),
+      setup: (server) => {
+        server.get("/__open-editor", (req, res) => {
+          opened.push(String(req.query.fileName));
+          res.end();
+        });
+      },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    hotApp.edit("broken for the editor {{{");
+    const frame = await waitForOverlay(page);
+    const chip = await frame.waitForSelector("[data-open-file]", {
+      timeout: 30000,
+    });
+
+    // The chip carries webpack's real file:line:column reference, and
+    // clicking it reaches the server-side route.
+    expect(await chip.evaluate((el) => el.getAttribute("data-open-file"))).toBe(
+      "./app.js:1:7",
+    );
+
+    await chip.click();
+    const start = Date.now();
+    while (opened.length === 0 && Date.now() - start < 30000) {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 50);
+      });
+    }
+
+    expect(opened).toEqual(["./app.js:1:7"]);
+  });
+
+  it("does not mark file chips when no endpoint is configured", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    hotApp.edit("broken without editor {{{");
+    const frame = await waitForOverlay(page);
+
+    expect(await frame.$("[data-open-file]")).toBeNull();
+  });
+
+  it("applies custom card styles and ansi colors from the query", async () => {
+    hotApp = await createHotApp({
+      query:
+        '?overlay={"styles":{"maxWidth":"500px"},"ansiColors":{"red":"00ff00"}}',
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    hotApp.edit("broken in green {{{");
+    const frame = await waitForOverlay(page);
+
+    // The remapped red drives the problem color; the style override lands
+    // on the card.
+    expect(
+      await frame.evaluate((id) => {
+        const card = document.getElementById(id);
+        return {
+          maxWidth: card.style.maxWidth,
+          border: card.style.borderTopColor,
+          badge: card.querySelector("span").style.backgroundColor,
+        };
+      }, CARD_ID),
+    ).toEqual({
+      maxWidth: "500px",
+      border: "rgb(0, 255, 0)",
+      badge: "rgb(0, 255, 0)",
+    });
+  });
+
+  it("renders under an enforced Trusted Types CSP with the configured policy", async () => {
+    hotApp = await createHotApp({
+      query: '?overlay={"trustedTypesPolicyName":"wdm-test"}',
+      code: acceptedApp("v1"),
+      // Real enforcement, which jsdom cannot do: every HTML sink must go
+      // through the "wdm-test" policy or Chrome throws. The about:blank
+      // overlay iframe inherits this policy from the page.
+      pageHeaders: {
+        "Content-Security-Policy":
+          "require-trusted-types-for 'script'; trusted-types wdm-test",
+      },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    hotApp.edit("broken by csp {{{");
+
+    // The overlay renders — proof that every innerHTML write went through
+    // the configured policy (a raw write, or a policy under any other name,
+    // would have thrown under this CSP).
+    const frame = await waitForOverlay(page);
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("Module parse failed"),
+    );
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "broken by csp",
+    );
+  });
+
+  it("does not appear when overlay=false", async () => {
+    hotApp = await createHotApp({
+      query: "?overlay=false",
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+
+    hotApp.edit("broken again {{{");
+    // The problem still reaches the console — just not the DOM.
+    await console_.waitFor("Module parse failed");
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+});
+
+describe("overlay shared state across bundled copies (browser)", () => {
+  const OVERLAY_ENTRY = require.resolve("../../client-src/overlay.js");
+  const OVERLAY_STATE_KEY = "__webpack_dev_middleware_hot_overlay_state__";
+
+  let hotApp;
+  let browser;
+  let page;
+
+  /**
+   * Two real bundled copies of the overlay module — one per compilation —
+   * exposed as globals so the tests can drive both from the page.
+   * @param {string} globalName global to expose the copy under
+   * @returns {string} app source
+   */
+  const exposeOverlay = (globalName) =>
+    `globalThis.${globalName} = require(${JSON.stringify(OVERLAY_ENTRY)});
+     globalThis.boom = (message) => {
+       setTimeout(() => {
+         throw new Error(message);
+       }, 0);
+     };`;
+
+  const start = async () => {
+    hotApp = await createHotApp({
+      // overlay=false keeps the real hot clients from reporting into the
+      // overlay these tests drive themselves.
+      query: "?overlay=false",
+      apps: [
+        { name: "a", code: exposeOverlay("overlayA") },
+        { name: "b", code: exposeOverlay("overlayB") },
+      ],
+    });
+    ({ page, browser } = await runBrowser());
+  };
+
+  /**
+   * @returns {Promise<import("puppeteer").Frame>} the overlay iframe's frame
+   */
+  const overlayFrame = async () => {
+    const handle = await page.waitForSelector(`#${OVERLAY_ID}`, {
+      timeout: 30000,
+    });
+
+    return handle.contentFrame();
+  };
+
+  afterEach(async () => {
+    ({ browser, app: hotApp } = await closeE2e(browser, hotApp));
+  });
+
+  it("shows the problems of two copies in the same overlay", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["boom from copy A"]);
+      globalThis.overlayB.showProblems("errors", ["boom from copy B"], "b");
+    });
+
+    // One iframe: the second copy adopted it instead of stacking another,
+    // and both sources are paginated together in the union.
+    expect(
+      await page.evaluate(() => document.querySelectorAll("iframe").length),
+    ).toBe(1);
+
+    const frame = await overlayFrame();
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "boom from copy A",
+    );
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "1 / 2",
+    );
+
+    await frame.click('[aria-label="Next problem"]');
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("boom from copy B"),
+    );
+
+    // The state is shared both ways: dismissing from the first copy removes
+    // the overlay the second copy rendered into.
+    await page.evaluate(() => globalThis.overlayA.clear());
+    expect(
+      await page.evaluate(() => document.querySelectorAll("iframe").length),
+    ).toBe(0);
+  });
+
+  it("prefers one copy's errors over another copy's warnings", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["boom from copy A"]);
+      globalThis.overlayB.showProblems(
+        "warnings",
+        ["careful from copy B"],
+        "b",
+      );
+    });
+
+    const frame = await overlayFrame();
+    const errorRed = "rgb(255, 51, 72)";
+    const warningYellow = "rgb(255, 211, 14)";
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "boom from copy A",
+    );
+    expect(await frame.evaluate(() => document.body.textContent)).not.toContain(
+      "careful from copy B",
+    );
+    expect(
+      await frame.evaluate(
+        (id) => document.getElementById(id).style.borderTopColor,
+        CARD_ID,
+      ),
+    ).toBe(errorRed);
+
+    // Once the erroring source recovers, the warnings surface.
+    await page.evaluate(() => globalThis.overlayA.clear(""));
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("careful from copy B"),
+    );
+    expect(
+      await frame.evaluate(
+        (id) => document.getElementById(id).style.borderTopColor,
+        CARD_ID,
+      ),
+    ).toBe(warningYellow);
+  });
+
+  it("does not re-render when a copy clears a source that reported nothing", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["a", "b"], "x");
+    });
+
+    const frame = await overlayFrame();
+
+    await frame.evaluate((id) => {
+      globalThis.__cardChild = document.getElementById(id).firstElementChild;
+    }, CARD_ID);
+
+    // What the reporter does on every clean build of its own bundle.
+    await page.evaluate(() => globalThis.overlayB.clear("never-reported"));
+
+    // Same DOM nodes — the card the other copy is showing was not rebuilt.
+    expect(
+      await frame.evaluate(
+        (id) =>
+          globalThis.__cardChild ===
+          document.getElementById(id).firstElementChild,
+        CARD_ID,
+      ),
+    ).toBe(true);
+    expect(await page.$(`#${OVERLAY_ID}`)).not.toBeNull();
+  });
+
+  it("honors the runtime filter configured by a later copy", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    // The first copy attaches the window listeners; a runtime error lands in
+    // the overlay, proving they are live.
+    await page.evaluate(() => {
+      globalThis.overlayA.default({ catchRuntimeError: true });
+      globalThis.boom("caught-by-A");
+    });
+    await page.waitForSelector(`#${OVERLAY_ID}`, { timeout: 30000 });
+    await page.evaluate(() => globalThis.overlayA.clear());
+
+    // A later copy swaps in a rejecting filter — the listeners the first
+    // copy attached must honor it.
+    await page.evaluate(() => {
+      globalThis.overlayB.default({ catchRuntimeError: () => false });
+      globalThis.boom("filtered-out");
+    });
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it("resets the page for a new problem set and keeps it for a re-publish", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["first boom", "second boom"]);
+    });
+    const frame = await overlayFrame();
+    await frame.click('[aria-label="Next problem"]');
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("2 / 2"),
+    );
+
+    // Re-publishing the same problems (every clean rebuild does) keeps the
+    // page the user navigated to…
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["first boom", "second boom"]);
+    });
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("2 / 2"),
+    );
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "second boom",
+    );
+
+    // …while a different set starts back at the first page.
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", [
+        "new first",
+        "new second",
+        "new third",
+      ]);
+    });
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("1 / 3"),
+    );
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "new first",
+    );
+  });
+
+  it("fills state fields missing from an older copy's shape", async () => {
+    await start();
+    // Clearing with nothing shown is a no-op (a throw would reject here).
+    await page.evaluate(() => globalThis.overlayA?.clear());
+    // An older package version created a leaner shared state before the
+    // bundles load.
+    await page.evaluateOnNewDocument((key) => {
+      globalThis[key] = { frame: null, card: null };
+    }, OVERLAY_STATE_KEY);
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["boom"], "newer");
+    });
+
+    expect(
+      await page.evaluate(() => document.querySelectorAll("iframe").length),
+    ).toBe(1);
+  });
+});

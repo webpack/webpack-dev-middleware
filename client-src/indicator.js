@@ -40,6 +40,9 @@ const INDICATOR_STATE_KEY = "__webpack_dev_middleware_hot_indicator_state__";
 
 /** @type {IndicatorState} */
 const state = (() => {
+  // The browser suite cannot produce a document-less environment; this is the
+  // guard for a server-side import of the bundle.
+  /* istanbul ignore next -- @preserve */
   if (typeof window === "undefined") {
     return createIndicatorState();
   }
@@ -81,6 +84,8 @@ function ensureIndicator() {
     return;
   }
 
+  // Only reachable from a script running before <body> exists.
+  /* istanbul ignore next -- @preserve */
   if (!document.body) {
     return;
   }
