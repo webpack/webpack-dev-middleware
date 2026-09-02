@@ -29,7 +29,7 @@ exports[`update processing (browser) stays on the broken state when reload=false
   "[webpack-dev-middleware] bundle rebuilding (<fixture> changed)",
   "[webpack-dev-middleware] bundle rebuilt in Xms",
   "[webpack-dev-middleware] Checking for updates on the server...",
-  "[webpack-dev-middleware] JSHandle@error",
+  "[webpack-dev-middleware] <error>",
   "[webpack-dev-middleware] Ignored an error while updating module ./app.js (accept-errored)",
   "[webpack-dev-middleware] Hot updated 1 modules.",
   "[webpack-dev-middleware] App is up to date.",

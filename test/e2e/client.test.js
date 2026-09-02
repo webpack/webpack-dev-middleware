@@ -260,8 +260,14 @@ describe("hot client (browser)", () => {
         globalThis.hotClient = require(${JSON.stringify(CLIENT_ENTRY)});
         globalThis.customOverlayCalls = [];
         globalThis.hotClient.useCustomOverlay({
-          show: (...args) => globalThis.customOverlayCalls.push(args),
-          clear: () => globalThis.customOverlayCalls.push(["clear"]),
+          showProblems: (type, problems) =>
+            globalThis.customOverlayCalls.push({
+              method: "showProblems",
+              type,
+              problems,
+            }),
+          clear: (scope) =>
+            globalThis.customOverlayCalls.push({ method: "clear", scope }),
         });
         document.getElementById("app").textContent = "v1";
         if (module.hot) {
@@ -286,9 +292,16 @@ describe("hot client (browser)", () => {
         OVERLAY_ID,
       ),
     ).toBe(true);
+    // Specifically `showProblems` with the errors: a `clear` call would
+    // satisfy a bare length check without the build error ever reaching the
+    // host's overlay.
     expect(
-      await page.evaluate(() => globalThis.customOverlayCalls.length > 0),
-    ).toBe(true);
+      await page.evaluate(() =>
+        globalThis.customOverlayCalls.find(
+          ({ method }) => method === "showProblems",
+        ),
+      ),
+    ).toMatchObject({ type: "errors" });
   });
 
   it("rebuilds on instance.invalidate() and syncs connected pages as a no-op", async () => {

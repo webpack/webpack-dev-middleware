@@ -118,6 +118,10 @@ jobs:
   upload-coverage:
     name: Upload coverage to codecov
     needs: test
+    # Every shard used to submit its own coverage, so a red shard still left a
+    # report. With one collecting job, skipping on failure would send codecov
+    # nothing at all for the run — exactly when the report is worth reading.
+    if: always()
     runs-on: ubuntu-latest
 
     steps:

@@ -28,20 +28,5 @@ module.exports = (api) => {
         ],
       },
     ],
-    env: {
-      test: {
-        presets: [
-          [
-            "@babel/preset-env",
-            {
-              targets: {
-                node: "18.12.0",
-              },
-            },
-          ],
-        ],
-        plugins: ["@babel/plugin-transform-runtime"],
-      },
-    },
   };
 };

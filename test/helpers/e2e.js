@@ -4,6 +4,28 @@ const { harvest } = require("./browser-coverage");
 const OVERLAY_ID = "webpack-dev-middleware-hot-overlay";
 const CARD_ID = `${OVERLAY_ID}-card`;
 const INDICATOR_ID = "webpack-dev-middleware-building-indicator";
+const OVERLAY_STATE_KEY = "__webpack_dev_middleware_hot_overlay_state__";
+
+/**
+ * Wait until the client has attached its `error` and `unhandledrejection`
+ * listeners. The app rendering does not imply it: the listeners go on during
+ * the client's own setup, so an error thrown before that lands nowhere and
+ * the overlay never appears. Gate every runtime-error test on this.
+ * @param {import("puppeteer").Page} page page
+ * @returns {Promise<void>} resolved once the listeners are attached
+ */
+function waitForRuntimeListeners(page) {
+  return page
+    .waitForFunction(
+      (key) =>
+        Boolean(
+          globalThis[key] && globalThis[key].runtimeListenersAttached === true,
+        ),
+      { timeout: 30000, polling: 100 },
+      OVERLAY_STATE_KEY,
+    )
+    .then(() => {});
+}
 
 /**
  * @param {import("puppeteer").Page} page page
@@ -148,15 +170,18 @@ async function clickInFrame(page, frame, selector) {
 async function closeE2e(browser, app) {
   try {
     // The client's counters live in the page, so they have to be read before
-    // the browser takes them down with it.
+    // the browser takes them down with it. A failed read must still not keep
+    // the browser alive, or it outlives the test that started it.
     await harvest(browser);
-
-    if (browser) {
-      await browser.close();
-    }
   } finally {
-    if (app) {
-      await app.close();
+    try {
+      if (browser) {
+        await browser.close();
+      }
+    } finally {
+      if (app) {
+        await app.close();
+      }
     }
   }
 
@@ -178,6 +203,7 @@ module.exports = {
   waitForAppText,
   waitForNoOverlay,
   waitForOverlay,
+  waitForRuntimeListeners,
   waitForText,
   warningApp,
 };

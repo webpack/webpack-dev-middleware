@@ -31,7 +31,7 @@ describe("update processing (browser)", () => {
     ({ browser, app } = await closeE2e(browser, app));
   });
 
-  it("reports an update to a declined module", async () => {
+  it("reports an update to a declined module and reloads", async () => {
     app = await createHotApp({
       code: `
         require("./dep");
@@ -50,16 +50,28 @@ describe("update processing (browser)", () => {
     await page.goto(app.url);
     await waitForAppText(page, "v1");
     await console_.waitFor("connected");
+    // The fixture renders "v1" again after a reload, so the text alone cannot
+    // tell a surviving page from a reloaded one; this marker can.
+    await page.evaluate(() => {
+      globalThis.__notReloaded = true;
+    });
+
+    // A declined update cannot be applied, so the client falls back to a full
+    // reload. Awaited rather than polled: the navigation destroys the context
+    // an evaluate() would run in.
+    const navigated = page.waitForNavigation({ timeout: 30000 });
 
     app.editFile("dep.js", "module.hot.decline();\nmodule.exports = 2;");
     await console_.waitFor("Ignored an update to declined module");
+    await navigated;
+    await waitForAppText(page, "v1");
 
-    // The decline is reported once, and the page is left as it was.
     expect(
       console_.messages.filter((text) =>
         text.includes("Ignored an update to declined module"),
       ),
     ).toHaveLength(1);
+    expect(await page.evaluate(() => globalThis.__notReloaded)).toBeUndefined();
   });
 
   it("reloads when an accept handler throws during apply", async () => {

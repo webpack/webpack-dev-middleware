@@ -9,6 +9,7 @@ import {
   waitForAppText,
   waitForNoOverlay,
   waitForOverlay,
+  waitForRuntimeListeners,
   warningApp,
 } from "../helpers/e2e";
 import createHotApp from "../helpers/hot-app";
@@ -217,12 +218,22 @@ describe("error overlay (browser)", () => {
 
     await page.goto(hotApp.url);
     await waitForAppText(page, "v1");
+    await waitForRuntimeListeners(page);
 
     // Some browsers and extensions emit a bare `error` event with nothing to
     // report; there is no overlay to show for it.
     await page.evaluate(() => {
       globalThis.dispatchEvent(new ErrorEvent("error", {}));
     });
+
+    // Checked before the real error: a blank overlay created here would be
+    // reused by it, and the assertion below would pass either way.
+    expect(
+      await page.evaluate(
+        (id) => document.getElementById(id) === null,
+        OVERLAY_ID,
+      ),
+    ).toBe(true);
 
     // A real error still gets through, which also proves the listener is live
     // rather than the empty event having torn it down.
@@ -247,6 +258,7 @@ describe("error overlay (browser)", () => {
 
     await page.goto(hotApp.url);
     await waitForAppText(page, "v1");
+    await waitForRuntimeListeners(page);
 
     // The message doubles as an XSS probe: it must render as text.
     await page.evaluate(() => {
@@ -296,6 +308,7 @@ describe("error overlay (browser)", () => {
 
     await page.goto(hotApp.url);
     await waitForAppText(page, "v1");
+    await waitForRuntimeListeners(page);
 
     await page.evaluate(() => globalThis.boomThroughBoundary("handled"));
     await new Promise((resolve) => {
@@ -317,6 +330,7 @@ describe("error overlay (browser)", () => {
 
     await page.goto(hotApp.url);
     await waitForAppText(page, "v1");
+    await waitForRuntimeListeners(page);
 
     await page.evaluate(() => globalThis.boom("boom-before"));
     let frame = await waitForOverlay(page);
@@ -329,6 +343,9 @@ describe("error overlay (browser)", () => {
     hotApp.edit(boomApp("v2"));
     await waitForAppText(page, "v2");
     await waitForNoOverlay(page);
+    // The fixture does not accept updates, so that was a full reload: the
+    // listeners are attached again, and racing them fails the same way.
+    await waitForRuntimeListeners(page);
 
     // …so the next error starts a fresh slot instead of paging after the
     // old one.
@@ -448,6 +465,8 @@ describe("error overlay (browser)", () => {
 
     await page.goto(hotApp.url);
     await waitForAppText(page, "v1");
+    // No gate here on purpose: this configuration never attaches the runtime
+    // listeners, which is the whole point of the test.
 
     await page.evaluate(() => globalThis.boom("uncaught boom"));
     await new Promise((resolve) => {
@@ -641,6 +660,7 @@ describe("error overlay (browser)", () => {
 
     await page.goto(hotApp.url);
     await waitForAppText(page, "v1");
+    await waitForRuntimeListeners(page);
 
     await page.evaluate(() => globalThis.boom("boom-one"));
     const frame = await waitForOverlay(page);
@@ -683,6 +703,7 @@ describe("error overlay (browser)", () => {
 
     await page.goto(hotApp.url);
     await waitForAppText(page, "v1");
+    await waitForRuntimeListeners(page);
 
     await page.evaluate(() => globalThis.rejectSoon("rejected-boom"));
 

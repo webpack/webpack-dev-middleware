@@ -112,7 +112,8 @@ describe("multi-compiler (browser)", () => {
     await waitForText(page, "out-app", "app-v2");
     await console_.waitForCount("App is up to date", 2);
 
-    // The widget's own rebuild drops its cache: same text logs again.
+    // Nor does the widget's own rebuild: the cache is keyed by name and type
+    // and holds the problem text, so an unchanged warning stays logged once.
     app.edit("widget", widgetWithWarning("widget-v2"));
     await waitForText(page, "out-widget", "widget-v2");
     await console_.waitForCount("App is up to date", 3);

@@ -14,9 +14,20 @@ function openSseReader(url) {
     const request = http.get(url, (res) => {
       /** @type {string[]} */
       const frames = [];
+      let pending = "";
+
       res.setEncoding("utf8");
       res.on("data", (chunk) => {
-        for (const line of chunk.split("\n")) {
+        // TCP chunks, not lines: a sync frame carrying errors and warnings is
+        // long enough to straddle two of them, and both halves would fail the
+        // `data: ` test. Hold the trailing partial line for the next chunk.
+        pending += chunk;
+
+        const lines = pending.split("\n");
+
+        pending = /** @type {string} */ (lines.pop());
+
+        for (const line of lines) {
           if (line.startsWith("data: ")) {
             frames.push(line.slice("data: ".length));
           }

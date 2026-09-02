@@ -45,7 +45,7 @@ exports[`hot client (browser) warns on malformed frames without breaking the pag
 [
   "[webpack-dev-middleware] connected",
   "[webpack-dev-middleware] Invalid HMR message: not-json{
-SyntaxError: Unexpected token 'o', "not-json{" is not valid JSON",
+<parse error>",
 ]
 `;
 
