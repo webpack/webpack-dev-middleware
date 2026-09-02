@@ -4,6 +4,7 @@ import createHot, {
   createEventStream,
   formatErrors,
   pathMatch,
+  toBundles,
 } from "../src/hot";
 
 jest.spyOn(globalThis.console, "log").mockImplementation();
@@ -12,7 +13,7 @@ jest.spyOn(globalThis.console, "log").mockImplementation();
 /** @typedef {any} EXPECTED_OBJECT */
 
 /** @type {EXPECTED_OBJECT} */
-const noopLogger = { log() {} };
+const noopLogger = { log() {}, warn() {} };
 
 /**
  * Build a minimal compiler-like object so we can drive `invalid`/`done` from
@@ -156,6 +157,128 @@ describe("hot middleware (unit)", () => {
     });
   });
 
+  describe("toBundles", () => {
+    it("reports one bundle for a single compilation", () => {
+      expect(toBundles(makeFakeStats({ name: "app" }), undefined)).toEqual([
+        expect.objectContaining({ name: "app", hash: "abc" }),
+      ]);
+    });
+
+    it("reports the compilation itself when it has neither modules nor children", () => {
+      expect(
+        toBundles(
+          makeFakeStats({ modules: undefined, name: "app" }),
+          undefined,
+        ),
+      ).toEqual([expect.objectContaining({ name: "app", hash: "abc" })]);
+    });
+
+    it("publishes the compilation's own hash, not a child compilation's", () => {
+      const stats = makeFakeStats({
+        hash: "parent",
+        children: [{ name: "child-one", hash: "child" }],
+      });
+
+      // `children` is forced off, but a plugin's child compilation must not
+      // reach the payload even when webpack reports one: the client compares
+      // the hash it is given against its own bundle's.
+      expect(toBundles(stats, { children: true })).toEqual([
+        expect.objectContaining({ hash: "parent" }),
+      ]);
+    });
+
+    it("takes the payload's diagnostics from the stats option", () => {
+      /** @type {EXPECTED_OBJECT} */
+      let requested;
+      /** @type {EXPECTED_OBJECT} */
+      let resolvedFrom;
+      const stats = {
+        toJson: (options) => {
+          requested = options;
+          return { hash: "abc" };
+        },
+        compilation: {
+          createStatsOptions: (option) => {
+            resolvedFrom = option;
+            return { errors: true, warnings: false };
+          },
+        },
+      };
+
+      toBundles(
+        /** @type {EXPECTED_OBJECT} */ (stats),
+        undefined,
+        "errors-only",
+      );
+
+      // Presets are webpack's to interpret, so the option goes to it as given.
+      expect(resolvedFrom).toBe("errors-only");
+      expect(requested).toMatchObject({ errors: true, warnings: false });
+    });
+
+    it("reports both when no stats option is set", () => {
+      /** @type {EXPECTED_OBJECT} */
+      let requested;
+      const stats = {
+        toJson: (options) => {
+          requested = options;
+          return { hash: "abc" };
+        },
+        compilation: { createStatsOptions: () => ({}) },
+      };
+
+      toBundles(/** @type {EXPECTED_OBJECT} */ (stats), undefined, undefined);
+
+      expect(requested).toMatchObject({ errors: true, warnings: true });
+    });
+
+    it("lets the deprecated statsOptions win over the stats option", () => {
+      /** @type {EXPECTED_OBJECT} */
+      let requested;
+      const stats = {
+        toJson: (options) => {
+          requested = options;
+          return { hash: "abc" };
+        },
+        compilation: {
+          createStatsOptions: () => ({ errors: true, warnings: false }),
+        },
+      };
+
+      toBundles(
+        /** @type {EXPECTED_OBJECT} */ (stats),
+        { warnings: true },
+        "errors-only",
+      );
+
+      expect(requested).toMatchObject({ warnings: true });
+    });
+
+    it("keeps the fields the client needs, whatever statsOptions asks for", () => {
+      /** @type {EXPECTED_OBJECT} */
+      let requested;
+      const stats = {
+        toJson: (options) => {
+          requested = options;
+          return { hash: "abc" };
+        },
+        compilation: undefined,
+      };
+
+      toBundles(/** @type {EXPECTED_OBJECT} */ (stats), {
+        hash: false,
+        timings: false,
+        children: true,
+      });
+
+      expect(requested).toMatchObject({
+        hash: true,
+        timings: true,
+        children: false,
+      });
+    });
+  });
+
   describe("createEventStream", () => {
     beforeEach(() => {
       jest.useFakeTimers();
@@ -165,10 +288,176 @@ describe("hot middleware (unit)", () => {
       jest.useRealTimers();
     });
 
+    it("emits a heartbeat at the configured interval", () => {
+      const stream = createEventStream(1000, noopLogger);
+      const writes = [];
+      const fakeRes = {
+        writableEnded: false,
+        write: (chunk) => writes.push(chunk),
+        writeHead: () => {},
+        end: () => {},
+      };
+      const fakeReq = {
+        httpVersion: "1.1",
+        socket: { setKeepAlive: () => {} },
+        on: () => {},
+      };
+
+      stream.handler(fakeReq, fakeRes);
+      writes.length = 0;
+      jest.advanceTimersByTime(1000);
+
+      expect(writes.some((w) => w.includes("💓"))).toBe(true);
+
+      stream.close();
+    });
+
+    it("publishes JSON payloads to attached clients", () => {
+      const stream = createEventStream(5000, noopLogger);
+      const writes = [];
+      const fakeRes = {
+        writableEnded: false,
+        write: (chunk) => writes.push(chunk),
+        writeHead: () => {},
+        end: () => {},
+      };
+      const fakeReq = {
+        httpVersion: "1.1",
+        socket: { setKeepAlive: () => {} },
+        on: () => {},
+      };
+
+      stream.handler(fakeReq, fakeRes);
+      stream.publish({ action: "built", hash: "abc" });
+
+      expect(writes.some((w) => w.includes('"action":"built"'))).toBe(true);
+      expect(writes.some((w) => w.includes('"hash":"abc"'))).toBe(true);
+
+      stream.close();
+    });
+
+    it("close ends connected clients", () => {
+      const stream = createEventStream(5000, noopLogger);
+      let ended = false;
+      const fakeRes = {
+        writableEnded: false,
+        write: () => {},
+        writeHead: () => {},
+        end: () => {
+          ended = true;
+        },
+      };
+      const fakeReq = {
+        httpVersion: "1.1",
+        socket: { setKeepAlive: () => {} },
+        on: () => {},
+      };
+
+      stream.handler(fakeReq, fakeRes);
+      stream.close();
+
+      expect(ended).toBe(true);
+    });
+
+    it("does not catch a client up on a response that already ended", () => {
+      const stream = createEventStream(5000, noopLogger);
+      const { res, writes } = attachClient(stream);
+
+      res.end();
+      writes.length = 0;
+
+      stream.publishTo(res, { action: "sync", hash: "abc" });
+
+      expect(writes).toHaveLength(0);
+
+      stream.close();
+    });
+
+    it("skips clients whose response already ended", () => {
+      const stream = createEventStream(5000, noopLogger);
+      const { res, writes } = attachClient(stream);
+
+      // The response was ended by something else (a shutting down server, a
+      // proxy) and `close` has not been dispatched yet — writing to it throws.
+      res.end();
+      writes.length = 0;
+
+      stream.publish({ action: "built", hash: "abc" });
+
+      expect(writes).toHaveLength(0);
+
+      stream.close();
+    });
+
+    it("reports a client disconnecting once, however often close fires", () => {
+      const messages = [];
+      const stream = createEventStream(5000, {
+        log: (message) => messages.push(message),
+      });
+      /** @type {() => void} */
+      let closeHandler = () => {};
+
+      attachClient(stream, {
+        on: (event, fn) => {
+          if (event === "close") closeHandler = fn;
+        },
+      });
+
+      closeHandler();
+      closeHandler();
+
+      expect(
+        messages.filter((message) => message.startsWith("Client disconnected")),
+      ).toEqual(["Client disconnected (0 active)"]);
+
+      stream.close();
+    });
+
+    it("drops a client whose request was already destroyed", () => {
+      const messages = [];
+      const stream = createEventStream(5000, {
+        log: (message) => messages.push(message),
+      });
+
+      attachClient(stream, { destroyed: true });
+
+      // `close` never fires for a request that is already gone, so the client
+      // has to be dropped by the handshake itself.
+      expect(messages).toContain("Client disconnected (0 active)");
+
+      stream.close();
+    });
+
+    it("sets Connection: keep-alive for HTTP/1 clients", () => {
+      const stream = createEventStream(5000, noopLogger);
+      const { headers } = attachClient(stream, { httpVersion: "1.1" });
+      expect(headers.Connection).toBe("keep-alive");
+      stream.close();
+    });
+
     it("does not set Connection: keep-alive for HTTP/2 clients", () => {
       const stream = createEventStream(5000, noopLogger);
       const { headers } = attachClient(stream, { httpVersion: "2.0" });
       expect(headers.Connection).toBeUndefined();
+      stream.close();
+    });
+
+    it("broadcasts events to every attached client", () => {
+      const stream = createEventStream(5000, noopLogger);
+      const clients = [
+        attachClient(stream),
+        attachClient(stream),
+        attachClient(stream),
+      ];
+
+      for (const c of clients) c.writes.length = 0;
+
+      stream.publish({ action: "built", hash: "xyz" });
+
+      for (const c of clients) {
+        expect(c.writes.some((w) => w.includes('"hash":"xyz"'))).toBe(true);
+      }
+
       stream.close();
     });
 
@@ -220,6 +509,55 @@ describe("createHot", () => {
     hot.close();
   });
 
+  it("exposes publish() so callers can broadcast custom payloads", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    hot.publish({ action: "custom-thing", payload: 42 });
+
+    expect(
+      writes.some(
+        (w) =>
+          w.includes('"action":"custom-thing"') && w.includes('"payload":42'),
+      ),
+    ).toBe(true);
+
+    hot.close();
+  });
+
+  it("includes the changed file in the building payload", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    compiler.emitInvalid("/src/index.js");
+
+    expect(
+      writes.some(
+        (w) =>
+          w.includes('"action":"building"') &&
+          w.includes('"file":"/src/index.js"'),
+      ),
+    ).toBe(true);
+
+    hot.close();
+  });
+
+  it("omits the file field when the invalid hook reports none", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    compiler.emitInvalid();
+
+    const building = writes.find((w) => w.includes('"action":"building"'));
+    expect(building).toBeDefined();
+    expect(building).not.toContain('"file"');
+
+    hot.close();
+  });
+
   it("ends a response whose headers were already sent instead of registering it", async () => {
     const compiler = makeFakeCompiler();
     const hot = createHot(compiler, {});
@@ -253,6 +591,61 @@ describe("createHot", () => {
     });
   });
 
+  it("includes the compilation name in the building payload", () => {
+    const compiler = makeFakeCompiler();
+    compiler.name = "main";
+    const hot = createHot(compiler, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    compiler.emitInvalid();
+
+    // The client pairs `building` with the `built`/`sync` that follows by
+    // name — without it the building indicator can never be hidden.
+    const building = writes.find((w) => w.includes('"action":"building"'));
+    expect(building).toContain('"name":"main"');
+
+    hot.close();
+  });
+
+  it("names the building payload after the compiler that invalidated in a multi-compiler", () => {
+    const app = makeFakeCompiler();
+    app.name = "app";
+    const widget = makeFakeCompiler();
+    widget.name = "widget";
+    const multi = makeFakeCompiler();
+    multi.compilers = [app, widget];
+    const hot = createHot(multi, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    widget.emitInvalid("/src/widget.js");
+
+    const building = writes.filter((w) => w.includes('"action":"building"'));
+    expect(building).toHaveLength(1);
+    expect(building[0]).toContain('"name":"widget"');
+    expect(building[0]).toContain('"file":"/src/widget.js"');
+
+    hot.close();
+  });
+
+  it("publishes sync instead of built when a bundle's hash did not change", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    compiler.emitDone(makeFakeStats({ hash: "same" }));
+    writes.length = 0;
+
+    // A rebuild that produced the same hash (e.g. another bundle of a
+    // multi-compiler changed) must not be announced as `built`.
+    compiler.emitInvalid();
+    compiler.emitDone(makeFakeStats({ hash: "same" }));
+
+    expect(writes.some((w) => w.includes('"action":"sync"'))).toBe(true);
+    expect(writes.some((w) => w.includes('"action":"built"'))).toBe(false);
+
+    hot.close();
+  });
+
   it("pairs bundles sharing a name by occurrence so unchanged ones publish sync", () => {
     const compiler = makeFakeCompiler();
     const hot = createHot(compiler, {});
@@ -276,6 +669,26 @@ describe("createHot", () => {
 
     expect(writes.filter((w) => w.includes('"action":"sync"'))).toHaveLength(2);
     expect(writes.some((w) => w.includes('"action":"built"'))).toBe(false);
+
+    hot.close();
+  });
+
+  it("publishes built when the bundle's hash changed", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    const { writes } = attachClient({ handler: hot.handle });
+
+    compiler.emitDone(makeFakeStats({ hash: "one" }));
+    writes.length = 0;
+
+    compiler.emitInvalid();
+    compiler.emitDone(makeFakeStats({ hash: "two" }));
+
+    expect(
+      writes.some(
+        (w) => w.includes('"action":"built"') && w.includes('"hash":"two"'),
+      ),
+    ).toBe(true);
 
     hot.close();
   });
@@ -335,6 +748,60 @@ describe("createHot", () => {
     hot.close();
   });
 
+  it("sends a sync payload to a client that connects after a build", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+
+    // A build finishes BEFORE anyone connects.
+    compiler.emitDone(makeFakeStats());
+
+    const { writes } = attachClient({ handler: hot.handle });
+
+    expect(writes.some((w) => w.includes('"action":"sync"'))).toBe(true);
+
+    hot.close();
+  });
+
+  it("responds 404 instead of hanging when a client connects after close()", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+
+    hot.close();
+
+    /** @type {number | undefined} */
+    let statusCode;
+    let ended = false;
+    const res = {
+      writeHead: (code) => {
+        statusCode = code;
+      },
+      end: () => {
+        ended = true;
+      },
+    };
+
+    hot.handle({}, res);
+
+    expect(statusCode).toBe(404);
+    expect(ended).toBe(true);
+  });
+
+  it("does not re-send the catch-up sync to already connected clients", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    const { writes: firstWrites } = attachClient({ handler: hot.handle });
+
+    compiler.emitDone(makeFakeStats());
+    firstWrites.length = 0;
+
+    const { writes: secondWrites } = attachClient({ handler: hot.handle });
+
+    expect(secondWrites.some((w) => w.includes('"action":"sync"'))).toBe(true);
+    expect(firstWrites.some((w) => w.includes('"action":"sync"'))).toBe(false);
+
+    hot.close();
+  });
+
   it("pairs bundles by name when the compilation order changes", () => {
     const compiler = makeFakeCompiler();
     const hot = createHot(compiler, {});
@@ -390,6 +857,62 @@ describe("createHot", () => {
           w.includes('"name":"child-bundle"') && w.includes('"action":"built"'),
       ),
     ).toBe(true);
+
+    hot.close();
+  });
+
+  it("warns that statsOptions is deprecated", () => {
+    const warnings = [];
+    const compiler = makeFakeCompiler({
+      log() {},
+      warn: (m) => warnings.push(m),
+    });
+    const hot = createHot(compiler, { statsOptions: { warnings: false } });
+
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("'hot.statsOptions' option is deprecated");
+
+    hot.close();
+  });
+
+  it("does not warn when statsOptions is not used", () => {
+    const warnings = [];
+    const compiler = makeFakeCompiler({
+      log() {},
+      warn: (m) => warnings.push(m),
+    });
+    const hot = createHot(compiler, {});
+
+    expect(warnings).toHaveLength(0);
+
+    hot.close();
+  });
+
+  it("forwards custom statsOptions to stats.toJson", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {
+      statsOptions: { modules: true, ids: true },
+    });
+    attachClient({ handler: hot.handle });
+
+    /** @type {EXPECTED_OBJECT} */
+    let receivedOptions;
+
+    compiler.emitDone({
+      toJson(statsOptions) {
+        receivedOptions = statsOptions;
+        return {
+          time: 1,
+          hash: "h",
+          warnings: [],
+          errors: [],
+          modules: [],
+        };
+      },
+      compilation: undefined,
+    });
+
+    expect(receivedOptions).toMatchObject({ modules: true, ids: true });
 
     hot.close();
   });

@@ -253,9 +253,7 @@ The function follows the same premise as [`Array#filter`](https://developer.mozi
 ```js
 const webpack = require("webpack");
 
-const configuration = {
-  /* Webpack configuration */
-};
+const configuration = {/* Webpack configuration */};
 const compiler = webpack(configuration);
 
 middleware(compiler, {
@@ -284,9 +282,7 @@ const webpack = require("webpack");
 myOutputFileSystem.join = path.join.bind(path); // no need to bind
 myOutputFileSystem.mkdirp = mkdirp.bind(mkdirp); // no need to bind
 
-const compiler = webpack({
-  /* Webpack configuration */
-});
+const compiler = webpack({/* Webpack configuration */});
 
 middleware(compiler, { outputFileSystem: myOutputFileSystem });
 ```
@@ -298,9 +294,7 @@ Allows to set up a callback to change the response data.
 ```js
 const webpack = require("webpack");
 
-const configuration = {
-  /* Webpack configuration */
-};
+const configuration = {/* Webpack configuration */};
 const compiler = webpack(configuration);
 
 middleware(compiler, {
@@ -318,7 +312,7 @@ middleware(compiler, {
 Type: `Boolean | Object`
 Default: `false`
 
-Enables hot module replacement by serving a [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) endpoint that publishes the webpack compiler's `building`, `built` and `sync` events to connected clients. When `true`, defaults are used; pass an object to customise. Use this option together with the browser runtime shipped as `webpack-dev-middleware/client`.
+Enables hot module replacement by serving a [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) endpoint that publishes the webpack compiler's `building`, `built` and `sync` events to connected clients. Whether those events carry errors and warnings follows the [`stats`](#stats) option, so one setting governs what a build reports in the terminal and in the browser — `stats: "errors-only"` keeps warnings out of both, and `stats: false` keeps both out. When `true`, defaults are used; pass an object to customise. Use this option together with the browser runtime shipped as `webpack-dev-middleware/client`.
 
 ```js
 const webpack = require("webpack");
@@ -329,6 +323,15 @@ const compiler = webpack({
 
 middleware(compiler, { hot: true });
 ```
+
+The object form accepts these options:
+
+|                  Name                  |   Type    |      Default       | Description                                           |
+| :------------------------------------: | :-------: | :----------------: | :---------------------------------------------------- |
+|         **[`path`](#hotpath)**         | `string`  | `'/__webpack_hmr'` | Path the SSE endpoint is served at.                   |
+|    **[`heartbeat`](#hotheartbeat)**    | `number`  |      `10000`       | Interval (in milliseconds) between keep-alive frames. |
+|     **[`progress`](#hotprogress)**     | `boolean` |      `false`       | Publish compilation progress events to the clients.   |
+| **[`statsOptions`](#hotstatsoptions)** | `object`  |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).       |
 
 #### `hot.path`
 
@@ -342,21 +345,31 @@ Path the SSE endpoint is served at. Must start with a slash and match the `path`
 Type: `Number`
 Default: `10000`
 
-Heartbeat interval (in milliseconds) used to keep the SSE connection alive when no compilation events are produced.
+Heartbeat interval (in milliseconds) used to keep the SSE connection alive when no compilation events are produced. Must be `1` or greater.
 
 #### `hot.progress`
 
 Type: `Boolean`
-Default: `undefined`
+Default: `false`
 
 Publish compilation progress events (`{ action: "progress", percent, message }`) to the clients using webpack's `ProgressPlugin`. The bundled client shows the percentage in its building badge (see the client `progress` option).
 
 #### `hot.statsOptions`
 
-Type: `Object`
-Default: `undefined`
+> [!WARNING]
+>
+> Deprecated, and removed in the next major release. Do not use it.
 
-Webpack stats options used when serializing compilation results for the SSE payload. Merged over the middleware's base options and forwarded to `stats.toJson(...)`. Only the object form is accepted — presets (`"errors-only"`) and booleans cannot be merged. By default only the minimal stats needed by the client are requested (`hash`, `timings`, `errors`, `warnings`) to avoid slowing down rebuilds.
+Use these instead:
+
+| To                                                              | Use                                                                                              |
+| :-------------------------------------------------------------- | :----------------------------------------------------------------------------------------------- |
+| decide what a build reports, in the terminal and in the payload | [`stats`](#stats)                                                                                |
+| quiet the browser console alone                                 | the client's [`logging`](#client-options)                                                        |
+| hide problems from the overlay alone                            | the client's [`overlay`](#client-overlay-options)                                                |
+| drop a warning everywhere at once                               | webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings) |
+
+Values still passed here apply until the option is removed, except `hash`, `timings` and `children`, which are ignored: the client compares `hash` against its own bundle's to decide whether an update applies, `timings` carries the build time it reports, and `children` would replace the bundle's hash with a child compilation's, so a page would reload instead of updating.
 
 ## Hot Module Replacement client
 
@@ -380,19 +393,42 @@ entry: [
 ];
 ```
 
+The runtime ships as ES5 and uses no built-in newer than ES5, apart from
+`EventSource` and `Promise` (which HMR itself needs), so it runs in old
+browsers too — set [`target`](https://webpack.js.org/configuration/target/) to
+`["web", "es5"]` in your configuration so webpack emits its own runtime as ES5
+as well.
+
 ### Client options
 
-|        Name         |       Type        |     Default      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| :-----------------: | :---------------: | :--------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|       `path`        |     `string`      | `/__webpack_hmr` | Path the SSE endpoint is served at. Must match the server `hot.path`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|      `timeout`      |     `number`      |     `20000`      | Reconnection / heartbeat watchdog timeout in milliseconds.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-|      `overlay`      | `boolean\|Object` |      `true`      | In-page overlay for problems. Same value shape as webpack-dev-server's [`client.overlay`](https://webpack.js.org/configuration/dev-server/#overlay): a boolean, or a JSON object with `errors`, `warnings`, `runtimeErrors` (booleans or filter functions) and `trustedTypesPolicyName`. Partial objects are filled with `true`. Also accepts the webpack-dev-middleware extensions `styles` (CSS overrides for the overlay card), `ansiColors` (ANSI → HTML color map) and `openEditorEndpoint` (when set, file references become clickable and issue `GET <endpoint>?fileName=<file:line:column>` — the endpoint is provided by your server, e.g. a route calling [launch-editor](https://github.com/yyx990803/launch-editor)) and `paginate` (show one problem at a time with prev/next navigation, enabled by default — disable with `{"paginate":false}`). |
-|      `reload`       |     `boolean`     |      `true`      | Fall back to a full page reload when an update cannot be applied through HMR (e.g. recovering from a broken build). Enabled by default, unlike webpack-hot-middleware; set to `false` to keep HMR-only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-|      `logging`      |     `string`      |     `"info"`     | Logger level — one of `"none"`, `"error"`, `"warn"`, `"info"`, `"log"`, `"verbose"`. Uses webpack's runtime logger.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-|       `name`        |     `string`      |       `""`       | Restrict updates to a specific compilation name (useful with multi-compiler).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-|    `autoConnect`    |     `boolean`     |      `true`      | Connect on load; set to `false` and call `setOptionsAndConnect()` manually.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|     `progress`      |     `boolean`     |      `true`      | Show a small badge in the page while a rebuild is in progress (with the compilation percentage when the server enables `hot.progress`). Set to `false` to disable.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `dynamicPublicPath` |     `boolean`     |     `false`      | Prefix `path` with `__webpack_public_path__` at runtime. The leading slash of `path` is stripped and no other normalization is applied, so the public path should end with `/`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+|        Name         |       Type        |     Default      | Description                                                                                                                                                                                                                                                                      |
+| :-----------------: | :---------------: | :--------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|       `path`        |     `string`      | `/__webpack_hmr` | Path the SSE endpoint is served at. Must match the server `hot.path`.                                                                                                                                                                                                            |
+|      `timeout`      |     `number`      |     `20000`      | Reconnection / heartbeat watchdog timeout in milliseconds.                                                                                                                                                                                                                       |
+|      `overlay`      | `boolean\|Object` |      `true`      | In-page overlay for problems: a boolean, or a JSON object — see [overlay options](#client-overlay-options). Same value shape as webpack-dev-server's [`client.overlay`](https://webpack.js.org/configuration/dev-server/#overlay), plus a few webpack-dev-middleware extensions. |
+|      `reload`       |     `boolean`     |      `true`      | Fall back to a full page reload when an update cannot be applied through HMR (e.g. recovering from a broken build). Enabled by default, unlike webpack-hot-middleware; set to `false` to keep HMR-only.                                                                          |
+|      `logging`      |     `string`      |     `"info"`     | Logger level — one of `"none"`, `"error"`, `"warn"`, `"info"`, `"log"`, `"verbose"`. Uses webpack's runtime logger.                                                                                                                                                              |
+|       `name`        |     `string`      |       `""`       | Restrict updates to a specific compilation name (useful with multi-compiler).                                                                                                                                                                                                    |
+|    `autoConnect`    |     `boolean`     |      `true`      | Connect on load; set to `false` and call `setOptionsAndConnect()` manually.                                                                                                                                                                                                      |
+|     `progress`      |     `boolean`     |      `true`      | Show a small badge in the page while a rebuild is in progress (with the compilation percentage when the server enables `hot.progress`). Set to `false` to disable.                                                                                                               |
+| `dynamicPublicPath` |     `boolean`     |     `false`      | Prefix `path` with `__webpack_public_path__` at runtime. The leading slash of `path` is stripped and no other normalization is applied, so the public path should end with `/`.                                                                                                  |
+
+#### Client `overlay` options
+
+Passed as a JSON object, e.g. `?overlay={"warnings":false}`. The three problem
+kinds default to `true` when the object leaves them out; a filter function
+(URI-encoded) shows only the messages it accepts.
+
+|           Name           |        Type         |   Default   | Description                                                                                                                                                                                                                                     |
+| :----------------------: | :-----------------: | :---------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|         `errors`         | `boolean\|Function` |   `true`    | Show build errors.                                                                                                                                                                                                                              |
+|        `warnings`        | `boolean\|Function` |   `true`    | Show build warnings.                                                                                                                                                                                                                            |
+|     `runtimeErrors`      | `boolean\|Function` |   `true`    | Show uncaught runtime errors and unhandled rejections.                                                                                                                                                                                          |
+| `trustedTypesPolicyName` |      `string`       | `undefined` | Trusted Types policy name used for the overlay's HTML.                                                                                                                                                                                          |
+|         `styles`         |      `Object`       | `undefined` | webpack-dev-middleware extension: CSS overrides for the overlay card (`element.style` keys).                                                                                                                                                    |
+|       `ansiColors`       |      `Object`       | `undefined` | webpack-dev-middleware extension: ANSI → HTML color map, as in [ansi-html-community](https://github.com/mahdyar/ansi-html-community#set-colors).                                                                                                |
+|   `openEditorEndpoint`   |      `string`       |    `""`     | webpack-dev-middleware extension: when set, file references become clickable and issue `GET <endpoint>?fileName=<file:line:column>`; your server provides it, e.g. a route calling [launch-editor](https://github.com/yyx990803/launch-editor). |
+|        `paginate`        |      `boolean`      |   `true`    | webpack-dev-middleware extension: show one problem at a time with prev/next navigation.                                                                                                                                                         |
 
 ### Programmatic API
 
@@ -486,46 +522,9 @@ hide(); // without a source: removed unconditionally
 
 ## Migrating from webpack-hot-middleware
 
-The `hot` option replaces [`webpack-hot-middleware`](https://github.com/webpack-contrib/webpack-hot-middleware): one middleware serves the assets and the SSE endpoint, and the client runtime ships under `webpack-dev-middleware/client`. The endpoint (`/__webpack_hmr`), the event stream, and the client query-string API stay compatible, so migrating is mostly renaming.
+The `hot` option replaces [`webpack-hot-middleware`](https://github.com/webpack/webpack-hot-middleware): one middleware serves the assets and the SSE endpoint, and the client runtime ships under `webpack-dev-middleware/client`. The endpoint (`/__webpack_hmr`) and its Server-Sent Events transport are unchanged, so the browser reaches the new server the same way; the payloads, option names and a few defaults need a look.
 
-On the server, remove `webpack-hot-middleware` and enable `hot` instead:
-
-```js
-// Before
-app.use(webpackDevMiddleware(compiler));
-app.use(webpackHotMiddleware(compiler, { heartbeat: 2000 }));
-
-// After
-app.use(webpackDevMiddleware(compiler, { hot: { heartbeat: 2000 } }));
-```
-
-In the webpack configuration, swap the client entry (`HotModuleReplacementPlugin` stays):
-
-```js
-// Before
-module.exports = {
-  entry: ["webpack-hot-middleware/client?timeout=20000", "./src/app.js"],
-};
-
-// After
-module.exports = {
-  entry: ["webpack-dev-middleware/client?timeout=20000", "./src/app.js"],
-};
-```
-
-Option mapping:
-
-| webpack-hot-middleware                                               | webpack-dev-middleware                                                                                                                       |
-| :------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
-| server `path`, `heartbeat`                                           | `hot.path`, `hot.heartbeat` (unchanged)                                                                                                      |
-| server `log`, `logLevel`                                             | Removed — the middleware logs through the compiler's [infrastructure logger](https://webpack.js.org/configuration/infrastructurelogging/).   |
-| server `statsOptions`                                                | `hot.statsOptions` (object form only)                                                                                                        |
-| client `path`, `timeout`, `name`, `autoConnect`, `dynamicPublicPath` | Unchanged.                                                                                                                                   |
-| client `reload`                                                      | Unchanged, but the default flipped to `true` — pass `reload=false` to keep the old HMR-only behavior.                                        |
-| client `noInfo`, `quiet`                                             | `logging` (`quiet=true` → `logging=none`, `noInfo=true` → `logging=warn`).                                                                   |
-| client `overlay`, `overlayWarnings`, `overlayStyles`, `ansiColors`   | A single `overlay` value: a boolean, or an object with `errors`, `warnings`, `styles`, `ansiColors` (see [client options](#client-options)). |
-
-The programmatic client API keeps the same names (`subscribe`, `subscribeAll`, `useCustomOverlay`, `setOptionsAndConnect`), and adds `disconnect()`. On the server, `webpackHotMiddleware.publish(...)` becomes `instance.context.hot.publish(...)`.
+See [migration-from-webpack-hot-middleware.md](migration-from-webpack-hot-middleware.md) — it walks the whole move: prerequisites, the server and webpack-configuration changes, every option mapped, the behavior differences worth knowing, the other frameworks, troubleshooting, and a checklist.
 
 ## HMR notes and troubleshooting
 
@@ -543,9 +542,9 @@ server over HTTP/2 if you need many simultaneous tabs.
 
 Three layers, from build to presentation:
 
-- webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings) removes them from the stats, so clients never receive them.
-- `hot: { statsOptions: { warnings: false } }` keeps them in the build output but out of the SSE payload.
-- On the client, `?overlay={"warnings":false}` hides them from the overlay and `?logging=error` from the console.
+- webpack's [`ignoreWarnings`](https://webpack.js.org/configuration/other-options/#ignorewarnings) removes them from the stats, so nothing reports them anywhere.
+- The middleware's [`stats`](#stats) option decides what a build reports, in the terminal and in the SSE payload alike: `stats: "errors-only"` keeps warnings out of both.
+- On the client, `?overlay={"warnings":false}` hides them from the overlay and `?logging=error` from the console, per page rather than per server.
 
 ### Paths and public paths
 
@@ -600,9 +599,7 @@ A function executed once the middleware has stopped watching.
 const express = require("express");
 const webpack = require("webpack");
 
-const compiler = webpack({
-  /* Webpack configuration */
-});
+const compiler = webpack({/* Webpack configuration */});
 
 const middleware = require("webpack-dev-middleware");
 
@@ -636,9 +633,7 @@ A function executed once the middleware has invalidated.
 const express = require("express");
 const webpack = require("webpack");
 
-const compiler = webpack({
-  /* Webpack configuration */
-});
+const compiler = webpack({/* Webpack configuration */});
 
 const middleware = require("webpack-dev-middleware");
 
@@ -677,9 +672,7 @@ If the bundle is valid at the time of calling, the callback is executed immediat
 const express = require("express");
 const webpack = require("webpack");
 
-const compiler = webpack({
-  /* Webpack configuration */
-});
+const compiler = webpack({/* Webpack configuration */});
 
 const middleware = require("webpack-dev-middleware");
 
@@ -712,9 +705,7 @@ URL for the requested file.
 const express = require("express");
 const webpack = require("webpack");
 
-const compiler = webpack({
-  /* Webpack configuration */
-});
+const compiler = webpack({/* Webpack configuration */});
 
 const middleware = require("webpack-dev-middleware");
 
@@ -761,9 +752,7 @@ const compiler = webpack({
       apply(compiler) {
         const devMiddleware = middleware(
           compiler,
-          {
-            /* webpack-dev-middleware options */
-          },
+          {/* webpack-dev-middleware options */},
           true,
         );
       },
@@ -807,9 +796,7 @@ const express = require("express");
 const webpack = require("webpack");
 const middleware = require("webpack-dev-middleware");
 
-const compiler = webpack({
-  /* Webpack configuration */
-});
+const compiler = webpack({/* Webpack configuration */});
 
 const instance = middleware(compiler, { forwardError: true });
 
@@ -877,9 +864,7 @@ const isObject = require("is-object");
 const webpack = require("webpack");
 const middleware = require("webpack-dev-middleware");
 
-const compiler = webpack({
-  /* Webpack configuration */
-});
+const compiler = webpack({/* Webpack configuration */});
 
 // eslint-disable-next-line new-cap
 const app = new express();
@@ -967,9 +952,7 @@ const devMiddleware = require("webpack-dev-middleware");
 const webpackConfig = require("./webpack.config.js");
 
 const compiler = webpack(webpackConfig);
-const devMiddlewareOptions = {
-  /** Your webpack-dev-middleware-options */
-};
+const devMiddlewareOptions = {/** Your webpack-dev-middleware-options */};
 const app = connect();
 
 app.use(devMiddleware(compiler, devMiddlewareOptions));
@@ -988,9 +971,7 @@ const devMiddleware = require("webpack-dev-middleware");
 const webpackConfig = require("./webpack.config.js");
 
 const compiler = webpack(webpackConfig);
-const devMiddlewareOptions = {
-  /** Your webpack-dev-middleware-options */
-};
+const devMiddlewareOptions = {/** Your webpack-dev-middleware-options */};
 
 // eslint-disable-next-line new-cap
 const router = Router();
@@ -1013,9 +994,7 @@ const devMiddleware = require("webpack-dev-middleware");
 const webpackConfig = require("./webpack.config.js");
 
 const compiler = webpack(webpackConfig);
-const devMiddlewareOptions = {
-  /** Your webpack-dev-middleware-options */
-};
+const devMiddlewareOptions = {/** Your webpack-dev-middleware-options */};
 const app = express();
 
 app.use(devMiddleware(compiler, devMiddlewareOptions));
@@ -1032,9 +1011,7 @@ const middleware = require("webpack-dev-middleware");
 const webpackConfig = require("./webpack.simple.config");
 
 const compiler = webpack(webpackConfig);
-const devMiddlewareOptions = {
-  /** Your webpack-dev-middleware-options */
-};
+const devMiddlewareOptions = {/** Your webpack-dev-middleware-options */};
 const app = new Koa();
 
 app.use(middleware.koaWrapper(compiler, devMiddlewareOptions));
@@ -1097,9 +1074,7 @@ const devMiddleware = require("webpack-dev-middleware");
 const webpackConfig = require("./webpack.config.js");
 
 const compiler = webpack(webpackConfig);
-const devMiddlewareOptions = {
-  /** Your webpack-dev-middleware-options */
-};
+const devMiddlewareOptions = {/** Your webpack-dev-middleware-options */};
 
 await fastify.register(require("@fastify/express"));
 await fastify.use(devMiddleware(compiler, devMiddlewareOptions));
@@ -1116,9 +1091,7 @@ import devMiddleware from "webpack-dev-middleware";
 import webpackConfig from "./webpack.config.js";
 
 const compiler = webpack(webpackConfig);
-const devMiddlewareOptions = {
-  /** Your webpack-dev-middleware-options */
-};
+const devMiddlewareOptions = {/** Your webpack-dev-middleware-options */};
 
 const app = new Hono();
 

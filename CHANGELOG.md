@@ -1,5 +1,17 @@
 # Changelog
 
+## 8.2.0
+
+### Minor Changes
+
+- Added a `hot` option that enables hot module replacement, replacing the need for `webpack-hot-middleware`. Pass `hot: true` to enable with defaults, or `hot: { path, heartbeat, progress, statsOptions }` to customize. The client runtime ships with the package and is added as a webpack entry. (by [@bjohansebas](https://github.com/bjohansebas) in [#2322](https://github.com/webpack/webpack-dev-middleware/pull/2322))
+
+## 8.1.1
+
+### Patch Changes
+
+- Fixed a crash when calling `close()` in plugin mode (`isPlugin = true`). Since the host (webpack-cli, webpack-dev-server, etc.) owns `compiler.watch()`, the middleware has no `watching` of its own to close, so `close()` now just calls the callback instead of throwing. (by [@bjohansebas](https://github.com/bjohansebas) in [#2347](https://github.com/webpack/webpack-dev-middleware/pull/2347))
+
 ## 8.1.0
 
 ### Minor Changes

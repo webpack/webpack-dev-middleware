@@ -87,8 +87,7 @@ type SendErrorOptions<
    * modify response data callback
    */
   modifyResponseData?:
-    | import("./index").ModifyResponseData<Request, Response>
-    | undefined;
+    import("./index").ModifyResponseData<Request, Response> | undefined;
 };
 type ReadStream = import("fs").ReadStream;
 type Compiler = import("webpack").Compiler;

@@ -378,8 +378,14 @@ function ready(context, callback, req) {
  */
 function wrapper(context) {
   return async function middleware(req, res, next) {
-    // Intercept Server-Sent Events handshake when the `hot` option is enabled.
-    if (context.hot && hotPathMatch(getRequestURL(req), context.hot.path)) {
+    // Intercept the Server-Sent Events handshake when the `hot` option is
+    // enabled. `GET` only: a `HEAD` (or any other method) would be handed a
+    // body and left hanging on a stream it cannot read.
+    if (
+      context.hot &&
+      getRequestMethod(req) === "GET" &&
+      hotPathMatch(getRequestURL(req), context.hot.path)
+    ) {
       try {
         context.hot.handle(req, res);
       } catch (error) {

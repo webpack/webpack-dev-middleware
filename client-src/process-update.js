@@ -96,18 +96,17 @@ export default function applyUpdate(hash, options, name) {
   /**
    * Trigger a full page reload when HMR cannot apply the update.
    */
-  function performReload() {
+  const performReload = () => {
     if (reload) {
       log.warn("Reloading page");
       reloadPage();
     }
-  }
+  };
 
   /**
    * @param {Error} err error
    */
-  function handleError(err) {
-    // @ts-expect-error function declarations are hoisted, so the `!hot` guard narrowing is lost
+  const handleError = (err) => {
     if (hot.status() in failureStatuses) {
       log.warn("Cannot check for update (Full reload needed)");
       log.warn(err.stack || err.message);
@@ -115,16 +114,15 @@ export default function applyUpdate(hash, options, name) {
       return;
     }
     log.warn(`Update check failed: ${err.stack || err.message}`);
-  }
+  };
 
   /**
    * @param {(string | number)[]} updatedModules ids of modules that were attempted to update
    * @param {(string | number)[] | null | undefined} renewedModules ids of modules that were successfully renewed
    */
-  function logUpdates(updatedModules, renewedModules) {
-    const renewedIds = new Set(renewedModules || []);
+  const logUpdates = (updatedModules, renewedModules) => {
     const unacceptedModules = updatedModules.filter(
-      (moduleId) => !renewedIds.has(moduleId),
+      (moduleId) => !renewedModules || renewedModules.indexOf(moduleId) === -1,
     );
 
     if (unacceptedModules.length > 0) {
@@ -157,13 +155,12 @@ export default function applyUpdate(hash, options, name) {
     if (upToDate()) {
       log.info("App is up to date.");
     }
-  }
+  };
 
   /**
    * Ask webpack for the next chunk of HMR updates and apply them.
    */
-  function check() {
-    // @ts-expect-error function declarations are hoisted, so the `!hot` guard narrowing is lost
+  const check = () => {
     hot
       .check(false)
       .then((updatedModules) => {
@@ -180,14 +177,13 @@ export default function applyUpdate(hash, options, name) {
           return undefined;
         }
 
-        // @ts-expect-error function declarations are hoisted, so the `!hot` guard narrowing is lost
         return hot.apply(applyOptions).then((renewedModules) => {
           if (!upToDate()) check();
           logUpdates(updatedModules, renewedModules);
         });
       })
       .catch(handleError);
-  }
+  };
 
   if (!upToDate(hash) && hot.status() === "idle") {
     log.info("Checking for updates on the server...");

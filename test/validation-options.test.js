@@ -99,8 +99,10 @@ describe("validation", () => {
         0,
         { path: "" },
         // Would validate but never match a request: pathnames always start
-        // with a slash.
+        // with a slash, and carry no query string or fragment.
         { path: "hmr" },
+        { path: "/__hmr?client=1" },
+        { path: "/__hmr#section" },
         { heartbeat: -1 },
         // 0 would silently fall back to the default interval — reject it.
         { heartbeat: 0 },

@@ -515,7 +515,11 @@ function wdm(compiler, options = {}, isPlugin = false) {
   compiler.hooks.done.tap(PLUGIN_NAME, done);
 
   if (options.hot) {
-    context.hot = createHot(compiler, options.hot === true ? {} : options.hot);
+    context.hot = createHot(
+      compiler,
+      options.hot === true ? {} : options.hot,
+      options.stats,
+    );
   }
 
   const compilersToModify = isMultipleCompiler(compiler)
@@ -611,6 +615,8 @@ function wdm(compiler, options = {}, isPlugin = false) {
   instance.invalidate = (callback = noop) => {
     middleware.ready(filledContext, callback);
 
+    // TODO for plugin usage (`isPlugin = true`) `watching` is `undefined` and this throws —
+    // invalidate the host's `compiler.watching` (each child's one for a `MultiCompiler`) instead
     filledContext.watching.invalidate();
   };
 
@@ -621,6 +627,17 @@ function wdm(compiler, options = {}, isPlugin = false) {
       // regular middleware instead of reaching the closed hot instance.
       filledContext.hot = undefined;
     }
+
+    // For plugin usage the host (webpack-cli, webpack-dev-server, etc.) owns `compiler.watch()`,
+    // so there is no `watching` of our own to close (`compiler.close()` on the host handles it)
+    if (!filledContext.watching) {
+      filledContext.logger.warn(
+        "The `close` method was called, but there is no own `watching` instance to close. When using the middleware as a plugin, the host owns watching, so use `compiler.close()` instead.",
+      );
+      callback(null);
+      return;
+    }
+
     filledContext.watching.close(callback);
   };
 

@@ -11,12 +11,13 @@
 // The object form only (no presets/booleans) — it is merged over the
 // middleware's own base options, which string or boolean forms cannot be.
 /** @typedef {import("webpack").StatsOptions} StatsOptions */
+/** @typedef {import("webpack").Configuration["stats"]} MiddlewareStatsOption */
 
 /**
  * @typedef {object} HotOptions
  * @property {string=} path the path the SSE endpoint is served at
  * @property {number=} heartbeat heartbeat interval in milliseconds
- * @property {StatsOptions=} statsOptions webpack stats options used when serializing compilation results
+ * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
  * @property {boolean=} progress publish compilation progress events to the clients
  */
 
@@ -72,11 +73,15 @@ function createEventStream(heartbeat, logger) {
   let clients = new Map();
 
   /**
+   * Run the callback for every client that can still be written to — a
+   * response ended between two `close` events would throw on write.
    * @param {(client: ServerResponse) => void} fn each client callback
    */
   const everyClient = (fn) => {
     for (const client of clients.values()) {
-      fn(client);
+      if (!client.writableEnded) {
+        fn(client);
+      }
     }
   };
 
@@ -113,9 +118,7 @@ function createEventStream(heartbeat, logger) {
     close() {
       stopHeartbeat();
       everyClient((client) => {
-        if (!client.writableEnded) {
-          client.end();
-        }
+        client.end();
       });
       clients = new Map();
     },
@@ -160,10 +163,15 @@ function createEventStream(heartbeat, logger) {
       startHeartbeat();
       logger.log(`Client connected (${clients.size} active)`);
 
-      req.on("close", () => {
+      const disconnect = () => {
+        if (!clients.has(id)) {
+          return;
+        }
+
         if (!res.writableEnded) {
           res.end();
         }
+
         clients.delete(id);
 
         if (clients.size === 0) {
@@ -171,7 +179,15 @@ function createEventStream(heartbeat, logger) {
         }
 
         logger.log(`Client disconnected (${clients.size} active)`);
-      });
+      };
+
+      req.on("close", disconnect);
+
+      // A request that died before the handshake finished never emits `close`
+      // again, so it would stay in `clients` forever.
+      if (req.destroyed) {
+        disconnect();
+      }
     },
     publish(payload) {
       // With no clients connected there is nothing to serialize for.
@@ -186,6 +202,10 @@ function createEventStream(heartbeat, logger) {
       });
     },
     publishTo(res, payload) {
+      if (res.writableEnded) {
+        return;
+      }
+
       res.write(`data: ${JSON.stringify(payload)}\n\n`);
     },
   };
@@ -213,6 +233,30 @@ function formatErrors(errors) {
 }
 
 /**
+ * Which diagnostics a payload carries follows the middleware's `stats` option,
+ * so one setting governs what a build reports in the terminal and in the
+ * browser. Resolved per compilation, because only webpack knows what a preset
+ * like `"errors-only"` means.
+ * @param {Stats} stats stats
+ * @param {MiddlewareStatsOption} statsOption the middleware's `stats` option
+ * @returns {{ errors: boolean, warnings: boolean }} diagnostics to serialize
+ */
+function diagnosticsFrom(stats, statsOption) {
+  if (typeof statsOption === "undefined" || !stats.compilation) {
+    return { errors: true, warnings: true };
+  }
+
+  const resolved = stats.compilation.createStatsOptions(statsOption, {
+    forToString: false,
+  });
+
+  return {
+    errors: Boolean(resolved.errors),
+    warnings: Boolean(resolved.warnings),
+  };
+}
+
+/**
  * @param {Stats} stats stats
  * @param {StatsOptions} statsOptions stats options
  * @returns {StatsCompilation} json stats with the compilation name resolved
@@ -229,44 +273,38 @@ function normalizeStats(stats, statsOptions) {
 }
 
 /**
- * @param {StatsCompilation} stats normalized stats
- * @returns {StatsCompilation[]} extracted bundles
- */
-function extractBundles(stats) {
-  if (stats.modules) {
-    return [stats];
-  }
-
-  if (stats.children && stats.children.length > 0) {
-    return stats.children;
-  }
-
-  return [stats];
-}
-
-/**
  * @param {Stats | MultiStats} statsResult stats result
- * @param {StatsOptions | undefined} statsOptions stats options
+ * @param {StatsOptions | undefined} statsOptions deprecated `hot.statsOptions`
+ * @param {MiddlewareStatsOption=} statsOption the middleware's `stats` option
  * @returns {StatsCompilation[]} normalized per-bundle stats
  */
-function toBundles(statsResult, statsOptions) {
-  const resultStatsOptions = {
+function toBundles(statsResult, statsOptions, statsOption) {
+  /**
+   * @param {Stats} stats stats of one compilation
+   * @returns {StatsOptions} what to ask `toJson` for
+   */
+  const optionsFor = (stats) => ({
     all: false,
+    ...diagnosticsFrom(stats, statsOption),
+    // TODO in the next major release remove `statsOptions` and this spread
+    ...statsOptions,
+    // Not negotiable, whatever the options above ask for: without `hash` the
+    // client has nothing to compare and stops applying updates, without
+    // `timings` it reports `undefined` build times, and with `children` the
+    // payload would carry a child compilation's hash instead of the bundle's.
     hash: true,
     timings: true,
-    errors: true,
-    warnings: true,
-    ...statsOptions,
-  };
+    children: false,
+  });
 
   // Multi-compiler stats have stats for each child compiler.
   if ("stats" in statsResult) {
-    return statsResult.stats.flatMap((stats) =>
-      extractBundles(normalizeStats(stats, resultStatsOptions)),
+    return statsResult.stats.map((stats) =>
+      normalizeStats(stats, optionsFor(stats)),
     );
   }
 
-  return extractBundles(normalizeStats(statsResult, resultStatsOptions));
+  return [normalizeStats(statsResult, optionsFor(statsResult))];
 }
 
 /**
@@ -354,14 +392,22 @@ function publishBundles(bundles, previousBundles, eventStream) {
 /**
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {HotOptions | true} userOptions options
+ * @param {MiddlewareStatsOption=} statsOption the middleware's `stats` option, which decides whether a payload carries errors and warnings
  * @returns {HotInstance} hot instance
  */
-function createHot(compiler, userOptions) {
+function createHot(compiler, userOptions, statsOption) {
   const options = userOptions === true ? {} : userOptions;
   const path = options.path || HOT_DEFAULT_PATH;
   const heartbeat = options.heartbeat ?? HOT_DEFAULT_HEARTBEAT;
   const { statsOptions } = options;
   const logger = compiler.getInfrastructureLogger("webpack-dev-middleware");
+
+  // TODO in the next major release remove `statsOptions` and this warning
+  if (statsOptions) {
+    logger.warn(
+      "The 'hot.statsOptions' option is deprecated and will be removed in the next major release. Until then it still applies, apart from 'hash', 'timings' and 'children', which the client needs to apply an update. What a payload reports now follows the 'stats' option, and the browser console is the client's own '?logging=' and '?overlay=' options; to drop a warning everywhere at once, use webpack's 'ignoreWarnings'.",
+    );
+  }
 
   let eventStream = createEventStream(heartbeat, logger);
   logger.log(`Hot module replacement enabled, serving events at "${path}"`);
@@ -430,7 +476,7 @@ function createHot(compiler, userOptions) {
   const onDone = (statsResult) => {
     if (closed) return;
 
-    const bundles = toBundles(statsResult, statsOptions);
+    const bundles = toBundles(statsResult, statsOptions, statsOption);
 
     publishBundles(bundles, latestBundles, eventStream);
     latestBundles = bundles;

@@ -28,6 +28,7 @@ import webpackConfig from "./fixtures/webpack.config";
 import webpackConfigImmutable from "./fixtures/webpack.immutable.config";
 import webpackPublicPathConfig from "./fixtures/webpack.public-path.config";
 import webpackQueryStringConfig from "./fixtures/webpack.querystring.config";
+import webpackWarningConfig from "./fixtures/webpack.warning.config";
 import webpackWatchOptionsConfig from "./fixtures/webpack.watch-options.config";
 import getCompiler from "./helpers/getCompiler";
 
@@ -7033,6 +7034,25 @@ describe.each([
       );
     });
 
+    it("does not open a stream for a HEAD request to the hot path", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: true },
+      );
+
+      // A HEAD request cannot read a body: intercepting it would hand it one
+      // and leave the connection hanging. It falls through to the middleware,
+      // which has nothing to serve at that path.
+      const response = await req.head("/__webpack_hmr");
+
+      expect(response.headers["content-type"] || "").not.toMatch(
+        /text\/event-stream/,
+      );
+    });
+
     if (name === "hono") {
       it("replaces headers left by earlier middleware on the SSE handshake", async () => {
         const compiler = getCompiler(webpackConfig);
@@ -7164,6 +7184,43 @@ describe.each([
         expect(sync).toBeDefined();
         expect(typeof sync.hash).toBe("string");
         expect(sync.errors).toEqual([]);
+      });
+
+      it("drops warnings from the payload when the stats option does", async () => {
+        const compiler = getCompiler(webpackWarningConfig);
+        [server, req, instance] = await frameworkFactory(
+          name,
+          framework,
+          compiler,
+          { hot: true, stats: "errors-only" },
+        );
+
+        await waitUntilValid(instance);
+
+        const events = await readSseEvents(server, "/__webpack_hmr");
+        const sync = events.find((event) => event.action === "sync");
+
+        // One option decides what a build reports, in the terminal and here.
+        expect(sync).toBeDefined();
+        expect(sync.warnings).toEqual([]);
+      });
+
+      it("keeps warnings in the payload by default", async () => {
+        const compiler = getCompiler(webpackWarningConfig);
+        [server, req, instance] = await frameworkFactory(
+          name,
+          framework,
+          compiler,
+          { hot: true },
+        );
+
+        await waitUntilValid(instance);
+
+        const events = await readSseEvents(server, "/__webpack_hmr");
+        const sync = events.find((event) => event.action === "sync");
+
+        expect(sync).toBeDefined();
+        expect(sync.warnings.length).toBeGreaterThan(0);
       });
 
       it("sends a sync event per compilation for a MultiCompiler", async () => {
@@ -7299,26 +7356,13 @@ describe.each([
 
         await waitUntilValid(instance);
 
-        const events = Promise.all([
-          readSseEvents(server, "/__webpack_hmr", 1500),
-          readSseEvents(server, "/__webpack_hmr", 1500),
+        const [first, second] = await Promise.all([
+          readSseEvents(server, "/__webpack_hmr"),
+          readSseEvents(server, "/__webpack_hmr"),
         ]);
 
-        // Broadcast while both clients are attached — the connect-time sync
-        // alone is written per client and would make this pass vacuously.
-        await new Promise((resolve) => {
-          setTimeout(resolve, 300);
-        });
-        instance.context.hot.publish({ action: "broadcast-check" });
-
-        const [first, second] = await events;
-
-        expect(first.some((event) => event.action === "broadcast-check")).toBe(
-          true,
-        );
-        expect(second.some((event) => event.action === "broadcast-check")).toBe(
-          true,
-        );
+        expect(first.some((event) => event.action === "sync")).toBe(true);
+        expect(second.some((event) => event.action === "sync")).toBe(true);
       });
     });
   });

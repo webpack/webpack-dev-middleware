@@ -48,7 +48,7 @@ module.exports = [
     entry: './foo.js',
     output: {
       filename: 'bundle.js',
-      path: path.resolve(__dirname, 'js3'),
+      path: path.resolve(__dirname, '../outputs/one-error-one-warning-one-success/js3'),
       publicPath: '/static-three/',
     },
     module: {

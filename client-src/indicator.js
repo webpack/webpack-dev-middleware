@@ -154,12 +154,15 @@ function ensureIndicator() {
   // Start the ring at 12 o'clock.
   state.ringValue.setAttribute("transform", "rotate(-90 8 8)");
 
-  state.ring.append(track, state.ringValue);
+  state.ring.appendChild(track);
+  state.ring.appendChild(state.ringValue);
 
   state.label = document.createElement("span");
-  badge.append(state.dot, state.ring, state.label);
-  root.append(badge);
-  document.body.append(state.host);
+  badge.appendChild(state.dot);
+  badge.appendChild(state.ring);
+  badge.appendChild(state.label);
+  root.appendChild(badge);
+  document.body.appendChild(state.host);
 }
 
 /**
@@ -219,7 +222,8 @@ export function hide(source) {
   }
 
   if (state.host && state.host.parentNode) {
-    state.host.remove();
+    /** @type {ParentNode & Node} */
+    (state.host.parentNode).removeChild(state.host);
   }
 
   state.host = null;

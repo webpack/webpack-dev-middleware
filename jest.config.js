@@ -7,6 +7,9 @@ const runningE2E = process.argv.some((arg) => arg.includes("test/e2e"));
 module.exports = {
   testEnvironment: "node",
   collectCoverage: false,
+  // The hot client is shipped code too, so a gap in `client-src` has to show
+  // up on the report the same way a gap in `src` does.
+  collectCoverageFrom: ["src/**/*.js", "client-src/**/*.js"],
   coveragePathIgnorePatterns: ["test", "<rootDir>/node_modules"],
   moduleFileExtensions: ["js", "json"],
   testMatch: ["**/test/**/*.test.js"],

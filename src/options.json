@@ -190,9 +190,9 @@
           "additionalProperties": false,
           "properties": {
             "path": {
-              "description": "The path the SSE endpoint is served at. Must start with a slash.",
+              "description": "The path the SSE endpoint is served at. Must start with a slash and carry no query string or fragment.",
               "type": "string",
-              "pattern": "^/"
+              "pattern": "^/[^?#]*$"
             },
             "heartbeat": {
               "description": "Heartbeat interval (in milliseconds) used to keep the SSE connection alive.",
@@ -204,7 +204,7 @@
               "type": "boolean"
             },
             "statsOptions": {
-              "description": "Webpack stats options used when serializing compilation results.",
+              "description": "Deprecated, do not use, will be removed in the next major release. Use the `stats` option instead, which decides whether a payload carries errors and warnings.",
               "type": "object",
               "additionalProperties": true
             }

@@ -1,0 +1,66 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`client with default options shows overlay on errored builds 1`] = `
+[
+  [
+    "[webpack-dev-middleware] bundle has 2 errors",
+  ],
+  [
+    "[webpack-dev-middleware] Something broke
+Actually, 2 things broke",
+  ],
+]
+`;
+
+exports[`client with default options shows overlay on warning builds by default (dev-server parity) 1`] = `
+[
+  [
+    "[webpack-dev-middleware] bundle has 1 warnings",
+  ],
+  [
+    "[webpack-dev-middleware] This isn't great, but it's not terrible",
+  ],
+]
+`;
+
+exports[`client with logging option emits info-level logs (including the [webpack-dev-middleware] prefix) by default 1`] = `
+[
+  [
+    "[webpack-dev-middleware] bundle rebuilt in 100ms",
+  ],
+]
+`;
+
+exports[`client with logging option logging=error silences info and warn but keeps error 1`] = `
+[
+  [
+    "[webpack-dev-middleware] bundle has 1 errors",
+  ],
+  [
+    "[webpack-dev-middleware] boom",
+  ],
+]
+`;
+
+exports[`client with logging option logging=warn silences info but keeps warn 1`] = `
+[
+  [
+    "[webpack-dev-middleware] bundle has 1 warnings",
+  ],
+  [
+    "[webpack-dev-middleware] something",
+  ],
+]
+`;
+
+exports[`client with overlay warnings enabled via the dev-server-shaped option shows overlay on errored builds 1`] = `
+[
+  [
+    "[webpack-dev-middleware] bundle has 2 errors",
+  ],
+  [
+    "[webpack-dev-middleware] Something broke
+Actually, 2 things broke",
+  ],
+]
+`;
