@@ -2,7 +2,24 @@
 // versions that follow.
 const puppeteer = require("puppeteer");
 
+const { STASH_KEY, stashingScript } = require("./browser-coverage");
 const { puppeteerArgs } = require("./puppeteer-constants");
+
+/**
+ * A reload takes `window.__coverage__` with it, which is precisely what the
+ * paths ending in one (`reloadPage`, the unaccepted-update branches) would
+ * have reported. Park the counters in `sessionStorage`, which survives a
+ * same-origin navigation, for the harvest to pick up afterwards.
+ * @param {import("puppeteer").Page} page page
+ * @returns {Promise<void>} resolved once the hook is installed
+ */
+async function stashCoverageAcrossReloads(page) {
+  if (!stashingScript) {
+    return;
+  }
+
+  await page.evaluateOnNewDocument(stashingScript, STASH_KEY);
+}
 
 /**
  * @typedef {object} RunBrowserResult
@@ -19,6 +36,7 @@ const { puppeteerArgs } = require("./puppeteer-constants");
 async function runPage(browser) {
   const page = await browser.newPage();
 
+  await stashCoverageAcrossReloads(page);
   await page.setRequestInterception(true);
 
   page.on("request", (interceptedRequest) => {

@@ -8,6 +8,42 @@ const webpack = require("webpack");
 const middleware = require("../../src");
 
 const CLIENT_ENTRY = require.resolve("../../client-src/index.js");
+const CLIENT_SRC = path.join(__dirname, "..", "..", "client-src");
+const COLLECT_COVERAGE = Boolean(process.env.E2E_COVERAGE);
+
+/**
+ * Instrument the hot client as webpack bundles it, so the browser reports
+ * what these tests actually exercised. Only the client: the fixture apps are
+ * throwaway code.
+ * @returns {EXPECTED_ANY} a webpack module rule
+ */
+function clientCoverageRule() {
+  return {
+    test: /\.js$/,
+    include: CLIENT_SRC,
+    use: {
+      loader: require.resolve("babel-loader"),
+      options: {
+        babelrc: false,
+        configFile: false,
+        plugins: [
+          [
+            require.resolve("babel-plugin-istanbul"),
+            {
+              cwd: CLIENT_SRC,
+              // Reach the global directly. The default finds it with
+              // `new Function("return this")`, which a page enforcing
+              // `require-trusted-types-for 'script'` refuses to compile —
+              // instrumenting must not change what the client can run under.
+              coverageGlobalScope: "globalThis",
+              coverageGlobalScopeFunc: false,
+            },
+          ],
+        ],
+      },
+    },
+  };
+}
 
 /**
  * @param {string[]} scripts script sources
@@ -54,6 +90,7 @@ function makeConfig(
       // and updates would fail with ChunkLoadError.
       ...(name ? { uniqueName: name } : {}),
     },
+    ...(COLLECT_COVERAGE ? { module: { rules: [clientCoverageRule()] } } : {}),
     plugins: hmrPlugin ? [new webpack.HotModuleReplacementPlugin()] : [],
     infrastructureLogging: { level: "none" },
     stats: "none",

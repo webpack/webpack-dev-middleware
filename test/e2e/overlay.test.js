@@ -25,6 +25,52 @@ describe("error overlay (browser)", () => {
     ({ browser, app: hotApp } = await closeE2e(browser, hotApp));
   });
 
+  it("stays out of the way when the query disables it", async () => {
+    // The empty pair is deliberate: the client parses its own query, and an
+    // `&&` must not become a parameter.
+    hotApp = await createHotApp({
+      code: acceptedApp("v1"),
+      query: "?overlay=false&&logging=info",
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    hotApp.edit("this is not valid javascript {{{");
+
+    // The build breaks either way; only the overlay is suppressed. Waiting
+    // for the client to report the failure keeps this off a bare timeout.
+    await console_.waitFor("has 1 errors");
+
+    expect(
+      await page.evaluate(
+        (id) => document.getElementById(id) === null,
+        OVERLAY_ID,
+      ),
+    ).toBe(true);
+  });
+
+  it("treats an unparsable overlay value as enabled", async () => {
+    // Not JSON, so it falls back to "anything but the literal false is on".
+    hotApp = await createHotApp({
+      code: acceptedApp("v1"),
+      query: "?overlay=on",
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    hotApp.edit("this is not valid javascript {{{");
+    const frame = await waitForOverlay(page);
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "Module parse failed",
+    );
+  });
+
   it("shows build errors and clears when the build recovers", async () => {
     hotApp = await createHotApp({ code: acceptedApp("v1") });
     ({ page, browser } = await runBrowser());

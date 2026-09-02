@@ -88,7 +88,15 @@ jobs:
         run: npm run test:coverage -- --ci --shard=${{ matrix.shard }}
 
       - name: Run browser e2e tests
+        # E2E_COVERAGE instruments the hot client as webpack bundles it, so the
+        # browser reports what these tests exercised in `client-src`; the flags
+        # below measure `src` in this process, as before.
         run: npm run test:e2e -- --ci --shard=${{ matrix.shard }} --collectCoverageFrom="src/**/*.js" --coverage --coverageDirectory=coverage-e2e
+        env:
+          E2E_COVERAGE: "1"
+
+      - name: Collect hot client coverage from the browser
+        run: npm run coverage:client
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -97,6 +105,7 @@ jobs:
           path: |
             coverage/lcov.info
             coverage-e2e/lcov.info
+            coverage-client/lcov.info
 
   upload-coverage:
     name: Upload coverage to codecov

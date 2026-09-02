@@ -45,6 +45,8 @@
     "package-lock.json",
     "node_modules",
     "coverage",
+    "coverage-e2e",
+    "coverage-client",
     "*.log",
     "./test/fixtures/**",
     "./test/outputs/**",

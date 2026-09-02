@@ -1,4 +1,6 @@
 /* global document -- evaluated inside the browser via waitForFunction */
+const { harvest } = require("./browser-coverage");
+
 const OVERLAY_ID = "webpack-dev-middleware-hot-overlay";
 const CARD_ID = `${OVERLAY_ID}-card`;
 const INDICATOR_ID = "webpack-dev-middleware-building-indicator";
@@ -145,6 +147,10 @@ async function clickInFrame(page, frame, selector) {
  */
 async function closeE2e(browser, app) {
   try {
+    // The client's counters live in the page, so they have to be read before
+    // the browser takes them down with it.
+    await harvest(browser);
+
     if (browser) {
       await browser.close();
     }
