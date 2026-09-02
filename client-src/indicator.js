@@ -182,6 +182,9 @@ export function show(text, percent, source = "") {
   state.building[source] = true;
   ensureIndicator();
 
+  // `ensureIndicator` above builds the label, so it is missing only in the
+  // document-less case that function already guards.
+  /* istanbul ignore next -- @preserve */
   if (!state.label) {
     return;
   }
