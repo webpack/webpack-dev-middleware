@@ -253,9 +253,7 @@ The function follows the same premise as [`Array#filter`](https://developer.mozi
 ```js
 const webpack = require("webpack");
 
-const configuration = {
-  /* Webpack configuration */
-};
+const configuration = {/* Webpack configuration */};
 const compiler = webpack(configuration);
 
 middleware(compiler, {
@@ -284,9 +282,7 @@ const webpack = require("webpack");
 myOutputFileSystem.join = path.join.bind(path); // no need to bind
 myOutputFileSystem.mkdirp = mkdirp.bind(mkdirp); // no need to bind
 
-const compiler = webpack({
-  /* Webpack configuration */
-});
+const compiler = webpack({/* Webpack configuration */});
 
 middleware(compiler, { outputFileSystem: myOutputFileSystem });
 ```
@@ -298,9 +294,7 @@ Allows to set up a callback to change the response data.
 ```js
 const webpack = require("webpack");
 
-const configuration = {
-  /* Webpack configuration */
-};
+const configuration = {/* Webpack configuration */};
 const compiler = webpack(configuration);
 
 middleware(compiler, {
@@ -605,9 +599,7 @@ A function executed once the middleware has stopped watching.
 const express = require("express");
 const webpack = require("webpack");
 
-const compiler = webpack({
-  /* Webpack configuration */
-});
+const compiler = webpack({/* Webpack configuration */});
 
 const middleware = require("webpack-dev-middleware");
 
@@ -641,9 +633,7 @@ A function executed once the middleware has invalidated.
 const express = require("express");
 const webpack = require("webpack");
 
-const compiler = webpack({
-  /* Webpack configuration */
-});
+const compiler = webpack({/* Webpack configuration */});
 
 const middleware = require("webpack-dev-middleware");
 
@@ -682,9 +672,7 @@ If the bundle is valid at the time of calling, the callback is executed immediat
 const express = require("express");
 const webpack = require("webpack");
 
-const compiler = webpack({
-  /* Webpack configuration */
-});
+const compiler = webpack({/* Webpack configuration */});
 
 const middleware = require("webpack-dev-middleware");
 
@@ -717,9 +705,7 @@ URL for the requested file.
 const express = require("express");
 const webpack = require("webpack");
 
-const compiler = webpack({
-  /* Webpack configuration */
-});
+const compiler = webpack({/* Webpack configuration */});
 
 const middleware = require("webpack-dev-middleware");
 
@@ -766,9 +752,7 @@ const compiler = webpack({
       apply(compiler) {
         const devMiddleware = middleware(
           compiler,
-          {
-            /* webpack-dev-middleware options */
-          },
+          {/* webpack-dev-middleware options */},
           true,
         );
       },
@@ -812,9 +796,7 @@ const express = require("express");
 const webpack = require("webpack");
 const middleware = require("webpack-dev-middleware");
 
-const compiler = webpack({
-  /* Webpack configuration */
-});
+const compiler = webpack({/* Webpack configuration */});
 
 const instance = middleware(compiler, { forwardError: true });
 
@@ -882,9 +864,7 @@ const isObject = require("is-object");
 const webpack = require("webpack");
 const middleware = require("webpack-dev-middleware");
 
-const compiler = webpack({
-  /* Webpack configuration */
-});
+const compiler = webpack({/* Webpack configuration */});
 
 // eslint-disable-next-line new-cap
 const app = new express();
@@ -972,9 +952,7 @@ const devMiddleware = require("webpack-dev-middleware");
 const webpackConfig = require("./webpack.config.js");
 
 const compiler = webpack(webpackConfig);
-const devMiddlewareOptions = {
-  /** Your webpack-dev-middleware-options */
-};
+const devMiddlewareOptions = {/** Your webpack-dev-middleware-options */};
 const app = connect();
 
 app.use(devMiddleware(compiler, devMiddlewareOptions));
@@ -993,9 +971,7 @@ const devMiddleware = require("webpack-dev-middleware");
 const webpackConfig = require("./webpack.config.js");
 
 const compiler = webpack(webpackConfig);
-const devMiddlewareOptions = {
-  /** Your webpack-dev-middleware-options */
-};
+const devMiddlewareOptions = {/** Your webpack-dev-middleware-options */};
 
 // eslint-disable-next-line new-cap
 const router = Router();
@@ -1018,9 +994,7 @@ const devMiddleware = require("webpack-dev-middleware");
 const webpackConfig = require("./webpack.config.js");
 
 const compiler = webpack(webpackConfig);
-const devMiddlewareOptions = {
-  /** Your webpack-dev-middleware-options */
-};
+const devMiddlewareOptions = {/** Your webpack-dev-middleware-options */};
 const app = express();
 
 app.use(devMiddleware(compiler, devMiddlewareOptions));
@@ -1037,9 +1011,7 @@ const middleware = require("webpack-dev-middleware");
 const webpackConfig = require("./webpack.simple.config");
 
 const compiler = webpack(webpackConfig);
-const devMiddlewareOptions = {
-  /** Your webpack-dev-middleware-options */
-};
+const devMiddlewareOptions = {/** Your webpack-dev-middleware-options */};
 const app = new Koa();
 
 app.use(middleware.koaWrapper(compiler, devMiddlewareOptions));
@@ -1102,9 +1074,7 @@ const devMiddleware = require("webpack-dev-middleware");
 const webpackConfig = require("./webpack.config.js");
 
 const compiler = webpack(webpackConfig);
-const devMiddlewareOptions = {
-  /** Your webpack-dev-middleware-options */
-};
+const devMiddlewareOptions = {/** Your webpack-dev-middleware-options */};
 
 await fastify.register(require("@fastify/express"));
 await fastify.use(devMiddleware(compiler, devMiddlewareOptions));
@@ -1121,9 +1091,7 @@ import devMiddleware from "webpack-dev-middleware";
 import webpackConfig from "./webpack.config.js";
 
 const compiler = webpack(webpackConfig);
-const devMiddlewareOptions = {
-  /** Your webpack-dev-middleware-options */
-};
+const devMiddlewareOptions = {/** Your webpack-dev-middleware-options */};
 
 const app = new Hono();
 
