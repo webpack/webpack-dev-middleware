@@ -613,11 +613,44 @@ function wdm(compiler, options = {}, isPlugin = false) {
   };
 
   instance.invalidate = (callback = noop) => {
+    const { compiler: contextCompiler, watching } = filledContext;
+    // Collected before anything is invalidated: with nothing to invalidate,
+    // no build follows, and `ready` would queue the callback against one that
+    // never comes.
+    /** @type {{ invalidate: () => void }[]} */
+    const invalidating = [];
+
+    if (watching) {
+      invalidating.push(watching);
+    } else if (contextCompiler.watching) {
+      // For plugin usage the host (webpack-cli, webpack-dev-server, etc.) owns
+      // `compiler.watch()`, so invalidate the host's `watching` instead
+      invalidating.push(contextCompiler.watching);
+    } else if (isMultipleCompiler(contextCompiler)) {
+      // `MultiCompiler` exposes `watching` only since webpack 5.109, fall back
+      // to each child compiler's own `watching`
+      for (const childCompiler of contextCompiler.compilers) {
+        if (childCompiler.watching) {
+          invalidating.push(childCompiler.watching);
+        }
+      }
+    }
+
+    if (invalidating.length === 0) {
+      filledContext.logger.warn(
+        "The `invalidate` method was called, but the compiler is not watching, so there is nothing to invalidate.",
+      );
+      // No stats to hand over: unlike `close`, this callback takes the build
+      // result, and no build ran.
+      callback();
+      return;
+    }
+
     middleware.ready(filledContext, callback);
 
-    // TODO for plugin usage (`isPlugin = true`) `watching` is `undefined` and this throws —
-    // invalidate the host's `compiler.watching` (each child's one for a `MultiCompiler`) instead
-    filledContext.watching.invalidate();
+    for (const target of invalidating) {
+      target.invalidate();
+    }
   };
 
   instance.close = (callback = noop) => {
