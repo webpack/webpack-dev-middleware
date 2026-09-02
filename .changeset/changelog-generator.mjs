@@ -157,9 +157,15 @@ const changelogFunctions = {
           .join(", ")
       : links.user;
 
+    // 1.0 reports nothing when a commit or pull request is not found, so the
+    // link half has to be dropped rather than printed as `null`.
+    const link = links.pull || links.commit;
+
     let suffix = "";
-    if (links.pull || links.commit || users) {
-      suffix = `(${users ? `by ${users} ` : ""}in ${links.pull || links.commit})`;
+    if (link) {
+      suffix = `(${users ? `by ${users} ` : ""}in ${link})`;
+    } else if (users) {
+      suffix = `(by ${users})`;
     }
 
     return `\n\n- ${firstLine} ${suffix}\n${futureLines.map((l) => `  ${l}`).join("\n")}`;
