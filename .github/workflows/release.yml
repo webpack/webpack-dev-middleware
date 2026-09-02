@@ -30,6 +30,11 @@ jobs:
         with:
           app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+          # Without these the token carries every permission the app is
+          # installed with. These two are what changesets/action documents it
+          # needs: commit the version change, and open the pull request.
+          permission-contents: write
+          permission-pull-requests: write
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
