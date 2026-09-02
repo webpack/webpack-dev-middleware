@@ -91,6 +91,22 @@ describe("plugin mode", () => {
       });
     });
 
+    it("should call the callback when there is nothing to invalidate", (done) => {
+      const compiler = getCompiler(webpackConfig);
+      const instance = middleware(compiler, {}, true);
+
+      jest.spyOn(instance.context.logger, "warn").mockImplementation();
+
+      // `close` completes its callback on the same no-op path. Without this,
+      // `ready` queues the callback against a build that will never run.
+      instance.invalidate((stats) => {
+        // No build ran, so there are no stats to report.
+        expect(stats).toBeUndefined();
+
+        done();
+      });
+    });
+
     it("should warn when a MultiCompiler has no watching anywhere", () => {
       const compiler = getCompiler(webpackArrayConfig);
       const instance = middleware(compiler, {}, true);
