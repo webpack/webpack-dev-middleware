@@ -14,6 +14,14 @@ export default defineConfig([
     },
   },
   {
+    // `@changesets/get-github-info` is ESM-only and ships an `exports` map with
+    // no `main`, which the import resolver cannot follow. Node resolves it.
+    files: [".changeset/changelog-generator.mjs"],
+    rules: {
+      "import/no-unresolved": "off",
+    },
+  },
+  {
     files: ["client-src/**/*"],
     extends: [configs["browser-outdated-recommended-module"]],
   },
