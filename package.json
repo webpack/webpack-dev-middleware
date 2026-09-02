@@ -60,7 +60,7 @@
     "@babel/core": "^7.29.7",
     "@babel/preset-env": "^7.29.7",
     "@changesets/cli": "^3.0.1",
-    "@changesets/get-github-info": "^0.8.0",
+    "@changesets/get-github-info": "^1.0.0",
     "@fastify/express": "^4.0.7",
     "@hapi/hapi": "^21.4.10",
     "@hono/node-server": "^2.1.1",

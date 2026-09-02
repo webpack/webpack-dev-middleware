@@ -1,6 +1,15 @@
-import { getInfo, getInfoFromPullRequest } from "@changesets/get-github-info";
+import { getCommitInfo, getPullRequestInfo } from "@changesets/get-github-info";
 
 /** @typedef {import("@changesets/types").ChangelogFunctions} ChangelogFunctions */
+/** @typedef {import("@changesets/get-github-info").CommitInfo} CommitInfo */
+/** @typedef {import("@changesets/get-github-info").PullRequestInfo} PullRequestInfo */
+
+/**
+ * @typedef {object} Links
+ * @property {string | null} commit markdown link to the commit
+ * @property {string | null} pull markdown link to the pull request
+ * @property {string | null} user markdown link to the author
+ */
 
 /**
  * @returns {{ GITHUB_SERVER_URL: string }} value
@@ -9,6 +18,24 @@ function readEnv() {
   const GITHUB_SERVER_URL =
     process.env.GITHUB_SERVER_URL || "https://github.com";
   return { GITHUB_SERVER_URL };
+}
+
+/**
+ * Flattens what GitHub reported into the three links a changelog line uses.
+ * Every field is null when the lookup found nothing.
+ * @param {CommitInfo | PullRequestInfo | undefined} info what GitHub reported
+ * @returns {Links} links
+ */
+function toLinks(info) {
+  if (!info) {
+    return { commit: null, pull: null, user: null };
+  }
+
+  return {
+    commit: info.commit ? info.commit.markdownLink : null,
+    pull: info.pull ? info.pull.markdownLink : null,
+    user: info.author ? info.author.markdownLink : null,
+  };
 }
 
 /** @type {ChangelogFunctions} */
@@ -29,12 +56,15 @@ const changelogFunctions = {
       await Promise.all(
         changesets.map(async (cs) => {
           if (cs.commit) {
-            const { links } = await getInfo({
+            const info = await getCommitInfo({
               repo: options.repo,
               commit: cs.commit,
             });
-            return links.commit;
+
+            return info ? info.commit.markdownLink : undefined;
           }
+
+          return undefined;
         }),
       )
     )
@@ -84,26 +114,32 @@ const changelogFunctions = {
 
     const links = await (async () => {
       if (prFromSummary !== undefined) {
-        let { links } = await getInfoFromPullRequest({
-          repo: options.repo,
-          pull: prFromSummary,
-        });
+        const linksFromPullRequest = toLinks(
+          await getPullRequestInfo({
+            repo: options.repo,
+            pull: prFromSummary,
+          }),
+        );
+
         if (commitFromSummary) {
           const shortCommitId = commitFromSummary.slice(0, 7);
-          links = {
-            ...links,
+
+          return {
+            ...linksFromPullRequest,
             commit: `[\`${shortCommitId}\`](${GITHUB_SERVER_URL}/${options.repo}/commit/${commitFromSummary})`,
           };
         }
-        return links;
+
+        return linksFromPullRequest;
       }
       const commitToFetchFrom = commitFromSummary || changeset.commit;
       if (commitToFetchFrom) {
-        const { links } = await getInfo({
-          repo: options.repo,
-          commit: commitToFetchFrom,
-        });
-        return links;
+        return toLinks(
+          await getCommitInfo({
+            repo: options.repo,
+            commit: commitToFetchFrom,
+          }),
+        );
       }
       return {
         commit: null,
@@ -121,9 +157,15 @@ const changelogFunctions = {
           .join(", ")
       : links.user;
 
+    // 1.0 reports nothing when a commit or pull request is not found, so the
+    // link half has to be dropped rather than printed as `null`.
+    const link = links.pull || links.commit;
+
     let suffix = "";
-    if (links.pull || links.commit || users) {
-      suffix = `(${users ? `by ${users} ` : ""}in ${links.pull || links.commit})`;
+    if (link) {
+      suffix = `(${users ? `by ${users} ` : ""}in ${link})`;
+    } else if (users) {
+      suffix = `(by ${users})`;
     }
 
     return `\n\n- ${firstLine} ${suffix}\n${futureLines.map((l) => `  ${l}`).join("\n")}`;
