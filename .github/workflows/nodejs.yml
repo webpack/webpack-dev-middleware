@@ -56,7 +56,7 @@ jobs:
         run: if [ -n "$(git status types --porcelain)" ]; then echo "Missing types. Update types by running 'npm run build:types'"; exit 1; else echo "All types are valid"; fi
 
   test:
-    name: Test - ${{ matrix.os }} - Node v${{ matrix.node-version }}, Webpack ${{ matrix.webpack-version }} (${{ matrix.shard }})
+    name: Test - ${{ matrix.os }} - Node v${{ matrix.node-version }}, Webpack ${{ matrix.webpack-version }}
 
     strategy:
       fail-fast: false
@@ -64,12 +64,11 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         node-version: [20.x, 22.x, 24.x, 25.x]
         webpack-version: [latest]
-        shard: ["1/4", "2/4", "3/4", "4/4"]
 
     runs-on: ${{ matrix.os }}
 
     concurrency:
-      group: test-${{ matrix.os }}-v${{ matrix.node-version }}-${{ matrix.webpack-version }}-${{ matrix.shard }}-${{ github.ref }}
+      group: test-${{ matrix.os }}-v${{ matrix.node-version }}-${{ matrix.webpack-version }}-${{ github.ref }}
       cancel-in-progress: true
 
     steps:
@@ -85,42 +84,61 @@ jobs:
         run: npm ci
 
       - name: Run tests for webpack version ${{ matrix.webpack-version }}
-        run: npm run test:coverage -- --ci --shard=${{ matrix.shard }}
-
-      # The browser suite drives a real Chromium, so it says the same thing on
-      # every OS and node version while costing the slowest job in the matrix.
-      # One platform runs it; the shards still cover the whole suite once.
-      - name: Run browser e2e tests
-        # E2E_COVERAGE instruments the hot client as webpack bundles it, so the
-        # browser reports what these tests exercised in `client-src`; the flags
-        # below measure `src` in this process, as before.
-        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '22.x'
-        run: npm run test:e2e -- --ci --shard=${{ matrix.shard }} --collectCoverageFrom="src/**/*.js" --coverage --coverageDirectory=coverage-e2e
-        env:
-          E2E_COVERAGE: "1"
-
-      - name: Collect hot client coverage from the browser
-        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '22.x'
-        run: npm run coverage:client
+        run: npm run test:coverage -- --ci
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: coverage-${{ matrix.os }}-${{ matrix.node-version }}-${{ strategy.job-index }}
-          # Only the one platform that runs the browser suite has the e2e and
-          # client reports; every other job legitimately uploads just its own.
-          if-no-files-found: ignore
+          path: coverage/lcov.info
+
+  client:
+    name: Client - ubuntu-latest - Node lts/*
+
+    # The browser suite drives a real Chromium, so it reports the same thing on
+    # every OS and node version. One job runs it, off the matrix.
+    runs-on: ubuntu-latest
+
+    concurrency:
+      group: client-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: lts/*
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run browser e2e tests
+        # E2E_COVERAGE instruments the hot client as webpack bundles it, so the
+        # browser reports what these tests exercised in `client-src`; the flags
+        # measure `src` in this process.
+        run: npm run test:e2e -- --ci --collectCoverageFrom="src/**/*.js" --coverage --coverageDirectory=coverage-e2e
+        env:
+          E2E_COVERAGE: "1"
+
+      - name: Collect hot client coverage from the browser
+        run: npm run coverage:client
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-client
           path: |
-            coverage/lcov.info
             coverage-e2e/lcov.info
             coverage-client/lcov.info
 
   upload-coverage:
     name: Upload coverage to codecov
-    needs: test
-    # Every shard used to submit its own coverage, so a red shard still left a
-    # report. With one collecting job, skipping on failure would send codecov
-    # nothing at all for the run — exactly when the report is worth reading.
+    needs: [test, client]
+    # Without this, one red job skips the upload and codecov gets nothing for
+    # the run — exactly when the report is worth reading.
     if: always()
     runs-on: ubuntu-latest
 
