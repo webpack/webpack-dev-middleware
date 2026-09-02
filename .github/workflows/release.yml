@@ -20,6 +20,17 @@ jobs:
     outputs:
       published: ${{ steps.changesets.outputs.published }}
     steps:
+      # A pull request opened with the repository's own GITHUB_TOKEN does not
+      # trigger workflows, so the release pull request never gets CI and sits
+      # with no checks reported. Opening it as the app makes the tests, lint
+      # and client jobs run on the version bump before it is merged.
+      - name: Generate Token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Use Node.js
@@ -34,12 +45,16 @@ jobs:
         id: changesets
         uses: changesets/action@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
         with:
+          # v2 takes a custom token through this input; the GITHUB_TOKEN
+          # environment variable is no longer read for the action's own auth.
+          github-token: ${{ steps.app-token.outputs.token }}
           version-script: npm run version
           publish-script: npm run release
           commit-message: "chore(release): new release"
           pr-title: "chore(release): new release"
         env:
-          # v2 no longer reads this for its own auth, but `changeset version`
-          # runs the changelog generator, which needs it to query GitHub.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Still needed as an environment variable: `changeset version` runs
+          # the changelog generator, which queries GitHub for commit and pull
+          # request info.
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           NPM_TOKEN: "" # https://github.com/changesets/changesets/issues/1152#issuecomment-3190884868
