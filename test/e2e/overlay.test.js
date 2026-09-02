@@ -211,6 +211,32 @@ describe("error overlay (browser)", () => {
     expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
   });
 
+  it("ignores an error event carrying neither an error nor a message", async () => {
+    hotApp = await createHotApp({ code: boomApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    // Some browsers and extensions emit a bare `error` event with nothing to
+    // report; there is no overlay to show for it.
+    await page.evaluate(() => {
+      globalThis.dispatchEvent(new ErrorEvent("error", {}));
+    });
+
+    // A real error still gets through, which also proves the listener is live
+    // rather than the empty event having torn it down.
+    await page.evaluate(() => {
+      globalThis.boom("a real one");
+    });
+
+    const frame = await waitForOverlay(page);
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "a real one",
+    );
+  });
+
   it("catches runtime errors and renders their message as text, not markup", async () => {
     hotApp = await createHotApp({
       // The error must be thrown from the page's own script — errors raised

@@ -87,21 +87,29 @@ jobs:
       - name: Run tests for webpack version ${{ matrix.webpack-version }}
         run: npm run test:coverage -- --ci --shard=${{ matrix.shard }}
 
+      # The browser suite drives a real Chromium, so it says the same thing on
+      # every OS and node version while costing the slowest job in the matrix.
+      # One platform runs it; the shards still cover the whole suite once.
       - name: Run browser e2e tests
         # E2E_COVERAGE instruments the hot client as webpack bundles it, so the
         # browser reports what these tests exercised in `client-src`; the flags
         # below measure `src` in this process, as before.
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '22.x'
         run: npm run test:e2e -- --ci --shard=${{ matrix.shard }} --collectCoverageFrom="src/**/*.js" --coverage --coverageDirectory=coverage-e2e
         env:
           E2E_COVERAGE: "1"
 
       - name: Collect hot client coverage from the browser
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '22.x'
         run: npm run coverage:client
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: coverage-${{ matrix.os }}-${{ matrix.node-version }}-${{ strategy.job-index }}
+          # Only the one platform that runs the browser suite has the e2e and
+          # client reports; every other job legitimately uploads just its own.
+          if-no-files-found: ignore
           path: |
             coverage/lcov.info
             coverage-e2e/lcov.info

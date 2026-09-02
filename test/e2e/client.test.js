@@ -1,5 +1,6 @@
 import collectConsole, { normalizeConsole } from "../helpers/console-collector";
 import {
+  OVERLAY_ID,
   acceptedApp,
   closeE2e,
   unacceptedApp,
@@ -218,6 +219,76 @@ describe("hot client (browser)", () => {
     await console_.waitFor("App is up to date");
 
     expect(normalizeConsole(console_.messages)).toMatchSnapshot();
+  });
+
+  it("connects once for a path already subscribed to", async () => {
+    app = await createHotApp({
+      code: `
+        globalThis.hotClient = require(${JSON.stringify(CLIENT_ENTRY)});
+        document.getElementById("app").textContent = "v1";
+        if (module.hot) {
+          module.hot.accept();
+        }
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    // The automatic connect already subscribed this path. Calling again must
+    // not add a second listener, or every message would be handled twice.
+    await page.evaluate(() => {
+      globalThis.hotClient.setOptionsAndConnect({});
+      globalThis.hotClient.setOptionsAndConnect({});
+    });
+
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+    await console_.waitFor("App is up to date");
+
+    expect(
+      console_.messages.filter((text) => text.includes("App is up to date")),
+    ).toHaveLength(1);
+  });
+
+  it("hands problems to a custom overlay instead of its own", async () => {
+    app = await createHotApp({
+      code: `
+        globalThis.hotClient = require(${JSON.stringify(CLIENT_ENTRY)});
+        globalThis.customOverlayCalls = [];
+        globalThis.hotClient.useCustomOverlay({
+          show: (...args) => globalThis.customOverlayCalls.push(args),
+          clear: () => globalThis.customOverlayCalls.push(["clear"]),
+        });
+        document.getElementById("app").textContent = "v1";
+        if (module.hot) {
+          module.hot.accept();
+        }
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    app.edit("this is not valid javascript {{{");
+    await console_.waitFor("has 1 errors");
+
+    // The client's own overlay stays out of the DOM: the host took over.
+    expect(
+      await page.evaluate(
+        (id) => document.getElementById(id) === null,
+        OVERLAY_ID,
+      ),
+    ).toBe(true);
+    expect(
+      await page.evaluate(() => globalThis.customOverlayCalls.length > 0),
+    ).toBe(true);
   });
 
   it("rebuilds on instance.invalidate() and syncs connected pages as a no-op", async () => {

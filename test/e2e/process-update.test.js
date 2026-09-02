@@ -31,6 +31,37 @@ describe("update processing (browser)", () => {
     ({ browser, app } = await closeE2e(browser, app));
   });
 
+  it("reports an update to a declined module", async () => {
+    app = await createHotApp({
+      code: `
+        require("./dep");
+        document.getElementById("app").textContent = "v1";
+        if (module.hot) {
+          module.hot.accept();
+        }
+      `,
+      // The dependency refuses updates, so its change is declined rather than
+      // applied or bubbled to an accept handler.
+      files: { "dep.js": "module.hot.decline();\nmodule.exports = 1;" },
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    app.editFile("dep.js", "module.hot.decline();\nmodule.exports = 2;");
+    await console_.waitFor("Ignored an update to declined module");
+
+    // The decline is reported once, and the page is left as it was.
+    expect(
+      console_.messages.filter((text) =>
+        text.includes("Ignored an update to declined module"),
+      ),
+    ).toHaveLength(1);
+  });
+
   it("reloads when an accept handler throws during apply", async () => {
     app = await createHotApp({
       code: throwingAcceptApp(),
