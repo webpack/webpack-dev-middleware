@@ -234,6 +234,9 @@ function createEventSourceWrapper() {
     closed = false;
 
     const handleDisconnect = () => {
+      // Reached only by an `error` event the EventSource had already queued
+      // when `close()` ran — a race the browser will not stage on demand.
+      /* istanbul ignore next -- @preserve */
       if (closed) {
         return;
       }

@@ -389,6 +389,8 @@ let render = () => {};
  * @param {number} index requested page index
  */
 function goToPage(index) {
+  // Paging is only reachable from a rendered overlay, which implies problems.
+  /* istanbul ignore next -- @preserve */
   if (!state.currentProblems) {
     return;
   }
@@ -557,12 +559,16 @@ function ensureOverlay() {
  * Render the current problem set into the card.
  */
 function renderProblems() {
+  // Both guards cover callers that cannot occur in a browser: rendering is
+  // driven by a problem set, and `ensureOverlay` only fails without a body.
+  /* istanbul ignore next -- @preserve */
   if (!state.currentProblems) {
     return;
   }
 
   const card = ensureOverlay();
 
+  /* istanbul ignore next -- @preserve */
   if (!card) {
     return;
   }

@@ -112,7 +112,7 @@ function makeConfig(
  * app becomes a named compilation whose client connects with `?name=<name>`
  * and renders from `<name>.js`. `pageHeaders` are sent with the HTML page
  * (e.g. a Content-Security-Policy).
- * @param {{ query?: string, code?: string, files?: Record<string, string>, apps?: { name: string, code: string }[], hot?: EXPECTED_ANY, pageHeaders?: Record<string, string>, publicPath?: string, setup?: (server: EXPECTED_ANY) => void, hmrPlugin?: boolean }} options options
+ * @param {{ query?: string, code?: string, files?: Record<string, string>, apps?: { name: string, code: string }[], hot?: EXPECTED_ANY, stats?: EXPECTED_ANY, pageHeaders?: Record<string, string>, publicPath?: string, setup?: (server: EXPECTED_ANY) => void, hmrPlugin?: boolean }} options options
  * @returns {Promise<EXPECTED_ANY>} handles for the running app
  */
 async function createHotApp({
@@ -121,6 +121,7 @@ async function createHotApp({
   files = {},
   apps,
   hot = true,
+  stats,
   pageHeaders = {},
   publicPath = "/",
   setup,
@@ -188,7 +189,7 @@ async function createHotApp({
       }
     });
 
-    instance = middleware(compiler, { hot });
+    instance = middleware(compiler, { hot, stats });
 
     const app = express();
 

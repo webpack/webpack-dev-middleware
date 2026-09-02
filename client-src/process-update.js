@@ -107,6 +107,9 @@ export default function applyUpdate(hash, options, name) {
    * @param {Error} err error
    */
   const handleError = (err) => {
+    // `hot.check()` rejecting while the runtime is already in `abort`/`fail`
+    // is a webpack-internal state the browser suite cannot stage.
+    /* istanbul ignore next -- @preserve */
     if (hot.status() in failureStatuses) {
       log.warn("Cannot check for update (Full reload needed)");
       log.warn(err.stack || err.message);
@@ -140,6 +143,9 @@ export default function applyUpdate(hash, options, name) {
       return;
     }
 
+    // An applied update that renews nothing: webpack does not produce one
+    // from an edit, so there is no build to drive this from.
+    /* istanbul ignore next -- @preserve */
     if (!renewedModules || renewedModules.length === 0) {
       log.info("Nothing hot updated.");
     } else {

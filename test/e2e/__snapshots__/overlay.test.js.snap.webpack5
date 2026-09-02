@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`error overlay (browser) keeps warnings out of the payload with hot.statsOptions 1`] = `
+exports[`error overlay (browser) keeps warnings out of the payload when the stats option does 1`] = `
 [
   "[webpack-dev-middleware] connected",
 ]

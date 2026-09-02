@@ -492,11 +492,11 @@ describe("error overlay (browser)", () => {
     expect(normalizeConsole(console_.messages)).toMatchSnapshot();
   });
 
-  it("keeps warnings out of the payload with hot.statsOptions", async () => {
+  it("keeps warnings out of the payload when the stats option does", async () => {
     hotApp = await createHotApp({
-      // The README's documented recipe: keep warnings in the build output
-      // but out of the SSE payload entirely.
-      hot: { statsOptions: { warnings: false } },
+      // One setting governs what a build reports in the terminal and in the
+      // browser; `hot.statsOptions` is deprecated and must not be used here.
+      stats: "errors-only",
       code: warningApp("v1"),
     });
     ({ page, browser } = await runBrowser());
@@ -1091,5 +1091,69 @@ describe("overlay shared state across bundled copies (browser)", () => {
     expect(
       await page.evaluate(() => document.querySelectorAll("iframe").length),
     ).toBe(1);
+  });
+
+  it("restyles a card that is already open", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["styled"], "a");
+    });
+    await overlayFrame();
+
+    // Configuring while a card exists has to reach that card, not only the
+    // next one rendered.
+    await page.evaluate(() => {
+      globalThis.overlayA.default({
+        overlayStyles: { background: "rgb(1, 2, 3)" },
+      });
+    });
+
+    const frame = await overlayFrame();
+
+    expect(
+      await frame.evaluate(
+        (id) => document.getElementById(id).style.background,
+        CARD_ID,
+      ),
+    ).toBe("rgb(1, 2, 3)");
+  });
+
+  it("renders an empty problem without markup", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    // An empty message still opens the overlay; the encoder has nothing to
+    // escape and must not fall over on it.
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", [""], "a");
+    });
+
+    const frame = await overlayFrame();
+
+    expect(await frame.evaluate(() => document.body.innerHTML)).toContain(
+      "ERROR",
+    );
+  });
+
+  it("dismisses on Escape pressed inside the overlay frame", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["dismiss me"], "a");
+    });
+
+    const frame = await overlayFrame();
+
+    // Clicking inside the card moves focus into the frame, so the keydown
+    // lands on the frame's own listener rather than the host page's.
+    await clickInFrame(page, frame, `#${CARD_ID}`);
+    await page.keyboard.press("Escape");
+
+    await waitForNoOverlay(page);
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
   });
 });
