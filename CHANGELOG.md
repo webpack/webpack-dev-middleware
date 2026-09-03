@@ -1,5 +1,23 @@
 # Changelog
 
+## 8.3.0
+
+### Minor Changes
+
+- Added a `hot` option that enables hot module replacement, replacing the need for `webpack-hot-middleware`. Pass `hot: true` to enable with defaults, or `hot: { path, heartbeat, progress, statsOptions }` to customize. The client runtime is served by the middleware itself. (by [@bjohansebas](https://github.com/bjohansebas) in [#2370](https://github.com/webpack/webpack-dev-middleware/pull/2370))
+
+- Take the diagnostics a hot payload carries from the `stats` option, so one setting governs what a build reports in the terminal and in the browser: `stats: "errors-only"` keeps warnings out of both, and `stats: false` keeps errors and warnings out of both, the client's error overlay included — reach for the client's `?logging=` or `?overlay=` to quiet the browser alone. `hot.statsOptions` is deprecated and will be removed in the next major release; its `hash`, `timings` and `children` keys are now ignored, because they could leave a payload without the hash the client compares, or carry a child compilation's hash instead, which stopped updates applying and forced a full page reload on every rebuild. (by [@alexander-akait](https://github.com/alexander-akait) in [#2392](https://github.com/webpack/webpack-dev-middleware/pull/2392))
+
+### Patch Changes
+
+- Fixed a crash when calling `invalidate()` in plugin mode (`isPlugin = true`). Since the host (webpack-cli, webpack-dev-server, etc.) owns `compiler.watch()`, the middleware now invalidates the host's `watching` instead (each child compiler's one for a `MultiCompiler` on webpack < 5.109). When nothing is watching it logs a warning and completes the callback, as `close()` does, rather than leaving `invalidate(callback)` waiting on a build that never runs. (by [@bjohansebas](https://github.com/bjohansebas) in [#2378](https://github.com/webpack/webpack-dev-middleware/pull/2378))
+
+- Reject with `403 Forbidden` the requests whose resolved filename falls outside `outputPath` ([GHSA-g84c-rxfj-3j2c](https://github.com/webpack/webpack-dev-middleware/security/advisories/GHSA-g84c-rxfj-3j2c)). With a `publicPath` without a trailing slash, a sibling path sharing its prefix (`/assets../secret`) escaped the output root once the prefix was stripped and joined. (by [@bjohansebas](https://github.com/bjohansebas) in [#2404](https://github.com/webpack/webpack-dev-middleware/pull/2404))
+
+- Update the changelog generator to the `@changesets/get-github-info` 1.0 API. (by [@alexander-akait](https://github.com/alexander-akait) in [#2396](https://github.com/webpack/webpack-dev-middleware/pull/2396))
+
+- Update dependencies. (by [@alexander-akait](https://github.com/alexander-akait) in [#2394](https://github.com/webpack/webpack-dev-middleware/pull/2394))
+
 ## 8.2.0
 
 ### Minor Changes
