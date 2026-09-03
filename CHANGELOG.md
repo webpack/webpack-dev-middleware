@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.3.1
+
+### Patch Changes
+
+- Bound the internal url and `Range` header caches, which grew for the life of the process and were never released, even by `close()`. (by [@alexander-akait](https://github.com/alexander-akait) in [#2405](https://github.com/webpack/webpack-dev-middleware/pull/2405))
+
 ## 8.3.0
 
 ### Minor Changes
