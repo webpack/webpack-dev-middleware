@@ -169,14 +169,24 @@ const cacheStore = new WeakMap();
  * @typedef {(...args: EXPECTED_ANY) => T} FunctionReturning
  */
 
+// These caches are keyed by request data — a url, or a `Range` header — so
+// the key space is only as bounded as what clients send. Without a limit a
+// long-running server keeps every key it has ever seen, so the cache is an
+// LRU: enough to serve a project's assets, capped for everything else.
+const DEFAULT_MAX_CACHE_SIZE = 1000;
+
 /**
  * @template T
  * @param {FunctionReturning<T>} fn memorized function
- * @param {({ cache?: Map<string, { data: T }> } | undefined)=} cache cache
+ * @param {({ cache?: Map<string, { data: T }>, maxSize?: number } | undefined)=} cache cache
  * @param {((value: T) => T)=} callback callback
  * @returns {FunctionReturning<T>} new function
  */
-function memorize(fn, { cache = new Map() } = {}, callback = undefined) {
+function memorize(
+  fn,
+  { cache = new Map(), maxSize = DEFAULT_MAX_CACHE_SIZE } = {},
+  callback = undefined,
+) {
   /**
    * @param {EXPECTED_ANY[]} arguments_ args
    * @returns {EXPECTED_ANY} result
@@ -186,6 +196,11 @@ function memorize(fn, { cache = new Map() } = {}, callback = undefined) {
     const cacheItem = cache.get(key);
 
     if (cacheItem) {
+      // Re-inserting moves the key to the end of the map's insertion order,
+      // which is what makes the first key the least recently used one.
+      cache.delete(key);
+      cache.set(key, cacheItem);
+
       return cacheItem.data;
     }
 
@@ -194,6 +209,10 @@ function memorize(fn, { cache = new Map() } = {}, callback = undefined) {
 
     if (callback) {
       result = callback(result);
+    }
+
+    if (cache.size >= maxSize) {
+      cache.delete(/** @type {string} */ (cache.keys().next().value));
     }
 
     cache.set(key, {
