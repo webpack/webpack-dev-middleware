@@ -3804,6 +3804,76 @@ describe.each([
         });
       });
 
+      // @see https://github.com/webpack/webpack-dev-middleware/security/advisories/GHSA-g84c-rxfj-3j2c
+      describe("should not allow path traversal when publicPath has no trailing slash", () => {
+        let compiler;
+
+        const rootPath = path.resolve(
+          __dirname,
+          "./outputs/traversal-no-slash-public-path",
+        );
+        const outputPath = path.resolve(rootPath, "dist");
+
+        beforeAll(async () => {
+          compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+              publicPath: "/static",
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "index.html"),
+            "HTML",
+          );
+          // A sensitive file placed one level above the served output root.
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "../secret.txt"),
+            "TOP SECRET",
+          );
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it('should serve a legitimate file under the "/static" prefix', async () => {
+          const response = await req.get("/static/index.html");
+
+          expect(response.statusCode).toBe(200);
+        });
+
+        it("should not allow to get files above root", async () => {
+          const response = await req.get("/static../secret.txt");
+
+          expect(response.statusCode).toBe(403);
+          expect(response.headers["content-type"]).toBe(
+            "text/html; charset=utf-8",
+          );
+          expect(response.text).toBe(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Forbidden</pre>
+</body>
+</html>`);
+        });
+      });
+
       describe("should call the next middleware for finished or errored requests when forwardError is enabled", () => {
         let compiler;
 

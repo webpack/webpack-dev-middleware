@@ -196,6 +196,22 @@ async function getFilenameFromUrl(context, url) {
         pathname.slice(publicPathPathname.length),
       );
 
+      // The resolved filename must stay within `outputPath`. When `publicPath`
+      // has no trailing slash a sibling path can share its prefix (for example
+      // `/assets../secret` starts with `/assets`), so the stripped remainder may
+      // contain `..` that escapes the output root once joined. The `..` guard
+      // above runs on the un-stripped pathname and does not catch this, so
+      // verify containment on the final path.
+      const relative = path.relative(outputPath, filename);
+
+      if (
+        relative === ".." ||
+        relative.startsWith(`..${path.sep}`) ||
+        path.isAbsolute(relative)
+      ) {
+        throw new FilenameError("Forbidden", 403);
+      }
+
       const { assetsInfo } = compilation;
       const { outputFileSystem } =
         /** @type {Compiler & { outputFileSystem: OutputFileSystem }} */
