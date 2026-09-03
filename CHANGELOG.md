@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.4.6](https://github.com/webpack/webpack-dev-middleware/compare/v7.4.5...v7.4.6) (2026-09-03)
+
+### Bug Fixes
+
+* reject requests that resolve outside the output directory
+
 ### [7.4.5](https://github.com/webpack/webpack-dev-middleware/compare/v7.4.4...v7.4.5) (2025-09-24)
 
 
