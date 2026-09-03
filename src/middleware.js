@@ -54,12 +54,13 @@ function decode(input) {
   return querystring.unescape(input);
 }
 
-const memoizedParse = memorize((url) => {
-  const urlObject = new URL(url, "http://localhost");
-
-  // We can't change pathname in URL object directly because don't decode correctly
-  return { ...urlObject, pathname: decode(urlObject.pathname) };
-}, undefined);
+// Only the pathname is ever read, and a `URL` cannot be carried around by
+// spreading it — its properties live on the prototype, so `{ ...url }` copies
+// nothing. The decoded pathname is returned on its own instead.
+const memoizedParsePathname = memorize((url) =>
+  // `URL` does not decode the pathname the way we need it.
+  decode(new URL(url, "http://localhost").pathname),
+);
 
 const UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
 
@@ -117,12 +118,13 @@ function isNotFoundError(error) {
  * @returns {Promise<FilenameWithExtra | undefined>} result of get filename from url
  */
 async function getFilenameFromUrl(context, url) {
-  /** @type {URL} */
-  let urlObject;
+  /** @type {string} */
+  let pathname;
 
   try {
-    // The `url` property of the `request` is contains only  `pathname`, `search` and `hash`
-    urlObject = memoizedParse(url);
+    // The `url` property of the `request` contains only `pathname`, `search`
+    // and `hash`.
+    pathname = memoizedParsePathname(url);
   } catch {
     return;
   }
@@ -146,22 +148,19 @@ async function getFilenameFromUrl(context, url) {
       continue;
     }
 
-    /** @type {URL} */
-    let publicPathObject;
+    /** @type {string} */
+    let publicPathPathname;
 
     const publicPath =
       options.publicPath || compilation.options.output.publicPath || "";
 
     try {
-      publicPathObject = memoizedParse(
+      publicPathPathname = memoizedParsePathname(
         publicPath === "auto" ? "/" : compilation.getPath(publicPath),
       );
     } catch {
       continue;
     }
-
-    const { pathname } = urlObject;
-    const { pathname: publicPathPathname } = publicPathObject;
 
     /** @type {string | undefined} */
     let filename;

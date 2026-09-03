@@ -1,6 +1,5 @@
 export type Stats = import("fs").Stats;
 export type ReadStream = import("fs").ReadStream;
-export type FunctionReturning<T> = (...args: EXPECTED_ANY) => T;
 export type ExpectedIncomingMessage = {
   /**
    * get header extra method
@@ -82,6 +81,7 @@ export type IncomingMessage = import("./index").IncomingMessage;
 export type ServerResponse = import("./index").ServerResponse;
 export type OutputFileSystem = import("./index").OutputFileSystem;
 export type EXPECTED_ANY = import("./index").EXPECTED_ANY;
+export type FunctionReturning<T> = (...args: EXPECTED_ANY) => T;
 /**
  * @param {string} filename filename
  * @param {OutputFileSystem} outputFileSystem output file system
@@ -238,19 +238,17 @@ export function initState<
 >(res: Response): void;
 /**
  * @template T
- * @typedef {(...args: EXPECTED_ANY) => T} FunctionReturning
- */
-/**
- * @template T
  * @param {FunctionReturning<T>} fn memorized function
- * @param {({ cache?: Map<string, { data: T }> } | undefined)=} cache cache
+ * @param {({ cache?: Map<string, { data: T }>, maxSize?: number } | undefined)=} cache cache
  * @param {((value: T) => T)=} callback callback
  * @returns {FunctionReturning<T>} new function
+ * @throws {TypeError} when `maxSize` is not a positive integer
  */
 export function memorize<T>(
   fn: FunctionReturning<T>,
   {
     cache,
+    maxSize,
   }?:
     | (
         | {
@@ -260,6 +258,7 @@ export function memorize<T>(
                 data: T;
               }
             >;
+            maxSize?: number;
           }
         | undefined
       )
