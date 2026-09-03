@@ -181,12 +181,18 @@ const DEFAULT_MAX_CACHE_SIZE = 1000;
  * @param {({ cache?: Map<string, { data: T }>, maxSize?: number } | undefined)=} cache cache
  * @param {((value: T) => T)=} callback callback
  * @returns {FunctionReturning<T>} new function
+ * @throws {TypeError} when `maxSize` is not a positive integer
  */
 function memorize(
   fn,
   { cache = new Map(), maxSize = DEFAULT_MAX_CACHE_SIZE } = {},
   callback = undefined,
 ) {
+  // A non-positive or fractional limit would never evict, or never terminate below.
+  if (!Number.isInteger(maxSize) || maxSize < 1) {
+    throw new TypeError("The 'maxSize' option must be a positive integer.");
+  }
+
   /**
    * @param {EXPECTED_ANY[]} arguments_ args
    * @returns {EXPECTED_ANY} result
@@ -211,7 +217,8 @@ function memorize(
       result = callback(result);
     }
 
-    if (cache.size >= maxSize) {
+    // A loop, because a caller-supplied cache can start out over the limit.
+    while (cache.size >= maxSize) {
       cache.delete(/** @type {string} */ (cache.keys().next().value));
     }
 

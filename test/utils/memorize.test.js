@@ -35,6 +35,28 @@ describe("memorize", () => {
     expect(cache.size).toBeLessThanOrEqual(3);
   });
 
+  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    "should reject the '%s' cache limit",
+    (maxSize) => {
+      expect(() => memorize((value) => value, { maxSize })).toThrow(
+        /must be a positive integer/,
+      );
+    },
+  );
+
+  it("should bring a cache that is already over the limit back down", () => {
+    const cache = new Map([
+      ["a", { data: "a" }],
+      ["b", { data: "b" }],
+      ["c", { data: "c" }],
+    ]);
+    const memoized = memorize((value) => value, { cache, maxSize: 2 });
+
+    memoized("d");
+
+    expect([...cache.keys()]).toEqual(["c", "d"]);
+  });
+
   it("should evict the least recently used key", () => {
     const fn = jest.fn((value) => value);
     const cache = new Map();

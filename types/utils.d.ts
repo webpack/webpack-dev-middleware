@@ -242,6 +242,7 @@ export function initState<
  * @param {({ cache?: Map<string, { data: T }>, maxSize?: number } | undefined)=} cache cache
  * @param {((value: T) => T)=} callback callback
  * @returns {FunctionReturning<T>} new function
+ * @throws {TypeError} when `maxSize` is not a positive integer
  */
 export function memorize<T>(
   fn: FunctionReturning<T>,
