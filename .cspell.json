@@ -3,6 +3,8 @@
   "language": "en,en-gb",
   "words": [
     "memfs",
+    "GHSA",
+    "rxfj",
     "noextension",
     "fullhash",
     "execa",
