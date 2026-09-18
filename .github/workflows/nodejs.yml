@@ -12,6 +12,18 @@ on:
       - next
       - hot-middleware
 
+# A new commit supersedes the previous one's jobs, so stop paying for them: the
+# matrix below fans out across three operating systems and four Node.js
+# versions. Only pull request runs share a group; every other run gets a group
+# of its own (`github.run_id`), because a group holds at most one pending run
+# and a later push would otherwise evict the one waiting — `cancel-in-progress`
+# protects the running run, not the queued one. The branches this also builds
+# on push (`main`, `next`, `hot-middleware`) publish coverage, and losing one of
+# those runs would also hide a breakage that is already on the branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 
@@ -29,9 +41,6 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
-    concurrency:
-      group: lint-${{ matrix.os }}-v${{ matrix.node-version }}-${{ github.ref }}
-      cancel-in-progress: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -67,10 +76,6 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
-    concurrency:
-      group: test-${{ matrix.os }}-v${{ matrix.node-version }}-${{ matrix.webpack-version }}-${{ github.ref }}
-      cancel-in-progress: true
-
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -98,10 +103,6 @@ jobs:
     # The browser suite drives a real Chromium, so it reports the same thing on
     # every OS and node version. One job runs it, off the matrix.
     runs-on: ubuntu-latest
-
-    concurrency:
-      group: client-${{ github.ref }}
-      cancel-in-progress: true
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
