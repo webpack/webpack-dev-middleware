@@ -9,6 +9,9 @@ function collectConsole(page) {
   const messages = [];
 
   page.on("console", (message) => {
+    // An Error logged as an argument arrives as the first line of its stack,
+    // `name: message` — the fixture's own words, so snapshots pin it rather
+    // than the opaque handle older puppeteer versions rendered instead.
     messages.push(message.text());
   });
 
@@ -64,13 +67,9 @@ function normalizeConsole(messages) {
           /rebuilding \(<fixture>\S* changed\)/g,
           "rebuilding (<fixture> changed)",
         )
-        // Both of the following come from the engine, not from the client, so
-        // a Chrome or puppeteer bump would otherwise fail these snapshots
-        // while the client is unchanged.
-        // An Error logged as an argument, which puppeteer renders as a handle.
-        .replaceAll("JSHandle@error", "<error>")
-        // V8's JSON parse message; the prefix the client adds is the part
-        // worth pinning.
+        // V8's JSON parse message comes from the engine, not from the client,
+        // so a Chrome bump would otherwise fail a snapshot the client has no
+        // part in; the prefix the client adds is what is worth pinning.
         .replaceAll(/SyntaxError: .*/gs, "<parse error>"),
     );
 }
