@@ -42,7 +42,7 @@
     "lint": "npm-run-all -l -p \"lint:**\"",
     "fix:js": "npm run lint:code -- --fix",
     "fix:prettier": "npm run lint:prettier -- --write",
-    "fix": "npm-run-all -l fix:js fix:prettier",
+    "fix": "npm-run-all -l fix:js fix:schema-check fix:prettier",
     "clean": "del-cli client dist types",
     "prebuild": "npm run clean",
     "build:types": "tsc && prettier \"types/**/*.ts\" --write",
@@ -58,7 +58,9 @@
     "prepare": "husky && npm run build",
     "version": "changeset version",
     "release": "npm run build && changeset publish",
-    "coverage:client": "node test/helpers/merge-coverage.js"
+    "coverage:client": "node test/helpers/merge-coverage.js",
+    "lint:schema-check": "node ./scripts/generate-schema-check.mjs --check",
+    "fix:schema-check": "node ./scripts/generate-schema-check.mjs"
   },
   "dependencies": {
     "ansi-html-community": "^0.0.8",
@@ -81,6 +83,7 @@
     "@types/mime-types": "^3.0.1",
     "@types/node": "^26.4.1",
     "acorn": "^8.18.0",
+    "ajv": "^8.20.0",
     "babel-jest": "^30.1.2",
     "babel-loader": "^10.1.1",
     "babel-plugin-istanbul": "^8.0.0",

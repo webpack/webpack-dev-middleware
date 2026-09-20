@@ -195,30 +195,47 @@ function isMultipleCompiler(compiler) {
 }
 
 /**
+ * Throw unless the options match the schema.
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>} options options
+ * @returns {void}
  */
 const internalValidate = (compiler, options) => {
-  const schema = require("./options.json");
-
   const firstCompiler = /** @type {Compiler & { validate: EXPECTED_ANY }} */ (
     isMultipleCompiler(compiler) ? compiler.compilers[0] : compiler
   );
 
-  if (typeof firstCompiler.validate === "function") {
-    firstCompiler.validate(schema, options, {
-      name: "Dev Middleware",
-      baseDataPath: "options",
-    });
+  // `compiler.hooks.validate` and `compiler.validate`'s lazy-schema and
+  // precompiled-check parameters landed together in webpack 5.106, so the hook
+  // doubles as the feature probe for them.
+  if (firstCompiler.hooks.validate) {
+    firstCompiler.validate(
+      () => require("./options.json"),
+      options,
+      { name: "Dev Middleware", baseDataPath: "options" },
+      /**
+       * @param {Options<RequestInternal, ResponseInternal>} value options to check
+       * @returns {boolean} whether they match the schema
+       */
+      (value) => require("./options.check")(value),
+    );
     return;
   }
 
-  // TODO in the next major release bump minimum supported webpack version and remove it in favor of `compiler.validate` (above)
+  // TODO in the next major release bump minimum supported webpack version and
+  // remove this fallback in favor of `compiler.validate` (above).
+  // The precompiled validator answers the common case in ~2ms, against the
+  // ~160ms `schema-utils` spends compiling the schema on its first call, so
+  // `./options.json` stays unread until something is actually wrong.
+  if (require("./options.check")(options)) {
+    return;
+  }
+
   const { validate } = require("schema-utils");
 
-  validate(/** @type {Schema} */ (schema), options, {
+  validate(/** @type {Schema} */ (require("./options.json")), options, {
     name: "Dev Middleware",
     baseDataPath: "options",
   });
