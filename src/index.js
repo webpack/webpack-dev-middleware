@@ -203,32 +203,39 @@ function isMultipleCompiler(compiler) {
  * @returns {void}
  */
 const internalValidate = (compiler, options) => {
-  // The precompiled validator answers the common case without ajv, which
-  // would otherwise spend ~160ms compiling the schema on the first call.
-  // Rejected options fall through to the real validator for the message, so
+  const firstCompiler = /** @type {Compiler & { validate: EXPECTED_ANY }} */ (
+    isMultipleCompiler(compiler) ? compiler.compilers[0] : compiler
+  );
+
+  // `compiler.hooks.validate` and `compiler.validate`'s lazy-schema and
+  // precompiled-check parameters landed together in webpack 5.106, so the hook
+  // doubles as the feature probe for them.
+  if (firstCompiler.hooks.validate) {
+    firstCompiler.validate(
+      () => require("./options.json"),
+      options,
+      { name: "Dev Middleware", baseDataPath: "options" },
+      /**
+       * @param {Options<RequestInternal, ResponseInternal>} value options to check
+       * @returns {boolean} whether they match the schema
+       */
+      (value) => require("./options.check")(value),
+    );
+    return;
+  }
+
+  // TODO in the next major release bump minimum supported webpack version and
+  // remove this fallback in favor of `compiler.validate` (above).
+  // The precompiled validator answers the common case in ~2ms, against the
+  // ~160ms `schema-utils` spends compiling the schema on its first call, so
   // `./options.json` stays unread until something is actually wrong.
   if (require("./options.check")(options)) {
     return;
   }
 
-  const schema = require("./options.json");
-
-  const firstCompiler = /** @type {Compiler & { validate: EXPECTED_ANY }} */ (
-    isMultipleCompiler(compiler) ? compiler.compilers[0] : compiler
-  );
-
-  if (typeof firstCompiler.validate === "function") {
-    firstCompiler.validate(schema, options, {
-      name: "Dev Middleware",
-      baseDataPath: "options",
-    });
-    return;
-  }
-
-  // TODO in the next major release bump minimum supported webpack version and remove it in favor of `compiler.validate` (above)
   const { validate } = require("schema-utils");
 
-  validate(/** @type {Schema} */ (schema), options, {
+  validate(/** @type {Schema} */ (require("./options.json")), options, {
     name: "Dev Middleware",
     baseDataPath: "options",
   });
