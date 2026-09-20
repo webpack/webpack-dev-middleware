@@ -201,6 +201,14 @@ function isMultipleCompiler(compiler) {
  * @param {Options<RequestInternal, ResponseInternal>} options options
  */
 const internalValidate = (compiler, options) => {
+  // The precompiled validator answers the common case without ajv, which
+  // would otherwise spend ~160ms compiling the schema on the first call.
+  // Rejected options fall through to the real validator for the message, so
+  // `./options.json` stays unread until something is actually wrong.
+  if (require("./options.check")(options)) {
+    return;
+  }
+
   const schema = require("./options.json");
 
   const firstCompiler = /** @type {Compiler & { validate: EXPECTED_ANY }} */ (
