@@ -195,10 +195,12 @@ function isMultipleCompiler(compiler) {
 }
 
 /**
+ * Throw unless the options match the schema.
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>} options options
+ * @returns {void}
  */
 const internalValidate = (compiler, options) => {
   // The precompiled validator answers the common case without ajv, which
