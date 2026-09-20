@@ -1,4 +1,11 @@
+import middleware from "../src";
 import validateOptions from "../src/options.check";
+
+import webpackConfig from "./fixtures/webpack.config";
+import getCompiler from "./helpers/getCompiler";
+
+// Suppress unnecessary stats output
+jest.spyOn(globalThis.console, "log").mockImplementation();
 
 // `validation-options.test.js` drives the option corpus through `middleware()`,
 // which catches a validator that wrongly *accepts* invalid options. It cannot
@@ -48,4 +55,39 @@ describe("precompiled options validator", () => {
       expect(validateOptions(options)).toBe(false);
     });
   }
+});
+
+// webpack < 5.106 has neither `compiler.hooks.validate` nor `compiler.validate`'s
+// precompiled-check parameter, so the middleware validates directly instead.
+// CI installs a newer webpack, so nothing else reaches that fallback.
+describe("validation without the validate hook", () => {
+  const withoutValidateHook = (compiler) => {
+    const hooks = { ...compiler.hooks };
+
+    delete hooks.validate;
+    Object.defineProperty(compiler, "hooks", { value: hooks });
+
+    return compiler;
+  };
+
+  it("should accept valid options", (done) => {
+    const compiler = withoutValidateHook(getCompiler(webpackConfig));
+    const validateSpy = jest.spyOn(compiler, "validate");
+    const instance = middleware(compiler, {});
+
+    // The fallback validated these, not the compiler.
+    expect(validateSpy).not.toHaveBeenCalled();
+
+    instance.waitUntilValid(() => {
+      instance.close(done);
+    });
+  });
+
+  it("should reject invalid options", () => {
+    const compiler = withoutValidateHook(getCompiler(webpackConfig));
+
+    expect(() => middleware(compiler, { unknownOption: true })).toThrow(
+      /Dev Middleware/,
+    );
+  });
 });
