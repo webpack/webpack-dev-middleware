@@ -248,6 +248,15 @@ function get404ContentTypeHeader(name) {
   }
 }
 
+// A malformed percent-encoding never reaches the middleware: fastify's router
+// rejects it as `FST_ERR_BAD_URL`, while every other framework routes it to
+// its own not-found path.
+function getMalformedUrlResponse(name) {
+  return name === "fastify"
+    ? { code: 400, contentType: "application/json" }
+    : { code: 404, contentType: get404ContentTypeHeader(name) };
+}
+
 function getContentTypeHeader(name, ext = "js") {
   return mime.contentType(ext);
 }
@@ -1367,12 +1376,14 @@ describe.each([
           expect(response.headers["content-type"]).toBe("image/svg+xml");
         });
 
-        it('should return the "404" code for the "GET" request to the "%FF" file', async () => {
+        const malformedUrl = getMalformedUrlResponse(name);
+
+        it(`should return the "${malformedUrl.code}" code for the "GET" request to the "%FF" file`, async () => {
           const response = await req.get("/%FF");
 
-          expect(response.statusCode).toBe(404);
+          expect(response.statusCode).toBe(malformedUrl.code);
           expect(response.headers["content-type"]).toEqual(
-            get404ContentTypeHeader(name),
+            malformedUrl.contentType,
           );
         });
       });
@@ -1629,8 +1640,7 @@ describe.each([
               },
               {
                 value: "%",
-                contentType: get404ContentTypeHeader(name),
-                code: 404,
+                ...getMalformedUrlResponse(name),
               },
             ],
           },
