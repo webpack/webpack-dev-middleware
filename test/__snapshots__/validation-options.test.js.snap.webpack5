@@ -3,7 +3,7 @@
 exports[`validation should throw an error on the "cacheControl" option with "{"unknown":true,"maxAge":10000}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.cacheControl has an unknown property 'unknown'. These properties are valid:
-   object { maxAge?, immutable? }"
+   object { maxAge?: number, immutable?: boolean }"
 `;
 
 exports[`validation should throw an error on the "cacheImmutable" option with "0" value 1`] = `
@@ -44,18 +44,18 @@ exports[`validation should throw an error on the "headers" option with "[]" valu
 exports[`validation should throw an error on the "headers" option with "[{"foo":"bar"}]" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.headers[0] has an unknown property 'foo'. These properties are valid:
-   object { key?, value? }"
+   object { key?: string, value?: string }"
 `;
 
 exports[`validation should throw an error on the "headers" option with "1" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.headers should be one of these:
-   [object { key?, value? }, ...] (should not have fewer than 1 item) | object { … } | function
+   [object { key?: string, value?: string }, ...] (should not have fewer than 1 item) | object { … } | function
    -> Allows to pass custom HTTP headers on each request
    -> Read more at https://github.com/webpack/webpack-dev-middleware#headers
    Details:
     * options.headers should be an array:
-      [object { key?, value? }, ...] (should not have fewer than 1 item)
+      [object { key?: string, value?: string }, ...] (should not have fewer than 1 item)
     * options.headers should be an object:
       object { … }
     * options.headers should be an instance of function."
@@ -64,12 +64,12 @@ exports[`validation should throw an error on the "headers" option with "1" value
 exports[`validation should throw an error on the "headers" option with "true" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.headers should be one of these:
-   [object { key?, value? }, ...] (should not have fewer than 1 item) | object { … } | function
+   [object { key?: string, value?: string }, ...] (should not have fewer than 1 item) | object { … } | function
    -> Allows to pass custom HTTP headers on each request
    -> Read more at https://github.com/webpack/webpack-dev-middleware#headers
    Details:
     * options.headers should be an array:
-      [object { key?, value? }, ...] (should not have fewer than 1 item)
+      [object { key?: string, value?: string }, ...] (should not have fewer than 1 item)
     * options.headers should be an object:
       object { … }
     * options.headers should be an instance of function."
@@ -128,31 +128,31 @@ exports[`validation should throw an error on the "hot" option with "{"statsOptio
 exports[`validation should throw an error on the "hot" option with "{"unknown":true}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot has an unknown property 'unknown'. These properties are valid:
-   object { path?, heartbeat?, progress?, statsOptions? }"
+   object { path?: string, heartbeat?: number, progress?: boolean, statsOptions? }"
 `;
 
 exports[`validation should throw an error on the "hot" option with "0" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot should be one of these:
-   boolean | object { path?, heartbeat?, progress?, statsOptions? }
+   boolean | object { path?: string, heartbeat?: number, progress?: boolean, statsOptions? }
    -> Enable hot module replacement via a Server-Sent Events endpoint.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
    Details:
     * options.hot should be a boolean.
     * options.hot should be an object:
-      object { path?, heartbeat?, progress?, statsOptions? }"
+      object { path?: string, heartbeat?: number, progress?: boolean, statsOptions? }"
 `;
 
 exports[`validation should throw an error on the "hot" option with "foo" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot should be one of these:
-   boolean | object { path?, heartbeat?, progress?, statsOptions? }
+   boolean | object { path?: string, heartbeat?: number, progress?: boolean, statsOptions? }
    -> Enable hot module replacement via a Server-Sent Events endpoint.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
    Details:
     * options.hot should be a boolean.
     * options.hot should be an object:
-      object { path?, heartbeat?, progress?, statsOptions? }"
+      object { path?: string, heartbeat?: number, progress?: boolean, statsOptions? }"
 `;
 
 exports[`validation should throw an error on the "index" option with "{}" value 1`] = `
