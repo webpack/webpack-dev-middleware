@@ -7,6 +7,7 @@
 /** @typedef {import("webpack").StatsError} StatsError */
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index.js").ServerResponse} ServerResponse */
+/** @typedef {import("node:http").Server} HttpServer */
 
 // The object form only (no presets/booleans) — it is merged over the
 // middleware's own base options, which string or boolean forms cannot be.
@@ -15,8 +16,10 @@
 
 /**
  * @typedef {object} HotOptions
- * @property {string=} path the path the SSE endpoint is served at
+ * @property {("sse" | "ws")=} transport how events reach the clients, Server-Sent Events by default
+ * @property {string=} path the path the endpoint is served at
  * @property {number=} heartbeat heartbeat interval in milliseconds
+ * @property {HttpServer=} server HTTP server the `"ws"` transport answers upgrades on, when it is already built
  * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
  * @property {boolean=} progress publish compilation progress events to the clients
  */
@@ -35,16 +38,32 @@
  */
 
 /**
- * @typedef {object} EventStream
- * @property {(req: IncomingMessage, res: ServerResponse) => void} handler attach a new client
- * @property {() => boolean} hasClients true when at least one client is connected
- * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
- * @property {(res: ServerResponse, payload: Payload | { action: string }) => void} publishTo publish a payload to a single client
- * @property {() => void} close end every client and stop the heartbeat
+ * What a client is addressed by, which is whatever the transport handed out: the
+ * response holding a Server-Sent Events stream, or a WebSocket.
+ * @typedef {ServerResponse | import("ws").WebSocket} StreamClient
  */
+
+/**
+ * One transport's clients. `createHot` publishes through this and does not know
+ * whether the events leave over Server-Sent Events or a WebSocket.
+ * @typedef {object} ClientStream
+ * @property {(req: IncomingMessage, res: ServerResponse) => void} handler answer a request on the endpoint's path
+ * @property {() => boolean} hasClients true when at least one client is connected
+ * @property {(fn: (client: StreamClient) => void) => void} onConnect called with each client once it has joined
+ * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
+ * @property {(client: StreamClient, payload: Payload | { action: string }) => void} publishTo publish a payload to a single client
+ * @property {() => void} close end every client and stop the heartbeat
+ * @property {((server: HttpServer) => void)=} attach answer upgrades on this server
+ * @property {(() => void)=} detach stop answering upgrades
+ */
+
+/** @typedef {ClientStream} EventStream */
+
+const createWebSocketStream = require("./servers/WebSocketServer.js");
 
 const HOT_DEFAULT_PATH = "/__webpack_hmr";
 const HOT_DEFAULT_HEARTBEAT = 10 * 1000;
+const HOT_DEFAULT_TRANSPORT = "sse";
 const PLUGIN_NAME = "DevMiddleware";
 
 /**
@@ -71,6 +90,8 @@ function createEventStream(heartbeat, logger) {
   let clientId = 0;
   /** @type {Map<number, ServerResponse>} */
   let clients = new Map();
+  /** @type {((client: StreamClient) => void) | undefined} */
+  let onConnectFn;
 
   /**
    * Run the callback for every client that can still be written to — a
@@ -124,6 +145,9 @@ function createEventStream(heartbeat, logger) {
     },
     hasClients() {
       return clients.size > 0;
+    },
+    onConnect(fn) {
+      onConnectFn = fn;
     },
     handler(req, res) {
       // A response another middleware already started can no longer become an
@@ -187,6 +211,12 @@ function createEventStream(heartbeat, logger) {
       // again, so it would stay in `clients` forever.
       if (req.destroyed) {
         disconnect();
+
+        return;
+      }
+
+      if (onConnectFn) {
+        onConnectFn(res);
       }
     },
     publish(payload) {
@@ -201,7 +231,9 @@ function createEventStream(heartbeat, logger) {
         client.write(frame);
       });
     },
-    publishTo(res, payload) {
+    publishTo(client, payload) {
+      const res = /** @type {ServerResponse} */ (client);
+
       if (res.writableEnded) {
         return;
       }
@@ -383,8 +415,10 @@ function publishBundles(bundles, previousBundles, eventStream) {
 
 /**
  * @typedef {object} HotInstance
- * @property {string} path path the SSE endpoint is served at
- * @property {(req: IncomingMessage, res: ServerResponse) => void} handle attach the request as a SSE client
+ * @property {string} path path the endpoint is served at
+ * @property {("sse" | "ws")} transport how events reach the clients
+ * @property {(server: HttpServer) => void} attach answer WebSocket upgrades on this server, a no-op for Server-Sent Events
+ * @property {(req: IncomingMessage, res: ServerResponse) => void} handle answer a request on the endpoint's path
  * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
  * @property {() => void} close end every client and detach the heartbeat
  */
@@ -399,6 +433,7 @@ function createHot(compiler, userOptions, statsOption) {
   const options = userOptions === true ? {} : userOptions;
   const path = options.path || HOT_DEFAULT_PATH;
   const heartbeat = options.heartbeat ?? HOT_DEFAULT_HEARTBEAT;
+  const transport = options.transport || HOT_DEFAULT_TRANSPORT;
   const { statsOptions } = options;
   const logger = compiler.getInfrastructureLogger("webpack-dev-middleware");
 
@@ -409,8 +444,16 @@ function createHot(compiler, userOptions, statsOption) {
     );
   }
 
-  let eventStream = createEventStream(heartbeat, logger);
-  logger.log(`Hot module replacement enabled, serving events at "${path}"`);
+  let eventStream =
+    transport === "ws"
+      ? createWebSocketStream({ heartbeat, path }, logger)
+      : createEventStream(heartbeat, logger);
+
+  logger.log(
+    `Hot module replacement enabled, serving events at "${path}" over ${
+      transport === "ws" ? "a WebSocket" : "Server-Sent Events"
+    }`,
+  );
 
   // `latestBundles` survives rebuilds so hashes can be compared per build.
   /** @type {StatsCompilation[] | null} */
@@ -418,6 +461,24 @@ function createHot(compiler, userOptions, statsOption) {
   let valid = false;
   let closed = false;
   let lastProgressPercent = -1;
+
+  // Catch a new client up wherever it joined from, as `sync` events carrying
+  // the last hashes.
+  eventStream.onConnect((client) => {
+    if (!valid || !latestBundles) {
+      return;
+    }
+
+    for (const stats of latestBundles) {
+      eventStream.publishTo(client, bundlePayload(stats, "sync"));
+    }
+  });
+
+  // A WebSocket is upgraded by the HTTP server rather than answered by the
+  // middleware, so the transport needs the server itself.
+  if (options.server && eventStream.attach) {
+    eventStream.attach(options.server);
+  }
 
   if (options.progress) {
     const { webpack } =
@@ -494,6 +555,14 @@ function createHot(compiler, userOptions, statsOption) {
 
   return {
     path,
+    transport,
+    attach(server) {
+      if (closed || !eventStream.attach) {
+        return;
+      }
+
+      eventStream.attach(server);
+    },
     handle(req, res) {
       // A request can race `close()` past the middleware intercept — end it
       // instead of leaving it hanging without a response.
@@ -505,13 +574,6 @@ function createHot(compiler, userOptions, statsOption) {
       }
 
       eventStream.handler(req, res);
-
-      // Catch only the new client up, as `sync` events with the last hashes.
-      if (valid && latestBundles) {
-        for (const stats of latestBundles) {
-          eventStream.publishTo(res, bundlePayload(stats, "sync"));
-        }
-      }
     },
     publish(payload) {
       if (closed) return;
@@ -525,7 +587,7 @@ function createHot(compiler, userOptions, statsOption) {
       // https://github.com/webpack/tapable/issues/32#issuecomment-350644466
       closed = true;
       eventStream.close();
-      eventStream = /** @type {EventStream} */ (/** @type {unknown} */ (null));
+      eventStream = /** @type {ClientStream} */ (/** @type {unknown} */ (null));
     },
   };
 }
@@ -533,6 +595,7 @@ function createHot(compiler, userOptions, statsOption) {
 module.exports = createHot;
 module.exports.HOT_DEFAULT_HEARTBEAT = HOT_DEFAULT_HEARTBEAT;
 module.exports.HOT_DEFAULT_PATH = HOT_DEFAULT_PATH;
+module.exports.HOT_DEFAULT_TRANSPORT = HOT_DEFAULT_TRANSPORT;
 module.exports.createEventStream = createEventStream;
 module.exports.createHot = createHot;
 module.exports.formatErrors = formatErrors;
