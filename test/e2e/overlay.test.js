@@ -893,6 +893,133 @@ describe("error overlay (browser)", () => {
   });
 });
 
+describe("error overlay parity with webpack-dev-server (browser)", () => {
+  let hotApp;
+  let browser;
+  let page;
+
+  afterEach(async () => {
+    ({ browser, app: hotApp } = await closeE2e(browser, hotApp));
+  });
+
+  it("keeps an error the filter accepts", async () => {
+    hotApp = await createHotApp({
+      query:
+        '?overlay={"errors":"function(message){return message.includes(`keep-me`)}"}',
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    hotApp.edit("keep-me is not valid javascript {{{");
+    const frame = await waitForOverlay(page);
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "keep-me",
+    );
+  });
+
+  it("shows no overlay when the errors filter rejects everything", async () => {
+    hotApp = await createHotApp({
+      query: '?overlay={"errors":"function(){return false}"}',
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    hotApp.edit("rejected by the filter {{{");
+    // The build problem still reaches the console — just not the DOM.
+    await console_.waitFor("Module parse failed");
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it("shows an error raised by the very first build", async () => {
+    // Broken before the browser ever connects, so the overlay has to come
+    // from the catch-up sync rather than from a rebuild.
+    hotApp = await createHotApp({ code: "broken from the start {{{" });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    const frame = await waitForOverlay(page);
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "Module parse failed",
+    );
+  });
+
+  it("replaces the overlay when a rebuild is still broken", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    hotApp.edit("first breakage {{{");
+    let frame = await waitForOverlay(page);
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "first breakage",
+    );
+
+    // A second, different failure must replace the first rather than leaving
+    // the stale one on screen.
+    hotApp.edit("second breakage {{{");
+    frame = await waitForOverlay(page);
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("second breakage"),
+    );
+
+    expect(await frame.evaluate(() => document.body.textContent)).not.toContain(
+      "first breakage",
+    );
+  });
+
+  it("dismisses with Escape more than once", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    hotApp.edit("broken once {{{");
+    await waitForOverlay(page);
+    await page.keyboard.press("Escape");
+    await waitForNoOverlay(page);
+
+    // Dismissing must not tear down whatever lets the next problem re-open
+    // it — a listener removed for good would leave the page blind.
+    hotApp.edit("broken twice {{{");
+    await waitForOverlay(page);
+    await page.keyboard.press("Escape");
+    await waitForNoOverlay(page);
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it("escapes markup in a build error instead of rendering it", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    // The error text carries markup, which must reach the card as text.
+    hotApp.edit("const bad = \"<img src=x onerror='globalThis.xss=1'>\" {{{");
+    const frame = await waitForOverlay(page);
+
+    expect(
+      await frame.evaluate(() => document.querySelectorAll("img").length),
+    ).toBe(0);
+    expect(await page.evaluate(() => globalThis.xss)).toBeUndefined();
+  });
+});
+
 describe("overlay shared state across bundled copies (browser)", () => {
   const OVERLAY_ENTRY = require.resolve("../../client-src/overlay.js");
   const OVERLAY_STATE_KEY = "__webpack_dev_middleware_hot_overlay_state__";
