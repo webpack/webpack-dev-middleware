@@ -28,6 +28,7 @@ import { log } from "../utils/log.js";
  * @typedef {object} SocketOptions
  * @property {number=} retries how many times to reconnect before giving up, `Infinity` to keep trying
  * @property {((attempt: number) => number)=} retryDelay how long to wait before the attempt, in milliseconds
+ * @property {boolean=} logRetries say so before each attempt, which only a bounded number of them can afford to do
  * @property {EXPECTED_ANY=} clientOptions passed to the client's constructor
  */
 
@@ -43,6 +44,12 @@ import { log } from "../utils/log.js";
  */
 export default function createSocket(Client, url, options = {}) {
   const retries = options.retries === undefined ? 10 : options.retries;
+  // A transport that keeps trying for as long as the page is open would
+  // otherwise say so every few seconds, all day.
+  const logRetries =
+    options.logRetries === undefined
+      ? retries !== Infinity
+      : options.logRetries;
   const retryDelay =
     options.retryDelay ||
     // Respectfully copied from the package `got`.
@@ -75,7 +82,9 @@ export default function createSocket(Client, url, options = {}) {
 
       attempt += 1;
 
-      log.info("Trying to reconnect...");
+      if (logRetries) {
+        log.info("Trying to reconnect...");
+      }
 
       timer = setTimeout(open, delay);
     });

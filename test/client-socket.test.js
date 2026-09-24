@@ -168,6 +168,47 @@ describe("createSocket", () => {
     expect(instances).toHaveLength(21);
   });
 
+  it("says it is reconnecting while the attempts are bounded", () => {
+    const info = jest.spyOn(globalThis.console, "info").mockImplementation();
+    const { FakeClient, instances } = createFakeClient();
+
+    createSocket(FakeClient, "ws://localhost/hmr", {
+      retries: 2,
+      retryDelay: () => 1000,
+    });
+
+    instances[0].closeHandler();
+
+    expect(info).toHaveBeenCalledWith(
+      expect.stringContaining("Trying to reconnect"),
+    );
+
+    info.mockRestore();
+  });
+
+  it("stays quiet when it will keep retrying forever", () => {
+    const info = jest.spyOn(globalThis.console, "info").mockImplementation();
+    const { FakeClient, instances } = createFakeClient();
+
+    createSocket(FakeClient, "http://localhost/__webpack_hmr", {
+      retries: Infinity,
+      retryDelay: () => 1000,
+    });
+
+    for (let i = 0; i < 5; i++) {
+      instances[instances.length - 1].closeHandler();
+      jest.advanceTimersByTime(1000);
+    }
+
+    // Saying it every few seconds for as long as the page is open is not
+    // information, it is noise — and Server-Sent Events never said it before.
+    expect(info).not.toHaveBeenCalledWith(
+      expect.stringContaining("Trying to reconnect"),
+    );
+
+    info.mockRestore();
+  });
+
   it("stops reconnecting once closed", () => {
     const { FakeClient, instances } = createFakeClient();
     const socket = createSocket(FakeClient, "ws://localhost/hmr", {
