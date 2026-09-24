@@ -1,5 +1,3 @@
-import { log } from "../utils/log.js";
-
 /** @typedef {import("./createSocket.js").CommunicationClient} CommunicationClient */
 /** @typedef {import("./createSocket.js").ClientHandler} ClientHandler */
 
@@ -34,7 +32,6 @@ export default class EventSourceClient {
 
     this.client.addEventListener("open", () => {
       this.lastActivity = Date.now();
-      log.info("connected");
 
       if (this.openHandler) {
         this.openHandler();
