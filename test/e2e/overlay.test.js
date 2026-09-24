@@ -184,6 +184,52 @@ describe("error overlay (browser)", () => {
     expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
   });
 
+  it("takes focus when it opens and hands it back when it closes", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    // Something on the page holds focus before the overlay appears.
+    await page.evaluate(() => {
+      const input = document.createElement("input");
+
+      input.id = "focus-me";
+      document.body.appendChild(input);
+      input.focus();
+    });
+
+    hotApp.edit("broken while focused {{{");
+    const frame = await waitForOverlay(page);
+
+    // Focus reaches into the frame, so Escape and the arrow keys work without
+    // clicking first, and a screen reader lands on the problem.
+    expect(
+      await frame.evaluate(() =>
+        document.activeElement
+          ? document.activeElement.getAttribute("aria-label")
+          : null,
+      ),
+    ).toBe("Close");
+
+    // The frame is announced by name rather than by its `about:blank` url.
+    expect(
+      await page.$eval(`#${OVERLAY_ID}`, (element) => element.title),
+    ).toBeTruthy();
+
+    await page.keyboard.press("Escape");
+    await waitForNoOverlay(page);
+
+    // Focus goes back where it was, rather than being lost with the removed
+    // frame and sending the next Tab to the top of the document.
+    expect(
+      await page.evaluate(() =>
+        document.activeElement ? document.activeElement.id : null,
+      ),
+    ).toBe("focus-me");
+  });
+
   it("dismisses on backdrop and close-button clicks, but not inside the card", async () => {
     hotApp = await createHotApp({ code: acceptedApp("v1") });
     ({ page, browser } = await runBrowser());

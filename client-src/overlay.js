@@ -127,7 +127,9 @@ const colors = {
  * @property {HTMLElement | null} card visible panel inside the iframe
  * @property {boolean} runtimeListenersAttached whether the window listeners are attached
  * @property {boolean} hostKeydownAttached whether the host document's Escape listener is attached
+ * @property {boolean} focusOnRender whether the next render is the first one of a newly opened overlay
  * @property {number} pageIndex page shown when paginating
+ * @property {Element | null} previousActiveElement what the page had focused before the overlay opened
  * @property {Record<string, { type: "errors" | "warnings", lines: string[] }>} problemsBySource each reporting source's problems
  * @property {{ type: "errors" | "warnings", lines: string[] } | null} currentProblems union of every source, as displayed
  * @property {{ createHTML: (value: string) => EXPECTED_ANY } | undefined} trustedTypesPolicy trusted types policy
@@ -141,7 +143,9 @@ function createOverlayState() {
     card: null,
     runtimeListenersAttached: false,
     hostKeydownAttached: false,
+    focusOnRender: false,
     pageIndex: 0,
+    previousActiveElement: null,
     problemsBySource: {},
     currentProblems: null,
     trustedTypesPolicy: undefined,
@@ -436,6 +440,23 @@ export function clear(source) {
     (state.frame.parentNode).removeChild(state.frame);
   }
 
+  // Hand focus back to whatever had it, or the page is left with focus on a
+  // removed element and the next Tab starts from the top of the document.
+  const { previousActiveElement } = state;
+
+  if (
+    previousActiveElement &&
+    typeof (/** @type {HTMLElement} */ (previousActiveElement).focus) ===
+      "function" &&
+    // Removed from the document while the overlay was up: focusing it does
+    // nothing useful, and reading `isConnected` is how to tell.
+    previousActiveElement.isConnected !== false
+  ) {
+    /** @type {HTMLElement} */ (previousActiveElement).focus();
+  }
+
+  state.previousActiveElement = null;
+  state.focusOnRender = false;
   state.frame = null;
   state.card = null;
   state.problemsBySource = {};
@@ -482,8 +503,18 @@ function ensureOverlay() {
     );
   }
 
+  // Whatever the page had focused, so it can be given back — the overlay
+  // takes focus to be reachable by keyboard, and is rude if it keeps it.
+  state.previousActiveElement = document.activeElement;
+  // Only the render that opens the overlay takes focus. Paginating re-renders
+  // it, and moving focus then would take it off the button being clicked.
+  state.focusOnRender = true;
+
   state.frame = document.createElement("iframe");
   state.frame.id = OVERLAY_ID;
+  // An iframe with no accessible name is announced by its url, which here is
+  // `about:blank`.
+  state.frame.title = "Build errors and warnings";
   state.frame.src = "about:blank";
   applyStyle(state.frame, backdropStyles);
   document.body.appendChild(state.frame);
@@ -712,6 +743,14 @@ function renderProblems() {
     ? "Use ‹ › or the arrow keys to navigate. Click outside, press Esc, or fix the code to dismiss."
     : "Click outside, press Esc, or fix the code to dismiss.";
   card.appendChild(hint);
+
+  // Focus reaches into the frame so Escape and the arrow keys work without a
+  // click first, and so a screen reader lands on the problem rather than
+  // staying where the page was.
+  if (state.focusOnRender) {
+    state.focusOnRender = false;
+    closeButton.focus();
+  }
 }
 
 render = renderProblems;
