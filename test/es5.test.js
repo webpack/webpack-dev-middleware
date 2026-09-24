@@ -1,7 +1,7 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import { transformFileAsync } from "@babel/core";
 import * as acorn from "acorn";
 
 // eslint-disable-next-line jsdoc/reject-any-type
@@ -194,8 +194,50 @@ function findNonES5(code) {
   return violations;
 }
 
+/**
+ * Compile the files the way `npm run build:client` does. In a child process:
+ * Babel 8 is ESM-only and loads its presets with `require()`, which Jest's
+ * module sandbox can't do for an ES module on every node.js version tested.
+ * @param {string[]} files files to compile
+ * @returns {Record<string, string>} the compiled code, by file
+ */
+function compile(files) {
+  const script = `
+    import { transformFileAsync } from "@babel/core";
+
+    const files = JSON.parse(process.argv[1]);
+    const result = {};
+
+    for (const file of files) {
+      // Jest runs under \`NODE_ENV=test\`, where the config compiles for the
+      // current node.js instead — this asserts what \`npm run build:client\`
+      // produces.
+      result[file] = (
+        await transformFileAsync(file, { cwd: ${JSON.stringify(ROOT)}, envName: "production" })
+      ).code;
+    }
+
+    process.stdout.write(JSON.stringify(result));
+  `;
+
+  return JSON.parse(
+    execFileSync(
+      process.execPath,
+      ["--input-type=module", "-e", script, JSON.stringify(files)],
+      { cwd: ROOT, encoding: "utf8" },
+    ),
+  );
+}
+
 describe("client-src", () => {
   const scripts = listScripts(CLIENT_SRC);
+
+  /** @type {Record<string, string>} */
+  let compiled;
+
+  beforeAll(() => {
+    compiled = compile(scripts);
+  });
 
   it("has scripts to check", () => {
     expect(scripts.length).toBeGreaterThan(0);
@@ -206,16 +248,8 @@ describe("client-src", () => {
   // syntax error that takes the whole bundle down, not a broken feature.
   it.each(scripts.map((file) => [path.relative(ROOT, file), file]))(
     "compiles %s to ES5",
-    async (_name, file) => {
-      const result = await transformFileAsync(file, {
-        cwd: ROOT,
-        // Jest runs under `NODE_ENV=test`, where the config compiles for the
-        // current node.js instead — this asserts what `npm run build:client`
-        // produces.
-        envName: "production",
-      });
-
-      expect(findNonES5(/** @type {string} */ (result).code)).toEqual([]);
+    (_name, file) => {
+      expect(findNonES5(compiled[file])).toEqual([]);
     },
   );
 });
