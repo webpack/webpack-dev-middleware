@@ -574,12 +574,19 @@ if (typeof window !== "undefined") {
   }
   reporter = window[REPORTER_KEY];
 
-  // Only the transport actually in use has to exist: asking for a WebSocket on
-  // a browser without `EventSource` is fine, and so is the reverse.
-  const missing =
-    options.transport === "ws"
-      ? typeof WebSocket === "undefined" && "WebSocket"
-      : typeof window.EventSource === "undefined" && "EventSource";
+  // Only what the transport in use needs has to exist: asking for a WebSocket
+  // on a browser without `EventSource` is fine, and so is the reverse. An
+  // injected client speaks for itself, so nothing is required of the browser
+  // on its behalf.
+  /** @type {string | false} */
+  let missing = false;
+
+  if (typeof __webpack_dev_server_client__ === "undefined") {
+    missing =
+      options.transport === "ws"
+        ? typeof WebSocket === "undefined" && "WebSocket"
+        : typeof window.EventSource === "undefined" && "EventSource";
+  }
 
   if (missing) {
     log.warn(

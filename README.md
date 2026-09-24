@@ -538,8 +538,10 @@ the built-in two rather than starting over if you only want to change part of
 it:
 
 ```js
-const EventSourceClient = require("webpack-dev-middleware/client/sse");
-const WebSocketClient = require("webpack-dev-middleware/client/ws");
+// The runtime ships as ES modules, so import it — a `require()` through a
+// bundler hands back the namespace, whose class is on `.default`.
+import EventSourceClient from "webpack-dev-middleware/client/sse";
+import WebSocketClient from "webpack-dev-middleware/client/ws";
 ```
 
 The runtime picks it up from `__webpack_dev_server_client__`, which
