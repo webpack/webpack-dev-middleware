@@ -1,8 +1,10 @@
 export = createHot;
 /**
  * @typedef {object} HotInstance
- * @property {string} path path the SSE endpoint is served at
- * @property {(req: IncomingMessage, res: ServerResponse) => void} handle attach the request as a SSE client
+ * @property {string} path path the endpoint is served at
+ * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)} transport how events reach the clients
+ * @property {(server: HttpServer) => void} attach answer WebSocket upgrades on this server, a no-op for Server-Sent Events
+ * @property {(req: IncomingMessage, res: ServerResponse) => void} handle answer a request on the endpoint's path
  * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
  * @property {() => void} close end every client and detach the heartbeat
  */
@@ -21,6 +23,8 @@ declare namespace createHot {
   export {
     HOT_DEFAULT_HEARTBEAT,
     HOT_DEFAULT_PATH,
+    HOT_DEFAULT_TRANSPORT,
+    checkClientStream,
     createEventStream,
     createHot,
     formatErrors,
@@ -37,53 +41,29 @@ declare namespace createHot {
     StatsError,
     IncomingMessage,
     ServerResponse,
+    HttpServer,
     StatsOptions,
     MiddlewareStatsOption,
     HotOptions,
     Payload,
+    EXPECTED_ANY,
+    WebSocketLikeClient,
+    StreamClient,
+    ClientStream,
+    ClientStreamFactory,
     EventStream,
   };
 }
 declare const HOT_DEFAULT_HEARTBEAT: number;
-/** @typedef {import("webpack").Compiler} Compiler */
-/** @typedef {import("webpack").MultiCompiler} MultiCompiler */
-/** @typedef {ReturnType<Compiler["getInfrastructureLogger"]>} Logger */
-/** @typedef {import("webpack").Stats} Stats */
-/** @typedef {import("webpack").MultiStats} MultiStats */
-/** @typedef {import("webpack").StatsCompilation} StatsCompilation */
-/** @typedef {import("webpack").StatsError} StatsError */
-/** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
-/** @typedef {import("./index.js").ServerResponse} ServerResponse */
-/** @typedef {import("webpack").StatsOptions} StatsOptions */
-/** @typedef {import("webpack").Configuration["stats"]} MiddlewareStatsOption */
-/**
- * @typedef {object} HotOptions
- * @property {string=} path the path the SSE endpoint is served at
- * @property {number=} heartbeat heartbeat interval in milliseconds
- * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
- * @property {boolean=} progress publish compilation progress events to the clients
- */
-/**
- * @typedef {object} Payload
- * @property {string} action action
- * @property {string=} file file that invalidated the compilation
- * @property {string=} name name
- * @property {number=} time time
- * @property {string=} hash hash
- * @property {number=} percent compilation progress (0-100)
- * @property {string=} message progress message
- * @property {string[]=} warnings warnings
- * @property {string[]=} errors errors
- */
-/**
- * @typedef {object} EventStream
- * @property {(req: IncomingMessage, res: ServerResponse) => void} handler attach a new client
- * @property {() => boolean} hasClients true when at least one client is connected
- * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
- * @property {(res: ServerResponse, payload: Payload | { action: string }) => void} publishTo publish a payload to a single client
- * @property {() => void} close end every client and stop the heartbeat
- */
 declare const HOT_DEFAULT_PATH: "/__webpack_hmr";
+declare const HOT_DEFAULT_TRANSPORT: "sse";
+/**
+ * @param {ClientStream<EXPECTED_ANY>} stream what a `transport` function returned
+ * @returns {ClientStream<EXPECTED_ANY>} the same stream
+ */
+declare function checkClientStream(
+  stream: ClientStream<EXPECTED_ANY>,
+): ClientStream<EXPECTED_ANY>;
 /**
  * @param {number} heartbeat heartbeat interval in milliseconds
  * @param {Logger} logger logger
@@ -130,11 +110,19 @@ declare function toBundles(
 ): StatsCompilation[];
 type HotInstance = {
   /**
-   * path the SSE endpoint is served at
+   * path the endpoint is served at
    */
   path: string;
   /**
-   * attach the request as a SSE client
+   * how events reach the clients
+   */
+  transport: "sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>;
+  /**
+   * answer WebSocket upgrades on this server, a no-op for Server-Sent Events
+   */
+  attach: (server: HttpServer) => void;
+  /**
+   * answer a request on the endpoint's path
    */
   handle: (req: IncomingMessage, res: ServerResponse) => void;
   /**
@@ -161,17 +149,26 @@ type StatsCompilation = import("webpack").StatsCompilation;
 type StatsError = import("webpack").StatsError;
 type IncomingMessage = import("./index.js").IncomingMessage;
 type ServerResponse = import("./index.js").ServerResponse;
+type HttpServer = import("node:http").Server;
 type StatsOptions = import("webpack").StatsOptions;
 type MiddlewareStatsOption = import("webpack").Configuration["stats"];
 type HotOptions = {
   /**
-   * the path the SSE endpoint is served at
+   * how events reach the clients, Server-Sent Events by default
+   */
+  transport?: ("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>) | undefined;
+  /**
+   * the path the endpoint is served at
    */
   path?: string | undefined;
   /**
    * heartbeat interval in milliseconds
    */
   heartbeat?: number | undefined;
+  /**
+   * HTTP server the `"ws"` transport answers upgrades on, when it is already built
+   */
+  server?: HttpServer | undefined;
   /**
    * deprecated, removed in the next major release — webpack stats options used when serializing compilation results
    */
@@ -219,15 +216,51 @@ type Payload = {
    */
   errors?: string[] | undefined;
 };
-type EventStream = {
+type EXPECTED_ANY = any;
+/**
+ * The WebSocket members a client is published to through. Structural rather than
+ * the ws package's own declarations, which would put an optional dependency's
+ * types in the path of every consumer, including those on Server-Sent Events.
+ */
+type WebSocketLikeClient = {
   /**
-   * attach a new client
+   * the socket's current state
+   */
+  readyState: number;
+  /**
+   * the value `readyState` has while the socket is open
+   */
+  OPEN: number;
+  /**
+   * send a frame to this client
+   */
+  send: (data: string) => void;
+};
+/**
+ * What a client is addressed by, which is whatever the transport handed out: the
+ * response holding a Server-Sent Events stream, or a WebSocket.
+ */
+type StreamClient = ServerResponse | WebSocketLikeClient;
+/**
+ * One transport's clients. `createHot` publishes through this and does not know
+ * whether the events leave over Server-Sent Events, a WebSocket or something of
+ * your own, which is what `TClient` is for: a transport built by a `transport`
+ * function names the type of the clients it hands to `onConnect` and takes back
+ * in `publishTo`.
+ */
+type ClientStream<TClient extends unknown = StreamClient> = {
+  /**
+   * answer a request on the endpoint's path
    */
   handler: (req: IncomingMessage, res: ServerResponse) => void;
   /**
    * true when at least one client is connected
    */
   hasClients: () => boolean;
+  /**
+   * called with each client once it has joined
+   */
+  onConnect: (fn: (client: TClient) => void) => void;
   /**
    * publish a payload to every client
    */
@@ -242,7 +275,7 @@ type EventStream = {
    * publish a payload to a single client
    */
   publishTo: (
-    res: ServerResponse,
+    client: TClient,
     payload:
       | Payload
       | {
@@ -253,4 +286,24 @@ type EventStream = {
    * end every client and stop the heartbeat
    */
   close: () => void;
+  /**
+   * answer upgrades on this server
+   */
+  attach?: ((server: HttpServer) => void) | undefined;
+  /**
+   * stop answering upgrades
+   */
+  detach?: (() => void) | undefined;
 };
+/**
+ * Builds a transport of your own. The same calls `createHot` makes of the
+ * built-in two are made of whatever this returns.
+ */
+type ClientStreamFactory<TClient extends unknown = StreamClient> = (
+  options: {
+    path: string;
+    heartbeat: number;
+  },
+  logger: Logger,
+) => ClientStream<TClient>;
+type EventStream = ClientStream;

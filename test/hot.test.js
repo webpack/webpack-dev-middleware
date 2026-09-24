@@ -502,8 +502,10 @@ describe("createHot", () => {
 
     const hot = createHot(compiler, { path: "/__hmr" });
 
+    // Which transport answered is part of it: the two are configured the same
+    // way but fail in different places.
     expect(messages).toContain(
-      'Hot module replacement enabled, serving events at "/__hmr"',
+      'Hot module replacement enabled, serving events at "/__hmr" over Server-Sent Events',
     );
 
     hot.close();
@@ -1028,5 +1030,299 @@ describe("createHot", () => {
     compiler.emitDone(makeFakeStats());
 
     expect(writes).toHaveLength(0);
+  });
+});
+
+describe("createHot over a WebSocket", () => {
+  /** @type {(() => Promise<void>)[]} */
+  let cleanups = [];
+
+  // Registered rather than left to each test, so a failing assertion still
+  // tears the server down instead of leaving the run hanging on it.
+  afterEach(async () => {
+    for (const cleanup of cleanups.reverse()) {
+      await cleanup();
+    }
+
+    cleanups = [];
+  });
+
+  /**
+   * Stand up an HTTP server with a `ws` hot instance attached to it.
+   * @param {EXPECTED_OBJECT} compiler fake compiler
+   * @param {EXPECTED_OBJECT=} options extra hot options
+   * @returns {Promise<{ hot: EXPECTED_OBJECT, url: string, stop: () => Promise<void> }>} the running endpoint
+   */
+  async function serveOverWs(compiler, options = {}) {
+    const hot = createHot(compiler, { transport: "ws", ...options });
+    const server = http.createServer((req, res) => {
+      hot.handle(req, res);
+    });
+
+    hot.attach(server);
+
+    await new Promise((resolve) => {
+      server.listen(0, resolve);
+    });
+
+    const { port } = server.address();
+
+    const stop = async () => {
+      hot.close();
+      await new Promise((resolve) => {
+        server.close(resolve);
+      });
+    };
+
+    cleanups.push(stop);
+
+    return { hot, url: `ws://127.0.0.1:${port}${hot.path}`, stop };
+  }
+
+  /**
+   * Connect a client and collect the payloads it is sent.
+   * @param {string} url url to connect to
+   * @returns {Promise<{ socket: EXPECTED_OBJECT, messages: string[] }>} the open client
+   */
+  async function connect(url) {
+    const { WebSocket } = require("ws");
+
+    const socket = new WebSocket(url);
+    /** @type {string[]} */
+    const messages = [];
+
+    socket.on("message", (data) => messages.push(data.toString()));
+
+    cleanups.push(async () => {
+      socket.terminate();
+    });
+
+    await new Promise((resolve, reject) => {
+      // A server which never answers the upgrade leaves the socket pending
+      // rather than erroring, so the wait is bounded here.
+      const timer = setTimeout(() => {
+        socket.terminate();
+        reject(new Error(`timed out connecting to ${url}`));
+      }, 5000);
+
+      socket.on("open", () => {
+        clearTimeout(timer);
+        resolve();
+      });
+      socket.on("error", (error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+    });
+
+    return { socket, messages };
+  }
+
+  /**
+   * @param {() => boolean} predicate what to wait for
+   * @returns {Promise<void>} resolves once the predicate holds
+   */
+  async function until(predicate) {
+    const deadline = Date.now() + 5000;
+
+    while (!predicate()) {
+      if (Date.now() > deadline) {
+        throw new Error("timed out");
+      }
+
+      await new Promise((resolve) => {
+        setTimeout(resolve, 10);
+      });
+    }
+  }
+
+  it("logs that the events are served over a WebSocket", async () => {
+    const messages = [];
+    const compiler = makeFakeCompiler({
+      log: (message) => messages.push(message),
+      error: () => {},
+    });
+
+    await serveOverWs(compiler, { path: "/__hmr" });
+
+    expect(messages).toContain(
+      'Hot module replacement enabled, serving events at "/__hmr" over a WebSocket',
+    );
+  });
+
+  it("publishes a build to a connected client", async () => {
+    const compiler = makeFakeCompiler();
+    const endpoint = await serveOverWs(compiler);
+    const { messages } = await connect(endpoint.url);
+
+    compiler.emitDone(makeFakeStats());
+    await until(() => messages.length > 0);
+
+    // The same payloads the SSE transport publishes, without its `data:` frame.
+    expect(JSON.parse(messages[0]).action).toBe("built");
+  });
+
+  it("catches a client up with sync when it joins after a build", async () => {
+    const compiler = makeFakeCompiler();
+    const endpoint = await serveOverWs(compiler);
+
+    compiler.emitDone(makeFakeStats({ hash: "joined-late" }));
+
+    const { messages } = await connect(endpoint.url);
+
+    await until(() => messages.length > 0);
+
+    // A client that missed the build still has to learn the current hash, or
+    // it can never apply the next update.
+    const sync = JSON.parse(messages[0]);
+
+    expect(sync.action).toBe("sync");
+    expect(sync.hash).toBe("joined-late");
+  });
+
+  it("answers a plain request on the path with 426 rather than a stream", async () => {
+    const compiler = makeFakeCompiler();
+    const endpoint = await serveOverWs(compiler);
+    const url = endpoint.url.replace("ws://", "http://");
+
+    const response = await fetch(url);
+
+    // Nothing but an upgrade can speak this transport, so a client which asked
+    // for the path over plain HTTP is told so instead of being left hanging.
+    expect(response.status).toBe(426);
+  });
+
+  it("stops answering upgrades once closed", async () => {
+    const compiler = makeFakeCompiler();
+    const endpoint = await serveOverWs(compiler);
+
+    endpoint.hot.close();
+
+    await expect(connect(endpoint.url)).rejects.toThrow(
+      /timed out connecting|ECONNREFUSED|socket hang up|Unexpected server response/,
+    );
+  });
+});
+
+describe("createHot over a transport of your own", () => {
+  /**
+   * The smallest thing `createHot` will publish through: it keeps the payloads
+   * in an array rather than putting them on a wire.
+   * @returns {EXPECTED_OBJECT} a recording client stream
+   */
+  function createRecordingStream() {
+    /** @type {EXPECTED_OBJECT[]} */
+    const clients = [];
+    /** @type {EXPECTED_OBJECT[]} */
+    const published = [];
+    /** @type {EXPECTED_OBJECT} */
+    let onConnectFn;
+
+    return {
+      clients,
+      published,
+      close() {},
+      connect(client) {
+        clients.push(client);
+        onConnectFn(client);
+      },
+      handler() {},
+      hasClients: () => clients.length > 0,
+      onConnect(fn) {
+        onConnectFn = fn;
+      },
+      publish(payload) {
+        published.push(payload);
+      },
+      publishTo(client, payload) {
+        client.sent.push(payload);
+      },
+    };
+  }
+
+  it("publishes through it instead of the built-in transports", () => {
+    const compiler = makeFakeCompiler();
+    const stream = createRecordingStream();
+    const hot = createHot(compiler, { transport: () => stream });
+
+    stream.connect({ sent: [] });
+    compiler.emitDone(makeFakeStats());
+
+    expect(stream.published.map((p) => p.action)).toContain("built");
+
+    hot.close();
+  });
+
+  it("is handed the resolved path and heartbeat", () => {
+    const compiler = makeFakeCompiler();
+    /** @type {EXPECTED_OBJECT} */
+    let received;
+    const hot = createHot(compiler, {
+      heartbeat: 1234,
+      path: "/__custom",
+      transport: (options) => {
+        received = options;
+
+        return createRecordingStream();
+      },
+    });
+
+    // Resolved, not raw: a transport should not have to re-apply the defaults.
+    expect(received).toEqual({ heartbeat: 1234, path: "/__custom" });
+
+    hot.close();
+  });
+
+  it("catches a late joiner up with sync, the same as the built-in ones", () => {
+    const compiler = makeFakeCompiler();
+    const stream = createRecordingStream();
+    const hot = createHot(compiler, { transport: () => stream });
+
+    compiler.emitDone(makeFakeStats({ hash: "late" }));
+
+    const client = { sent: [] };
+
+    stream.connect(client);
+
+    expect(client.sent).toHaveLength(1);
+    expect(client.sent[0].action).toBe("sync");
+    expect(client.sent[0].hash).toBe("late");
+
+    hot.close();
+  });
+
+  it("keeps the optional ws dependency out of the published types", () => {
+    const fs = require("node:fs");
+    const path = require("node:path");
+
+    const declarations = fs.readFileSync(
+      path.resolve(__dirname, "../types/hot.d.ts"),
+      "utf8",
+    );
+
+    // `types/index.d.ts` reaches these, so an `import("ws")` here is loaded by
+    // every consumer — including one on Server-Sent Events, who has no reason
+    // to have `@types/ws` installed, and whose build then fails outright.
+    expect(declarations).not.toMatch(/\bimport\("ws"\)/);
+  });
+
+  it("names what a returned object is missing rather than failing later", () => {
+    const compiler = makeFakeCompiler();
+
+    // Publishing through a half-built stream would throw from whichever call
+    // it lacks, a long way from the option that built it.
+    expect(() =>
+      createHot(compiler, { transport: () => ({ publish() {} }) }),
+    ).toThrow(
+      "The 'hot.transport' function must return a client stream, which is missing: close, handler, hasClients, onConnect, publishTo.",
+    );
+  });
+
+  it("treats a transport returning nothing the same way", () => {
+    const compiler = makeFakeCompiler();
+
+    expect(() => createHot(compiler, { transport: () => undefined })).toThrow(
+      /must return a client stream, which is missing: close, handler/,
+    );
   });
 });

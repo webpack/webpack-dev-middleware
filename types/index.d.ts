@@ -53,6 +53,7 @@ declare namespace wdm {
     GetFilenameFromUrl,
     WaitUntilValid,
     Invalidate,
+    Attach,
     Close,
     AdditionalMethods,
     API,
@@ -341,6 +342,7 @@ type GetFilenameFromUrl = (
 ) => Promise<FilenameWithExtra | undefined>;
 type WaitUntilValid = (callback: Callback) => any;
 type Invalidate = (callback: Callback) => any;
+type Attach = (server: import("node:http").Server) => any;
 type Close = (callback: (err: Error | null | undefined) => void) => any;
 type AdditionalMethods<
   RequestInternal extends IncomingMessage,
@@ -358,6 +360,10 @@ type AdditionalMethods<
    * invalidate
    */
   invalidate: Invalidate;
+  /**
+   * answer WebSocket upgrades on this server
+   */
+  attach: Attach;
   /**
    * close
    */

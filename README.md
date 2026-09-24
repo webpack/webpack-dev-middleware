@@ -326,26 +326,107 @@ middleware(compiler, { hot: true });
 
 The object form accepts these options:
 
-|                  Name                  |   Type    |      Default       | Description                                           |
-| :------------------------------------: | :-------: | :----------------: | :---------------------------------------------------- |
-|         **[`path`](#hotpath)**         | `string`  | `'/__webpack_hmr'` | Path the SSE endpoint is served at.                   |
-|    **[`heartbeat`](#hotheartbeat)**    | `number`  |      `10000`       | Interval (in milliseconds) between keep-alive frames. |
-|     **[`progress`](#hotprogress)**     | `boolean` |      `false`       | Publish compilation progress events to the clients.   |
-| **[`statsOptions`](#hotstatsoptions)** | `object`  |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).       |
+|                  Name                  |         Type         |      Default       | Description                                           |
+| :------------------------------------: | :------------------: | :----------------: | :---------------------------------------------------- |
+|    **[`transport`](#hottransport)**    | `string \| function` |      `'sse'`       | How events reach the clients.                         |
+|         **[`path`](#hotpath)**         |       `string`       | `'/__webpack_hmr'` | Path the endpoint is served at.                       |
+|    **[`heartbeat`](#hotheartbeat)**    |       `number`       |      `10000`       | Interval (in milliseconds) between keep-alive frames. |
+|       **[`server`](#hotserver)**       |       `object`       |    `undefined`     | HTTP server the `'ws'` transport answers upgrades on. |
+|     **[`progress`](#hotprogress)**     |      `boolean`       |      `false`       | Publish compilation progress events to the clients.   |
+| **[`statsOptions`](#hotstatsoptions)** |       `object`       |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).       |
+
+#### `hot.transport`
+
+Type: `'sse' | 'ws' | Function`
+Default: `'sse'`
+
+How events reach the clients.
+
+`'sse'` serves them as [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) from the middleware itself, which needs nothing else.
+
+`'ws'` serves them over a WebSocket. It needs the optional [`ws`](https://www.npmjs.com/package/ws) package (`npm install ws`), and an HTTP server to answer upgrades on — a handshake is an upgrade the server answers, which the middleware never sees. Give it [`hot.server`](#hotserver), or hand the server over later with the middleware's [`attach`](#attach) method:
+
+```js
+const server = http.createServer(instance);
+
+instance.attach(server);
+```
+
+A plain `GET` on the path under `'ws'` answers `426 Upgrade Required`.
+
+A **function** builds a transport of your own. It is called with the resolved `path` and `heartbeat` and a logger, and must return a client stream — the same calls the built-in two answer:
+
+```js
+/**
+ * @param {{ path: string, heartbeat: number }} options
+ * @param {Logger} logger
+ * @returns {ClientStream}
+ */
+middleware(compiler, {
+  hot: {
+    transport: ({ path, heartbeat }, logger) => ({
+      // Answer a request on the endpoint's path.
+      handler(req, res) {},
+      // True while at least one client is connected; a compilation with no
+      // clients skips serializing its payload.
+      hasClients: () => clients.size > 0,
+      // Call `fn` with each client once it has joined. It is what catches a
+      // client up with the last hashes, so it can apply the next update.
+      onConnect(fn) {},
+      // Publish a payload to every client.
+      publish(payload) {},
+      // Publish a payload to one client, as handed to `onConnect`.
+      publishTo(client, payload) {},
+      // End every client and stop any timers.
+      close() {},
+      // Optional, for transports built on an upgrade.
+      attach(server) {},
+      detach() {},
+    }),
+  },
+});
+```
+
+A function that returns something missing one of those throws, naming what is absent, rather than failing later from wherever it is first published to.
+
+The clients are yours — whatever `onConnect` hands out is what `publishTo` takes back — so in TypeScript name their type through `ClientStreamFactory<T>`:
+
+```ts
+import { type ClientStreamFactory } from "webpack-dev-middleware/types/hot";
+
+interface MyClient {
+  id: number;
+  send: (frame: string) => void;
+}
+
+const transport: ClientStreamFactory<MyClient> = ({ path }, logger) => ({
+  // ...
+  publishTo(client, payload) {
+    client.send(JSON.stringify(payload));
+  },
+});
+```
 
 #### `hot.path`
 
 Type: `String`
 Default: `'/__webpack_hmr'`
 
-Path the SSE endpoint is served at. Must start with a slash and match the `path` option used by the client.
+Path the endpoint is served at. Must start with a slash and match the `path` option used by the client.
 
 #### `hot.heartbeat`
 
 Type: `Number`
 Default: `10000`
 
-Heartbeat interval (in milliseconds) used to keep the SSE connection alive when no compilation events are produced. Must be `1` or greater.
+Heartbeat interval (in milliseconds) used to keep the connection alive when no compilation events are produced: keep-alive frames for `'sse'`, pings for `'ws'`. Must be `1` or greater.
+
+#### `hot.server`
+
+Type: `Object`
+Default: `undefined`
+
+HTTP server the [`'ws'`](#hottransport) transport answers upgrades on, when it already exists where the middleware is built. Otherwise hand it over later with the middleware's [`attach`](#attach) method. Ignored by `'sse'`, which is answered by the middleware itself.
 
 #### `hot.progress`
 
@@ -581,6 +662,42 @@ hotClient.subscribe((payload) => {
 
 `webpack-dev-middleware` also provides convenience methods that can be use to
 interact with the middleware at runtime:
+
+### `attach(server)`
+
+Gives the [`hot.transport: "ws"`](#hottransport) endpoint the HTTP server to answer WebSocket upgrades on. A handshake is an upgrade the server answers, which the middleware never sees, so it cannot find the server on its own. Use this when the server is built after the middleware; when it already exists, [`hot.server`](#hotserver) does the same thing.
+
+Does nothing when `hot` is disabled or the transport is Server-Sent Events, which the middleware answers itself.
+
+#### Parameters
+
+##### `server`
+
+Type: `http.Server | https.Server`
+Required: `Yes`
+
+The server whose `upgrade` event the endpoint listens on. It stops listening when the middleware is closed.
+
+```js
+const http = require("node:http");
+const express = require("express");
+const webpack = require("webpack");
+
+const middleware = require("webpack-dev-middleware");
+
+const compiler = webpack({/* Webpack configuration */});
+const instance = middleware(compiler, { hot: { transport: "ws" } });
+
+// eslint-disable-next-line new-cap
+const app = new express();
+
+app.use(instance);
+
+const server = http.createServer(app);
+
+instance.attach(server);
+server.listen(3000);
+```
 
 ### `close(callback)`
 

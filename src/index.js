@@ -151,6 +151,11 @@ const noop = () => {};
  */
 
 /**
+ * @callback Attach
+ * @param {import("node:http").Server} server HTTP server the `hot.transport: "ws"` endpoint answers upgrades on
+ */
+
+/**
  * @callback Close
  * @param {(err: Error | null | undefined) => void} callback
  */
@@ -162,6 +167,7 @@ const noop = () => {};
  * @property {GetFilenameFromUrl} getFilenameFromUrl get filename from url
  * @property {WaitUntilValid} waitUntilValid wait until valid
  * @property {Invalidate} invalidate invalidate
+ * @property {Attach} attach answer WebSocket upgrades on this server
  * @property {Close} close close
  * @property {Context<RequestInternal, ResponseInternal>} context context
  */
@@ -624,6 +630,14 @@ function wdm(compiler, options = {}, isPlugin = false) {
   // API
   instance.getFilenameFromUrl = (url) =>
     middleware.getFilenameFromUrl(filledContext, url);
+
+  // A WebSocket handshake is an upgrade the HTTP server answers, which the
+  // middleware never sees, so the server is handed over rather than inferred.
+  instance.attach = (server) => {
+    if (filledContext.hot) {
+      filledContext.hot.attach(server);
+    }
+  };
 
   instance.waitUntilValid = (callback = noop) => {
     middleware.ready(filledContext, callback);
