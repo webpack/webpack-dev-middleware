@@ -1,4 +1,4 @@
-/* global __resourceQuery, __webpack_public_path__ */
+/* global __resourceQuery, __webpack_dev_server_client__, __webpack_public_path__ */
 
 // This file is bundled by webpack into a browser bundle, so it is compiled to
 // ES5 (see `babel.config.js`) and sticks to ES5 runtime APIs — `EventSource`
@@ -9,6 +9,9 @@
 // Adding it now is a breaking change: it would hide every other path of the
 // package (e.g. `webpack-dev-middleware/dist/...`) from existing users.
 
+import EventSourceClient from "./clients/EventSourceClient.js";
+import WebSocketClient from "./clients/WebSocketClient.js";
+import createSocket from "./clients/createSocket.js";
 import * as indicator from "./indicator.js";
 import configureOverlay from "./overlay.js";
 import applyUpdate from "./process-update.js";
@@ -34,18 +37,21 @@ import stripAnsi from "./utils/strip-ansi.js";
 
 /**
  * @typedef {object} ClientOptions
- * @property {string} path SSE endpoint path
+ * @property {("sse" | "ws")} transport how the events are carried, matching the server's `hot.transport`
+ * @property {string} path endpoint path
  * @property {number} timeout reconnection timeout in milliseconds
  * @property {boolean | OverlayOptions} overlay enable the in-page error overlay (same value shape as webpack-dev-server's `client.overlay`)
  * @property {boolean} reload reload the page when HMR cannot apply the update
  * @property {LogLevel} logging logger level
  * @property {string} name limit updates to this compilation name
  * @property {boolean} autoConnect connect immediately when the entry runs
+ * @property {number=} reconnect how many times to reconnect before giving up, unset to use the transport's default
  * @property {boolean} progress show a small badge while a rebuild is in progress
  */
 
 /** @type {ClientOptions} */
 const options = {
+  transport: "sse",
   path: "/__webpack_hmr",
   timeout: 20 * 1000,
   overlay: true,
@@ -123,6 +129,13 @@ function setOverrides(overrides) {
   if (overrides.autoConnect) {
     options.autoConnect = overrides.autoConnect === "true";
   }
+  if (overrides.transport === "sse" || overrides.transport === "ws") {
+    options.transport = overrides.transport;
+  }
+  // webpack-dev-server spells the endpoint `webSocketURL`, and unlike `path`
+  // it carries the origin as well, which is what lets the page reach a server
+  // on another host.
+  if (overrides.webSocketURL) options.path = overrides.webSocketURL;
   if (overrides.path) options.path = overrides.path;
   if (overrides.timeout) {
     const timeout = Number(overrides.timeout);
@@ -155,6 +168,16 @@ function setOverrides(overrides) {
       decodeOverlayOptions(options.overlay);
     }
   }
+  if (overrides.reconnect) {
+    const reconnect = Number(overrides.reconnect);
+
+    if (reconnect >= 0) {
+      options.reconnect = reconnect;
+    }
+  }
+  if (overrides["live-reload"]) {
+    options.reload = overrides["live-reload"] !== "false";
+  }
   if (overrides.reload) options.reload = overrides.reload !== "false";
   if (overrides.logging) {
     options.logging = /** @type {LogLevel} */ (overrides.logging);
@@ -181,107 +204,47 @@ function setOverrides(overrides) {
  */
 
 /**
- * @returns {{ addMessageListener: (fn: MessageListener) => void, close: () => void }} event source wrapper
+ * The transport the page speaks. A custom one injected by webpack-dev-server
+ * wins over both built-ins, which is what `client.webSocketTransport` has
+ * always done; a module exporting it as `default` is unwrapped.
+ * @returns {import("./clients/createSocket.js").CommunicationClientConstructor} client constructor
  */
-function createEventSourceWrapper() {
-  /** @type {EventSource} */
-  let source;
-  let lastActivity = Date.now();
-  /** @type {MessageListener[]} */
-  const listeners = [];
-  /** @type {ReturnType<typeof setInterval>} */
-  let timer;
-  /** @type {ReturnType<typeof setTimeout>} */
-  let reconnectTimer;
-  // Set once the wrapper is closed for good, so an `error` event the
-  // EventSource had already queued cannot schedule a reconnection after it.
-  let closed = false;
-
-  const handleOnline = () => {
-    log.info("connected");
-    lastActivity = Date.now();
-  };
-
-  /**
-   * @param {{ data: string }} event event
-   */
-  const handleMessage = (event) => {
-    lastActivity = Date.now();
-    for (const listener of listeners) {
-      listener(event);
-    }
-  };
-
-  /**
-   * Close the connection and stop the activity timer without scheduling a
-   * reconnection. A reconnection that is already pending is cancelled too, so
-   * closing during the reconnect window really is final.
-   */
-  const close = () => {
-    closed = true;
-    clearInterval(timer);
-    clearTimeout(reconnectTimer);
-    source.close();
-  };
-
-  /**
-   * Open the EventSource connection and (re)start the inactivity watchdog —
-   * disconnecting stops the watchdog, so a reconnected source has to bring its
-   * own. The disconnect handler belongs to one connection, so it is created
-   * here rather than shared between reconnections.
-   */
-  const init = () => {
-    closed = false;
-
-    const handleDisconnect = () => {
-      // Reached only by an `error` event the EventSource had already queued
-      // when `close()` ran — a race the browser will not stage on demand.
-      /* istanbul ignore next -- @preserve */
-      if (closed) {
-        return;
-      }
-
-      close();
-      reconnectTimer = setTimeout(
-        init,
-        /** @type {number} */ (options.timeout),
-      );
-    };
-
-    source = new window.EventSource(/** @type {string} */ (options.path));
-    source.addEventListener("open", handleOnline);
-    source.addEventListener("error", handleDisconnect);
-    source.addEventListener("message", handleMessage);
-
-    lastActivity = Date.now();
-    clearInterval(timer);
-    timer = setInterval(
-      () => {
-        if (
-          Date.now() - lastActivity >
-          /** @type {number} */ (options.timeout)
-        ) {
-          handleDisconnect();
-        }
-      },
-      /** @type {number} */ (options.timeout) / 2,
+function getClient() {
+  if (typeof __webpack_dev_server_client__ !== "undefined") {
+    const injected = /** @type {EXPECTED_ANY} */ (
+      __webpack_dev_server_client__
     );
-  };
 
-  init();
+    return typeof injected.default === "undefined"
+      ? injected
+      : injected.default;
+  }
 
-  return {
-    addMessageListener(fn) {
-      listeners.push(fn);
-    },
-    close,
-  };
+  return options.transport === "ws" ? WebSocketClient : EventSourceClient;
+}
+
+/**
+ * @returns {ReturnType<typeof createSocket>} a socket on the current options
+ */
+function createClientSocket() {
+  const isEventSource = options.transport !== "ws";
+
+  return createSocket(getClient(), /** @type {string} */ (options.path), {
+    clientOptions: { timeout: options.timeout },
+    // Server-Sent Events are retried for as long as the page is open, at the
+    // steady interval its watchdog already uses: a dev server is expected to
+    // come back, and a tab left open over a restart has to find it again.
+    retries: isEventSource ? Infinity : options.reconnect,
+    retryDelay: isEventSource
+      ? () => /** @type {number} */ (options.timeout)
+      : undefined,
+  });
 }
 
 const WRAPPER_KEY = "__wdmEventSourceWrapper";
 
 /**
- * @returns {ReturnType<typeof createEventSourceWrapper>} cached event source wrapper for this path
+ * @returns {ReturnType<typeof createClientSocket>} cached socket for this path
  */
 function getEventSourceWrapper() {
   const path = /** @type {string} */ (options.path);
@@ -289,9 +252,9 @@ function getEventSourceWrapper() {
     window[WRAPPER_KEY] = {};
   }
   if (!window[WRAPPER_KEY][path]) {
-    // Cache the wrapper so multiple entries on the same page sharing the same
-    // `options.path` reuse a single SSE connection.
-    window[WRAPPER_KEY][path] = createEventSourceWrapper();
+    // Cache the socket so multiple entries on the same page sharing the same
+    // `options.path` reuse a single connection.
+    window[WRAPPER_KEY][path] = createClientSocket();
   }
   return window[WRAPPER_KEY][path];
 }
@@ -611,9 +574,16 @@ if (typeof window !== "undefined") {
   }
   reporter = window[REPORTER_KEY];
 
-  if (typeof window.EventSource === "undefined") {
+  // Only the transport actually in use has to exist: asking for a WebSocket on
+  // a browser without `EventSource` is fine, and so is the reverse.
+  const missing =
+    options.transport === "ws"
+      ? typeof WebSocket === "undefined" && "WebSocket"
+      : typeof window.EventSource === "undefined" && "EventSource";
+
+  if (missing) {
     log.warn(
-      "webpack-dev-middleware's hot client requires EventSource to work. " +
+      `webpack-dev-middleware's hot client requires ${missing} to work. ` +
         "Include a polyfill if you want to support this browser: " +
         "https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events#Tools",
     );

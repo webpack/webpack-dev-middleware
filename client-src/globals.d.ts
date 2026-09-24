@@ -23,6 +23,22 @@ interface EventSourceWrapper {
   close(): void;
 }
 
+interface CommunicationClient {
+  onOpen(fn: (data?: string) => void): void;
+  onClose(fn: (data?: string) => void): void;
+  onMessage(fn: (data?: string) => void): void;
+  close(): void;
+}
+
+interface CommunicationClientConstructor {
+  new (url: string, options?: any): CommunicationClient;
+}
+
+declare const __webpack_dev_server_client__:
+  | CommunicationClientConstructor
+  | { default: CommunicationClientConstructor }
+  | undefined;
+
 interface OverlayTrustedTypesPolicy {
   createHTML(value: string): string;
 }
