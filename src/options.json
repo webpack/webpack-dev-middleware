@@ -190,8 +190,15 @@
           "additionalProperties": false,
           "properties": {
             "transport": {
-              "description": "How events reach the clients. `ws` needs the optional `ws` dependency and an HTTP server to answer upgrades on, given as `server` or through the middleware's `attach` method.",
-              "enum": ["sse", "ws"]
+              "description": "How events reach the clients: `sse`, `ws` (needs the optional `ws` dependency and an HTTP server to answer upgrades on, given as `server` or through the middleware's `attach` method), or a function building a transport of your own.",
+              "anyOf": [
+                {
+                  "enum": ["sse", "ws"]
+                },
+                {
+                  "instanceof": "Function"
+                }
+              ]
             },
             "path": {
               "description": "The path the endpoint is served at. Must start with a slash and carry no query string or fragment.",

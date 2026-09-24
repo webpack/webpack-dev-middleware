@@ -2,4 +2,4 @@
 "webpack-dev-middleware": minor
 ---
 
-Serve hot module replacement events over a WebSocket with `hot.transport: "ws"`, alongside the Server-Sent Events default
+Choose how hot module replacement events reach the clients with `hot.transport`: Server-Sent Events (the default), a WebSocket, or a transport of your own

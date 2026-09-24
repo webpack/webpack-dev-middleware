@@ -92,6 +92,20 @@ describe("validation", () => {
         {},
         { path: "/__hmr" },
         { heartbeat: 1000 },
+        { transport: "sse" },
+        { transport: "ws" },
+        // A transport of your own, built by this function. It is called, so it
+        // has to answer what `createHot` publishes through.
+        {
+          transport: () => ({
+            close() {},
+            handler() {},
+            hasClients: () => false,
+            onConnect() {},
+            publish() {},
+            publishTo() {},
+          }),
+        },
         { statsOptions: { all: false } },
       ],
       failure: [
@@ -103,6 +117,8 @@ describe("validation", () => {
         { path: "hmr" },
         { path: "/__hmr?client=1" },
         { path: "/__hmr#section" },
+        { transport: "websocket" },
+        { transport: true },
         { heartbeat: -1 },
         // 0 would silently fall back to the default interval — reject it.
         { heartbeat: 0 },

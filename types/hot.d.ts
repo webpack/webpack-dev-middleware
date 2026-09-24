@@ -2,7 +2,7 @@ export = createHot;
 /**
  * @typedef {object} HotInstance
  * @property {string} path path the endpoint is served at
- * @property {("sse" | "ws")} transport how events reach the clients
+ * @property {("sse" | "ws" | ClientStreamFactory)} transport how events reach the clients
  * @property {(server: HttpServer) => void} attach answer WebSocket upgrades on this server, a no-op for Server-Sent Events
  * @property {(req: IncomingMessage, res: ServerResponse) => void} handle answer a request on the endpoint's path
  * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
@@ -24,6 +24,7 @@ declare namespace createHot {
     HOT_DEFAULT_HEARTBEAT,
     HOT_DEFAULT_PATH,
     HOT_DEFAULT_TRANSPORT,
+    checkClientStream,
     createEventStream,
     createHot,
     formatErrors,
@@ -47,12 +48,18 @@ declare namespace createHot {
     Payload,
     StreamClient,
     ClientStream,
+    ClientStreamFactory,
     EventStream,
   };
 }
 declare const HOT_DEFAULT_HEARTBEAT: number;
 declare const HOT_DEFAULT_PATH: "/__webpack_hmr";
 declare const HOT_DEFAULT_TRANSPORT: "sse";
+/**
+ * @param {ClientStream} stream what a `transport` function returned
+ * @returns {ClientStream} the same stream
+ */
+declare function checkClientStream(stream: ClientStream): ClientStream;
 /**
  * @param {number} heartbeat heartbeat interval in milliseconds
  * @param {Logger} logger logger
@@ -105,7 +112,7 @@ type HotInstance = {
   /**
    * how events reach the clients
    */
-  transport: "sse" | "ws";
+  transport: "sse" | "ws" | ClientStreamFactory;
   /**
    * answer WebSocket upgrades on this server, a no-op for Server-Sent Events
    */
@@ -145,7 +152,7 @@ type HotOptions = {
   /**
    * how events reach the clients, Server-Sent Events by default
    */
-  transport?: ("sse" | "ws") | undefined;
+  transport?: ("sse" | "ws" | ClientStreamFactory) | undefined;
   /**
    * the path the endpoint is served at
    */
@@ -261,4 +268,15 @@ type ClientStream = {
    */
   detach?: (() => void) | undefined;
 };
+/**
+ * Builds a transport of your own. The same calls `createHot` makes of the
+ * built-in two are made of whatever this returns.
+ */
+type ClientStreamFactory = (
+  options: {
+    path: string;
+    heartbeat: number;
+  },
+  logger: Logger,
+) => ClientStream;
 type EventStream = ClientStream;

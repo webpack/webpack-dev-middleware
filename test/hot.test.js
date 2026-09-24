@@ -1203,3 +1203,111 @@ describe("createHot over a WebSocket", () => {
     );
   });
 });
+
+describe("createHot over a transport of your own", () => {
+  /**
+   * The smallest thing `createHot` will publish through: it keeps the payloads
+   * in an array rather than putting them on a wire.
+   * @returns {EXPECTED_OBJECT} a recording client stream
+   */
+  function createRecordingStream() {
+    /** @type {EXPECTED_OBJECT[]} */
+    const clients = [];
+    /** @type {EXPECTED_OBJECT[]} */
+    const published = [];
+    /** @type {EXPECTED_OBJECT} */
+    let onConnectFn;
+
+    return {
+      clients,
+      published,
+      close() {},
+      connect(client) {
+        clients.push(client);
+        onConnectFn(client);
+      },
+      handler() {},
+      hasClients: () => clients.length > 0,
+      onConnect(fn) {
+        onConnectFn = fn;
+      },
+      publish(payload) {
+        published.push(payload);
+      },
+      publishTo(client, payload) {
+        client.sent.push(payload);
+      },
+    };
+  }
+
+  it("publishes through it instead of the built-in transports", () => {
+    const compiler = makeFakeCompiler();
+    const stream = createRecordingStream();
+    const hot = createHot(compiler, { transport: () => stream });
+
+    stream.connect({ sent: [] });
+    compiler.emitDone(makeFakeStats());
+
+    expect(stream.published.map((p) => p.action)).toContain("built");
+
+    hot.close();
+  });
+
+  it("is handed the resolved path and heartbeat", () => {
+    const compiler = makeFakeCompiler();
+    /** @type {EXPECTED_OBJECT} */
+    let received;
+    const hot = createHot(compiler, {
+      heartbeat: 1234,
+      path: "/__custom",
+      transport: (options) => {
+        received = options;
+
+        return createRecordingStream();
+      },
+    });
+
+    // Resolved, not raw: a transport should not have to re-apply the defaults.
+    expect(received).toEqual({ heartbeat: 1234, path: "/__custom" });
+
+    hot.close();
+  });
+
+  it("catches a late joiner up with sync, the same as the built-in ones", () => {
+    const compiler = makeFakeCompiler();
+    const stream = createRecordingStream();
+    const hot = createHot(compiler, { transport: () => stream });
+
+    compiler.emitDone(makeFakeStats({ hash: "late" }));
+
+    const client = { sent: [] };
+
+    stream.connect(client);
+
+    expect(client.sent).toHaveLength(1);
+    expect(client.sent[0].action).toBe("sync");
+    expect(client.sent[0].hash).toBe("late");
+
+    hot.close();
+  });
+
+  it("names what a returned object is missing rather than failing later", () => {
+    const compiler = makeFakeCompiler();
+
+    // Publishing through a half-built stream would throw from whichever call
+    // it lacks, a long way from the option that built it.
+    expect(() =>
+      createHot(compiler, { transport: () => ({ publish() {} }) }),
+    ).toThrow(
+      "The 'hot.transport' function must return a client stream, which is missing: close, handler, hasClients, onConnect, publishTo.",
+    );
+  });
+
+  it("treats a transport returning nothing the same way", () => {
+    const compiler = makeFakeCompiler();
+
+    expect(() => createHot(compiler, { transport: () => undefined })).toThrow(
+      /must return a client stream, which is missing: close, handler/,
+    );
+  });
+});

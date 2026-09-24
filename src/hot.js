@@ -16,7 +16,7 @@
 
 /**
  * @typedef {object} HotOptions
- * @property {("sse" | "ws")=} transport how events reach the clients, Server-Sent Events by default
+ * @property {("sse" | "ws" | ClientStreamFactory)=} transport how events reach the clients, Server-Sent Events by default
  * @property {string=} path the path the endpoint is served at
  * @property {number=} heartbeat heartbeat interval in milliseconds
  * @property {HttpServer=} server HTTP server the `"ws"` transport answers upgrades on, when it is already built
@@ -57,6 +57,15 @@
  * @property {(() => void)=} detach stop answering upgrades
  */
 
+/**
+ * Builds a transport of your own. The same calls `createHot` makes of the
+ * built-in two are made of whatever this returns.
+ * @callback ClientStreamFactory
+ * @param {{ path: string, heartbeat: number }} options the endpoint's path and heartbeat interval
+ * @param {Logger} logger logger
+ * @returns {ClientStream} client stream
+ */
+
 /** @typedef {ClientStream} EventStream */
 
 const createWebSocketStream = require("./servers/WebSocketServer.js");
@@ -79,6 +88,41 @@ function pathMatch(url, expected) {
   } catch {
     return false;
   }
+}
+
+// Everything `createHot` calls on a stream. A transport of your own which is
+// missing one of them would throw from wherever it is first published to,
+// which is a long way from the option that built it.
+const CLIENT_STREAM_METHODS = [
+  "close",
+  "handler",
+  "hasClients",
+  "onConnect",
+  "publish",
+  "publishTo",
+];
+
+/**
+ * @param {ClientStream} stream what a `transport` function returned
+ * @returns {ClientStream} the same stream
+ */
+function checkClientStream(stream) {
+  const missing =
+    stream && typeof stream === "object"
+      ? CLIENT_STREAM_METHODS.filter(
+          (method) =>
+            typeof (/** @type {Record<string, unknown>} */ (stream)[method]) !==
+            "function",
+        )
+      : CLIENT_STREAM_METHODS;
+
+  if (missing.length > 0) {
+    throw new TypeError(
+      `The 'hot.transport' function must return a client stream, which is missing: ${missing.join(", ")}.`,
+    );
+  }
+
+  return stream;
 }
 
 /**
@@ -416,7 +460,7 @@ function publishBundles(bundles, previousBundles, eventStream) {
 /**
  * @typedef {object} HotInstance
  * @property {string} path path the endpoint is served at
- * @property {("sse" | "ws")} transport how events reach the clients
+ * @property {("sse" | "ws" | ClientStreamFactory)} transport how events reach the clients
  * @property {(server: HttpServer) => void} attach answer WebSocket upgrades on this server, a no-op for Server-Sent Events
  * @property {(req: IncomingMessage, res: ServerResponse) => void} handle answer a request on the endpoint's path
  * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
@@ -444,15 +488,24 @@ function createHot(compiler, userOptions, statsOption) {
     );
   }
 
-  let eventStream =
-    transport === "ws"
-      ? createWebSocketStream({ heartbeat, path }, logger)
-      : createEventStream(heartbeat, logger);
+  /** @type {ClientStream} */
+  let eventStream;
+  /** @type {string} */
+  let transportName;
+
+  if (typeof transport === "function") {
+    eventStream = checkClientStream(transport({ heartbeat, path }, logger));
+    transportName = "a custom transport";
+  } else if (transport === "ws") {
+    eventStream = createWebSocketStream({ heartbeat, path }, logger);
+    transportName = "a WebSocket";
+  } else {
+    eventStream = createEventStream(heartbeat, logger);
+    transportName = "Server-Sent Events";
+  }
 
   logger.log(
-    `Hot module replacement enabled, serving events at "${path}" over ${
-      transport === "ws" ? "a WebSocket" : "Server-Sent Events"
-    }`,
+    `Hot module replacement enabled, serving events at "${path}" over ${transportName}`,
   );
 
   // `latestBundles` survives rebuilds so hashes can be compared per build.
@@ -596,6 +649,7 @@ module.exports = createHot;
 module.exports.HOT_DEFAULT_HEARTBEAT = HOT_DEFAULT_HEARTBEAT;
 module.exports.HOT_DEFAULT_PATH = HOT_DEFAULT_PATH;
 module.exports.HOT_DEFAULT_TRANSPORT = HOT_DEFAULT_TRANSPORT;
+module.exports.checkClientStream = checkClientStream;
 module.exports.createEventStream = createEventStream;
 module.exports.createHot = createHot;
 module.exports.formatErrors = formatErrors;

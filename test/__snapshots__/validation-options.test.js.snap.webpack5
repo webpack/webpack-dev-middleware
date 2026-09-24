@@ -125,6 +125,38 @@ exports[`validation should throw an error on the "hot" option with "{"statsOptio
    -> Deprecated, do not use, will be removed in the next major release. Use the \`stats\` option instead, which decides whether a payload carries errors and warnings."
 `;
 
+exports[`validation should throw an error on the "hot" option with "{"transport":"websocket"}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot should be one of these:
+   boolean | object { transport?, path?: string, heartbeat?: number, server?, progress?: boolean, statsOptions? }
+   -> Enable hot module replacement over a Server-Sent Events or WebSocket endpoint.
+   -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
+   Details:
+    * options.hot.transport should be one of these:
+      "sse" | "ws" | function
+      -> How events reach the clients: \`sse\`, \`ws\` (needs the optional \`ws\` dependency and an HTTP server to answer upgrades on, given as \`server\` or through the middleware's \`attach\` method), or a function building a transport of your own.
+      Details:
+       * options.hot.transport should be one of these:
+         "sse" | "ws"
+       * options.hot.transport should be an instance of function."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"transport":true}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot should be one of these:
+   boolean | object { transport?, path?: string, heartbeat?: number, server?, progress?: boolean, statsOptions? }
+   -> Enable hot module replacement over a Server-Sent Events or WebSocket endpoint.
+   -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
+   Details:
+    * options.hot.transport should be one of these:
+      "sse" | "ws" | function
+      -> How events reach the clients: \`sse\`, \`ws\` (needs the optional \`ws\` dependency and an HTTP server to answer upgrades on, given as \`server\` or through the middleware's \`attach\` method), or a function building a transport of your own.
+      Details:
+       * options.hot.transport should be one of these:
+         "sse" | "ws"
+       * options.hot.transport should be an instance of function."
+`;
+
 exports[`validation should throw an error on the "hot" option with "{"unknown":true}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot has an unknown property 'unknown'. These properties are valid:
