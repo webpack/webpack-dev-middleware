@@ -22,6 +22,8 @@
       "default": "./dist/index.js"
     },
     "./client": "./client/index.js",
+    "./client/sse": "./client/clients/EventSourceClient.js",
+    "./client/ws": "./client/clients/WebSocketClient.js",
     "./client/indicator": "./client/indicator.js",
     "./client/overlay": "./client/overlay.js",
     "./package.json": "./package.json"

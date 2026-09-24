@@ -475,7 +475,8 @@ entry: [
 ```
 
 The runtime ships as ES5 and uses no built-in newer than ES5, apart from
-`EventSource` and `Promise` (which HMR itself needs), so it runs in old
+`Promise`, the transport in use (`EventSource` or `WebSocket`) and what HMR
+itself needs, so it runs in old
 browsers too — set [`target`](https://webpack.js.org/configuration/target/) to
 `["web", "es5"]` in your configuration so webpack emits its own runtime as ES5
 as well.
@@ -484,8 +485,10 @@ as well.
 
 |        Name         |       Type        |     Default      | Description                                                                                                                                                                                                                                                                      |
 | :-----------------: | :---------------: | :--------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|       `path`        |     `string`      | `/__webpack_hmr` | Path the SSE endpoint is served at. Must match the server `hot.path`.                                                                                                                                                                                                            |
-|      `timeout`      |     `number`      |     `20000`      | Reconnection / heartbeat watchdog timeout in milliseconds.                                                                                                                                                                                                                       |
+|     `transport`     |     `string`      |     `"sse"`      | How the events are carried: `"sse"` or `"ws"`. Must match the server [`hot.transport`](#hottransport).                                                                                                                                                                           |
+|       `path`        |     `string`      | `/__webpack_hmr` | Path the endpoint is served at. Must match the server `hot.path`.                                                                                                                                                                                                                |
+|      `timeout`      |     `number`      |     `20000`      | Heartbeat watchdog timeout in milliseconds, and the interval between reconnections under `"sse"`.                                                                                                                                                                                |
+|     `reconnect`     |     `number`      |       `10`       | How many times `"ws"` reconnects before giving up. `"sse"` retries for as long as the page is open and ignores this.                                                                                                                                                             |
 |      `overlay`      | `boolean\|Object` |      `true`      | In-page overlay for problems: a boolean, or a JSON object — see [overlay options](#client-overlay-options). Same value shape as webpack-dev-server's [`client.overlay`](https://webpack.js.org/configuration/dev-server/#overlay), plus a few webpack-dev-middleware extensions. |
 |      `reload`       |     `boolean`     |      `true`      | Fall back to a full page reload when an update cannot be applied through HMR (e.g. recovering from a broken build). Enabled by default, unlike webpack-hot-middleware; set to `false` to keep HMR-only.                                                                          |
 |      `logging`      |     `string`      |     `"info"`     | Logger level — one of `"none"`, `"error"`, `"warn"`, `"info"`, `"log"`, `"verbose"`. Uses webpack's runtime logger.                                                                                                                                                              |
@@ -493,6 +496,58 @@ as well.
 |    `autoConnect`    |     `boolean`     |      `true`      | Connect on load; set to `false` and call `setOptionsAndConnect()` manually.                                                                                                                                                                                                      |
 |     `progress`      |     `boolean`     |      `true`      | Show a small badge in the page while a rebuild is in progress (with the compilation percentage when the server enables `hot.progress`). Set to `false` to disable.                                                                                                               |
 | `dynamicPublicPath` |     `boolean`     |     `false`      | Prefix `path` with `__webpack_public_path__` at runtime. The leading slash of `path` is stripped and no other normalization is applied, so the public path should end with `/`.                                                                                                  |
+
+#### A client of your own
+
+The transport the page speaks can be replaced. A client is a class constructed
+with the url, the same shape webpack-dev-server's
+[`client.webSocketTransport`](https://webpack.js.org/configuration/dev-server/#websockettransport)
+has always taken, so one written for that works here unchanged:
+
+```js
+// my-client.js
+module.exports = class MyClient {
+  constructor(url) {
+    this.socket = new WebSocket(url);
+  }
+
+  onOpen(fn) {
+    this.socket.onopen = fn;
+  }
+
+  onClose(fn) {
+    this.socket.onclose = fn;
+  }
+
+  onMessage(fn) {
+    // Called with the message as a string.
+    this.socket.onmessage = (event) => fn(event.data);
+  }
+
+  close() {
+    // Close without reporting it, so the runtime does not reconnect.
+    this.socket.onclose = null;
+    this.socket.close();
+  }
+};
+```
+
+Reconnecting and the backoff between attempts are the runtime's job, not the
+client's — it only has to report `onOpen` and `onClose` honestly. Extend one of
+the built-in two rather than starting over if you only want to change part of
+it:
+
+```js
+// The runtime ships as ES modules, so import it — a `require()` through a
+// bundler hands back the namespace, whose class is on `.default`.
+import EventSourceClient from "webpack-dev-middleware/client/sse";
+import WebSocketClient from "webpack-dev-middleware/client/ws";
+```
+
+The runtime picks it up from `__webpack_dev_server_client__`, which
+webpack-dev-server sets from its `client.webSocketTransport` option; a module
+exporting the class as `default` is unwrapped. An injected client wins over
+both built-ins, whatever `transport` says.
 
 #### Client `overlay` options
 
