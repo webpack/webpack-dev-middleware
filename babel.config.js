@@ -1,4 +1,4 @@
-const MIN_BABEL_VERSION = 7;
+const MIN_BABEL_VERSION = 8;
 
 // The middleware itself runs on the node.js version `engines` requires.
 const NODE_TARGETS = { node: "20.9.0" };
