@@ -389,6 +389,24 @@ middleware(compiler, {
 
 A function that returns something missing one of those throws, naming what is absent, rather than failing later from wherever it is first published to.
 
+The clients are yours — whatever `onConnect` hands out is what `publishTo` takes back — so in TypeScript name their type through `ClientStreamFactory<T>`:
+
+```ts
+import { type ClientStreamFactory } from "webpack-dev-middleware/types/hot";
+
+interface MyClient {
+  id: number;
+  send: (frame: string) => void;
+}
+
+const transport: ClientStreamFactory<MyClient> = ({ path }, logger) => ({
+  // ...
+  publishTo(client, payload) {
+    client.send(JSON.stringify(payload));
+  },
+});
+```
+
 #### `hot.path`
 
 Type: `String`

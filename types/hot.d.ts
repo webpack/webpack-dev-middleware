@@ -2,7 +2,7 @@ export = createHot;
 /**
  * @typedef {object} HotInstance
  * @property {string} path path the endpoint is served at
- * @property {("sse" | "ws" | ClientStreamFactory)} transport how events reach the clients
+ * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)} transport how events reach the clients
  * @property {(server: HttpServer) => void} attach answer WebSocket upgrades on this server, a no-op for Server-Sent Events
  * @property {(req: IncomingMessage, res: ServerResponse) => void} handle answer a request on the endpoint's path
  * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
@@ -46,6 +46,8 @@ declare namespace createHot {
     MiddlewareStatsOption,
     HotOptions,
     Payload,
+    EXPECTED_ANY,
+    WebSocketLikeClient,
     StreamClient,
     ClientStream,
     ClientStreamFactory,
@@ -56,10 +58,12 @@ declare const HOT_DEFAULT_HEARTBEAT: number;
 declare const HOT_DEFAULT_PATH: "/__webpack_hmr";
 declare const HOT_DEFAULT_TRANSPORT: "sse";
 /**
- * @param {ClientStream} stream what a `transport` function returned
- * @returns {ClientStream} the same stream
+ * @param {ClientStream<EXPECTED_ANY>} stream what a `transport` function returned
+ * @returns {ClientStream<EXPECTED_ANY>} the same stream
  */
-declare function checkClientStream(stream: ClientStream): ClientStream;
+declare function checkClientStream(
+  stream: ClientStream<EXPECTED_ANY>,
+): ClientStream<EXPECTED_ANY>;
 /**
  * @param {number} heartbeat heartbeat interval in milliseconds
  * @param {Logger} logger logger
@@ -112,7 +116,7 @@ type HotInstance = {
   /**
    * how events reach the clients
    */
-  transport: "sse" | "ws" | ClientStreamFactory;
+  transport: "sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>;
   /**
    * answer WebSocket upgrades on this server, a no-op for Server-Sent Events
    */
@@ -152,7 +156,7 @@ type HotOptions = {
   /**
    * how events reach the clients, Server-Sent Events by default
    */
-  transport?: ("sse" | "ws" | ClientStreamFactory) | undefined;
+  transport?: ("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>) | undefined;
   /**
    * the path the endpoint is served at
    */
@@ -212,16 +216,39 @@ type Payload = {
    */
   errors?: string[] | undefined;
 };
+type EXPECTED_ANY = any;
+/**
+ * The WebSocket members a client is published to through. Structural rather than
+ * the ws package's own declarations, which would put an optional dependency's
+ * types in the path of every consumer, including those on Server-Sent Events.
+ */
+type WebSocketLikeClient = {
+  /**
+   * the socket's current state
+   */
+  readyState: number;
+  /**
+   * the value `readyState` has while the socket is open
+   */
+  OPEN: number;
+  /**
+   * send a frame to this client
+   */
+  send: (data: string) => void;
+};
 /**
  * What a client is addressed by, which is whatever the transport handed out: the
  * response holding a Server-Sent Events stream, or a WebSocket.
  */
-type StreamClient = ServerResponse | import("ws").WebSocket;
+type StreamClient = ServerResponse | WebSocketLikeClient;
 /**
  * One transport's clients. `createHot` publishes through this and does not know
- * whether the events leave over Server-Sent Events or a WebSocket.
+ * whether the events leave over Server-Sent Events, a WebSocket or something of
+ * your own, which is what `TClient` is for: a transport built by a `transport`
+ * function names the type of the clients it hands to `onConnect` and takes back
+ * in `publishTo`.
  */
-type ClientStream = {
+type ClientStream<TClient extends unknown = StreamClient> = {
   /**
    * answer a request on the endpoint's path
    */
@@ -233,7 +260,7 @@ type ClientStream = {
   /**
    * called with each client once it has joined
    */
-  onConnect: (fn: (client: StreamClient) => void) => void;
+  onConnect: (fn: (client: TClient) => void) => void;
   /**
    * publish a payload to every client
    */
@@ -248,7 +275,7 @@ type ClientStream = {
    * publish a payload to a single client
    */
   publishTo: (
-    client: StreamClient,
+    client: TClient,
     payload:
       | Payload
       | {
@@ -272,11 +299,11 @@ type ClientStream = {
  * Builds a transport of your own. The same calls `createHot` makes of the
  * built-in two are made of whatever this returns.
  */
-type ClientStreamFactory = (
+type ClientStreamFactory<TClient extends unknown = StreamClient> = (
   options: {
     path: string;
     heartbeat: number;
   },
   logger: Logger,
-) => ClientStream;
+) => ClientStream<TClient>;
 type EventStream = ClientStream;

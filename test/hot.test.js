@@ -1291,6 +1291,21 @@ describe("createHot over a transport of your own", () => {
     hot.close();
   });
 
+  it("keeps the optional ws dependency out of the published types", () => {
+    const fs = require("node:fs");
+    const path = require("node:path");
+
+    const declarations = fs.readFileSync(
+      path.resolve(__dirname, "../types/hot.d.ts"),
+      "utf8",
+    );
+
+    // `types/index.d.ts` reaches these, so an `import("ws")` here is loaded by
+    // every consumer — including one on Server-Sent Events, who has no reason
+    // to have `@types/ws` installed, and whose build then fails outright.
+    expect(declarations).not.toMatch(/\bimport\("ws"\)/);
+  });
+
   it("names what a returned object is missing rather than failing later", () => {
     const compiler = makeFakeCompiler();
 

@@ -16,7 +16,7 @@
 
 /**
  * @typedef {object} HotOptions
- * @property {("sse" | "ws" | ClientStreamFactory)=} transport how events reach the clients, Server-Sent Events by default
+ * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)=} transport how events reach the clients, Server-Sent Events by default
  * @property {string=} path the path the endpoint is served at
  * @property {number=} heartbeat heartbeat interval in milliseconds
  * @property {HttpServer=} server HTTP server the `"ws"` transport answers upgrades on, when it is already built
@@ -37,21 +37,38 @@
  * @property {string[]=} errors errors
  */
 
+// eslint-disable-next-line jsdoc/reject-any-type
+/** @typedef {any} EXPECTED_ANY */
+
+/**
+ * The WebSocket members a client is published to through. Structural rather than
+ * the ws package's own declarations, which would put an optional dependency's
+ * types in the path of every consumer, including those on Server-Sent Events.
+ * @typedef {object} WebSocketLikeClient
+ * @property {number} readyState the socket's current state
+ * @property {number} OPEN the value `readyState` has while the socket is open
+ * @property {(data: string) => void} send send a frame to this client
+ */
+
 /**
  * What a client is addressed by, which is whatever the transport handed out: the
  * response holding a Server-Sent Events stream, or a WebSocket.
- * @typedef {ServerResponse | import("ws").WebSocket} StreamClient
+ * @typedef {ServerResponse | WebSocketLikeClient} StreamClient
  */
 
 /**
  * One transport's clients. `createHot` publishes through this and does not know
- * whether the events leave over Server-Sent Events or a WebSocket.
+ * whether the events leave over Server-Sent Events, a WebSocket or something of
+ * your own, which is what `TClient` is for: a transport built by a `transport`
+ * function names the type of the clients it hands to `onConnect` and takes back
+ * in `publishTo`.
+ * @template {EXPECTED_ANY} [TClient=StreamClient]
  * @typedef {object} ClientStream
  * @property {(req: IncomingMessage, res: ServerResponse) => void} handler answer a request on the endpoint's path
  * @property {() => boolean} hasClients true when at least one client is connected
- * @property {(fn: (client: StreamClient) => void) => void} onConnect called with each client once it has joined
+ * @property {(fn: (client: TClient) => void) => void} onConnect called with each client once it has joined
  * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
- * @property {(client: StreamClient, payload: Payload | { action: string }) => void} publishTo publish a payload to a single client
+ * @property {(client: TClient, payload: Payload | { action: string }) => void} publishTo publish a payload to a single client
  * @property {() => void} close end every client and stop the heartbeat
  * @property {((server: HttpServer) => void)=} attach answer upgrades on this server
  * @property {(() => void)=} detach stop answering upgrades
@@ -60,10 +77,11 @@
 /**
  * Builds a transport of your own. The same calls `createHot` makes of the
  * built-in two are made of whatever this returns.
+ * @template {EXPECTED_ANY} [TClient=StreamClient]
  * @callback ClientStreamFactory
  * @param {{ path: string, heartbeat: number }} options the endpoint's path and heartbeat interval
  * @param {Logger} logger logger
- * @returns {ClientStream} client stream
+ * @returns {ClientStream<TClient>} client stream
  */
 
 /** @typedef {ClientStream} EventStream */
@@ -103,8 +121,8 @@ const CLIENT_STREAM_METHODS = [
 ];
 
 /**
- * @param {ClientStream} stream what a `transport` function returned
- * @returns {ClientStream} the same stream
+ * @param {ClientStream<EXPECTED_ANY>} stream what a `transport` function returned
+ * @returns {ClientStream<EXPECTED_ANY>} the same stream
  */
 function checkClientStream(stream) {
   const missing =
@@ -460,7 +478,7 @@ function publishBundles(bundles, previousBundles, eventStream) {
 /**
  * @typedef {object} HotInstance
  * @property {string} path path the endpoint is served at
- * @property {("sse" | "ws" | ClientStreamFactory)} transport how events reach the clients
+ * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)} transport how events reach the clients
  * @property {(server: HttpServer) => void} attach answer WebSocket upgrades on this server, a no-op for Server-Sent Events
  * @property {(req: IncomingMessage, res: ServerResponse) => void} handle answer a request on the endpoint's path
  * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
@@ -488,7 +506,7 @@ function createHot(compiler, userOptions, statsOption) {
     );
   }
 
-  /** @type {ClientStream} */
+  /** @type {ClientStream<EXPECTED_ANY>} */
   let eventStream;
   /** @type {string} */
   let transportName;
@@ -640,7 +658,9 @@ function createHot(compiler, userOptions, statsOption) {
       // https://github.com/webpack/tapable/issues/32#issuecomment-350644466
       closed = true;
       eventStream.close();
-      eventStream = /** @type {ClientStream} */ (/** @type {unknown} */ (null));
+      eventStream = /** @type {ClientStream<EXPECTED_ANY>} */ (
+        /** @type {unknown} */ (null)
+      );
     },
   };
 }
