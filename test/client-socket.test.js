@@ -168,6 +168,25 @@ describe("createSocket", () => {
     expect(instances).toHaveLength(21);
   });
 
+  it("backs off exponentially by default", () => {
+    const { FakeClient, instances } = createFakeClient();
+
+    // No `retryDelay`: the default doubles each time, so a server that is
+    // down does not get hammered once a second forever.
+    createSocket(FakeClient, "ws://localhost/hmr");
+
+    instances[0].closeHandler();
+    jest.advanceTimersByTime(1100);
+    expect(instances).toHaveLength(2);
+
+    instances[1].closeHandler();
+    // The second wait is past two seconds, which the first was not.
+    jest.advanceTimersByTime(1100);
+    expect(instances).toHaveLength(2);
+    jest.advanceTimersByTime(1000);
+    expect(instances).toHaveLength(3);
+  });
+
   it("says it is reconnecting while the attempts are bounded", () => {
     const info = jest.spyOn(globalThis.console, "info").mockImplementation();
     const { FakeClient, instances } = createFakeClient();
@@ -207,6 +226,41 @@ describe("createSocket", () => {
     );
 
     info.mockRestore();
+  });
+
+  it("takes an explicit choice about announcing retries", () => {
+    const info = jest.spyOn(globalThis.console, "info").mockImplementation();
+    const { FakeClient, instances } = createFakeClient();
+
+    // Bounded attempts would announce themselves, but the caller said not to.
+    createSocket(FakeClient, "ws://localhost/hmr", {
+      logRetries: false,
+      retries: 2,
+      retryDelay: () => 1000,
+    });
+
+    instances[0].closeHandler();
+
+    expect(info).not.toHaveBeenCalledWith(
+      expect.stringContaining("Trying to reconnect"),
+    );
+
+    info.mockRestore();
+  });
+
+  it("closes cleanly while waiting to reconnect", () => {
+    const { FakeClient, instances } = createFakeClient();
+    const socket = createSocket(FakeClient, "ws://localhost/hmr", {
+      retryDelay: () => 1000,
+    });
+
+    // Closed with no live connection, only a pending timer — there is nothing
+    // to close, and the timer must not fire afterwards.
+    instances[0].closeHandler();
+    socket.close();
+    jest.advanceTimersByTime(10000);
+
+    expect(instances).toHaveLength(1);
   });
 
   it("stops reconnecting once closed", () => {

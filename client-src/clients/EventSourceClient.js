@@ -8,6 +8,10 @@ const DEFAULT_TIMEOUT = 20 * 1000;
  * Server-Sent Events. A connection can die without the browser firing `error`
  * — a proxy that stops forwarding, a laptop that slept — so this one watches
  * for silence as well, and reports that as a close for the caller to reconnect.
+ *
+ * A failure is not logged here, for the same reason the WebSocket one does not
+ * log it: `error` fires on every routine reconnection, so saying so would be
+ * noise rather than news.
  * @implements {CommunicationClient}
  */
 export default class EventSourceClient {
@@ -31,6 +35,10 @@ export default class EventSourceClient {
     this.client = new window.EventSource(url);
 
     this.client.addEventListener("open", () => {
+      if (this.closed) {
+        return;
+      }
+
       this.lastActivity = Date.now();
 
       if (this.openHandler) {
@@ -39,6 +47,10 @@ export default class EventSourceClient {
     });
 
     this.client.addEventListener("message", (event) => {
+      if (this.closed) {
+        return;
+      }
+
       this.lastActivity = Date.now();
 
       if (this.messageHandler) {
@@ -62,7 +74,6 @@ export default class EventSourceClient {
    * End this connection and report it, once.
    */
   handleDisconnect() {
-    /* istanbul ignore next -- @preserve reached only by an event queued before close() */
     if (this.closed) {
       return;
     }

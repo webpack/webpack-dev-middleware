@@ -1,5 +1,3 @@
-import { log } from "../utils/log.js";
-
 /** @typedef {import("./createSocket.js").CommunicationClient} CommunicationClient */
 /** @typedef {import("./createSocket.js").ClientHandler} ClientHandler */
 
@@ -30,6 +28,11 @@ function toWebSocketURL(url) {
  * A WebSocket. The browser reports a dropped connection itself, and the server
  * pings to find a half-open one, so unlike Server-Sent Events this needs no
  * watchdog of its own.
+ *
+ * A failure is not logged here. The `error` event carries no detail by
+ * specification, so it would print an opaque object, and it is followed by the
+ * `close` the shared socket already reports and acts on — which is also all
+ * Server-Sent Events say, so neither transport is noisier than the other.
  * @implements {CommunicationClient}
  */
 export default class WebSocketClient {
@@ -37,9 +40,42 @@ export default class WebSocketClient {
    * @param {string} url url to connect to
    */
   constructor(url) {
+    /** @type {ClientHandler | undefined} */
+    this.openHandler = undefined;
+    /** @type {ClientHandler | undefined} */
+    this.closeHandler = undefined;
+    /** @type {ClientHandler | undefined} */
+    this.messageHandler = undefined;
+    // Set once closed, so an event the socket had already queued cannot report
+    // anything after the caller asked for none.
+    this.closed = false;
+
     this.client = new WebSocket(toWebSocketURL(url));
-    this.client.onerror = (error) => {
-      log.error(error);
+
+    this.client.onopen = () => {
+      if (this.openHandler) {
+        this.openHandler();
+      }
+    };
+
+    this.client.onclose = () => {
+      if (this.closed) {
+        return;
+      }
+
+      if (this.closeHandler) {
+        this.closeHandler();
+      }
+    };
+
+    this.client.onmessage = (event) => {
+      if (this.closed) {
+        return;
+      }
+
+      if (this.messageHandler) {
+        this.messageHandler(event.data);
+      }
     };
   }
 
@@ -47,34 +83,28 @@ export default class WebSocketClient {
    * @param {ClientHandler} fn called once the connection is open
    */
   onOpen(fn) {
-    this.client.onopen = () => {
-      fn();
-    };
+    this.openHandler = fn;
   }
 
   /**
    * @param {ClientHandler} fn called once the connection is gone
    */
   onClose(fn) {
-    this.client.onclose = () => {
-      fn();
-    };
+    this.closeHandler = fn;
   }
 
   /**
    * @param {ClientHandler} fn called with each message, as a string
    */
   onMessage(fn) {
-    this.client.onmessage = (event) => {
-      fn(event.data);
-    };
+    this.messageHandler = fn;
   }
 
   /**
    * Close without reporting it, so the caller does not reconnect.
    */
   close() {
-    this.client.onclose = null;
+    this.closed = true;
     this.client.close();
   }
 }
