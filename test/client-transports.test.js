@@ -130,6 +130,10 @@ for (const { name, Client, setup, teardown, emit } of transports) {
     let instances;
 
     beforeEach(() => {
+      // `EventSourceClient` arms a watchdog in its constructor, and the cases
+      // below that never close their client would otherwise leave a real
+      // interval ticking after the file is done.
+      jest.useFakeTimers();
       instances = setup();
     });
 

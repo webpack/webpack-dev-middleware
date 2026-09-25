@@ -230,6 +230,44 @@ describe("error overlay (browser)", () => {
     ).toBe("focus-me");
   });
 
+  it("hands focus back to a control inside a shadow root", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    await page.evaluate(() => {
+      const host = document.createElement("div");
+
+      document.body.appendChild(host);
+
+      const input = document.createElement("input");
+
+      input.id = "in-shadow";
+      host.attachShadow({ mode: "open" }).appendChild(input);
+      input.focus();
+    });
+
+    hotApp.edit("broken while a shadow control is focused {{{");
+    await waitForOverlay(page);
+    await page.keyboard.press("Escape");
+    await waitForNoOverlay(page);
+
+    // `document.activeElement` names the host rather than the control, and a
+    // host that does not delegate focus cannot be focused at all — so without
+    // descending into the root first, focus is simply dropped here.
+    expect(
+      await page.evaluate(() => {
+        const active = document.activeElement;
+        const inner =
+          active && active.shadowRoot && active.shadowRoot.activeElement;
+
+        return inner ? inner.id : null;
+      }),
+    ).toBe("in-shadow");
+  });
+
   it("dismisses on backdrop and close-button clicks, but not inside the card", async () => {
     hotApp = await createHotApp({ code: acceptedApp("v1") });
     ({ page, browser } = await runBrowser());
@@ -659,6 +697,53 @@ describe("error overlay (browser)", () => {
     expect(await frame.evaluate(() => document.body.textContent)).toContain(
       "2 / 2",
     );
+  });
+
+  it("keeps focus on the navigation across a page change", async () => {
+    hotApp = await createHotApp({
+      code: `
+        try {
+          require("./a");
+        } catch (err) {
+          // expected
+        }
+        try {
+          require("./b");
+        } catch (err) {
+          // expected
+        }
+      `,
+      files: {
+        "a.js": "broken a {{{",
+        "b.js": "broken b {{{",
+      },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    const frame = await waitForOverlay(page);
+
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("1 / 2"),
+    );
+    await frame.click('[aria-label="Previous problem"]');
+    await frame.click('[aria-label="Next problem"]');
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("2 / 2"),
+    );
+
+    // Turning the page rebuilds the card, which destroys the very button that
+    // was clicked. Handing focus to its replacement is what keeps a keyboard
+    // user on the navigation rather than dropping them at the top of the card
+    // after the first press.
+    expect(
+      await frame.evaluate(() =>
+        document.activeElement
+          ? document.activeElement.getAttribute("aria-label")
+          : null,
+      ),
+    ).toBe("Next problem");
   });
 
   it("shows the full problem list when paginate=false", async () => {

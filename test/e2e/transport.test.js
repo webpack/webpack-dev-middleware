@@ -90,6 +90,41 @@ for (const transport of ["sse", "ws"]) {
       expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
     });
 
+    it("reconnects after the server restarts", async () => {
+      hotApp = await createHotApp({
+        transport,
+        query: "?timeout=1000",
+        code: acceptedApp("v1"),
+        // Heartbeats faster than the shortened timeout, so the inactivity
+        // watchdog does not churn disconnect/reconnect cycles mid-test.
+        hot: { heartbeat: 300 },
+      });
+      ({ page, browser } = await runBrowser());
+      const console_ = collectConsole(page);
+
+      await page.goto(hotApp.url);
+      await waitForAppText(page, "v1");
+      await console_.waitFor("connected");
+
+      // Rebuilt while the server is down, so the update can only have arrived
+      // through the catch-up sync a reconnected client is sent. Restarting
+      // has to hand the new server to the transport again — a WebSocket
+      // upgrade is answered by the server, not by the middleware.
+      await hotApp.stopHttp();
+
+      const rebuilt = hotApp.nextBuild();
+
+      hotApp.edit(acceptedApp("v2"));
+      await rebuilt;
+      await hotApp.startHttp();
+
+      await waitForAppText(page, "v2");
+
+      expect(
+        await page.evaluate(() => document.getElementById("app").textContent),
+      ).toContain("v2");
+    });
+
     it("catches a client up on what it missed while it was away", async () => {
       hotApp = await createHotApp({ transport, code: acceptedApp("v1") });
       ({ page, browser } = await runBrowser());

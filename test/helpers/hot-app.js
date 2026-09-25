@@ -245,13 +245,42 @@ async function createHotApp({
         });
       });
 
-    server = await listen(0);
+    /** @type {EXPECTED_ANY[]} */
+    let upgradedSockets = [];
 
-    // A WebSocket handshake is an upgrade the HTTP server answers, which the
-    // middleware never sees — so it only works once the server is handed over.
-    if (transport === "ws") {
-      instance.attach(server);
-    }
+    /**
+     * A WebSocket handshake is an upgrade the HTTP server answers, which the
+     * middleware never sees — so it only works once the server is handed over.
+     * Every server this app listens on needs that again, the replacement one a
+     * restart brings up included.
+     * @param {EXPECTED_ANY} httpServer the server now serving this app
+     */
+    const attachTransport = (httpServer) => {
+      if (transport !== "ws") {
+        return;
+      }
+
+      instance.attach(httpServer);
+      // Once a socket is upgraded it stops being the HTTP server's to close,
+      // so `closeAllConnections()` does not reach it and a shutdown would
+      // wait on a connected client forever. Tracked here to be severed by
+      // hand, which is also what a client sees when a server really dies.
+      httpServer.on("upgrade", (/** @type {EXPECTED_ANY} */ _req, socket) => {
+        upgradedSockets.push(socket);
+      });
+    };
+
+    /** Sever every upgraded connection this app is holding open. */
+    const severUpgraded = () => {
+      for (const socket of upgradedSockets) {
+        socket.destroy();
+      }
+
+      upgradedSockets = [];
+    };
+
+    server = await listen(0);
+    attachTransport(server);
 
     const { port } = server.address();
 
@@ -328,6 +357,7 @@ async function createHotApp({
        */
       stopHttp() {
         return new Promise((resolve) => {
+          severUpgraded();
           server.closeAllConnections();
           server.close(() => resolve());
         });
@@ -340,6 +370,7 @@ async function createHotApp({
        */
       async startHttp() {
         server = await listen(port);
+        attachTransport(server);
       },
 
       /**
@@ -354,6 +385,7 @@ async function createHotApp({
             resolve();
             return;
           }
+          severUpgraded();
           server.closeAllConnections();
           server.close(() => resolve());
         });

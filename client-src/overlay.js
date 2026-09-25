@@ -505,7 +505,21 @@ function ensureOverlay() {
 
   // Whatever the page had focused, so it can be given back — the overlay
   // takes focus to be reachable by keyboard, and is rude if it keeps it.
-  state.previousActiveElement = document.activeElement;
+  // `document.activeElement` names the shadow host rather than the control
+  // inside it, and focusing a host that does not delegate focus does nothing
+  // at all, so descend to the control itself. A closed root reports no
+  // `activeElement`, and there the host really is all there is to go back to.
+  let previouslyFocused = document.activeElement;
+
+  while (
+    previouslyFocused &&
+    previouslyFocused.shadowRoot &&
+    previouslyFocused.shadowRoot.activeElement
+  ) {
+    previouslyFocused = previouslyFocused.shadowRoot.activeElement;
+  }
+
+  state.previousActiveElement = previouslyFocused;
   // Only the render that opens the overlay takes focus. Paginating re-renders
   // it, and moving focus then would take it off the button being clicked.
   state.focusOnRender = true;
@@ -610,6 +624,17 @@ function renderProblems() {
   const { type, lines } = state.currentProblems;
   const paginated = paginate && lines.length > 1;
 
+  // Emptying the card destroys whatever it had focused, and the browser then
+  // falls back to the frame's body — so paging with the keyboard would lose
+  // the button being used after the very first press. Which control it was is
+  // remembered here and given back below, since the rebuilt one is a
+  // different element.
+  const previouslyFocused = frameDocument.activeElement;
+  const refocus =
+    previouslyFocused && card.contains(previouslyFocused)
+      ? previouslyFocused.getAttribute("data-control")
+      : null;
+
   // Accent the top bar with the problem color (red for errors, yellow for warnings).
   card.style.borderTopColor = `#${problemColor(type)}`;
   setHTML(card, "");
@@ -619,6 +644,8 @@ function renderProblems() {
   closeButton.type = "button";
   closeButton.textContent = "×";
   closeButton.setAttribute("aria-label", "Close");
+  // Names this control across the re-render that replaces it, for `refocus`.
+  closeButton.setAttribute("data-control", "close");
   applyStyle(closeButton, closeButtonStyles);
   closeButton.addEventListener("click", () => {
     clear();
@@ -626,6 +653,8 @@ function renderProblems() {
   card.appendChild(closeButton);
 
   const visible = paginated ? [lines[state.pageIndex]] : lines;
+  /** @type {{ previous?: HTMLButtonElement, next?: HTMLButtonElement }} */
+  const navButtons = {};
 
   if (paginated) {
     // Header row: badge and the problem's first line (usually the file
@@ -672,13 +701,15 @@ function renderProblems() {
      * @param {string} text button text
      * @param {number} delta page delta
      * @param {string} ariaLabel accessible label
+     * @param {string} control name kept across re-renders, for `refocus`
      * @returns {HTMLButtonElement} nav button
      */
-    const makeNavButton = (text, delta, ariaLabel) => {
+    const makeNavButton = (text, delta, ariaLabel, control) => {
       const button = frameDocument.createElement("button");
       button.type = "button";
       button.textContent = text;
       button.setAttribute("aria-label", ariaLabel);
+      button.setAttribute("data-control", control);
       applyStyle(button, {
         border: "none",
         background: "transparent",
@@ -699,9 +730,17 @@ function renderProblems() {
     counter.textContent = `${state.pageIndex + 1} / ${lines.length}`;
     applyStyle(counter, { color: "#f2f2f2" });
 
-    nav.appendChild(makeNavButton("‹", -1, "Previous problem"));
+    navButtons.previous = makeNavButton(
+      "‹",
+      -1,
+      "Previous problem",
+      "previous",
+    );
+    navButtons.next = makeNavButton("›", 1, "Next problem", "next");
+
+    nav.appendChild(navButtons.previous);
     nav.appendChild(counter);
-    nav.appendChild(makeNavButton("›", 1, "Next problem"));
+    nav.appendChild(navButtons.next);
     header.appendChild(badge);
     header.appendChild(nav);
     card.appendChild(header);
@@ -750,6 +789,13 @@ function renderProblems() {
   if (state.focusOnRender) {
     state.focusOnRender = false;
     closeButton.focus();
+  } else if (refocus) {
+    // The same control when this render still has one — a problem set that
+    // shrank back to a single page has no navigation left — and the close
+    // button otherwise, so focus stays inside the card either way.
+    (
+      navButtons[/** @type {"previous" | "next"} */ (refocus)] || closeButton
+    ).focus();
   }
 }
 
