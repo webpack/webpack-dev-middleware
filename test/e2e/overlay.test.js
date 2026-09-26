@@ -15,6 +15,8 @@ import {
 import createHotApp from "../helpers/hot-app";
 import runBrowser from "../helpers/run-browser";
 
+const CLIENT_ENTRY = require.resolve("../../client-src/index.js");
+
 jest.setTimeout(400000);
 
 describe("error overlay (browser)", () => {
@@ -1102,6 +1104,87 @@ describe("error overlay parity with webpack-dev-server (browser)", () => {
       await frame.evaluate(() => document.querySelectorAll("img").length),
     ).toBe(0);
     expect(await page.evaluate(() => globalThis.xss)).toBeUndefined();
+  });
+
+  it("keeps a runtime error the filter accepts and drops the one it rejects", async () => {
+    hotApp = await createHotApp({
+      // Encoded in both layers webpack-dev-server uses: the function through
+      // `encodeURIComponent`, then the whole parameter through
+      // `URLSearchParams`. The outer layer is what keeps a `!` out of the
+      // entry request, which webpack would otherwise read as its
+      // inline-loader separator.
+      query: `?${new URLSearchParams({
+        overlay: JSON.stringify({
+          runtimeErrors: encodeURIComponent(
+            "function(error){return !/Injected/.test(error.message)}",
+          ),
+        }),
+      })}`,
+      code: boomApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await waitForRuntimeListeners(page);
+
+    // Rejected by the filter, so nothing appears.
+    await page.evaluate(() => globalThis.boom("Injected error"));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+
+    // Accepted, so the filter is doing the deciding rather than suppressing
+    // everything — which a filter that failed to decode would also look like.
+    await page.evaluate(() => globalThis.boom("kept boom"));
+    const frame = await waitForOverlay(page);
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "kept boom",
+    );
+  });
+
+  it("keeps a runtime error thrown while the entry was still evaluating", async () => {
+    hotApp = await createHotApp({
+      // Throws as the entry evaluates, which is before the transport's
+      // handshake completes. The build itself succeeded, so the catch-up sync
+      // that follows reports no problems at all.
+      //
+      // `subscribeAll` runs after the message has been fully processed, so it
+      // is the gate for "the sync has been handled" — waiting on a log line
+      // would not do, since a sync that changes nothing writes none.
+      code: `
+        globalThis.handled = [];
+        require(${JSON.stringify(CLIENT_ENTRY)}).subscribeAll((obj) => {
+          globalThis.handled.push(obj.action);
+        });
+        throw new Error("Injected error");
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    const frame = await waitForOverlay(page);
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "Injected error",
+    );
+
+    // The sync must not take the overlay down with it: a build that succeeded
+    // says nothing about an error the page threw on its own. This is
+    // webpack-dev-server#5024.
+    await page.waitForFunction(
+      () => globalThis.handled && globalThis.handled.includes("sync"),
+      { timeout: 30000 },
+    );
+
+    expect(await page.$(`#${OVERLAY_ID}`)).not.toBeNull();
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "Injected error",
+    );
   });
 });
 
