@@ -68,6 +68,9 @@ export default function createSocket(Client, url, options = {}) {
     client = new Client(url, options.clientOptions);
 
     client.onOpen(() => {
+      // Said here rather than in a transport, or whichever one did not say it
+      // would leave the page with no sign it had connected at all.
+      log.info("connected");
       attempt = 0;
     });
 

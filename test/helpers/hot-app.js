@@ -112,7 +112,11 @@ function makeConfig(
  * app becomes a named compilation whose client connects with `?name=<name>`
  * and renders from `<name>.js`. `pageHeaders` are sent with the HTML page
  * (e.g. a Content-Security-Policy).
- * @param {{ query?: string, code?: string, files?: Record<string, string>, apps?: { name: string, code: string }[], hot?: EXPECTED_ANY, stats?: EXPECTED_ANY, pageHeaders?: Record<string, string>, publicPath?: string, setup?: (server: EXPECTED_ANY) => void, hmrPlugin?: boolean }} options options
+ * Pass `transport: "ws"` to serve the events over a WebSocket instead of
+ * Server-Sent Events: the middleware is told to, the client is asked for the
+ * matching transport, and the HTTP server is handed over so it can answer the
+ * upgrade.
+ * @param {{ query?: string, code?: string, files?: Record<string, string>, apps?: { name: string, code: string }[], hot?: EXPECTED_ANY, stats?: EXPECTED_ANY, pageHeaders?: Record<string, string>, publicPath?: string, setup?: (server: EXPECTED_ANY) => void, hmrPlugin?: boolean, transport?: ("sse" | "ws") }} options options
  * @returns {Promise<EXPECTED_ANY>} handles for the running app
  */
 async function createHotApp({
@@ -126,6 +130,7 @@ async function createHotApp({
   publicPath = "/",
   setup,
   hmrPlugin = true,
+  transport = "sse",
 }) {
   const dir = fs.mkdtempSync(
     path.join(fs.realpathSync.native(os.tmpdir()), "wdm-e2e-"),
@@ -152,6 +157,13 @@ async function createHotApp({
     /** @type {string[]} */
     let scripts;
 
+    // The client picks its transport from its own query, so it has to be told
+    // the same thing the middleware was.
+    const clientQuery =
+      transport === "ws"
+        ? `?transport=ws${query ? `&${query.replace(/^\?/, "")}` : ""}`
+        : query;
+
     if (apps) {
       config = apps.map((app) => {
         // One context dir per compilation: editing one app's entry must not
@@ -161,7 +173,7 @@ async function createHotApp({
         fs.mkdirSync(appDir, { recursive: true });
         entryFiles[app.name] = path.join(appDir, "entry.js");
         fs.writeFileSync(entryFiles[app.name], app.code);
-        return makeConfig(app.name, appDir, entryFiles[app.name], query);
+        return makeConfig(app.name, appDir, entryFiles[app.name], clientQuery);
       });
       scripts = apps.map((app) => `/${app.name}.js`);
     } else {
@@ -171,7 +183,7 @@ async function createHotApp({
         "",
         dir,
         entryFiles[""],
-        query,
+        clientQuery,
         publicPath,
         hmrPlugin,
       );
@@ -189,7 +201,13 @@ async function createHotApp({
       }
     });
 
-    instance = middleware(compiler, { hot, stats });
+    instance = middleware(compiler, {
+      hot:
+        transport === "ws" && hot
+          ? { ...(hot === true ? {} : hot), transport: "ws" }
+          : hot,
+      stats,
+    });
 
     const app = express();
 
@@ -227,7 +245,43 @@ async function createHotApp({
         });
       });
 
+    /** @type {EXPECTED_ANY[]} */
+    let upgradedSockets = [];
+
+    /**
+     * A WebSocket handshake is an upgrade the HTTP server answers, which the
+     * middleware never sees — so it only works once the server is handed over.
+     * Every server this app listens on needs that again, the replacement one a
+     * restart brings up included.
+     * @param {EXPECTED_ANY} httpServer the server now serving this app
+     */
+    const attachTransport = (httpServer) => {
+      if (transport !== "ws") {
+        return;
+      }
+
+      instance.attach(httpServer);
+      // Once a socket is upgraded it stops being the HTTP server's to close,
+      // so `closeAllConnections()` does not reach it and a shutdown would
+      // wait on a connected client forever. Tracked here to be severed by
+      // hand, which is also what a client sees when a server really dies.
+      httpServer.on("upgrade", (/** @type {EXPECTED_ANY} */ _req, socket) => {
+        upgradedSockets.push(socket);
+      });
+    };
+
+    /** Sever every upgraded connection this app is holding open. */
+    const severUpgraded = () => {
+      for (const socket of upgradedSockets) {
+        socket.destroy();
+      }
+
+      upgradedSockets = [];
+    };
+
     server = await listen(0);
+    attachTransport(server);
+
     const { port } = server.address();
 
     await new Promise((resolve) => {
@@ -303,6 +357,7 @@ async function createHotApp({
        */
       stopHttp() {
         return new Promise((resolve) => {
+          severUpgraded();
           server.closeAllConnections();
           server.close(() => resolve());
         });
@@ -315,6 +370,7 @@ async function createHotApp({
        */
       async startHttp() {
         server = await listen(port);
+        attachTransport(server);
       },
 
       /**
@@ -329,6 +385,7 @@ async function createHotApp({
             resolve();
             return;
           }
+          severUpgraded();
           server.closeAllConnections();
           server.close(() => resolve());
         });

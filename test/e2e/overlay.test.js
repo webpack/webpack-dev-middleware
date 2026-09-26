@@ -184,6 +184,90 @@ describe("error overlay (browser)", () => {
     expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
   });
 
+  it("takes focus when it opens and hands it back when it closes", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    // Something on the page holds focus before the overlay appears.
+    await page.evaluate(() => {
+      const input = document.createElement("input");
+
+      input.id = "focus-me";
+      document.body.appendChild(input);
+      input.focus();
+    });
+
+    hotApp.edit("broken while focused {{{");
+    const frame = await waitForOverlay(page);
+
+    // Focus reaches into the frame, so Escape and the arrow keys work without
+    // clicking first, and a screen reader lands on the problem.
+    expect(
+      await frame.evaluate(() =>
+        document.activeElement
+          ? document.activeElement.getAttribute("aria-label")
+          : null,
+      ),
+    ).toBe("Close");
+
+    // The frame is announced by name rather than by its `about:blank` url.
+    expect(
+      await page.$eval(`#${OVERLAY_ID}`, (element) => element.title),
+    ).toBeTruthy();
+
+    await page.keyboard.press("Escape");
+    await waitForNoOverlay(page);
+
+    // Focus goes back where it was, rather than being lost with the removed
+    // frame and sending the next Tab to the top of the document.
+    expect(
+      await page.evaluate(() =>
+        document.activeElement ? document.activeElement.id : null,
+      ),
+    ).toBe("focus-me");
+  });
+
+  it("hands focus back to a control inside a shadow root", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    await page.evaluate(() => {
+      const host = document.createElement("div");
+
+      document.body.appendChild(host);
+
+      const input = document.createElement("input");
+
+      input.id = "in-shadow";
+      host.attachShadow({ mode: "open" }).appendChild(input);
+      input.focus();
+    });
+
+    hotApp.edit("broken while a shadow control is focused {{{");
+    await waitForOverlay(page);
+    await page.keyboard.press("Escape");
+    await waitForNoOverlay(page);
+
+    // `document.activeElement` names the host rather than the control, and a
+    // host that does not delegate focus cannot be focused at all — so without
+    // descending into the root first, focus is simply dropped here.
+    expect(
+      await page.evaluate(() => {
+        const active = document.activeElement;
+        const inner =
+          active && active.shadowRoot && active.shadowRoot.activeElement;
+
+        return inner ? inner.id : null;
+      }),
+    ).toBe("in-shadow");
+  });
+
   it("dismisses on backdrop and close-button clicks, but not inside the card", async () => {
     hotApp = await createHotApp({ code: acceptedApp("v1") });
     ({ page, browser } = await runBrowser());
@@ -615,6 +699,53 @@ describe("error overlay (browser)", () => {
     );
   });
 
+  it("keeps focus on the navigation across a page change", async () => {
+    hotApp = await createHotApp({
+      code: `
+        try {
+          require("./a");
+        } catch (err) {
+          // expected
+        }
+        try {
+          require("./b");
+        } catch (err) {
+          // expected
+        }
+      `,
+      files: {
+        "a.js": "broken a {{{",
+        "b.js": "broken b {{{",
+      },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    const frame = await waitForOverlay(page);
+
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("1 / 2"),
+    );
+    await frame.click('[aria-label="Previous problem"]');
+    await frame.click('[aria-label="Next problem"]');
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("2 / 2"),
+    );
+
+    // Turning the page rebuilds the card, which destroys the very button that
+    // was clicked. Handing focus to its replacement is what keeps a keyboard
+    // user on the navigation rather than dropping them at the top of the card
+    // after the first press.
+    expect(
+      await frame.evaluate(() =>
+        document.activeElement
+          ? document.activeElement.getAttribute("aria-label")
+          : null,
+      ),
+    ).toBe("Next problem");
+  });
+
   it("shows the full problem list when paginate=false", async () => {
     hotApp = await createHotApp({
       query: '?overlay={"paginate":false}',
@@ -844,6 +975,133 @@ describe("error overlay (browser)", () => {
     await console_.waitFor("Module parse failed");
 
     expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+});
+
+describe("error overlay parity with webpack-dev-server (browser)", () => {
+  let hotApp;
+  let browser;
+  let page;
+
+  afterEach(async () => {
+    ({ browser, app: hotApp } = await closeE2e(browser, hotApp));
+  });
+
+  it("keeps an error the filter accepts", async () => {
+    hotApp = await createHotApp({
+      query:
+        '?overlay={"errors":"function(message){return message.includes(`keep-me`)}"}',
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    hotApp.edit("keep-me is not valid javascript {{{");
+    const frame = await waitForOverlay(page);
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "keep-me",
+    );
+  });
+
+  it("shows no overlay when the errors filter rejects everything", async () => {
+    hotApp = await createHotApp({
+      query: '?overlay={"errors":"function(){return false}"}',
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    hotApp.edit("rejected by the filter {{{");
+    // The build problem still reaches the console — just not the DOM.
+    await console_.waitFor("Module parse failed");
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it("shows an error raised by the very first build", async () => {
+    // Broken before the browser ever connects, so the overlay has to come
+    // from the catch-up sync rather than from a rebuild.
+    hotApp = await createHotApp({ code: "broken from the start {{{" });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    const frame = await waitForOverlay(page);
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "Module parse failed",
+    );
+  });
+
+  it("replaces the overlay when a rebuild is still broken", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    hotApp.edit("first breakage {{{");
+    let frame = await waitForOverlay(page);
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "first breakage",
+    );
+
+    // A second, different failure must replace the first rather than leaving
+    // the stale one on screen.
+    hotApp.edit("second breakage {{{");
+    frame = await waitForOverlay(page);
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("second breakage"),
+    );
+
+    expect(await frame.evaluate(() => document.body.textContent)).not.toContain(
+      "first breakage",
+    );
+  });
+
+  it("dismisses with Escape more than once", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    hotApp.edit("broken once {{{");
+    await waitForOverlay(page);
+    await page.keyboard.press("Escape");
+    await waitForNoOverlay(page);
+
+    // Dismissing must not tear down whatever lets the next problem re-open
+    // it — a listener removed for good would leave the page blind.
+    hotApp.edit("broken twice {{{");
+    await waitForOverlay(page);
+    await page.keyboard.press("Escape");
+    await waitForNoOverlay(page);
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it("escapes markup in a build error instead of rendering it", async () => {
+    hotApp = await createHotApp({ code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    // The error text carries markup, which must reach the card as text.
+    hotApp.edit("const bad = \"<img src=x onerror='globalThis.xss=1'>\" {{{");
+    const frame = await waitForOverlay(page);
+
+    expect(
+      await frame.evaluate(() => document.querySelectorAll("img").length),
+    ).toBe(0);
+    expect(await page.evaluate(() => globalThis.xss)).toBeUndefined();
   });
 });
 

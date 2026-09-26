@@ -127,7 +127,9 @@ const colors = {
  * @property {HTMLElement | null} card visible panel inside the iframe
  * @property {boolean} runtimeListenersAttached whether the window listeners are attached
  * @property {boolean} hostKeydownAttached whether the host document's Escape listener is attached
+ * @property {boolean} focusOnRender whether the next render is the first one of a newly opened overlay
  * @property {number} pageIndex page shown when paginating
+ * @property {Element | null} previousActiveElement what the page had focused before the overlay opened
  * @property {Record<string, { type: "errors" | "warnings", lines: string[] }>} problemsBySource each reporting source's problems
  * @property {{ type: "errors" | "warnings", lines: string[] } | null} currentProblems union of every source, as displayed
  * @property {{ createHTML: (value: string) => EXPECTED_ANY } | undefined} trustedTypesPolicy trusted types policy
@@ -141,7 +143,9 @@ function createOverlayState() {
     card: null,
     runtimeListenersAttached: false,
     hostKeydownAttached: false,
+    focusOnRender: false,
     pageIndex: 0,
+    previousActiveElement: null,
     problemsBySource: {},
     currentProblems: null,
     trustedTypesPolicy: undefined,
@@ -436,6 +440,23 @@ export function clear(source) {
     (state.frame.parentNode).removeChild(state.frame);
   }
 
+  // Hand focus back to whatever had it, or the page is left with focus on a
+  // removed element and the next Tab starts from the top of the document.
+  const { previousActiveElement } = state;
+
+  if (
+    previousActiveElement &&
+    typeof (/** @type {HTMLElement} */ (previousActiveElement).focus) ===
+      "function" &&
+    // Removed from the document while the overlay was up: focusing it does
+    // nothing useful, and reading `isConnected` is how to tell.
+    previousActiveElement.isConnected !== false
+  ) {
+    /** @type {HTMLElement} */ (previousActiveElement).focus();
+  }
+
+  state.previousActiveElement = null;
+  state.focusOnRender = false;
   state.frame = null;
   state.card = null;
   state.problemsBySource = {};
@@ -482,8 +503,32 @@ function ensureOverlay() {
     );
   }
 
+  // Whatever the page had focused, so it can be given back — the overlay
+  // takes focus to be reachable by keyboard, and is rude if it keeps it.
+  // `document.activeElement` names the shadow host rather than the control
+  // inside it, and focusing a host that does not delegate focus does nothing
+  // at all, so descend to the control itself. A closed root reports no
+  // `activeElement`, and there the host really is all there is to go back to.
+  let previouslyFocused = document.activeElement;
+
+  while (
+    previouslyFocused &&
+    previouslyFocused.shadowRoot &&
+    previouslyFocused.shadowRoot.activeElement
+  ) {
+    previouslyFocused = previouslyFocused.shadowRoot.activeElement;
+  }
+
+  state.previousActiveElement = previouslyFocused;
+  // Only the render that opens the overlay takes focus. Paginating re-renders
+  // it, and moving focus then would take it off the button being clicked.
+  state.focusOnRender = true;
+
   state.frame = document.createElement("iframe");
   state.frame.id = OVERLAY_ID;
+  // An iframe with no accessible name is announced by its url, which here is
+  // `about:blank`.
+  state.frame.title = "Build errors and warnings";
   state.frame.src = "about:blank";
   applyStyle(state.frame, backdropStyles);
   document.body.appendChild(state.frame);
@@ -579,6 +624,17 @@ function renderProblems() {
   const { type, lines } = state.currentProblems;
   const paginated = paginate && lines.length > 1;
 
+  // Emptying the card destroys whatever it had focused, and the browser then
+  // falls back to the frame's body — so paging with the keyboard would lose
+  // the button being used after the very first press. Which control it was is
+  // remembered here and given back below, since the rebuilt one is a
+  // different element.
+  const previouslyFocused = frameDocument.activeElement;
+  const refocus =
+    previouslyFocused && card.contains(previouslyFocused)
+      ? previouslyFocused.getAttribute("data-control")
+      : null;
+
   // Accent the top bar with the problem color (red for errors, yellow for warnings).
   card.style.borderTopColor = `#${problemColor(type)}`;
   setHTML(card, "");
@@ -588,6 +644,8 @@ function renderProblems() {
   closeButton.type = "button";
   closeButton.textContent = "×";
   closeButton.setAttribute("aria-label", "Close");
+  // Names this control across the re-render that replaces it, for `refocus`.
+  closeButton.setAttribute("data-control", "close");
   applyStyle(closeButton, closeButtonStyles);
   closeButton.addEventListener("click", () => {
     clear();
@@ -595,6 +653,8 @@ function renderProblems() {
   card.appendChild(closeButton);
 
   const visible = paginated ? [lines[state.pageIndex]] : lines;
+  /** @type {{ previous?: HTMLButtonElement, next?: HTMLButtonElement }} */
+  const navButtons = {};
 
   if (paginated) {
     // Header row: badge and the problem's first line (usually the file
@@ -641,13 +701,15 @@ function renderProblems() {
      * @param {string} text button text
      * @param {number} delta page delta
      * @param {string} ariaLabel accessible label
+     * @param {string} control name kept across re-renders, for `refocus`
      * @returns {HTMLButtonElement} nav button
      */
-    const makeNavButton = (text, delta, ariaLabel) => {
+    const makeNavButton = (text, delta, ariaLabel, control) => {
       const button = frameDocument.createElement("button");
       button.type = "button";
       button.textContent = text;
       button.setAttribute("aria-label", ariaLabel);
+      button.setAttribute("data-control", control);
       applyStyle(button, {
         border: "none",
         background: "transparent",
@@ -668,9 +730,17 @@ function renderProblems() {
     counter.textContent = `${state.pageIndex + 1} / ${lines.length}`;
     applyStyle(counter, { color: "#f2f2f2" });
 
-    nav.appendChild(makeNavButton("‹", -1, "Previous problem"));
+    navButtons.previous = makeNavButton(
+      "‹",
+      -1,
+      "Previous problem",
+      "previous",
+    );
+    navButtons.next = makeNavButton("›", 1, "Next problem", "next");
+
+    nav.appendChild(navButtons.previous);
     nav.appendChild(counter);
-    nav.appendChild(makeNavButton("›", 1, "Next problem"));
+    nav.appendChild(navButtons.next);
     header.appendChild(badge);
     header.appendChild(nav);
     card.appendChild(header);
@@ -712,6 +782,21 @@ function renderProblems() {
     ? "Use ‹ › or the arrow keys to navigate. Click outside, press Esc, or fix the code to dismiss."
     : "Click outside, press Esc, or fix the code to dismiss.";
   card.appendChild(hint);
+
+  // Focus reaches into the frame so Escape and the arrow keys work without a
+  // click first, and so a screen reader lands on the problem rather than
+  // staying where the page was.
+  if (state.focusOnRender) {
+    state.focusOnRender = false;
+    closeButton.focus();
+  } else if (refocus) {
+    // The same control when this render still has one — a problem set that
+    // shrank back to a single page has no navigation left — and the close
+    // button otherwise, so focus stays inside the card either way.
+    (
+      navButtons[/** @type {"previous" | "next"} */ (refocus)] || closeButton
+    ).focus();
+  }
 }
 
 render = renderProblems;
