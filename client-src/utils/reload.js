@@ -7,35 +7,12 @@
 const UNLOAD_GRACE_PERIOD = 1000;
 
 let unloading = false;
+// A reload asked for while the page looked like it was leaving. Held rather
+// than dropped: if the navigation was cancelled the page is staying and still
+// wants the update, and nothing would ask again until the next rebuild.
+let deferred = false;
 /** @type {ReturnType<typeof setTimeout> | undefined} */
 let graceTimer;
-
-if (typeof window !== "undefined" && window.addEventListener) {
-  window.addEventListener("beforeunload", () => {
-    unloading = true;
-
-    clearTimeout(graceTimer);
-
-    graceTimer = setTimeout(() => {
-      unloading = false;
-    }, UNLOAD_GRACE_PERIOD);
-  });
-
-  // The page really is going now, so stop reloading it for good.
-  window.addEventListener("pagehide", () => {
-    clearTimeout(graceTimer);
-
-    unloading = true;
-  });
-
-  // Restored from the back/forward cache: the same script keeps running, so a
-  // flag left set by the navigation away would block every later update.
-  window.addEventListener("pageshow", () => {
-    clearTimeout(graceTimer);
-
-    unloading = false;
-  });
-}
 
 /**
  * @returns {boolean} whether the page is on its way out
@@ -45,11 +22,15 @@ export function isUnloading() {
 }
 
 /**
- * Reload the page, unless it is already leaving. Isolated so tests can stub it
- * — `window.location` is not configurable in modern jsdom.
+ * Reload the page. While it looks like the page is leaving, the reload is held
+ * until that turns out to be wrong rather than performed or thrown away.
+ * Isolated so tests can stub it — `window.location` is not configurable in
+ * modern jsdom.
  */
 export default function reloadPage() {
   if (unloading) {
+    deferred = true;
+
     return;
   }
 
@@ -74,4 +55,41 @@ export default function reloadPage() {
   }
 
   target.location.reload();
+}
+
+if (typeof window !== "undefined" && window.addEventListener) {
+  window.addEventListener("beforeunload", () => {
+    unloading = true;
+
+    clearTimeout(graceTimer);
+
+    graceTimer = setTimeout(() => {
+      unloading = false;
+
+      if (deferred) {
+        deferred = false;
+        reloadPage();
+      }
+    }, UNLOAD_GRACE_PERIOD);
+  });
+
+  // The page really is going now, so stop reloading it for good — and drop
+  // anything held, or it would fire into a document on its way out.
+  window.addEventListener("pagehide", () => {
+    clearTimeout(graceTimer);
+
+    unloading = true;
+    deferred = false;
+  });
+
+  // Restored from the back/forward cache: the same script keeps running, so a
+  // flag left set by the navigation away would block every later update. The
+  // page is showing its own state again, so a reload held from before that
+  // navigation is stale and goes no further.
+  window.addEventListener("pageshow", () => {
+    clearTimeout(graceTimer);
+
+    unloading = false;
+    deferred = false;
+  });
 }

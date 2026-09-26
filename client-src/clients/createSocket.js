@@ -29,7 +29,7 @@ import { log } from "../utils/log.js";
  * @property {number=} retries how many times to reconnect before giving up, `Infinity` to keep trying
  * @property {((attempt: number) => number)=} retryDelay how long to wait before the attempt, in milliseconds
  * @property {boolean=} logRetries say so before each attempt, which only a bounded number of them can afford to do
- * @property {(() => void)=} onDisconnect called once per outage, when a connection that was open goes away
+ * @property {(() => void)=} onDisconnect called once per outage — on the first drop, whether or not that connection ever opened
  * @property {EXPECTED_ANY=} clientOptions passed to the client's constructor
  */
 
@@ -81,6 +81,10 @@ export default function createSocket(Client, url, options = {}) {
       // Once per outage rather than once per failed attempt: the retries that
       // follow are this module reconnecting, not the connection going away
       // again. `attempt` is back to zero for every connection that opened.
+      //
+      // A first attempt that never opened reports too, which is deliberate: a
+      // page loaded while the server is down has no connection either, and
+      // saying so is what webpack-dev-server's client has always done.
       if (!closed && attempt === 0 && options.onDisconnect) {
         options.onDisconnect();
       }
