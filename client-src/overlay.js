@@ -855,8 +855,14 @@ function handleRuntimeError(error, fallbackMessage) {
     return;
   }
 
+  // A rejection carries whatever it was rejected with, which is often a plain
+  // object rather than an `Error`. Wrapping it keeps a message to render, and
+  // `cause` keeps the value itself reachable — a `catchRuntimeError` filter
+  // deciding on a status code has nowhere else to read it from.
   const errorObject =
-    error instanceof Error ? error : new Error(error || fallbackMessage);
+    error instanceof Error
+      ? error
+      : new Error(error || fallbackMessage, { cause: error });
 
   // `catchRuntimeError` may be a filter function, like in webpack-dev-server.
   const shouldDisplay =

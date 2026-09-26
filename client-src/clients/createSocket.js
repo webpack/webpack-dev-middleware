@@ -29,6 +29,7 @@ import { log } from "../utils/log.js";
  * @property {number=} retries how many times to reconnect before giving up, `Infinity` to keep trying
  * @property {((attempt: number) => number)=} retryDelay how long to wait before the attempt, in milliseconds
  * @property {boolean=} logRetries say so before each attempt, which only a bounded number of them can afford to do
+ * @property {(() => void)=} onDisconnect called once per outage, when a connection that was open goes away
  * @property {EXPECTED_ANY=} clientOptions passed to the client's constructor
  */
 
@@ -76,6 +77,13 @@ export default function createSocket(Client, url, options = {}) {
 
     client.onClose(() => {
       client = null;
+
+      // Once per outage rather than once per failed attempt: the retries that
+      // follow are this module reconnecting, not the connection going away
+      // again. `attempt` is back to zero for every connection that opened.
+      if (!closed && attempt === 0 && options.onDisconnect) {
+        options.onDisconnect();
+      }
 
       if (closed || attempt >= retries) {
         return;

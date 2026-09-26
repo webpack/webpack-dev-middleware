@@ -16,6 +16,7 @@ import * as indicator from "./indicator.js";
 import configureOverlay from "./overlay.js";
 import applyUpdate from "./process-update.js";
 import { log, setLogLevel } from "./utils/log.js";
+import sendMessage from "./utils/send-message.js";
 import stripAnsi from "./utils/strip-ansi.js";
 
 /** @typedef {import("./utils/log.js").LogLevel} LogLevel */
@@ -238,6 +239,9 @@ function createClientSocket() {
     retryDelay: isEventSource
       ? () => /** @type {number} */ (options.timeout)
       : undefined,
+    onDisconnect: () => {
+      sendMessage("Close");
+    },
   });
 }
 
@@ -469,6 +473,7 @@ function processMessage(obj) {
           lastBuildingName,
         );
       }
+      sendMessage("Invalid");
       break;
     }
     case "progress": {
@@ -481,6 +486,7 @@ function processMessage(obj) {
           lastBuildingName,
         );
       }
+      sendMessage("Progress", obj);
       break;
     }
     case "built":
@@ -503,17 +509,29 @@ function processMessage(obj) {
       if (obj.errors.length > 0) {
         if (reporter) reporter.problems("errors", obj);
         shouldApply = false;
+        sendMessage("Errors", obj.errors);
       } else if (obj.warnings.length > 0) {
         // Warnings are reported (and possibly shown in the overlay) but do
         // not block the update, matching webpack-dev-server.
         if (reporter) {
           reporter.problems("warnings", obj);
         }
-      } else if (reporter) {
-        reporter.cleanProblemsCache(obj.name || "");
-        reporter.success(obj);
+        sendMessage("Warnings", obj.warnings);
+      } else {
+        if (reporter) {
+          reporter.cleanProblemsCache(obj.name || "");
+          reporter.success(obj);
+        }
+        // `built` is a compilation that produced something, `sync` one that
+        // had nothing to report — the same distinction webpack-dev-server
+        // draws between `Ok` and `StillOk`.
+        sendMessage(obj.action === "built" ? "Ok" : "StillOk");
       }
       if (shouldApply) {
+        // Posted before the update is applied, in the shape
+        // webpack-dev-server has always used for this one — a bare string
+        // rather than the `{ type, data }` the others carry.
+        sendMessage.raw(`webpackHotUpdate${obj.hash}`);
         applyUpdate(obj.hash, options, obj.name);
       }
       break;
