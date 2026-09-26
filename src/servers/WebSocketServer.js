@@ -181,17 +181,10 @@ function createWebSocketStream({ path, heartbeat }, logger) {
       implementation.close();
     },
     detach,
-    handler(req, res) {
-      // The handshake is an upgrade the HTTP server answers, so a plain request
-      // reaching the middleware is a client which cannot speak this transport.
-      if (!res.headersSent) {
-        res.writeHead(426, { "Content-Type": "text/plain; charset=utf-8" });
-      }
-
-      if (!res.writableEnded) {
-        res.end("Upgrade Required");
-      }
-    },
+    // No `handler`: the handshake is an upgrade the HTTP server answers, so a
+    // plain request reaching the middleware is a client which cannot speak this
+    // transport, and answering that is `createHot`'s default for any transport
+    // that does not serve requests itself.
     hasClients() {
       return clients.size > 0;
     },

@@ -250,13 +250,13 @@ type StreamClient = ServerResponse | WebSocketLikeClient;
  */
 type ClientStream<TClient extends unknown = StreamClient> = {
   /**
-   * answer a request on the endpoint's path
+   * answer a request on the endpoint's path; without one a request there is answered `426 Upgrade Required`
    */
-  handler: (req: IncomingMessage, res: ServerResponse) => void;
+  handler?: ((req: IncomingMessage, res: ServerResponse) => void) | undefined;
   /**
-   * true when at least one client is connected
+   * true when at least one client is connected; without one a payload is built even if nobody is listening
    */
-  hasClients: () => boolean;
+  hasClients?: (() => boolean) | undefined;
   /**
    * called with each client once it has joined
    */

@@ -1189,7 +1189,10 @@ describe("createHot over a WebSocket", () => {
 
     // Nothing but an upgrade can speak this transport, so a client which asked
     // for the path over plain HTTP is told so instead of being left hanging.
+    // The built-in WebSocket stream has no `handler` of its own — this is the
+    // answer `createHot` gives for any transport that does not serve requests.
     expect(response.status).toBe(426);
+    expect(await response.text()).toBe("Upgrade Required");
   });
 
   it("stops answering upgrades once closed", async () => {
@@ -1314,7 +1317,7 @@ describe("createHot over a transport of your own", () => {
     expect(() =>
       createHot(compiler, { transport: () => ({ publish() {} }) }),
     ).toThrow(
-      "The 'hot.transport' function must return a client stream, which is missing: close, handler, hasClients, onConnect, publishTo.",
+      "The 'hot.transport' function must return a client stream, which is missing: close, onConnect, publishTo.",
     );
   });
 
@@ -1322,7 +1325,75 @@ describe("createHot over a transport of your own", () => {
     const compiler = makeFakeCompiler();
 
     expect(() => createHot(compiler, { transport: () => undefined })).toThrow(
-      /must return a client stream, which is missing: close, handler/,
+      /must return a client stream, which is missing: close, onConnect/,
     );
+  });
+
+  it("accepts a transport that only does what a transport must", () => {
+    const compiler = makeFakeCompiler();
+    /** @type {EXPECTED_ANY[]} */
+    const published = [];
+
+    // `handler` and `hasClients` are not a transport's job: one is meaningless
+    // unless it is served over HTTP, the other an optimization it can make
+    // inside `publish`.
+    const hot = createHot(compiler, {
+      transport: () => ({
+        close() {},
+        onConnect() {},
+        publish(payload) {
+          published.push(payload);
+        },
+        publishTo() {},
+      }),
+    });
+
+    hot.publish({ action: "built" });
+
+    expect(published).toEqual([{ action: "built" }]);
+
+    hot.close();
+  });
+
+  it("publishes progress to a transport that does not answer hasClients", () => {
+    const compiler = makeFakeCompiler();
+    /** @type {EXPECTED_OBJECT} */
+    let progressHandler;
+    /** @type {EXPECTED_ANY[]} */
+    const published = [];
+
+    compiler.webpack = {
+      ProgressPlugin: class {
+        /** @param {EXPECTED_OBJECT} handler handler */
+        constructor(handler) {
+          progressHandler = handler;
+        }
+
+        apply() {}
+      },
+    };
+
+    const hot = createHot(compiler, {
+      progress: true,
+      transport: () => ({
+        close() {},
+        onConnect() {},
+        publish(payload) {
+          published.push(payload);
+        },
+        publishTo() {},
+      }),
+    });
+
+    progressHandler(0.25, "building");
+
+    // `hasClients` is what skips building a payload nobody will read. A
+    // transport that does not offer it is asked to publish and decides for
+    // itself, rather than being treated as having no clients at all.
+    expect(published).toEqual([
+      { action: "progress", percent: 25, message: "building" },
+    ]);
+
+    hot.close();
   });
 });

@@ -354,7 +354,7 @@ instance.attach(server);
 
 A plain `GET` on the path under `'ws'` answers `426 Upgrade Required`.
 
-A **function** builds a transport of your own. It is called with the resolved `path` and `heartbeat` and a logger, and must return a client stream — the same calls the built-in two answer:
+A **function** builds a transport of your own. It is called with the resolved `path` and `heartbeat` and a logger, and must return a client stream. Four methods are required:
 
 ```js
 /**
@@ -365,11 +365,6 @@ A **function** builds a transport of your own. It is called with the resolved `p
 middleware(compiler, {
   hot: {
     transport: ({ path, heartbeat }, logger) => ({
-      // Answer a request on the endpoint's path.
-      handler(req, res) {},
-      // True while at least one client is connected; a compilation with no
-      // clients skips serializing its payload.
-      hasClients: () => clients.size > 0,
       // Call `fn` with each client once it has joined. It is what catches a
       // client up with the last hashes, so it can apply the next update.
       onConnect(fn) {},
@@ -379,15 +374,32 @@ middleware(compiler, {
       publishTo(client, payload) {},
       // End every client and stop any timers.
       close() {},
-      // Optional, for transports built on an upgrade.
-      attach(server) {},
-      detach() {},
     }),
   },
 });
 ```
 
 A function that returns something missing one of those throws, naming what is absent, rather than failing later from wherever it is first published to.
+
+Four more are optional:
+
+```js
+const transport = ({ path, heartbeat }, logger) => ({
+  // ...the four above, and any of these:
+
+  // Answer a request on the endpoint's path. Only a transport served over
+  // HTTP needs one; without it a request there is answered
+  // `426 Upgrade Required`, which is what the built-in WebSocket relies on.
+  handler(req, res) {},
+  // True while at least one client is connected, so a compilation with none
+  // can skip building its payload. Without it, `publish` is called and the
+  // transport decides for itself.
+  hasClients: () => clients.size > 0,
+  // For a transport built on an upgrade, which the middleware never sees.
+  attach(server) {},
+  detach() {},
+});
+```
 
 The clients are yours — whatever `onConnect` hands out is what `publishTo` takes back — so in TypeScript name their type through `ClientStreamFactory<T>`:
 
