@@ -9,6 +9,7 @@ import {
   waitForAppText,
   waitForNoOverlay,
   waitForOverlay,
+  waitForOverlayText,
   waitForRuntimeListeners,
   warningApp,
 } from "../helpers/e2e";
@@ -429,8 +430,14 @@ describe("error overlay (browser)", () => {
     hotApp.edit(boomApp("v2"));
     await waitForAppText(page, "v2");
     await waitForNoOverlay(page);
-    // The fixture does not accept updates, so that was a full reload: the
-    // listeners are attached again, and racing them fails the same way.
+    // The fixture does not accept updates, so every rebuild is a full reload.
+    // A second one — the watcher seeing the same write twice, which file
+    // timestamp granularity makes possible — would land in the middle of the
+    // evaluate below and destroy its execution context, so wait until no
+    // further build is pending before touching the page again.
+    await hotApp.settle();
+    // Reloaded, so the listeners are attached afresh; racing them fails the
+    // same way.
     await waitForRuntimeListeners(page);
 
     // …so the next error starts a fresh slot instead of paging after the
@@ -522,24 +529,14 @@ describe("error overlay (browser)", () => {
           module.hot.accept();
         }
       `);
-    await page.waitForFunction(
-      (id) => {
-        const body = document.getElementById(id)?.contentDocument?.body;
-        return (
-          body &&
-          body.textContent.includes("Critical dependency") &&
-          !body.textContent.includes("Module parse failed")
-        );
-      },
-      { timeout: 30000, polling: 100 },
-      OVERLAY_ID,
-    );
-    expect(
-      await page.evaluate(
-        (id) => document.getElementById(id).contentDocument.body.textContent,
-        OVERLAY_ID,
-      ),
-    ).toContain("WARNING");
+    // Read by the wait itself: the recovery reloads the page, and a separate
+    // read afterwards loses its execution context to that navigation.
+    const text = await waitForOverlayText(page, {
+      includes: ["Critical dependency"],
+      excludes: ["Module parse failed"],
+    });
+
+    expect(text).toContain("WARNING");
   });
 
   it('overlay={"runtimeErrors":false} leaves runtime errors uncaught', async () => {

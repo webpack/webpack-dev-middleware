@@ -64,8 +64,8 @@
  * in `publishTo`.
  * @template {EXPECTED_ANY} [TClient=StreamClient]
  * @typedef {object} ClientStream
- * @property {(req: IncomingMessage, res: ServerResponse) => void} handler answer a request on the endpoint's path
- * @property {() => boolean} hasClients true when at least one client is connected
+ * @property {((req: IncomingMessage, res: ServerResponse) => void)=} handler answer a request on the endpoint's path; without one a request there is answered `426 Upgrade Required`
+ * @property {(() => boolean)=} hasClients true when at least one client is connected; without one a payload is built even if nobody is listening
  * @property {(fn: (client: TClient) => void) => void} onConnect called with each client once it has joined
  * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
  * @property {(client: TClient, payload: Payload | { action: string }) => void} publishTo publish a payload to a single client
@@ -108,17 +108,43 @@ function pathMatch(url, expected) {
   }
 }
 
-// Everything `createHot` calls on a stream. A transport of your own which is
-// missing one of them would throw from wherever it is first published to,
-// which is a long way from the option that built it.
-const CLIENT_STREAM_METHODS = [
-  "close",
+// What a transport has to do for itself. Missing one of these would throw from
+// wherever the stream is first published to, which is a long way from the
+// option that built it.
+const CLIENT_STREAM_METHODS = ["close", "onConnect", "publish", "publishTo"];
+
+// What it may also do. Absent is fine; present and not a function is not — that
+// would pass startup and throw from the endpoint or a progress callback later,
+// which is the failure being validated against in the first place.
+const OPTIONAL_CLIENT_STREAM_METHODS = [
+  "attach",
+  "detach",
   "handler",
   "hasClients",
-  "onConnect",
-  "publish",
-  "publishTo",
 ];
+
+// TODO remove in the next major release, along with the `handler` and
+// `hasClients` entries in `ClientStream`. Both were required of every transport
+// when `hot.transport` shipped, and neither needs to be: `handler` is
+// meaningless for a transport that is not served over HTTP — the built-in
+// WebSocket one only had it to answer 426 — and `hasClients` is an
+// optimization a transport can make inside `publish`. They stay optional
+// rather than being dropped now so a transport written against 8.3.0 keeps
+// working.
+//
+// Answers a request on the endpoint's path for a transport that has no
+// `handler`: reaching it over plain HTTP means the client cannot speak this
+// transport at all.
+/** @type {(req: IncomingMessage, res: ServerResponse) => void} */
+const upgradeRequired = (req, res) => {
+  if (!res.headersSent) {
+    res.writeHead(426, { "Content-Type": "text/plain; charset=utf-8" });
+  }
+
+  if (!res.writableEnded) {
+    res.end("Upgrade Required");
+  }
+};
 
 /**
  * @param {ClientStream<EXPECTED_ANY>} stream what a `transport` function returned
@@ -137,6 +163,18 @@ function checkClientStream(stream) {
   if (missing.length > 0) {
     throw new TypeError(
       `The 'hot.transport' function must return a client stream, which is missing: ${missing.join(", ")}.`,
+    );
+  }
+
+  const notFunctions = OPTIONAL_CLIENT_STREAM_METHODS.filter((method) => {
+    const value = /** @type {Record<string, unknown>} */ (stream)[method];
+
+    return value !== undefined && typeof value !== "function";
+  });
+
+  if (notFunctions.length > 0) {
+    throw new TypeError(
+      `The 'hot.transport' function returned a client stream whose optional ${notFunctions.length === 1 ? "method is" : "methods are"} not callable: ${notFunctions.join(", ")}.`,
     );
   }
 
@@ -557,7 +595,9 @@ function createHot(compiler, userOptions, statsOption) {
 
     // Published only when the rounded percent changes to keep the stream small.
     new webpack.ProgressPlugin((percent, message) => {
-      if (closed || !eventStream.hasClients()) {
+      // No `hasClients` means the transport did not offer to answer, so the
+      // payload is built and it decides in `publish`.
+      if (closed || (eventStream.hasClients && !eventStream.hasClients())) {
         return;
       }
 
@@ -644,7 +684,14 @@ function createHot(compiler, userOptions, statsOption) {
         return;
       }
 
-      eventStream.handler(req, res);
+      // Called as a method, not through a picked-off reference: a transport
+      // whose `handler` reaches for `this` was working before this became
+      // optional, and must keep working.
+      if (eventStream.handler) {
+        eventStream.handler(req, res);
+      } else {
+        upgradeRequired(req, res);
+      }
     },
     publish(payload) {
       if (closed) return;
