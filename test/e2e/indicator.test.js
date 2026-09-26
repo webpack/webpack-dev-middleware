@@ -252,6 +252,114 @@ describe("indicator shared state across bundled copies (browser)", () => {
     ({ browser, app: hotApp } = await closeE2e(browser, hotApp));
   });
 
+  it("stops a sweep when motion is declined mid-build, and recovers", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    const bar = async () =>
+      page.evaluate((id) => {
+        const host = document.getElementById(id);
+        const child =
+          host && host.shadowRoot && host.shadowRoot.firstElementChild;
+
+        return child
+          ? { width: child.style.width, running: child.getAnimations().length }
+          : null;
+      }, INDICATOR_ID);
+
+    await page.evaluate(() => {
+      globalThis.indicatorA.configure("linear");
+      // No percent, so the bar sweeps rather than measuring.
+      globalThis.indicatorA.show();
+    });
+
+    expect(await bar()).toEqual({ width: "40%", running: 1 });
+
+    // Declined while it is moving.
+    await page.emulateMediaFeatures([
+      { name: "prefers-reduced-motion", value: "reduce" },
+    ]);
+    await page.waitForFunction(
+      (id) =>
+        document.getElementById(id).shadowRoot.firstElementChild.getAnimations()
+          .length === 0,
+      { timeout: 30000 },
+      INDICATOR_ID,
+    );
+
+    // A sweep cancelled where it happened to be would sit at 40% looking like
+    // progress that stalled, and the stale animation reference would make
+    // every later call a no-op.
+    expect(await bar()).toEqual({ width: "100%", running: 0 });
+
+    await page.evaluate(() => {
+      globalThis.indicatorA.show();
+    });
+
+    expect(await bar()).toEqual({ width: "100%", running: 0 });
+  });
+
+  it("does not pile up preference listeners across builds", async () => {
+    await start();
+
+    // Tracked per query object rather than as a total, because that is where
+    // the mistake hides: `matchMedia` hands back a new `MediaQueryList` every
+    // call, so removing from a fresh one still *calls* `removeEventListener`
+    // and still leaves the listener attached to the object that has it.
+    // Installed before any page script runs, so the client's own calls count.
+    await page.evaluateOnNewDocument(() => {
+      globalThis.__attached = new Map();
+
+      const real = globalThis.matchMedia.bind(globalThis);
+
+      globalThis.matchMedia = (query) => {
+        const list = real(query);
+        const add = list.addEventListener.bind(list);
+        const remove = list.removeEventListener.bind(list);
+        const tally = (delta) => {
+          globalThis.__attached.set(
+            list,
+            (globalThis.__attached.get(list) || 0) + delta,
+          );
+        };
+
+        list.addEventListener = (...args) => {
+          tally(1);
+
+          return add(...args);
+        };
+        list.removeEventListener = (...args) => {
+          tally(-1);
+
+          return remove(...args);
+        };
+
+        return list;
+      };
+    });
+    await page.goto(hotApp.url);
+
+    const left = await page.evaluate(() => {
+      for (let i = 0; i < 3; i++) {
+        globalThis.indicatorA.show("Rebuilding…");
+        globalThis.indicatorA.hide();
+      }
+
+      let worst = 0;
+
+      for (const count of globalThis.__attached.values()) {
+        worst = Math.max(worst, count);
+      }
+
+      return { worst, queries: globalThis.__attached.size };
+    });
+
+    // Three builds registered on three query objects; none may still be
+    // holding a listener afterwards.
+    expect(left.queries).toBeGreaterThan(0);
+    expect(left.worst).toBe(0);
+  });
+
   it("drives a single badge from a second bundled copy", async () => {
     await start();
     await page.goto(hotApp.url);

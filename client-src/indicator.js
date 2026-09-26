@@ -28,6 +28,7 @@ const RING_LENGTH = 2 * Math.PI * 6;
  * @property {EXPECTED_ANY} barAnimation the bar's sweep, when one is running
  * @property {EXPECTED_ANY[]} animations every running animation, so motion can be stopped on request
  * @property {EXPECTED_ANY} motionListener what watches for motion being declined mid-build
+ * @property {EXPECTED_ANY} motionMediaQuery the query that listener sits on, which is the only object it can be removed from
  * @property {Record<string, true>} building sources with a build in progress — the badge hides only when every source finished
  */
 
@@ -44,6 +45,7 @@ function createIndicatorState() {
     barAnimation: null,
     animations: [],
     motionListener: null,
+    motionMediaQuery: null,
     building: {},
   };
 }
@@ -106,7 +108,10 @@ function stopAnimations() {
 
   state.animations = [];
 
-  const query = motionQuery();
+  // The query the listener was registered on, not a fresh one: `matchMedia`
+  // returns a new `MediaQueryList` for every call, so removing from another
+  // object silently does nothing and the listeners pile up one per build.
+  const query = state.motionMediaQuery;
 
   if (query && state.motionListener) {
     if (typeof query.removeEventListener === "function") {
@@ -117,6 +122,23 @@ function stopAnimations() {
   }
 
   state.motionListener = null;
+  state.motionMediaQuery = null;
+}
+
+/**
+ * Stop the motion, and leave what was moving in a state that still reads as a
+ * build in progress — a sweep cancelled where it happens to be would otherwise
+ * look like progress that stalled.
+ */
+function declineMotion() {
+  const wasSweeping = Boolean(state.barAnimation);
+
+  stopAnimations();
+  state.barAnimation = null;
+
+  if (wasSweeping && state.bar) {
+    state.bar.style.width = "100%";
+  }
 }
 
 /**
@@ -141,9 +163,10 @@ function animate(element, keyframes, options) {
 
   // Asked for mid-build: stop what is already moving rather than wait it out.
   if (query && !state.motionListener) {
+    state.motionMediaQuery = query;
     state.motionListener = () => {
       if (query.matches) {
-        stopAnimations();
+        declineMotion();
       }
     };
 
