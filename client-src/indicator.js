@@ -25,7 +25,9 @@ const RING_LENGTH = 2 * Math.PI * 6;
  * @property {SVGSVGElement | null} ring progress ring (determinate mode)
  * @property {SVGCircleElement | null} ringValue ring value circle
  * @property {HTMLElement | null} bar filled part of the linear indicator
- * @property {EXPECTED_ANY} barAnimation the indeterminate animation, so it can be stopped
+ * @property {EXPECTED_ANY} barAnimation the bar's sweep, when one is running
+ * @property {EXPECTED_ANY[]} animations every running animation, so motion can be stopped on request
+ * @property {EXPECTED_ANY} motionListener what watches for motion being declined mid-build
  * @property {Record<string, true>} building sources with a build in progress — the badge hides only when every source finished
  */
 
@@ -40,6 +42,8 @@ function createIndicatorState() {
     ringValue: null,
     bar: null,
     barAnimation: null,
+    animations: [],
+    motionListener: null,
     building: {},
   };
 }
@@ -75,6 +79,84 @@ const state = (() => {
 
   return holder[INDICATOR_STATE_KEY];
 })();
+
+/**
+ * @returns {EXPECTED_ANY} the reduced-motion query, or null where there is none
+ */
+function motionQuery() {
+  /* istanbul ignore next -- @preserve */
+  if (
+    typeof window === "undefined" ||
+    typeof window.matchMedia !== "function"
+  ) {
+    return null;
+  }
+
+  return window.matchMedia("(prefers-reduced-motion: reduce)");
+}
+
+/**
+ * Stop every animation this module started, and stop listening for the
+ * preference that would have stopped them.
+ */
+function stopAnimations() {
+  for (const animation of state.animations) {
+    animation.cancel();
+  }
+
+  state.animations = [];
+
+  const query = motionQuery();
+
+  if (query && state.motionListener) {
+    if (typeof query.removeEventListener === "function") {
+      query.removeEventListener("change", state.motionListener);
+    } else if (typeof query.removeListener === "function") {
+      query.removeListener(state.motionListener);
+    }
+  }
+
+  state.motionListener = null;
+}
+
+/**
+ * Start a looping animation, unless the viewer asked not to see motion — and
+ * stop it if they ask while it is running. Every animation started this way is
+ * tracked, so `hide` can stop them and drop the listener with them.
+ * @param {EXPECTED_ANY} element what to animate
+ * @param {EXPECTED_ANY} keyframes keyframes
+ * @param {EXPECTED_ANY} options animation options
+ * @returns {EXPECTED_ANY} the animation, or null when none was started
+ */
+function animate(element, keyframes, options) {
+  const query = motionQuery();
+
+  if ((query && query.matches) || typeof element.animate !== "function") {
+    return null;
+  }
+
+  const animation = element.animate(keyframes, options);
+
+  state.animations.push(animation);
+
+  // Asked for mid-build: stop what is already moving rather than wait it out.
+  if (query && !state.motionListener) {
+    state.motionListener = () => {
+      if (query.matches) {
+        stopAnimations();
+      }
+    };
+
+    if (typeof query.addEventListener === "function") {
+      query.addEventListener("change", state.motionListener);
+    } else if (typeof query.addListener === "function") {
+      // Safari below 14 has only the deprecated spelling.
+      query.addListener(state.motionListener);
+    }
+  }
+
+  return animation;
+}
 
 /**
  * @param {EXPECTED_ANY} element element
@@ -170,12 +252,10 @@ function ensureIndicator() {
   });
 
   // Pulse through the Web Animations API — no <style> element involved.
-  if (typeof state.dot.animate === "function") {
-    state.dot.animate([{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }], {
-      duration: 1000,
-      iterations: Number.POSITIVE_INFINITY,
-    });
-  }
+  animate(state.dot, [{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }], {
+    duration: 1000,
+    iterations: Number.POSITIVE_INFINITY,
+  });
 
   // Determinate mode: a progress ring drawn with SVG presentation attributes.
   state.ring = document.createElementNS(SVG_NS, "svg");
@@ -230,7 +310,7 @@ function showBar(percent) {
 
   if (typeof percent === "number") {
     if (state.barAnimation) {
-      state.barAnimation.cancel();
+      stopAnimations();
       state.barAnimation = null;
     }
 
@@ -239,18 +319,20 @@ function showBar(percent) {
     return;
   }
 
-  state.bar.style.width = "40%";
-
-  if (state.barAnimation || typeof state.bar.animate !== "function") {
+  if (state.barAnimation) {
     return;
   }
 
   // Web Animations rather than a stylesheet: a strict `style-src` refuses a
-  // `<style>` element, which is why nothing here has one.
-  state.barAnimation = state.bar.animate(
+  // `<style>` element, which is why nothing here has one. With motion declined
+  // nothing sweeps, so the bar states that a build is running by sitting still
+  // at full width instead.
+  state.barAnimation = animate(
+    state.bar,
     [{ transform: "translateX(-100%)" }, { transform: "translateX(250%)" }],
     { duration: 1400, iterations: Number.POSITIVE_INFINITY },
   );
+  state.bar.style.width = state.barAnimation ? "40%" : "100%";
 }
 
 /**
@@ -318,10 +400,8 @@ export function hide(source) {
     }
   }
 
-  if (state.barAnimation) {
-    state.barAnimation.cancel();
-    state.barAnimation = null;
-  }
+  stopAnimations();
+  state.barAnimation = null;
 
   if (state.host && state.host.parentNode) {
     /** @type {ParentNode & Node} */

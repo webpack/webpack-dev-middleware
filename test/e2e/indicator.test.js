@@ -171,6 +171,56 @@ describe("building indicator (browser)", () => {
       ),
     ).toBe(true);
   });
+
+  it("does not sweep the bar when motion is declined", async () => {
+    hotApp = await createHotApp({
+      query: "?progress=linear",
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.emulateMediaFeatures([
+      { name: "prefers-reduced-motion", value: "reduce" },
+    ]);
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    await page.evaluate((id) => {
+      globalThis.__animated = [];
+
+      const record = () => {
+        const host = document.getElementById(id);
+        const child =
+          host && host.shadowRoot && host.shadowRoot.firstElementChild;
+
+        if (child) {
+          globalThis.__animated.push({
+            running: child.getAnimations
+              ? child.getAnimations().length
+              : "unsupported",
+            width: child.style.width,
+          });
+        }
+      };
+
+      new MutationObserver(record).observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+      setInterval(record, 10);
+    }, INDICATOR_ID);
+
+    hotApp.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    const samples = await page.evaluate(() => globalThis.__animated);
+
+    expect(samples.length).toBeGreaterThan(0);
+    // Nothing moving, and the bar says a build is running by being full
+    // instead of by sweeping.
+    expect(samples.every((sample) => sample.running === 0)).toBe(true);
+    expect(samples.some((sample) => sample.width === "100%")).toBe(true);
+  });
 });
 
 describe("indicator shared state across bundled copies (browser)", () => {
