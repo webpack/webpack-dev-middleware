@@ -10,6 +10,7 @@ declare module "ansi-html-community" {
 
 interface ClientReporter {
   cleanProblemsCache(name: string): void;
+  clearRuntimeProblems(): void;
   problems(
     type: "errors" | "warnings",
     obj: { errors: string[]; warnings: string[]; name?: string },
