@@ -1,0 +1,14 @@
+{
+  // Emits the declarations for the browser client, which the `./client/*`
+  // exports need: without them a TypeScript consumer importing one gets `any`,
+  // or an error under `noImplicitAny`. Checking happens in
+  // `tsconfig.client.json`; this one only writes the `.d.ts` files.
+  "extends": "./tsconfig.client.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "./client-src",
+    "outDir": "./types/client"
+  }
+}
