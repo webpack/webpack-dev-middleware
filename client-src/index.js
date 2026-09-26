@@ -267,6 +267,7 @@ function getEventSourceWrapper() {
 /**
  * @returns {{
  * cleanProblemsCache: (name: string) => void,
+ * clearRuntimeProblems: () => void,
  * problems: (type: "errors" | "warnings", obj: HMRPayload) => boolean,
  * success: (obj?: HMRPayload) => void,
  * useCustomOverlay: (customOverlay: EXPECTED_ANY) => void,
@@ -361,10 +362,14 @@ function createReporter() {
       return false;
     }
 
-    // Clear only this client's problems and the runtime errors — other
-    // clients sharing the overlay keep theirs.
+    // Clear only this client's build problems — other clients sharing the
+    // overlay keep theirs, and runtime errors are not this event's to judge: a
+    // build that succeeded says nothing about an error the page threw on its
+    // own. Dropping them here dismissed an overlay raised milliseconds earlier
+    // by an entry that threw while it was still evaluating, because the
+    // handshake's catch-up sync arrives right behind it (webpack-dev-server
+    // #5024). A rebuild clears them instead, from `building` below.
     overlay.clear("");
-    overlay.clear("runtime");
     return true;
   };
 
@@ -409,6 +414,14 @@ function createReporter() {
       delete problemsByName[(obj && obj.name) || ""];
       renderOverlay();
     },
+    clearRuntimeProblems() {
+      // No overlay configured, or a custom one that does not take sources.
+      if (!overlay || !overlay.clear) {
+        return;
+      }
+
+      overlay.clear("runtime");
+    },
     useCustomOverlay(customOverlay) {
       overlay = customOverlay;
     },
@@ -441,6 +454,13 @@ function processMessage(obj) {
           obj.file ? ` (${obj.file} changed)` : ""
         }`,
       );
+      // A rebuild replaces the code a runtime error came from, so the error
+      // stops being worth showing — unlike a build that merely succeeded,
+      // which says nothing about it. Not scoped to this client's bundle: a
+      // runtime error is the page's, not one compilation's.
+      if (reporter) {
+        reporter.clearRuntimeProblems();
+      }
       if (options.progress && typeof document !== "undefined") {
         lastBuildingName = obj.name || "";
         indicator.show(
