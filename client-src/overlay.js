@@ -855,8 +855,26 @@ function handleRuntimeError(error, fallbackMessage) {
     return;
   }
 
-  const errorObject =
-    error instanceof Error ? error : new Error(error || fallbackMessage);
+  // A rejection carries whatever it was rejected with, which is often a plain
+  // object rather than an `Error`. Wrapping it keeps a message to render, and
+  // `cause` keeps the value itself reachable — a `catchRuntimeError` filter
+  // deciding on a status code has nowhere else to read it from.
+  const wrapped = !(error instanceof Error);
+  const errorObject = wrapped
+    ? new Error(error || fallbackMessage)
+    : /** @type {Error} */ (error);
+
+  // Not the constructor's `cause` option: that is ES2022, and this file is
+  // compiled to an ES5 baseline for browsers that predate it — where the option
+  // is quietly ignored and the filter would find nothing. Defined rather than
+  // assigned so it stays non-enumerable, as the option makes it.
+  if (wrapped) {
+    Object.defineProperty(errorObject, "cause", {
+      configurable: true,
+      value: error,
+      writable: true,
+    });
+  }
 
   // `catchRuntimeError` may be a filter function, like in webpack-dev-server.
   const shouldDisplay =
