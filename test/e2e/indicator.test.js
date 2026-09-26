@@ -108,6 +108,119 @@ describe("building indicator (browser)", () => {
 
     expect(await page.evaluate(() => globalThis.__badgeSeen)).toBe(false);
   });
+
+  it("renders a bar across the top for progress=linear", async () => {
+    hotApp = await createHotApp({
+      query: "?progress=linear",
+      code: acceptedApp("v1"),
+      hot: { progress: true },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    // Sampled from inside the page: the indicator only exists while a build
+    // is running, which can be shorter than a round trip from the test.
+    await page.evaluate((id) => {
+      globalThis.__shapes = [];
+
+      const record = () => {
+        const host = document.getElementById(id);
+
+        if (!host || !host.shadowRoot) {
+          return;
+        }
+
+        const child = host.shadowRoot.firstElementChild;
+
+        globalThis.__shapes.push({
+          top: host.style.top,
+          width: host.style.width,
+          right: host.style.right,
+          childWidth: child ? child.style.width : null,
+        });
+      };
+
+      new MutationObserver(record).observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+      setInterval(record, 10);
+    }, INDICATOR_ID);
+
+    hotApp.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    const shapes = await page.evaluate(() => globalThis.__shapes);
+
+    expect(shapes.length).toBeGreaterThan(0);
+    // Pinned to the top edge and spanning the viewport, rather than the
+    // badge's bottom-right corner.
+    expect(shapes[0].top).toBe("0px");
+    expect(shapes[0].width).toBe("100%");
+    expect(shapes[0].right).toBe("");
+    // A percentage arrives with the progress payloads, so the filled part is
+    // measured rather than sweeping.
+    expect(
+      shapes.some(
+        (shape) =>
+          shape.childWidth &&
+          shape.childWidth !== "40%" &&
+          shape.childWidth.endsWith("%"),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not sweep the bar when motion is declined", async () => {
+    hotApp = await createHotApp({
+      query: "?progress=linear",
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.emulateMediaFeatures([
+      { name: "prefers-reduced-motion", value: "reduce" },
+    ]);
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    await page.evaluate((id) => {
+      globalThis.__animated = [];
+
+      const record = () => {
+        const host = document.getElementById(id);
+        const child =
+          host && host.shadowRoot && host.shadowRoot.firstElementChild;
+
+        if (child) {
+          globalThis.__animated.push({
+            running: child.getAnimations
+              ? child.getAnimations().length
+              : "unsupported",
+            width: child.style.width,
+          });
+        }
+      };
+
+      new MutationObserver(record).observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+      setInterval(record, 10);
+    }, INDICATOR_ID);
+
+    hotApp.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    const samples = await page.evaluate(() => globalThis.__animated);
+
+    expect(samples.length).toBeGreaterThan(0);
+    // Nothing moving, and the bar says a build is running by being full
+    // instead of by sweeping.
+    expect(samples.every((sample) => sample.running === 0)).toBe(true);
+    expect(samples.some((sample) => sample.width === "100%")).toBe(true);
+  });
 });
 
 describe("indicator shared state across bundled copies (browser)", () => {
@@ -137,6 +250,114 @@ describe("indicator shared state across bundled copies (browser)", () => {
 
   afterEach(async () => {
     ({ browser, app: hotApp } = await closeE2e(browser, hotApp));
+  });
+
+  it("stops a sweep when motion is declined mid-build, and recovers", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    const bar = async () =>
+      page.evaluate((id) => {
+        const host = document.getElementById(id);
+        const child =
+          host && host.shadowRoot && host.shadowRoot.firstElementChild;
+
+        return child
+          ? { width: child.style.width, running: child.getAnimations().length }
+          : null;
+      }, INDICATOR_ID);
+
+    await page.evaluate(() => {
+      globalThis.indicatorA.configure("linear");
+      // No percent, so the bar sweeps rather than measuring.
+      globalThis.indicatorA.show();
+    });
+
+    expect(await bar()).toEqual({ width: "40%", running: 1 });
+
+    // Declined while it is moving.
+    await page.emulateMediaFeatures([
+      { name: "prefers-reduced-motion", value: "reduce" },
+    ]);
+    await page.waitForFunction(
+      (id) =>
+        document.getElementById(id).shadowRoot.firstElementChild.getAnimations()
+          .length === 0,
+      { timeout: 30000 },
+      INDICATOR_ID,
+    );
+
+    // A sweep cancelled where it happened to be would sit at 40% looking like
+    // progress that stalled, and the stale animation reference would make
+    // every later call a no-op.
+    expect(await bar()).toEqual({ width: "100%", running: 0 });
+
+    await page.evaluate(() => {
+      globalThis.indicatorA.show();
+    });
+
+    expect(await bar()).toEqual({ width: "100%", running: 0 });
+  });
+
+  it("does not pile up preference listeners across builds", async () => {
+    await start();
+
+    // Tracked per query object rather than as a total, because that is where
+    // the mistake hides: `matchMedia` hands back a new `MediaQueryList` every
+    // call, so removing from a fresh one still *calls* `removeEventListener`
+    // and still leaves the listener attached to the object that has it.
+    // Installed before any page script runs, so the client's own calls count.
+    await page.evaluateOnNewDocument(() => {
+      globalThis.__attached = new Map();
+
+      const real = globalThis.matchMedia.bind(globalThis);
+
+      globalThis.matchMedia = (query) => {
+        const list = real(query);
+        const add = list.addEventListener.bind(list);
+        const remove = list.removeEventListener.bind(list);
+        const tally = (delta) => {
+          globalThis.__attached.set(
+            list,
+            (globalThis.__attached.get(list) || 0) + delta,
+          );
+        };
+
+        list.addEventListener = (...args) => {
+          tally(1);
+
+          return add(...args);
+        };
+        list.removeEventListener = (...args) => {
+          tally(-1);
+
+          return remove(...args);
+        };
+
+        return list;
+      };
+    });
+    await page.goto(hotApp.url);
+
+    const left = await page.evaluate(() => {
+      for (let i = 0; i < 3; i++) {
+        globalThis.indicatorA.show("Rebuilding…");
+        globalThis.indicatorA.hide();
+      }
+
+      let worst = 0;
+
+      for (const count of globalThis.__attached.values()) {
+        worst = Math.max(worst, count);
+      }
+
+      return { worst, queries: globalThis.__attached.size };
+    });
+
+    // Three builds registered on three query objects; none may still be
+    // holding a listener afterwards.
+    expect(left.queries).toBeGreaterThan(0);
+    expect(left.worst).toBe(0);
   });
 
   it("drives a single badge from a second bundled copy", async () => {

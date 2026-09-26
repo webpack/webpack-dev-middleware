@@ -47,7 +47,7 @@ import stripAnsi from "./utils/strip-ansi.js";
  * @property {string} name limit updates to this compilation name
  * @property {boolean} autoConnect connect immediately when the entry runs
  * @property {number=} reconnect how many times to reconnect before giving up, unset to use the transport's default
- * @property {boolean} progress show a small badge while a rebuild is in progress
+ * @property {boolean | "circular" | "linear"} progress show an indicator while a rebuild is in progress — `true` and `"circular"` a small badge, `"linear"` a thin bar across the top of the viewport
  */
 
 /** @type {ClientOptions} */
@@ -188,7 +188,12 @@ function setOverrides(overrides) {
   }
 
   if (overrides.progress) {
-    options.progress = overrides.progress !== "false";
+    // Same values as webpack-dev-server's `client.progress`, so the shape it
+    // puts in this query needs no translating.
+    options.progress =
+      overrides.progress === "linear" || overrides.progress === "circular"
+        ? overrides.progress
+        : overrides.progress !== "false";
   }
 
   if (overrides.dynamicPublicPath && overrides.dynamicPublicPath !== "false") {
@@ -611,6 +616,9 @@ if (typeof window !== "undefined") {
     window[REPORTER_KEY] = createReporter();
   }
   reporter = window[REPORTER_KEY];
+
+  // `true` keeps the badge this package has always shown.
+  indicator.configure(options.progress === "linear" ? "linear" : "circular");
 
   // Only what the transport in use needs has to exist: asking for a WebSocket
   // on a browser without `EventSource` is fine, and so is the reverse. An

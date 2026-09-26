@@ -13,12 +13,22 @@ const RING_LENGTH = 2 * Math.PI * 6;
 /** @typedef {any} EXPECTED_ANY */
 
 /**
+ * @typedef {"circular" | "linear"} IndicatorType
+ */
+
+/**
  * @typedef {object} IndicatorState
  * @property {HTMLElement | null} host badge host element
+ * @property {IndicatorType} type which indicator is rendered
  * @property {HTMLElement | null} label label inside the badge
  * @property {HTMLElement | null} dot pulsing dot (indeterminate mode)
  * @property {SVGSVGElement | null} ring progress ring (determinate mode)
  * @property {SVGCircleElement | null} ringValue ring value circle
+ * @property {HTMLElement | null} bar filled part of the linear indicator
+ * @property {EXPECTED_ANY} barAnimation the bar's sweep, when one is running
+ * @property {EXPECTED_ANY[]} animations every running animation, so motion can be stopped on request
+ * @property {EXPECTED_ANY} motionListener what watches for motion being declined mid-build
+ * @property {EXPECTED_ANY} motionMediaQuery the query that listener sits on, which is the only object it can be removed from
  * @property {Record<string, true>} building sources with a build in progress — the badge hides only when every source finished
  */
 
@@ -26,10 +36,16 @@ const RING_LENGTH = 2 * Math.PI * 6;
 function createIndicatorState() {
   return {
     host: null,
+    type: "circular",
     label: null,
     dot: null,
     ring: null,
     ringValue: null,
+    bar: null,
+    barAnimation: null,
+    animations: [],
+    motionListener: null,
+    motionMediaQuery: null,
     building: {},
   };
 }
@@ -67,6 +83,105 @@ const state = (() => {
 })();
 
 /**
+ * @returns {EXPECTED_ANY} the reduced-motion query, or null where there is none
+ */
+function motionQuery() {
+  /* istanbul ignore next -- @preserve */
+  if (
+    typeof window === "undefined" ||
+    typeof window.matchMedia !== "function"
+  ) {
+    return null;
+  }
+
+  return window.matchMedia("(prefers-reduced-motion: reduce)");
+}
+
+/**
+ * Stop every animation this module started, and stop listening for the
+ * preference that would have stopped them.
+ */
+function stopAnimations() {
+  for (const animation of state.animations) {
+    animation.cancel();
+  }
+
+  state.animations = [];
+
+  // The query the listener was registered on, not a fresh one: `matchMedia`
+  // returns a new `MediaQueryList` for every call, so removing from another
+  // object silently does nothing and the listeners pile up one per build.
+  const query = state.motionMediaQuery;
+
+  if (query && state.motionListener) {
+    if (typeof query.removeEventListener === "function") {
+      query.removeEventListener("change", state.motionListener);
+    } else if (typeof query.removeListener === "function") {
+      query.removeListener(state.motionListener);
+    }
+  }
+
+  state.motionListener = null;
+  state.motionMediaQuery = null;
+}
+
+/**
+ * Stop the motion, and leave what was moving in a state that still reads as a
+ * build in progress — a sweep cancelled where it happens to be would otherwise
+ * look like progress that stalled.
+ */
+function declineMotion() {
+  const wasSweeping = Boolean(state.barAnimation);
+
+  stopAnimations();
+  state.barAnimation = null;
+
+  if (wasSweeping && state.bar) {
+    state.bar.style.width = "100%";
+  }
+}
+
+/**
+ * Start a looping animation, unless the viewer asked not to see motion — and
+ * stop it if they ask while it is running. Every animation started this way is
+ * tracked, so `hide` can stop them and drop the listener with them.
+ * @param {EXPECTED_ANY} element what to animate
+ * @param {EXPECTED_ANY} keyframes keyframes
+ * @param {EXPECTED_ANY} options animation options
+ * @returns {EXPECTED_ANY} the animation, or null when none was started
+ */
+function animate(element, keyframes, options) {
+  const query = motionQuery();
+
+  if ((query && query.matches) || typeof element.animate !== "function") {
+    return null;
+  }
+
+  const animation = element.animate(keyframes, options);
+
+  state.animations.push(animation);
+
+  // Asked for mid-build: stop what is already moving rather than wait it out.
+  if (query && !state.motionListener) {
+    state.motionMediaQuery = query;
+    state.motionListener = () => {
+      if (query.matches) {
+        declineMotion();
+      }
+    };
+
+    if (typeof query.addEventListener === "function") {
+      query.addEventListener("change", state.motionListener);
+    } else if (typeof query.addListener === "function") {
+      // Safari below 14 has only the deprecated spelling.
+      query.addListener(state.motionListener);
+    }
+  }
+
+  return animation;
+}
+
+/**
  * @param {EXPECTED_ANY} element element
  * @param {Record<string, string | number>} style style map
  */
@@ -74,6 +189,32 @@ function applyStyle(element, style) {
   for (const key of Object.keys(style)) {
     element.style[key] = style[key];
   }
+}
+
+/**
+ * Build the linear indicator: a thin bar across the top of the viewport, the
+ * shape `progress: "linear"` selects in webpack-dev-server.
+ * @param {ShadowRoot} root the host's shadow root
+ */
+function buildBar(root) {
+  applyStyle(/** @type {HTMLElement} */ (state.host), {
+    position: "fixed",
+    top: "0",
+    left: "0",
+    width: "100%",
+    height: "4px",
+    zIndex: 2147483645,
+    pointerEvents: "none",
+  });
+
+  state.bar = document.createElement("div");
+  applyStyle(state.bar, {
+    width: "0%",
+    height: "4px",
+    background: theme.accent,
+  });
+
+  root.appendChild(state.bar);
 }
 
 /**
@@ -92,6 +233,16 @@ function ensureIndicator() {
 
   state.host = document.createElement("div");
   state.host.id = INDICATOR_ID;
+
+  const root = state.host.attachShadow({ mode: "open" });
+
+  if (state.type === "linear") {
+    buildBar(root);
+    document.body.appendChild(state.host);
+
+    return;
+  }
+
   applyStyle(state.host, {
     position: "fixed",
     right: "16px",
@@ -99,8 +250,6 @@ function ensureIndicator() {
     zIndex: 9999,
     pointerEvents: "none",
   });
-
-  const root = state.host.attachShadow({ mode: "open" });
 
   const badge = document.createElement("div");
   applyStyle(badge, {
@@ -126,12 +275,10 @@ function ensureIndicator() {
   });
 
   // Pulse through the Web Animations API — no <style> element involved.
-  if (typeof state.dot.animate === "function") {
-    state.dot.animate([{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }], {
-      duration: 1000,
-      iterations: Number.POSITIVE_INFINITY,
-    });
-  }
+  animate(state.dot, [{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }], {
+    duration: 1000,
+    iterations: Number.POSITIVE_INFINITY,
+  });
 
   // Determinate mode: a progress ring drawn with SVG presentation attributes.
   state.ring = document.createElementNS(SVG_NS, "svg");
@@ -171,6 +318,47 @@ function ensureIndicator() {
 }
 
 /**
+ * Drive the linear indicator. A percent sets the width; without one there is
+ * nothing to measure, so the bar sweeps instead — the same choice the badge
+ * makes between its ring and its pulsing dot.
+ * @param {number=} percent compilation progress (0-100)
+ */
+function showBar(percent) {
+  // Built by `ensureIndicator`, so missing only in the document-less case it
+  // already guards.
+  /* istanbul ignore next -- @preserve */
+  if (!state.bar) {
+    return;
+  }
+
+  if (typeof percent === "number") {
+    if (state.barAnimation) {
+      stopAnimations();
+      state.barAnimation = null;
+    }
+
+    state.bar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+
+    return;
+  }
+
+  if (state.barAnimation) {
+    return;
+  }
+
+  // Web Animations rather than a stylesheet: a strict `style-src` refuses a
+  // `<style>` element, which is why nothing here has one. With motion declined
+  // nothing sweeps, so the bar states that a build is running by sitting still
+  // at full width instead.
+  state.barAnimation = animate(
+    state.bar,
+    [{ transform: "translateX(-100%)" }, { transform: "translateX(250%)" }],
+    { duration: 1400, iterations: Number.POSITIVE_INFINITY },
+  );
+  state.bar.style.width = state.barAnimation ? "40%" : "100%";
+}
+
+/**
  * Show the indicator (idempotent). With a percent the badge renders a
  * progress ring; without one it renders a pulsing dot.
  * @param {string=} text label text
@@ -181,6 +369,12 @@ function ensureIndicator() {
 export function show(text, percent, source = "") {
   state.building[source] = true;
   ensureIndicator();
+
+  if (state.type === "linear") {
+    showBar(percent);
+
+    return;
+  }
 
   // `ensureIndicator` above builds the label, so it is missing only in the
   // document-less case that function already guards.
@@ -229,6 +423,9 @@ export function hide(source) {
     }
   }
 
+  stopAnimations();
+  state.barAnimation = null;
+
   if (state.host && state.host.parentNode) {
     /** @type {ParentNode & Node} */
     (state.host.parentNode).removeChild(state.host);
@@ -239,5 +436,30 @@ export function hide(source) {
   state.dot = null;
   state.ring = null;
   state.ringValue = null;
+  state.bar = null;
   state.building = {};
+}
+
+/**
+ * Choose which indicator is rendered. `"circular"` is the badge this package
+ * has always shown; `"linear"` is the thin bar across the top of the viewport,
+ * so `progress` can carry the same values as webpack-dev-server's.
+ * @param {IndicatorType} type which indicator to render
+ */
+export function configure(type) {
+  if (type === state.type) {
+    return;
+  }
+
+  state.type = type;
+
+  // The two are different elements, so anything already on screen has to go;
+  // the next event rebuilds in the new shape. Which sources are mid-build is
+  // kept, so the indicator still hides only once they have all finished.
+  if (state.host) {
+    const building = state.building;
+
+    hide();
+    state.building = building;
+  }
 }
