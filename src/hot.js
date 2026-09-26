@@ -113,6 +113,16 @@ function pathMatch(url, expected) {
 // option that built it.
 const CLIENT_STREAM_METHODS = ["close", "onConnect", "publish", "publishTo"];
 
+// What it may also do. Absent is fine; present and not a function is not — that
+// would pass startup and throw from the endpoint or a progress callback later,
+// which is the failure being validated against in the first place.
+const OPTIONAL_CLIENT_STREAM_METHODS = [
+  "attach",
+  "detach",
+  "handler",
+  "hasClients",
+];
+
 // TODO remove in the next major release, along with the `handler` and
 // `hasClients` entries in `ClientStream`. Both were required of every transport
 // when `hot.transport` shipped, and neither needs to be: `handler` is
@@ -153,6 +163,18 @@ function checkClientStream(stream) {
   if (missing.length > 0) {
     throw new TypeError(
       `The 'hot.transport' function must return a client stream, which is missing: ${missing.join(", ")}.`,
+    );
+  }
+
+  const notFunctions = OPTIONAL_CLIENT_STREAM_METHODS.filter((method) => {
+    const value = /** @type {Record<string, unknown>} */ (stream)[method];
+
+    return value !== undefined && typeof value !== "function";
+  });
+
+  if (notFunctions.length > 0) {
+    throw new TypeError(
+      `The 'hot.transport' function returned a client stream whose optional ${notFunctions.length === 1 ? "method is" : "methods are"} not callable: ${notFunctions.join(", ")}.`,
     );
   }
 
@@ -662,7 +684,14 @@ function createHot(compiler, userOptions, statsOption) {
         return;
       }
 
-      (eventStream.handler || upgradeRequired)(req, res);
+      // Called as a method, not through a picked-off reference: a transport
+      // whose `handler` reaches for `this` was working before this became
+      // optional, and must keep working.
+      if (eventStream.handler) {
+        eventStream.handler(req, res);
+      } else {
+        upgradeRequired(req, res);
+      }
     },
     publish(payload) {
       if (closed) return;

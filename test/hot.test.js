@@ -1355,6 +1355,76 @@ describe("createHot over a transport of your own", () => {
     hot.close();
   });
 
+  it("rejects an optional method that is not callable", () => {
+    const compiler = makeFakeCompiler();
+
+    // Absent is the supported case; present and not callable would pass
+    // startup and throw from the endpoint instead, which is the failure this
+    // validation exists to prevent.
+    expect(() =>
+      createHot(compiler, {
+        transport: () => ({
+          close() {},
+          onConnect() {},
+          publish() {},
+          publishTo() {},
+          handler: true,
+        }),
+      }),
+    ).toThrow(
+      "The 'hot.transport' function returned a client stream whose optional method is not callable: handler.",
+    );
+  });
+
+  it("names every optional method that is not callable", () => {
+    const compiler = makeFakeCompiler();
+
+    expect(() =>
+      createHot(compiler, {
+        transport: () => ({
+          close() {},
+          onConnect() {},
+          publish() {},
+          publishTo() {},
+          handler: true,
+          hasClients: 1,
+        }),
+      }),
+    ).toThrow(/optional methods are not callable: handler, hasClients\./);
+  });
+
+  it("calls a transport's handler as its own method", () => {
+    const compiler = makeFakeCompiler();
+    /** @type {EXPECTED_ANY} */
+    let receiver;
+
+    const hot = createHot(compiler, {
+      transport: () => ({
+        name: "mine",
+        close() {},
+        onConnect() {},
+        publish() {},
+        publishTo() {},
+        // Reaching for `this` is how a stream written as an object literal
+        // gets at its own state, and it worked before `handler` was optional.
+        handler(req, res) {
+          receiver = this.name;
+          res.end();
+        },
+      }),
+    });
+
+    hot.handle(
+      /** @type {EXPECTED_OBJECT} */ ({ url: "/__webpack_hmr" }),
+      /** @type {EXPECTED_OBJECT} */ ({ end() {} }),
+      () => {},
+    );
+
+    expect(receiver).toBe("mine");
+
+    hot.close();
+  });
+
   it("publishes progress to a transport that does not answer hasClients", () => {
     const compiler = makeFakeCompiler();
     /** @type {EXPECTED_OBJECT} */
