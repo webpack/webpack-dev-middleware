@@ -13,12 +13,19 @@ const RING_LENGTH = 2 * Math.PI * 6;
 /** @typedef {any} EXPECTED_ANY */
 
 /**
+ * @typedef {"circular" | "linear"} IndicatorType
+ */
+
+/**
  * @typedef {object} IndicatorState
  * @property {HTMLElement | null} host badge host element
+ * @property {IndicatorType} type which indicator is rendered
  * @property {HTMLElement | null} label label inside the badge
  * @property {HTMLElement | null} dot pulsing dot (indeterminate mode)
  * @property {SVGSVGElement | null} ring progress ring (determinate mode)
  * @property {SVGCircleElement | null} ringValue ring value circle
+ * @property {HTMLElement | null} bar filled part of the linear indicator
+ * @property {EXPECTED_ANY} barAnimation the indeterminate animation, so it can be stopped
  * @property {Record<string, true>} building sources with a build in progress — the badge hides only when every source finished
  */
 
@@ -26,10 +33,13 @@ const RING_LENGTH = 2 * Math.PI * 6;
 function createIndicatorState() {
   return {
     host: null,
+    type: "circular",
     label: null,
     dot: null,
     ring: null,
     ringValue: null,
+    bar: null,
+    barAnimation: null,
     building: {},
   };
 }
@@ -77,6 +87,32 @@ function applyStyle(element, style) {
 }
 
 /**
+ * Build the linear indicator: a thin bar across the top of the viewport, the
+ * shape `progress: "linear"` selects in webpack-dev-server.
+ * @param {ShadowRoot} root the host's shadow root
+ */
+function buildBar(root) {
+  applyStyle(/** @type {HTMLElement} */ (state.host), {
+    position: "fixed",
+    top: "0",
+    left: "0",
+    width: "100%",
+    height: "4px",
+    zIndex: 2147483645,
+    pointerEvents: "none",
+  });
+
+  state.bar = document.createElement("div");
+  applyStyle(state.bar, {
+    width: "0%",
+    height: "4px",
+    background: theme.accent,
+  });
+
+  root.appendChild(state.bar);
+}
+
+/**
  * Create (or reuse) the indicator host element.
  */
 function ensureIndicator() {
@@ -92,6 +128,16 @@ function ensureIndicator() {
 
   state.host = document.createElement("div");
   state.host.id = INDICATOR_ID;
+
+  const root = state.host.attachShadow({ mode: "open" });
+
+  if (state.type === "linear") {
+    buildBar(root);
+    document.body.appendChild(state.host);
+
+    return;
+  }
+
   applyStyle(state.host, {
     position: "fixed",
     right: "16px",
@@ -99,8 +145,6 @@ function ensureIndicator() {
     zIndex: 9999,
     pointerEvents: "none",
   });
-
-  const root = state.host.attachShadow({ mode: "open" });
 
   const badge = document.createElement("div");
   applyStyle(badge, {
@@ -171,6 +215,45 @@ function ensureIndicator() {
 }
 
 /**
+ * Drive the linear indicator. A percent sets the width; without one there is
+ * nothing to measure, so the bar sweeps instead — the same choice the badge
+ * makes between its ring and its pulsing dot.
+ * @param {number=} percent compilation progress (0-100)
+ */
+function showBar(percent) {
+  // Built by `ensureIndicator`, so missing only in the document-less case it
+  // already guards.
+  /* istanbul ignore next -- @preserve */
+  if (!state.bar) {
+    return;
+  }
+
+  if (typeof percent === "number") {
+    if (state.barAnimation) {
+      state.barAnimation.cancel();
+      state.barAnimation = null;
+    }
+
+    state.bar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+
+    return;
+  }
+
+  state.bar.style.width = "40%";
+
+  if (state.barAnimation || typeof state.bar.animate !== "function") {
+    return;
+  }
+
+  // Web Animations rather than a stylesheet: a strict `style-src` refuses a
+  // `<style>` element, which is why nothing here has one.
+  state.barAnimation = state.bar.animate(
+    [{ transform: "translateX(-100%)" }, { transform: "translateX(250%)" }],
+    { duration: 1400, iterations: Number.POSITIVE_INFINITY },
+  );
+}
+
+/**
  * Show the indicator (idempotent). With a percent the badge renders a
  * progress ring; without one it renders a pulsing dot.
  * @param {string=} text label text
@@ -181,6 +264,12 @@ function ensureIndicator() {
 export function show(text, percent, source = "") {
   state.building[source] = true;
   ensureIndicator();
+
+  if (state.type === "linear") {
+    showBar(percent);
+
+    return;
+  }
 
   // `ensureIndicator` above builds the label, so it is missing only in the
   // document-less case that function already guards.
@@ -229,6 +318,11 @@ export function hide(source) {
     }
   }
 
+  if (state.barAnimation) {
+    state.barAnimation.cancel();
+    state.barAnimation = null;
+  }
+
   if (state.host && state.host.parentNode) {
     /** @type {ParentNode & Node} */
     (state.host.parentNode).removeChild(state.host);
@@ -239,5 +333,30 @@ export function hide(source) {
   state.dot = null;
   state.ring = null;
   state.ringValue = null;
+  state.bar = null;
   state.building = {};
+}
+
+/**
+ * Choose which indicator is rendered. `"circular"` is the badge this package
+ * has always shown; `"linear"` is the thin bar across the top of the viewport,
+ * so `progress` can carry the same values as webpack-dev-server's.
+ * @param {IndicatorType} type which indicator to render
+ */
+export function configure(type) {
+  if (type === state.type) {
+    return;
+  }
+
+  state.type = type;
+
+  // The two are different elements, so anything already on screen has to go;
+  // the next event rebuilds in the new shape. Which sources are mid-build is
+  // kept, so the indicator still hides only once they have all finished.
+  if (state.host) {
+    const building = state.building;
+
+    hide();
+    state.building = building;
+  }
 }

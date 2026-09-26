@@ -108,6 +108,69 @@ describe("building indicator (browser)", () => {
 
     expect(await page.evaluate(() => globalThis.__badgeSeen)).toBe(false);
   });
+
+  it("renders a bar across the top for progress=linear", async () => {
+    hotApp = await createHotApp({
+      query: "?progress=linear",
+      code: acceptedApp("v1"),
+      hot: { progress: true },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    // Sampled from inside the page: the indicator only exists while a build
+    // is running, which can be shorter than a round trip from the test.
+    await page.evaluate((id) => {
+      globalThis.__shapes = [];
+
+      const record = () => {
+        const host = document.getElementById(id);
+
+        if (!host || !host.shadowRoot) {
+          return;
+        }
+
+        const child = host.shadowRoot.firstElementChild;
+
+        globalThis.__shapes.push({
+          top: host.style.top,
+          width: host.style.width,
+          right: host.style.right,
+          childWidth: child ? child.style.width : null,
+        });
+      };
+
+      new MutationObserver(record).observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+      setInterval(record, 10);
+    }, INDICATOR_ID);
+
+    hotApp.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    const shapes = await page.evaluate(() => globalThis.__shapes);
+
+    expect(shapes.length).toBeGreaterThan(0);
+    // Pinned to the top edge and spanning the viewport, rather than the
+    // badge's bottom-right corner.
+    expect(shapes[0].top).toBe("0px");
+    expect(shapes[0].width).toBe("100%");
+    expect(shapes[0].right).toBe("");
+    // A percentage arrives with the progress payloads, so the filled part is
+    // measured rather than sweeping.
+    expect(
+      shapes.some(
+        (shape) =>
+          shape.childWidth &&
+          shape.childWidth !== "40%" &&
+          shape.childWidth.endsWith("%"),
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("indicator shared state across bundled copies (browser)", () => {
