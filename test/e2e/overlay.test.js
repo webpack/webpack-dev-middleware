@@ -9,6 +9,7 @@ import {
   waitForAppText,
   waitForNoOverlay,
   waitForOverlay,
+  waitForOverlayText,
   waitForRuntimeListeners,
   warningApp,
 } from "../helpers/e2e";
@@ -528,24 +529,14 @@ describe("error overlay (browser)", () => {
           module.hot.accept();
         }
       `);
-    await page.waitForFunction(
-      (id) => {
-        const body = document.getElementById(id)?.contentDocument?.body;
-        return (
-          body &&
-          body.textContent.includes("Critical dependency") &&
-          !body.textContent.includes("Module parse failed")
-        );
-      },
-      { timeout: 30000, polling: 100 },
-      OVERLAY_ID,
-    );
-    expect(
-      await page.evaluate(
-        (id) => document.getElementById(id).contentDocument.body.textContent,
-        OVERLAY_ID,
-      ),
-    ).toContain("WARNING");
+    // Read by the wait itself: the recovery reloads the page, and a separate
+    // read afterwards loses its execution context to that navigation.
+    const text = await waitForOverlayText(page, {
+      includes: ["Critical dependency"],
+      excludes: ["Module parse failed"],
+    });
+
+    expect(text).toContain("WARNING");
   });
 
   it('overlay={"runtimeErrors":false} leaves runtime errors uncaught', async () => {

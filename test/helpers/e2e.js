@@ -69,6 +69,56 @@ async function waitForOverlay(page) {
 }
 
 /**
+ * Wait until the overlay's text contains everything in `includes` and none of
+ * `excludes`, and return that text.
+ *
+ * Waiting and reading have to happen together. Recovering from a build that
+ * failed cannot be applied hot, so the page reloads — and while puppeteer
+ * re-installs a `waitForFunction` in the new document, a separate
+ * `page.evaluate` afterwards dies with "Execution context was destroyed" when
+ * the reload lands between the two. The retry covers the narrower race where
+ * the navigation arrives after the wait resolved but before its handle is read.
+ * @param {import("puppeteer").Page} page page
+ * @param {{ includes?: string[], excludes?: string[] }} text what the overlay's text must and must not contain
+ * @returns {Promise<string>} the overlay body's text once it matches
+ */
+async function waitForOverlayText(page, { includes = [], excludes = [] } = {}) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      const handle = await page.waitForFunction(
+        (id, want, avoid) => {
+          const body = document.getElementById(id)?.contentDocument?.body;
+
+          if (!body) {
+            return null;
+          }
+
+          const { textContent } = body;
+
+          return want.every((part) => textContent.includes(part)) &&
+            avoid.every((part) => !textContent.includes(part))
+            ? textContent
+            : null;
+        },
+        { polling: 100, timeout: 30000 },
+        OVERLAY_ID,
+        includes,
+        excludes,
+      );
+
+      return await handle.jsonValue();
+    } catch (error) {
+      if (
+        attempt >= 5 ||
+        !/Execution context was destroyed/.test(String(error))
+      ) {
+        throw error;
+      }
+    }
+  }
+}
+
+/**
  * @param {import("puppeteer").Page} page page
  * @returns {Promise<void>} resolved once the overlay is gone
  */
@@ -203,6 +253,7 @@ module.exports = {
   waitForAppText,
   waitForNoOverlay,
   waitForOverlay,
+  waitForOverlayText,
   waitForRuntimeListeners,
   waitForText,
   warningApp,
