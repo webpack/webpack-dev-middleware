@@ -1,5 +1,37 @@
 # Changelog
 
+## 8.4.0
+
+### Minor Changes
+
+- Post build events to the page the way webpack-dev-server's client does — `webpackInvalid`, `webpackProgress`, `webpackOk`, `webpackStillOk`, `webpackWarnings`, `webpackErrors`, `webpackClose` and `webpackHotUpdate<hash>` — so a plugin or a framework's dev tooling can follow a build without reaching into the client (by [@alexander-akait](https://github.com/alexander-akait) in [#2425](https://github.com/webpack/webpack-dev-middleware/pull/2425))
+
+- Carry the browser runtime's events over a WebSocket with the client `transport=ws` option, or over a transport of your own, and reuse the built-in two from `webpack-dev-middleware/client/sse` and `webpack-dev-middleware/client/ws` (by [@alexander-akait](https://github.com/alexander-akait) in [#2421](https://github.com/webpack/webpack-dev-middleware/pull/2421))
+
+- Choose how hot module replacement events reach the clients with `hot.transport`: Server-Sent Events (the default), a WebSocket, or a transport of your own (by [@alexander-akait](https://github.com/alexander-akait) in [#2420](https://github.com/webpack/webpack-dev-middleware/pull/2420))
+
+- `progress` now takes `"circular"` and `"linear"` as well as a boolean, the same values as webpack-dev-server's `client.progress`. `"circular"` is the badge this package has always shown, and what `true` still selects; `"linear"` renders a thin bar across the top of the viewport (by [@alexander-akait](https://github.com/alexander-akait) in [#2426](https://github.com/webpack/webpack-dev-middleware/pull/2426))
+
+- A custom `hot.transport` now needs only four methods — `onConnect`, `publish`, `publishTo` and `close`. `handler` and `hasClients` became optional: without a `handler` a request on the endpoint's path is answered `426 Upgrade Required`, and without `hasClients` a payload is built and the transport decides for itself in `publish`. A transport that implements all six keeps working unchanged (by [@alexander-akait](https://github.com/alexander-akait) in [#2427](https://github.com/webpack/webpack-dev-middleware/pull/2427))
+
+### Patch Changes
+
+- Bound the internal url and `Range` header caches, which grew for the life of the process and were never released, even by `close()`. (by [@alexander-akait](https://github.com/alexander-akait) in [#2405](https://github.com/webpack/webpack-dev-middleware/pull/2405))
+
+- Say `connected` whichever transport the client used, rather than only Server-Sent Events (by [@alexander-akait](https://github.com/alexander-akait) in [#2423](https://github.com/webpack/webpack-dev-middleware/pull/2423))
+
+- Move focus into the error overlay when it opens, keep it on the navigation while paging through problems, and give it back to whatever the page had focused — a control inside an open shadow root included — when it closes, and give its frame an accessible name (by [@alexander-akait](https://github.com/alexander-akait) in [#2423](https://github.com/webpack/webpack-dev-middleware/pull/2423))
+
+- Validate options with a precompiled schema to cut ~155ms from startup. (by [@alexander-akait](https://github.com/alexander-akait) in [#2413](https://github.com/webpack/webpack-dev-middleware/pull/2413))
+
+- Do not reload a page that is already navigating away, and reload the nearest ancestor that has a url of its own when the app runs in an `about:blank` iframe (by [@alexander-akait](https://github.com/alexander-akait) in [#2425](https://github.com/webpack/webpack-dev-middleware/pull/2425))
+
+- Give an `overlay.runtimeErrors` filter the rejected value through `error.cause`, so a rejection carrying a plain object rather than an `Error` can still be judged on what it carries (by [@alexander-akait](https://github.com/alexander-akait) in [#2425](https://github.com/webpack/webpack-dev-middleware/pull/2425))
+
+- Keep an uncaught runtime error in the overlay when a build succeeds — a successful compilation says nothing about an error the page threw on its own, and it used to dismiss one raised moments earlier by an entry that threw while it was still evaluating. A rebuild still clears it, since that replaces the code the error came from (by [@alexander-akait](https://github.com/alexander-akait) in [#2424](https://github.com/webpack/webpack-dev-middleware/pull/2424))
+
+- Make the two client transports behave alike: neither logs a raw connection error, and neither reports anything after being closed (by [@alexander-akait](https://github.com/alexander-akait) in [#2423](https://github.com/webpack/webpack-dev-middleware/pull/2423))
+
 ## 8.3.0
 
 ### Minor Changes
