@@ -5,7 +5,7 @@
 // rather than the class. A nested `package.json` says what these two
 // directories really contain, without renaming a published file — those paths
 // are what `client.webSocketTransport` points at.
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -14,8 +14,14 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 for (const dir of ["client", "types/client"]) {
+  const target = path.join(ROOT, dir);
+
+  // `build` runs every `build:*` in parallel, so the directory babel writes
+  // `client` into may not exist yet when this runs — and `build:types` on its
+  // own, after a `clean`, never creates it at all.
+  await mkdir(target, { recursive: true });
   await writeFile(
-    path.join(ROOT, dir, "package.json"),
+    path.join(target, "package.json"),
     `${JSON.stringify({ type: "module" }, null, 2)}\n`,
   );
 }
