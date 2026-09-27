@@ -21,11 +21,26 @@
       "types": "./types/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./client": "./client/index.js",
-    "./client/sse": "./client/clients/EventSourceClient.js",
-    "./client/ws": "./client/clients/WebSocketClient.js",
-    "./client/indicator": "./client/indicator.js",
-    "./client/overlay": "./client/overlay.js",
+    "./client": {
+      "types": "./types/client/index.d.ts",
+      "default": "./client/index.js"
+    },
+    "./client/sse": {
+      "types": "./types/client/clients/EventSourceClient.d.ts",
+      "default": "./client/clients/EventSourceClient.js"
+    },
+    "./client/ws": {
+      "types": "./types/client/clients/WebSocketClient.d.ts",
+      "default": "./client/clients/WebSocketClient.js"
+    },
+    "./client/indicator": {
+      "types": "./types/client/indicator.d.ts",
+      "default": "./client/indicator.js"
+    },
+    "./client/overlay": {
+      "types": "./types/client/overlay.d.ts",
+      "default": "./client/overlay.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "dist/index.js",
@@ -47,7 +62,7 @@
     "fix": "npm-run-all -l fix:js fix:schema-check fix:prettier",
     "clean": "del-cli client dist types",
     "prebuild": "npm run clean",
-    "build:types": "tsc && prettier \"types/**/*.ts\" --write",
+    "build:types": "tsc && tsc -p tsconfig.client.build.json && node ./scripts/mark-client-esm.mjs && prettier \"types/**/*.ts\" --write",
     "build:code": "babel src -d dist --copy-files",
     "build:client": "babel client-src -d client --copy-files",
     "build": "npm-run-all -p \"build:**\"",
