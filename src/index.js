@@ -575,6 +575,7 @@ function wdm(compiler, options = {}, isPlugin = false) {
         path: hotOptions.path || HOT_DEFAULT_PATH,
         transport: hotOptions.transport || "sse",
         inject: hotOptions.inject,
+        client: hotOptions.client,
       },
       /** @type {Logger} */ (context.logger),
     );

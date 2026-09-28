@@ -4,11 +4,11 @@ export = injectHotClient;
  * what a developer has to do: no entry to add, no `HotModuleReplacementPlugin`
  * to remember, no configuration to change.
  *
- * The client is given the endpoint and the transport through its resource
- * query, so it agrees with the server by construction rather than by the
- * developer keeping two settings in step.
+ * The client is given the endpoint, the transport and the browser options
+ * through its resource query, so it agrees with the server by construction
+ * rather than by the developer keeping two settings in step.
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean }} options resolved hot options
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: EXPECTED_ANY }} options resolved hot options
  * @param {Logger} logger logger
  */
 declare function injectHotClient(
@@ -17,6 +17,7 @@ declare function injectHotClient(
     path: string;
     transport: NonNullable<HotOptions["transport"]>;
     inject?: boolean;
+    client?: EXPECTED_ANY;
   },
   logger: Logger,
 ): void;

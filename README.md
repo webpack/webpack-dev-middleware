@@ -543,7 +543,25 @@ One caveat: if the compiler was already watching before the middleware was creat
 
 No client is added when [`hot.transport`](#hottransport) is a function either — the built-in one speaks Server-Sent Events and WebSocket, and a transport of your own carries whatever protocol you wrote it to carry, so the client that speaks it is yours to add. `HotModuleReplacementPlugin` is still applied for you. `hot.inject: false` silences the reminder, and turns that off as well — apply the plugin yourself if you use it.
 
-Any of the options below can be set by adding a query string to the entry path:
+The [client options](#client-options) below are set on the middleware, next to
+the rest of the hot configuration, and the injected entry carries them to the
+browser:
+
+```js
+app.use(
+  middleware(compiler, {
+    hot: { client: { overlay: false, logging: "warn" } },
+  }),
+);
+```
+
+`transport`, `path` and `name` are not accepted there: the middleware knows all
+three already and sets them itself, so the runtime cannot be pointed somewhere
+the server is not listening.
+
+`hot.client` is read only when the client is injected. With `hot.inject: false`,
+or for a client the configuration already has as an entry, the query string on
+the entry path is the only source — and it works either way:
 
 ```js
 entry: [
