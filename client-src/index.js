@@ -144,11 +144,21 @@ function turnedOffByUrl(setting) {
     return false;
   }
 
-  return (
-    self.location.search
-      .toLowerCase()
-      .indexOf(`${options.urlPrefix}-${setting}=false`) !== -1
-  );
+  // Parsed rather than searched for as text: `?note=…-hot=false` carries the
+  // words without being the parameter, and `…-hot=falsehood` is not `false`.
+  // The name is compared case-insensitively on both sides, so a `urlPrefix`
+  // with capitals in it works as written.
+  const wanted = `${options.urlPrefix}-${setting}`.toLowerCase();
+  const parameters = parseQuery(self.location.search);
+  const names = Object.keys(parameters);
+
+  for (let index = 0; index < names.length; index++) {
+    if (names[index].toLowerCase() === wanted) {
+      return parameters[names[index]].toLowerCase() === "false";
+    }
+  }
+
+  return false;
 }
 
 /**

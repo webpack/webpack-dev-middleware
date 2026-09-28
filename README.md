@@ -717,7 +717,7 @@ http://localhost:3000/?webpack-dev-middleware-live-reload=false
 http://localhost:3000/?webpack-dev-middleware-hot=false
 ```
 
-The `webpack-dev-middleware` part is the client's [`urlPrefix`](#client-options).
+The `webpack-dev-middleware` part is the client's [`urlPrefix`](#client-options). The name is matched whole and case-insensitively, and only the value `false` turns anything off — a parameter that merely contains those words, or a value such as `falsehood`, is left alone.
 
 ### Reloading the page from the server
 

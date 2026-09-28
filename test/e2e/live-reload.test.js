@@ -143,6 +143,49 @@ describe("live reload (browser)", () => {
     expect(await readReloadMarker(page)).toBe(true);
   });
 
+  it("reads the parameter, not the text of the url", async () => {
+    app = await createHotApp({
+      query: "?hot=false",
+      hmrPlugin: false,
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    // Both halves of the url say the words without saying the thing: the
+    // first carries them inside another parameter's value, and the second is
+    // the parameter but with a value that only begins with "false".
+    await page.goto(
+      `${app.url}?note=webpack-dev-middleware-live-reload=false&webpack-dev-middleware-live-reload=falsehood`,
+    );
+    await waitForAppText(page, "v1");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    // Neither turned anything off, so the page reloaded as it should.
+    expect(await readReloadMarker(page)).toBeUndefined();
+  });
+
+  it("matches a prefix with capitals in it", async () => {
+    app = await createHotApp({
+      query: "?hot=false&urlPrefix=MyServer",
+      hmrPlugin: false,
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(`${app.url}?MyServer-live-reload=false`);
+    await waitForAppText(page, "v1");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await settle();
+
+    expect(await appText(page)).toBe("v1");
+    expect(await readReloadMarker(page)).toBe(true);
+  });
+
   it("turns a page's hot updates into a reload through its own url", async () => {
     // The plugin is there and the client would hot update, but this page said
     // not to — so the build reaches it the only other way.
