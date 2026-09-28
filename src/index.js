@@ -156,6 +156,19 @@ const noop = () => {};
  */
 
 /**
+ * @callback HandleUpgrade
+ * @param {IncomingMessage} req the request being upgraded
+ * @param {import("node:stream").Duplex} socket the request's socket
+ * @param {Buffer} head the first packet of the upgraded stream
+ * @returns {boolean} true when the endpoint answered the upgrade, false when the request was not its own — or `hot` is off, or the transport answers no upgrades
+ */
+
+/**
+ * @callback OnConnect
+ * @param {(client: EXPECTED_ANY, req: IncomingMessage) => void} fn called with each client once it has joined, and the request it joined with, before anything is published to it
+ */
+
+/**
  * @callback Close
  * @param {(err: Error | null | undefined) => void} callback
  */
@@ -168,6 +181,8 @@ const noop = () => {};
  * @property {WaitUntilValid} waitUntilValid wait until valid
  * @property {Invalidate} invalidate invalidate
  * @property {Attach} attach answer WebSocket upgrades on this server
+ * @property {HandleUpgrade} handleUpgrade answer one WebSocket upgrade, for a server that owns its own `upgrade` event
+ * @property {OnConnect} onConnect called with each client that joins, and the request it joined with
  * @property {Close} close close
  * @property {Context<RequestInternal, ResponseInternal>} context context
  */
@@ -636,6 +651,26 @@ function wdm(compiler, options = {}, isPlugin = false) {
   instance.attach = (server) => {
     if (filledContext.hot) {
       filledContext.hot.attach(server);
+    }
+  };
+
+  // For a server that would rather decide each upgrade than hand itself over:
+  // it keeps its own `upgrade` listener and calls in, so it can turn a request
+  // away before a handshake ever happens.
+  instance.handleUpgrade = (req, socket, head) => {
+    if (!filledContext.hot) {
+      return false;
+    }
+
+    return filledContext.hot.handleUpgrade(req, socket, head);
+  };
+
+  // Everything the middleware knows about a client that joined. What may be
+  // done about it is the caller's to decide — the middleware has no policy of
+  // its own and applies none.
+  instance.onConnect = (fn) => {
+    if (filledContext.hot) {
+      filledContext.hot.onConnect(fn);
     }
   };
 

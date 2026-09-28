@@ -804,6 +804,79 @@ describe("createHot", () => {
     hot.close();
   });
 
+  it("hands a new client's request to onConnect along with the client", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    /** @type {EXPECTED_OBJECT[]} */
+    const joined = [];
+
+    hot.onConnect((client, req) => {
+      joined.push({ client, req });
+    });
+
+    // The request is the whole of what a caller has to go on to decide whether
+    // this client may listen: the middleware has no say in that and hands over
+    // what it knows.
+    const { res } = attachClient(
+      { handler: hot.handle },
+      { headers: { origin: "http://example.test" } },
+    );
+
+    expect(joined).toHaveLength(1);
+    expect(joined[0].client).toBe(res);
+    expect(joined[0].req.headers.origin).toBe("http://example.test");
+
+    hot.close();
+  });
+
+  it("publishes nothing to a client a subscriber closed", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+
+    hot.onConnect((client) => {
+      client.end();
+    });
+
+    // A build the client would otherwise be caught up on.
+    compiler.emitDone(makeFakeStats());
+
+    const { writes } = attachClient({ handler: hot.handle });
+
+    // Subscribers run first, so a client turned away never sees the hashes —
+    // which is the difference between refusing one and merely hanging up on it
+    // afterwards.
+    expect(writes.some((w) => w.includes('"action":"sync"'))).toBe(false);
+
+    hot.close();
+  });
+
+  it("calls every subscriber, in the order they were added", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+    /** @type {string[]} */
+    const calls = [];
+
+    hot.onConnect(() => calls.push("first"));
+    hot.onConnect(() => calls.push("second"));
+
+    attachClient({ handler: hot.handle });
+
+    expect(calls).toStrictEqual(["first", "second"]);
+
+    hot.close();
+  });
+
+  it("has no upgrade to answer over Server-Sent Events", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+
+    // Said rather than thrown, so a caller that owns `upgrade` can pass the
+    // request on to whatever else it serves.
+    expect(hot.handleUpgrade({}, {}, Buffer.alloc(0))).toBe(false);
+
+    hot.close();
+  });
+
   it("pairs bundles by name when the compilation order changes", () => {
     const compiler = makeFakeCompiler();
     const hot = createHot(compiler, {});
@@ -1051,15 +1124,22 @@ describe("createHot over a WebSocket", () => {
    * Stand up an HTTP server with a `ws` hot instance attached to it.
    * @param {EXPECTED_OBJECT} compiler fake compiler
    * @param {EXPECTED_OBJECT=} options extra hot options
+   * @param {((hot: EXPECTED_OBJECT, server: EXPECTED_OBJECT) => void)=} connect_ wire the endpoint to the server, instead of `attach`
    * @returns {Promise<{ hot: EXPECTED_OBJECT, url: string, stop: () => Promise<void> }>} the running endpoint
    */
-  async function serveOverWs(compiler, options = {}) {
+  async function serveOverWs(compiler, options = {}, connect_ = undefined) {
     const hot = createHot(compiler, { transport: "ws", ...options });
     const server = http.createServer((req, res) => {
       hot.handle(req, res);
     });
 
-    hot.attach(server);
+    // `attach` unless the test wants to own the server's `upgrade` event, the
+    // way a server that has its own rules about who may connect does.
+    if (connect_) {
+      connect_(hot, server);
+    } else {
+      hot.attach(server);
+    }
 
     await new Promise((resolve) => {
       server.listen(0, resolve);
@@ -1082,12 +1162,13 @@ describe("createHot over a WebSocket", () => {
   /**
    * Connect a client and collect the payloads it is sent.
    * @param {string} url url to connect to
+   * @param {EXPECTED_OBJECT=} headers request headers to connect with
    * @returns {Promise<{ socket: EXPECTED_OBJECT, messages: string[] }>} the open client
    */
-  async function connect(url) {
+  async function connect(url, headers) {
     const { WebSocket } = require("ws");
 
-    const socket = new WebSocket(url);
+    const socket = new WebSocket(url, headers ? { headers } : undefined);
     /** @type {string[]} */
     const messages = [];
 
@@ -1204,6 +1285,127 @@ describe("createHot over a WebSocket", () => {
     await expect(connect(endpoint.url)).rejects.toThrow(
       /timed out connecting|ECONNREFUSED|socket hang up|Unexpected server response/,
     );
+  });
+
+  it("hands the upgraded request to onConnect along with the client", async () => {
+    const compiler = makeFakeCompiler();
+    const endpoint = await serveOverWs(compiler);
+    /** @type {EXPECTED_OBJECT[]} */
+    const joined = [];
+
+    endpoint.hot.onConnect((client, req) => {
+      joined.push(req);
+    });
+
+    await connect(endpoint.url);
+    await until(() => joined.length > 0);
+
+    // Same as the Server-Sent Events stream: the request a client arrived
+    // with, headers and all, so a caller can judge it.
+    expect(joined[0].headers.host).toBe(
+      endpoint.url.replace("ws://", "").replace(endpoint.hot.path, ""),
+    );
+  });
+
+  it("publishes nothing to a client a subscriber closed", async () => {
+    const compiler = makeFakeCompiler();
+    const endpoint = await serveOverWs(compiler);
+
+    endpoint.hot.onConnect((client) => {
+      client.close();
+    });
+
+    compiler.emitDone(makeFakeStats({ hash: "turned-away" }));
+
+    const { socket, messages } = await connect(endpoint.url);
+
+    await until(() => socket.readyState !== socket.OPEN);
+
+    expect(messages).toStrictEqual([]);
+  });
+
+  it("answers one upgrade for a server that owns its own upgrade event", async () => {
+    const compiler = makeFakeCompiler();
+    /** @type {boolean[]} */
+    const answered = [];
+    const endpoint = await serveOverWs(compiler, {}, (hot, server) => {
+      server.on("upgrade", (req, socket, head) => {
+        answered.push(hot.handleUpgrade(req, socket, head));
+      });
+    });
+
+    compiler.emitDone(makeFakeStats({ hash: "own-upgrade" }));
+
+    const { messages } = await connect(endpoint.url);
+
+    await until(() => messages.length > 0);
+
+    // Nothing was attached: the server called in, and the endpoint works the
+    // same — which is what lets a server decide each upgrade for itself.
+    expect(answered).toStrictEqual([true]);
+    expect(JSON.parse(messages[0]).hash).toBe("own-upgrade");
+  });
+
+  it("declines an upgrade meant for another endpoint on the same server", async () => {
+    const compiler = makeFakeCompiler();
+    /** @type {boolean[]} */
+    const answered = [];
+    const endpoint = await serveOverWs(compiler, {}, (hot, server) => {
+      server.on("upgrade", (req, socket, head) => {
+        answered.push(hot.handleUpgrade(req, socket, head));
+
+        // What a server would do with an upgrade nobody claimed.
+        if (!answered[answered.length - 1]) {
+          socket.destroy();
+        }
+      });
+    });
+    const elsewhere = `${endpoint.url.replace(endpoint.hot.path, "")}/somewhere-else`;
+
+    await expect(connect(elsewhere)).rejects.toThrow(
+      /timed out connecting|ECONNREFUSED|socket hang up|Unexpected server response/,
+    );
+
+    // The same listener, the endpoint's own path: declining is about which
+    // request it is, not a refusal to answer at all.
+    compiler.emitDone(makeFakeStats({ hash: "still-answers" }));
+
+    const { messages } = await connect(endpoint.url);
+
+    await until(() => messages.length > 0);
+
+    expect(answered).toStrictEqual([false, true]);
+    expect(JSON.parse(messages[0]).hash).toBe("still-answers");
+  });
+
+  it("lets the server refuse a client before the handshake", async () => {
+    const compiler = makeFakeCompiler();
+    const endpoint = await serveOverWs(compiler, {}, (hot, server) => {
+      server.on("upgrade", (req, socket, head) => {
+        // The rule is the server's own — the middleware has none, and never
+        // sees this request.
+        if (req.headers.origin !== "http://allowed.test") {
+          socket.destroy();
+
+          return;
+        }
+
+        hot.handleUpgrade(req, socket, head);
+      });
+    });
+
+    await expect(connect(endpoint.url)).rejects.toThrow(
+      /timed out connecting|ECONNREFUSED|socket hang up|Unexpected server response/,
+    );
+
+    const { messages } = await connect(endpoint.url, {
+      origin: "http://allowed.test",
+    });
+
+    compiler.emitDone(makeFakeStats());
+    await until(() => messages.length > 0);
+
+    expect(JSON.parse(messages[0]).action).toBe("built");
   });
 });
 

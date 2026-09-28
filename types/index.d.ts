@@ -54,6 +54,8 @@ declare namespace wdm {
     WaitUntilValid,
     Invalidate,
     Attach,
+    HandleUpgrade,
+    OnConnect,
     Close,
     AdditionalMethods,
     API,
@@ -343,6 +345,14 @@ type GetFilenameFromUrl = (
 type WaitUntilValid = (callback: Callback) => any;
 type Invalidate = (callback: Callback) => any;
 type Attach = (server: import("node:http").Server) => any;
+type HandleUpgrade = (
+  req: IncomingMessage,
+  socket: import("node:stream").Duplex,
+  head: Buffer,
+) => boolean;
+type OnConnect = (
+  fn: (client: EXPECTED_ANY, req: IncomingMessage) => void,
+) => any;
 type Close = (callback: (err: Error | null | undefined) => void) => any;
 type AdditionalMethods<
   RequestInternal extends IncomingMessage,
@@ -364,6 +374,14 @@ type AdditionalMethods<
    * answer WebSocket upgrades on this server
    */
   attach: Attach;
+  /**
+   * answer one WebSocket upgrade, for a server that owns its own `upgrade` event
+   */
+  handleUpgrade: HandleUpgrade;
+  /**
+   * called with each client that joins, and the request it joined with
+   */
+  onConnect: OnConnect;
   /**
    * close
    */

@@ -40,7 +40,7 @@ function createWebSocketStream({ path, heartbeat }, logger) {
   const WebSocketServerImplementation = requireWsServer();
   /** @type {Set<WebSocket>} */
   const clients = new Set();
-  /** @type {((client: WebSocket) => void) | undefined} */
+  /** @type {((client: WebSocket, req: IncomingMessage) => void) | undefined} */
   let onConnectFn;
   /** @type {HttpServer | undefined} */
   let attachedServer;
@@ -101,7 +101,10 @@ function createWebSocketStream({ path, heartbeat }, logger) {
 
   implementation.on(
     "connection",
-    /** @param {WebSocket} client client */ (client) => {
+    /**
+     * @param {WebSocket} client client
+     * @param {IncomingMessage} req the request that was upgraded
+     */ (client, req) => {
       clients.add(client);
       startHeartbeat();
       logger.log(`Client connected (${clients.size} active)`);
@@ -129,7 +132,7 @@ function createWebSocketStream({ path, heartbeat }, logger) {
       );
 
       if (onConnectFn) {
-        onConnectFn(client);
+        onConnectFn(client, req);
       }
     },
   );
@@ -141,6 +144,27 @@ function createWebSocketStream({ path, heartbeat }, logger) {
 
     attachedServer = undefined;
     upgradeListener = undefined;
+  };
+
+  /**
+   * @param {IncomingMessage} req the request being upgraded
+   * @param {Duplex} socket the request's socket
+   * @param {Buffer} head the first packet of the upgraded stream
+   * @returns {boolean} true when this endpoint answered the upgrade
+   */
+  const handleUpgrade = (req, socket, head) => {
+    // Another WebSocket endpoint on the same server owns this path. Said
+    // rather than assumed, so a caller holding the server can go on to its own
+    // endpoints instead of leaving the socket hanging.
+    if (!implementation.shouldHandle(req)) {
+      return false;
+    }
+
+    implementation.handleUpgrade(req, socket, head, (client) => {
+      implementation.emit("connection", client, req);
+    });
+
+    return true;
   };
 
   return {
@@ -155,14 +179,7 @@ function createWebSocketStream({ path, heartbeat }, logger) {
       }
 
       upgradeListener = (req, socket, head) => {
-        // Another WebSocket endpoint on the same server owns this path.
-        if (!implementation.shouldHandle(req)) {
-          return;
-        }
-
-        implementation.handleUpgrade(req, socket, head, (client) => {
-          implementation.emit("connection", client, req);
-        });
+        handleUpgrade(req, socket, head);
       };
 
       attachedServer = server;
@@ -181,6 +198,7 @@ function createWebSocketStream({ path, heartbeat }, logger) {
       implementation.close();
     },
     detach,
+    handleUpgrade,
     // No `handler`: the handshake is an upgrade the HTTP server answers, so a
     // plain request reaching the middleware is a client which cannot speak this
     // transport, and answering that is `createHot`'s default for any transport
