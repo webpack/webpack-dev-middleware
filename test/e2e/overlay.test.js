@@ -1344,6 +1344,36 @@ describe("overlay shared state across bundled copies (browser)", () => {
     expect(await page.$(`#${OVERLAY_ID}`)).not.toBeNull();
   });
 
+  it("names the overlay element what the embedder asked for", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    const ids = await page.evaluate(() => {
+      globalThis.overlayA.default({ id: "embedder-chosen-overlay" });
+      globalThis.overlayA.showProblems("errors", ["boom"]);
+
+      const host = document.querySelector("#embedder-chosen-overlay");
+
+      return {
+        host: Boolean(host),
+        card: host
+          ? Boolean(
+              host.contentDocument.querySelector(
+                "#embedder-chosen-overlay-card",
+              ),
+            )
+          : false,
+        // Nothing may be left under the default id, or a package embedding
+        // this one would ship two ids and its users would query the wrong one.
+        default: Boolean(
+          document.querySelector("#webpack-dev-middleware-hot-overlay"),
+        ),
+      };
+    });
+
+    expect(ids).toEqual({ host: true, card: true, default: false });
+  });
+
   it("honors the runtime filter configured by a later copy", async () => {
     await start();
     await page.goto(hotApp.url);
