@@ -28,20 +28,29 @@ function clientEntry() {
  * all — `target: false`, or a bare `es2020` — leaves nothing to go on and gets
  * no client; add the entry yourself there.
  *
- * Two of webpack's `web` platforms are not pages and have no `window`, which
- * is the one thing the client's bootstrap needs, so they are left out.
+ * Two of webpack's `web` platforms are not pages, and neither gets a client
+ * yet — for different reasons, both recorded below.
  * @param {Compiler} compiler compiler
  * @returns {boolean} true when the client belongs in this compilation
  */
 function isWebTarget(compiler) {
   const { platform } = /** @type {EXPECTED_ANY} */ (compiler);
 
-  // A worker has no `window`, and Deno removed it in 2.0 — the client's
-  // bootstrap connects only where there is one, so either would carry a client
-  // that never joins. Each is matched as itself: a universal target that
-  // happens to include one of them reports `null` here and still runs in a
-  // browser, so it keeps its client.
-  // TODO let both back in once the client connects from `self` instead.
+  // TODO in the next major release, inject into `target: "webworker"` as well
+  // and drop it from here. The client runs there — it connects over both
+  // transports and applies updates in place, which `test/e2e/worker.test.js`
+  // covers — so this is not about capability. It is that putting the client
+  // into every worker bundle changes what those bundles contain, and that
+  // belongs in a major rather than in a minor. Until then, adding the entry to
+  // a worker configuration yourself works.
+  //
+  // Deno is a separate question and stays out until someone can run it: it has
+  // no `window` either, and whether it has `EventSource` is not something this
+  // suite can answer.
+  //
+  // Each is matched as itself. A universal target that happens to include one
+  // of them reports `null` here and still runs in a browser, so it keeps its
+  // client.
   if (platform.webworker === true || platform.deno === true) {
     return false;
   }

@@ -12,7 +12,9 @@ function fakeEventSource() {
   /** @type {EXPECTED_OBJECT[]} */
   const instances = [];
 
-  globalThis.window = /** @type {EXPECTED_OBJECT} */ ({
+  // `self`, which is what the client reads — the same object as `window` in a
+  // browser, and the only one a worker has.
+  globalThis.self = /** @type {EXPECTED_OBJECT} */ ({
     EventSource: function EventSource(url) {
       /** @type {EXPECTED_OBJECT} */
       const source = {
@@ -95,7 +97,7 @@ const transports = [
     Client: EventSourceClient,
     setup: fakeEventSource,
     teardown: () => {
-      delete globalThis.window;
+      delete globalThis.self;
     },
     // `EventSource` has no `close` event — a dropped connection is an `error`,
     // which is exactly the difference this shared contract hides.
@@ -233,7 +235,7 @@ describe("EventSourceClient (what only it does)", () => {
   });
 
   afterEach(() => {
-    delete globalThis.window;
+    delete globalThis.self;
     jest.useRealTimers();
   });
 

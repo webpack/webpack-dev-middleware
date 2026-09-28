@@ -4,9 +4,13 @@
 // flag is released again shortly after, and `pagehide`/`pageshow` settle the
 // cases `beforeunload` gets wrong (a page kept in the back/forward cache runs
 // the same script again when it comes back).
+import { log } from "./log.js";
+
 const UNLOAD_GRACE_PERIOD = 1000;
 
 let unloading = false;
+// Said once per worker, not once per failed update.
+let warnedNoReload = false;
 // A reload asked for while the page looked like it was leaving. Held rather
 // than dropped: if the navigation was cancelled the page is staying and still
 // wants the update, and nothing would ask again until the next rebuild.
@@ -30,6 +34,21 @@ export function isUnloading() {
 export default function reloadPage() {
   if (unloading) {
     deferred = true;
+
+    return;
+  }
+
+  // A worker has a `location`, but no `reload` on it and no page of its own to
+  // reload — only whoever started it can do that. Said once rather than
+  // thrown, so an update that cannot be applied does not also break the
+  // worker.
+  if (typeof window === "undefined") {
+    if (!warnedNoReload) {
+      warnedNoReload = true;
+      log.warn(
+        "An update could not be applied and a reload is the fallback, which a worker cannot do to itself. Reload the page that started it.",
+      );
+    }
 
     return;
   }
