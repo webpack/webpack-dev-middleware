@@ -40,7 +40,6 @@ describe("which targets get a client", () => {
   const WEB = [
     ["nothing, so webpack's default", undefined],
     ["web", "web"],
-    ["webworker", "webworker"],
     ["electron-renderer", "electron-renderer"],
     ["electron13-renderer", "electron13-renderer"],
     ["electron-preload", "electron-preload"],
@@ -54,6 +53,9 @@ describe("which targets get a client", () => {
   ];
 
   const NOT_WEB = [
+    // A browser context, but not one this client can join: it connects from
+    // its bootstrap only when there is a `window`, and a worker has none.
+    ["webworker", "webworker"],
     ["node", "node"],
     ["node14", "node14"],
     ["async-node", "async-node"],

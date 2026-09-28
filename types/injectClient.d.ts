@@ -8,20 +8,27 @@ export = injectHotClient;
  * query, so it agrees with the server by construction rather than by the
  * developer keeping two settings in step.
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: (string | EXPECTED_ANY), inject?: boolean }} options resolved hot options
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean }} options resolved hot options
  * @param {Logger} logger logger
  */
 declare function injectHotClient(
   compilers: Compiler[],
   options: {
     path: string;
-    transport: string | EXPECTED_ANY;
+    transport: NonNullable<HotOptions["transport"]>;
     inject?: boolean;
   },
   logger: Logger,
 ): void;
 declare namespace injectHotClient {
-  export { hasClientEntry, isWebTarget, Compiler, Logger, EXPECTED_ANY };
+  export {
+    hasClientEntry,
+    isWebTarget,
+    Compiler,
+    Logger,
+    HotOptions,
+    EXPECTED_ANY,
+  };
 }
 /**
  * Whether this compilation already pulls the client in. Anyone who followed the
@@ -51,4 +58,5 @@ declare function hasClientEntry(compiler: Compiler): boolean;
 declare function isWebTarget(compiler: Compiler): boolean;
 type Compiler = import("webpack").Compiler;
 type Logger = import("./index.js").Logger;
+type HotOptions = import("./hot.js").HotOptions;
 type EXPECTED_ANY = any;

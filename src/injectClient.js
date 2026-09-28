@@ -2,6 +2,7 @@ const path = require("node:path");
 
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("./index.js").Logger} Logger */
+/** @typedef {import("./hot.js").HotOptions} HotOptions */
 
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_ANY */
@@ -31,6 +32,15 @@ function clientEntry() {
  */
 function isWebTarget(compiler) {
   const { platform } = /** @type {EXPECTED_ANY} */ (compiler);
+
+  // TODO inject into `target: "webworker"` too, once the client connects
+  // without a `window` — its bootstrap does not, so a worker would carry a
+  // client that can never join. Only the worker target itself is excluded: a
+  // universal target that happens to include `webworker` reports `null` here
+  // and still runs in a browser.
+  if (platform.webworker === true) {
+    return false;
+  }
 
   // TODO remove the third clause once the `webpack` peer range starts at
   // ^5.108.0, which is where `platform.universal` was added. Until then a
@@ -102,7 +112,7 @@ function hasClientEntry(compiler) {
  * query, so it agrees with the server by construction rather than by the
  * developer keeping two settings in step.
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: (string | EXPECTED_ANY), inject?: boolean }} options resolved hot options
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean }} options resolved hot options
  * @param {Logger} logger logger
  */
 function injectHotClient(compilers, options, logger) {
@@ -114,14 +124,17 @@ function injectHotClient(compilers, options, logger) {
   // and the built-in client speaks two. There is nothing to configure it with
   // here, so the client that speaks it is yours to add — the plugin below
   // still is not.
-  const custom = typeof options.transport === "function";
   let warned = false;
 
-  const query = new URLSearchParams({
-    path: options.path,
-    transport: options.transport,
-  });
-  const entry = `${clientEntry()}?${query}`;
+  // Written as one expression so the entry is built from a transport that is
+  // known to name itself — a function has nothing to put in a query.
+  const entry =
+    typeof options.transport === "function"
+      ? undefined
+      : `${clientEntry()}?${new URLSearchParams({
+          path: options.path,
+          transport: options.transport,
+        })}`;
 
   for (const compiler of compilers) {
     if (!isWebTarget(compiler)) {
@@ -131,7 +144,7 @@ function injectHotClient(compilers, options, logger) {
     const { webpack } = compiler;
 
     if (!hasClientEntry(compiler)) {
-      if (custom) {
+      if (entry === undefined) {
         if (!warned) {
           warned = true;
           logger.warn(

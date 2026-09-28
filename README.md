@@ -509,13 +509,18 @@ Only the ones a browser runs, decided by the compilation's [`target`](https://we
 
 | `target`                                                               | Gets the runtime |
 | :--------------------------------------------------------------------- | :--------------- |
-| unset (webpack's default), `web`, `webworker`, `browserslist: …`       | yes              |
+| unset (webpack's default), `web`, `browserslist: …`                    | yes              |
 | `electron-renderer`, `electron-preload`, `nwjs`, `node-webkit`, `deno` | yes              |
 | universal — `web` and `node` together, as in `["node", "web"]`         | yes              |
 | `node`, `node14`, `async-node`, `electron-main`                        | no               |
+| `webworker`                                                            | no               |
 | `false`, or a version with no platform such as `es2020`                | no               |
 
-So in a multi-compiler build the browser half gets a client and the server-rendering half does not, with nothing to configure. A target in the last row names no platform for the middleware to go on; if it is a browser bundle, add the entry yourself as above.
+So in a multi-compiler build the browser half gets a client and the server-rendering half does not, with nothing to configure.
+
+`webworker` is a browser context, but the client connects from its bootstrap only when there is a `window`, and a worker has none — it would be carried without ever joining, so it is left out until the client can connect without one.
+
+The last row names no platform for the middleware to go on; if it is a browser bundle, add the entry yourself as above.
 
 #### Upgrading a project that wired it up itself
 
@@ -531,7 +536,7 @@ Two things do change, and `hot.inject: false` turns both off:
 
 One caveat: if the compiler was already watching before the middleware was created, the runtime appears from the next build onwards rather than the first one. Create the middleware before starting the watch to avoid it.
 
-No client is added when [`hot.transport`](#hottransport) is a function either — the built-in one speaks Server-Sent Events and WebSocket, and a transport of your own carries whatever protocol you wrote it to carry, so the client that speaks it is yours to add. `HotModuleReplacementPlugin` is still applied for you, and `hot.inject: false` silences the reminder.
+No client is added when [`hot.transport`](#hottransport) is a function either — the built-in one speaks Server-Sent Events and WebSocket, and a transport of your own carries whatever protocol you wrote it to carry, so the client that speaks it is yours to add. `HotModuleReplacementPlugin` is still applied for you. `hot.inject: false` silences the reminder, and turns that off as well — apply the plugin yourself if you use it.
 
 Any of the options below can be set by adding a query string to the entry path:
 
