@@ -62,6 +62,7 @@ function pageHtml(scripts) {
  * @param {string} query extra client query ("?..." or "")
  * @param {string=} publicPath output public path
  * @param {boolean=} hmrPlugin include HotModuleReplacementPlugin
+ * @param {boolean=} bare omit the client entry and the plugin, leaving both to the middleware
  * @returns {EXPECTED_ANY} webpack configuration
  */
 function makeConfig(
@@ -71,6 +72,7 @@ function makeConfig(
   query,
   publicPath = "/",
   hmrPlugin = true,
+  bare = false,
 ) {
   const clientQuery = name
     ? `?name=${name}${query ? `&${query.replace(/^\?/, "")}` : ""}`
@@ -80,7 +82,10 @@ function makeConfig(
     ...(name ? { name } : {}),
     mode: "development",
     context: dir,
-    entry: [`${CLIENT_ENTRY}${clientQuery}`, appFile],
+    // `bare`: neither the client entry nor the plugin, which is what a
+    // developer who only added the middleware has. The middleware is expected
+    // to put both in for them.
+    entry: bare ? [appFile] : [`${CLIENT_ENTRY}${clientQuery}`, appFile],
     output: {
       path: path.join(dir, "dist"),
       filename: name ? `${name}.js` : "main.js",
@@ -91,7 +96,8 @@ function makeConfig(
       ...(name ? { uniqueName: name } : {}),
     },
     ...(COLLECT_COVERAGE ? { module: { rules: [clientCoverageRule()] } } : {}),
-    plugins: hmrPlugin ? [new webpack.HotModuleReplacementPlugin()] : [],
+    plugins:
+      hmrPlugin && !bare ? [new webpack.HotModuleReplacementPlugin()] : [],
     infrastructureLogging: { level: "none" },
     stats: "none",
     devtool: false,
@@ -116,7 +122,7 @@ function makeConfig(
  * Server-Sent Events: the middleware is told to, the client is asked for the
  * matching transport, and the HTTP server is handed over so it can answer the
  * upgrade.
- * @param {{ query?: string, code?: string, files?: Record<string, string>, apps?: { name: string, code: string }[], hot?: EXPECTED_ANY, stats?: EXPECTED_ANY, pageHeaders?: Record<string, string>, publicPath?: string, setup?: (server: EXPECTED_ANY) => void, hmrPlugin?: boolean, transport?: ("sse" | "ws") }} options options
+ * @param {{ query?: string, code?: string, files?: Record<string, string>, apps?: { name: string, code: string }[], hot?: EXPECTED_ANY, stats?: EXPECTED_ANY, pageHeaders?: Record<string, string>, publicPath?: string, setup?: (server: EXPECTED_ANY) => void, hmrPlugin?: boolean, bare?: boolean, transport?: ("sse" | "ws") }} options options
  * @returns {Promise<EXPECTED_ANY>} handles for the running app
  */
 async function createHotApp({
@@ -130,6 +136,7 @@ async function createHotApp({
   publicPath = "/",
   setup,
   hmrPlugin = true,
+  bare = false,
   transport = "sse",
 }) {
   const dir = fs.mkdtempSync(
@@ -186,6 +193,7 @@ async function createHotApp({
         clientQuery,
         publicPath,
         hmrPlugin,
+        bare,
       );
       scripts = [`${publicPath}main.js`];
     }

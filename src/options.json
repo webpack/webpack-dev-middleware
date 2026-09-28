@@ -223,6 +223,11 @@
               "description": "Deprecated, do not use, will be removed in the next major release. Use the `stats` option instead, which decides whether a payload carries errors and warnings.",
               "type": "object",
               "additionalProperties": true
+            },
+            "inject": {
+              "description": "Add the hot client entry and HotModuleReplacementPlugin to the compilation. Turn it off to wire them yourself.",
+              "link": "https://github.com/webpack/webpack-dev-middleware#hot",
+              "type": "boolean"
             }
           }
         }

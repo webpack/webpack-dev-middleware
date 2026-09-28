@@ -466,7 +466,18 @@ Values still passed here apply until the option is removed, except `hash`, `timi
 
 ## Hot Module Replacement client
 
-When the server is configured to serve the hot module replacement endpoint, the bundled application needs a small runtime that subscribes to that stream and applies the updates. `webpack-dev-middleware` ships that runtime under the `./client` subpath. Add it as a webpack entry next to your application code and enable `HotModuleReplacementPlugin`:
+The bundled application needs a small runtime that subscribes to the endpoint and applies the updates. **`hot` puts it there for you**, along with `HotModuleReplacementPlugin` — enabling the option is the whole of what a webpack configuration needs:
+
+```js
+const middleware = require("webpack-dev-middleware");
+
+app.use(middleware(compiler, { hot: true }));
+// no entry to add, no plugin to apply, no configuration change
+```
+
+The runtime is told the endpoint and the transport the middleware resolved, so the two agree without the same value being written in two places.
+
+Set `hot.inject` to `false` to wire it yourself instead — the runtime is published under the `./client` subpath:
 
 ```js
 const webpack = require("webpack");
@@ -477,7 +488,9 @@ module.exports = {
 };
 ```
 
-The runtime connects to `/__webpack_hmr` by default. Any of the options below can be set by adding a query string to the entry path:
+A configuration that already has the client as an entry is left alone, so this keeps working without `hot.inject: false`; the check is a best effort over the `entry` shapes it can read, and `hot.inject: false` is the way out if it misses one. Nothing is injected into a compilation that does not target the browser.
+
+Any of the options below can be set by adding a query string to the entry path:
 
 ```js
 entry: [
