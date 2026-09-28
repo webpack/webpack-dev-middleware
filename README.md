@@ -807,7 +807,14 @@ The middleware has no rule about who may listen and applies none — this is wha
 
 ```js
 instance.onConnect((client, req) => {
-  if (req.headers.host !== "localhost:3000") {
+  // Which server was asked for, and which page is doing the asking. They
+  // answer different questions and a rule usually needs both: a page on
+  // another origin can reach a server it knows the `Host` of, and a client
+  // that is not a browser sends no `Origin` at all.
+  if (
+    req.headers.host !== "localhost:3000" ||
+    req.headers.origin !== "http://localhost:3000"
+  ) {
     client.end(); // or `client.close()` over a WebSocket
   }
 });

@@ -850,6 +850,22 @@ describe("createHot", () => {
     hot.close();
   });
 
+  it("survives a subscriber that closes the middleware", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, {});
+
+    hot.onConnect(() => {
+      hot.close();
+    });
+
+    // A build to be caught up on, so the catch-up is reached at all.
+    compiler.emitDone(makeFakeStats());
+
+    // A subscriber is arbitrary code: closing from one leaves no stream to
+    // publish the catch-up through.
+    expect(() => attachClient({ handler: hot.handle })).not.toThrow();
+  });
+
   it("calls every subscriber, in the order they were added", () => {
     const compiler = makeFakeCompiler();
     const hot = createHot(compiler, {});

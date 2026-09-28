@@ -590,7 +590,10 @@ function createHot(compiler, userOptions, statsOption) {
       listener(client, req);
     }
 
-    if (!valid || !latestBundles) {
+    // A listener is arbitrary code, and closing the middleware from one is a
+    // reasonable thing for it to do — there would be no stream left to catch
+    // this client up on.
+    if (closed || !valid || !latestBundles) {
       return;
     }
 
