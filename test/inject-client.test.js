@@ -270,6 +270,75 @@ describe("injectHotClient", () => {
     expect(entryCount(instance)).toBe(before);
   });
 
+  it("does not mistake the project's own client folder for this one", () => {
+    // `./src/client/index.js` is an ordinary application entry, and a common
+    // one. Reading it as this package's client leaves the page with no client
+    // at all, which is worse than the duplicate it was guarding against.
+    const instance = compiler({ entry: "./src/client/index.js" });
+    const before = entryCount(instance);
+
+    injectHotClient(
+      [instance],
+      { path: "/__webpack_hmr", transport: "sse" },
+      logger,
+    );
+
+    expect(entryCount(instance)).toBe(before + 1);
+  });
+
+  it("recognises this package's client asked for by path", () => {
+    const instance = compiler({
+      entry: [require.resolve("../client-src/index.js"), "./app.js"],
+    });
+    const before = entryCount(instance);
+
+    injectHotClient(
+      [instance],
+      { path: "/__webpack_hmr", transport: "sse" },
+      logger,
+    );
+
+    expect(entryCount(instance)).toBe(before);
+  });
+
+  it("gives a client to the entry points that lack one, and only those", () => {
+    // Separate pages: one already has the client, the other would connect to
+    // nothing without one of its own.
+    const instance = compiler({
+      entry: {
+        landing: ["webpack-dev-middleware/client", "./landing.js"],
+        dashboard: "./dashboard.js",
+        admin: "./admin.js",
+      },
+    });
+    const before = entryCount(instance);
+
+    injectHotClient(
+      [instance],
+      { path: "/__webpack_hmr", transport: "sse" },
+      logger,
+    );
+
+    // Two added, for `dashboard` and `admin` — not one global entry, which
+    // would have given `landing` a second client.
+    expect(entryCount(instance)).toBe(before + 2);
+  });
+
+  it("adds one entry for them all when none has a client", () => {
+    const instance = compiler({
+      entry: { landing: "./landing.js", dashboard: "./dashboard.js" },
+    });
+    const before = entryCount(instance);
+
+    injectHotClient(
+      [instance],
+      { path: "/__webpack_hmr", transport: "sse" },
+      logger,
+    );
+
+    expect(entryCount(instance)).toBe(before + 1);
+  });
+
   describe("with a transport of your own", () => {
     const transport = () => ({
       close: () => {},

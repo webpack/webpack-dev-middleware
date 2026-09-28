@@ -501,7 +501,9 @@ module.exports = {
 };
 ```
 
-A configuration that already has the client as an entry is left alone, so this keeps working without `hot.inject: false`; the check is a best effort over the `entry` shapes it can read, and `hot.inject: false` is the way out if it misses one.
+An entry point that already has the client is left alone, so this keeps working without `hot.inject: false`. It is decided per entry point rather than per compilation: in a build with `landing` and `dashboard` where only `landing` has the client, `dashboard` still gets one, because they are separate pages and it would otherwise connect to nothing.
+
+The client is recognized as `webpack-dev-middleware/client` (with or without a query) or as the path that resolves to, so your own `./src/client/index.js` is your own file. It is a best effort over the `entry` shapes it can read: a function is computed per build and cannot be read, and a request can reach the client through an alias or a loader. Missing one costs a duplicate entry, not a broken build, and `hot.inject: false` is the way out.
 
 #### Which compilations get the runtime
 

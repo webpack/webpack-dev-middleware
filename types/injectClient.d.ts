@@ -31,15 +31,9 @@ declare namespace injectHotClient {
   };
 }
 /**
- * Whether this compilation already pulls the client in. Anyone who followed the
- * documentation before it was injected for them has it in `entry`, and a second
- * copy is at best wasted bytes.
- *
- * Best effort by design: `entry` can be a function, and a request can reach the
- * client through an alias or a loader. Missing one of those costs a duplicate
- * entry, not a broken build, and `hot.inject: false` is the way out.
+ * Whether every entry point already pulls the client in.
  * @param {Compiler} compiler compiler
- * @returns {boolean} true when the client is already an entry
+ * @returns {boolean} true when nothing needs adding
  */
 declare function hasClientEntry(compiler: Compiler): boolean;
 /**
