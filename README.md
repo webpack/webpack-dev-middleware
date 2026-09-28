@@ -312,28 +312,32 @@ middleware(compiler, {
 Type: `Boolean | Object`
 Default: `false`
 
-Enables hot module replacement by serving a [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) endpoint that publishes the webpack compiler's `building`, `built` and `sync` events to connected clients. Whether those events carry errors and warnings follows the [`stats`](#stats) option, so one setting governs what a build reports in the terminal and in the browser — `stats: "errors-only"` keeps warnings out of both, and `stats: false` keeps both out. When `true`, defaults are used; pass an object to customise. Use this option together with the browser runtime shipped as `webpack-dev-middleware/client`.
+Enables hot module replacement. The middleware serves an endpoint that publishes the webpack compiler's `building`, `built` and `sync` events, **and puts the browser runtime that listens to them into your bundle**, along with `HotModuleReplacementPlugin`. Turning the option on is the whole of it — there is no entry to add, no plugin to apply and no change to your webpack configuration:
 
 ```js
 const webpack = require("webpack");
+const middleware = require("webpack-dev-middleware");
 
-const compiler = webpack({
-  /* Webpack configuration with HotModuleReplacementPlugin and the client entry */
-});
+const compiler = webpack({/* your webpack configuration, unchanged */});
 
-middleware(compiler, { hot: true });
+app.use(middleware(compiler, { hot: true }));
 ```
+
+Whether the events carry errors and warnings follows the [`stats`](#stats) option, so one setting governs what a build reports in the terminal and in the browser — `stats: "errors-only"` keeps warnings out of both, and `stats: false` keeps both out. When `true`, defaults are used; pass an object to customise.
+
+See [Hot Module Replacement client](#hot-module-replacement-client) for which compilations get the runtime, how to configure it, and how to wire it yourself instead.
 
 The object form accepts these options:
 
-|                  Name                  |         Type         |      Default       | Description                                           |
-| :------------------------------------: | :------------------: | :----------------: | :---------------------------------------------------- |
-|    **[`transport`](#hottransport)**    | `string \| function` |      `'sse'`       | How events reach the clients.                         |
-|         **[`path`](#hotpath)**         |       `string`       | `'/__webpack_hmr'` | Path the endpoint is served at.                       |
-|    **[`heartbeat`](#hotheartbeat)**    |       `number`       |      `10000`       | Interval (in milliseconds) between keep-alive frames. |
-|       **[`server`](#hotserver)**       |       `object`       |    `undefined`     | HTTP server the `'ws'` transport answers upgrades on. |
-|     **[`progress`](#hotprogress)**     |      `boolean`       |      `false`       | Publish compilation progress events to the clients.   |
-| **[`statsOptions`](#hotstatsoptions)** |       `object`       |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).       |
+|                  Name                  |         Type         |      Default       | Description                                            |
+| :------------------------------------: | :------------------: | :----------------: | :----------------------------------------------------- |
+|    **[`transport`](#hottransport)**    | `string \| function` |      `'sse'`       | How events reach the clients.                          |
+|         **[`path`](#hotpath)**         |       `string`       | `'/__webpack_hmr'` | Path the endpoint is served at.                        |
+|    **[`heartbeat`](#hotheartbeat)**    |       `number`       |      `10000`       | Interval (in milliseconds) between keep-alive frames.  |
+|       **[`server`](#hotserver)**       |       `object`       |    `undefined`     | HTTP server the `'ws'` transport answers upgrades on.  |
+|     **[`progress`](#hotprogress)**     |      `boolean`       |      `false`       | Publish compilation progress events to the clients.    |
+|       **[`inject`](#hotinject)**       |      `boolean`       |       `true`       | Add the client entry and `HotModuleReplacementPlugin`. |
+| **[`statsOptions`](#hotstatsoptions)** |       `object`       |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).        |
 
 #### `hot.transport`
 
@@ -447,6 +451,15 @@ Default: `false`
 
 Publish compilation progress events (`{ action: "progress", percent, message }`) to the clients using webpack's `ProgressPlugin`. The bundled client shows the percentage in its building badge (see the client `progress` option).
 
+#### `hot.inject`
+
+Type: `Boolean`
+Default: `true`
+
+Add the client entry and `HotModuleReplacementPlugin` to the compilation. Set it to `false` to wire both yourself — see [Hot Module Replacement client](#hot-module-replacement-client).
+
+Turn it off when you have a client of your own that the middleware will not recognize as one (anything other than `webpack-dev-middleware/client`), or when you do not want the hot runtime in your bundle at all and are using the endpoint through [`subscribe`](#custom-events) instead.
+
 #### `hot.statsOptions`
 
 > [!WARNING]
@@ -488,7 +501,35 @@ module.exports = {
 };
 ```
 
-A configuration that already has the client as an entry is left alone, so this keeps working without `hot.inject: false`; the check is a best effort over the `entry` shapes it can read, and `hot.inject: false` is the way out if it misses one. Nothing is injected into a compilation that does not target the browser.
+A configuration that already has the client as an entry is left alone, so this keeps working without `hot.inject: false`; the check is a best effort over the `entry` shapes it can read, and `hot.inject: false` is the way out if it misses one.
+
+#### Which compilations get the runtime
+
+Only the ones a browser runs, decided by the compilation's [`target`](https://webpack.js.org/configuration/target/):
+
+| `target`                                                               | Gets the runtime |
+| :--------------------------------------------------------------------- | :--------------- |
+| unset (webpack's default), `web`, `webworker`, `browserslist: …`       | yes              |
+| `electron-renderer`, `electron-preload`, `nwjs`, `node-webkit`, `deno` | yes              |
+| universal — `web` and `node` together, as in `["node", "web"]`         | yes              |
+| `node`, `node14`, `async-node`, `electron-main`                        | no               |
+| `false`, or a version with no platform such as `es2020`                | no               |
+
+So in a multi-compiler build the browser half gets a client and the server-rendering half does not, with nothing to configure. A target in the last row names no platform for the middleware to go on; if it is a browser bundle, add the entry yourself as above.
+
+#### Upgrading a project that wired it up itself
+
+Nothing has to change, and both pieces are recognized rather than duplicated:
+
+- An entry that is already `webpack-dev-middleware/client` (with or without a query) is left as it is.
+- `HotModuleReplacementPlugin` already in `plugins` is not applied twice. It is now redundant, and the middleware says so once per build so you can drop it.
+
+Two things do change, and `hot.inject: false` turns both off:
+
+- **A client the middleware does not recognize** — anything other than `webpack-dev-middleware/client`, such as another package's hot client — is not detected, so a second client is added and both connect.
+- **A project with no `HotModuleReplacementPlugin` on purpose** now gets one, which puts the HMR runtime in the bundle and changes its output. If you only wanted the endpoint to listen to through [`subscribe`](#custom-events), set `hot.inject: false`.
+
+One caveat: if the compiler was already watching before the middleware was created, the runtime appears from the next build onwards rather than the first one. Create the middleware before starting the watch to avoid it.
 
 No client is added when [`hot.transport`](#hottransport) is a function either — the built-in one speaks Server-Sent Events and WebSocket, and a transport of your own carries whatever protocol you wrote it to carry, so the client that speaks it is yours to add. `HotModuleReplacementPlugin` is still applied for you, and `hot.inject: false` silences the reminder.
 

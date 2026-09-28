@@ -37,7 +37,9 @@
     "mbold",
     "mred",
     "noopener",
-    "noreferrer"
+    "noreferrer",
+    "webworker",
+    "nwjs"
   ],
   "ignorePaths": [
     "CHANGELOG.md",

@@ -1,6 +1,6 @@
 import webpack from "webpack";
 
-import injectHotClient from "../src/injectClient";
+import injectHotClient, { isWebTarget } from "../src/injectClient";
 
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_OBJECT */
@@ -31,6 +31,84 @@ function hasHmrPlugin(compiler) {
 function makeCompiler(config = {}) {
   return webpack({ entry: "./app.js", mode: "development", ...config });
 }
+
+// Every target webpack resolves a platform from, so a change to the check has
+// to say which of these it meant to move. `electron-renderer` and `nwjs` are
+// browsers that also have node; `webworker` has no document but does have the
+// transport — webpack-dev-server has always given both a client.
+describe("which targets get a client", () => {
+  const WEB = [
+    ["nothing, so webpack's default", undefined],
+    ["web", "web"],
+    ["webworker", "webworker"],
+    ["electron-renderer", "electron-renderer"],
+    ["electron13-renderer", "electron13-renderer"],
+    ["electron-preload", "electron-preload"],
+    ["nwjs", "nwjs"],
+    ["node-webkit", "node-webkit"],
+    ["deno", "deno"],
+    ["browserslist: last 2 versions", "browserslist: last 2 versions"],
+    ['["web", "es5"]', ["web", "es5"]],
+    ['["node", "web"], a universal target', ["node", "web"]],
+    ['["webworker", "node"], also universal', ["webworker", "node"]],
+  ];
+
+  const NOT_WEB = [
+    ["node", "node"],
+    ["node14", "node14"],
+    ["async-node", "async-node"],
+    ["electron-main", "electron-main"],
+    ['["electron-main", "node"]', ["electron-main", "node"]],
+  ];
+
+  /** @type {EXPECTED_OBJECT[]} */
+  let compilers = [];
+
+  afterEach(() => {
+    for (const compiler of compilers) {
+      compiler.close(() => {});
+    }
+
+    compilers = [];
+  });
+
+  /**
+   * @param {EXPECTED_OBJECT} target webpack target
+   * @param {EXPECTED_OBJECT=} extra extra webpack configuration
+   * @returns {boolean} whether the client belongs in it
+   */
+  function verdict(target, extra = {}) {
+    const compiler = makeCompiler(
+      target === undefined ? extra : { target, ...extra },
+    );
+
+    compilers.push(compiler);
+
+    return isWebTarget(compiler);
+  }
+
+  for (const [label, target] of WEB) {
+    it(`gives one to ${label}`, () => {
+      expect(verdict(target)).toBe(true);
+    });
+  }
+
+  for (const [label, target] of NOT_WEB) {
+    it(`gives none to ${label}`, () => {
+      expect(verdict(target)).toBe(false);
+    });
+  }
+
+  it("gives none to a target that names no platform", () => {
+    // `target: false` is null everywhere, exactly like a universal target, so
+    // it is told apart by the target itself rather than by the platform.
+    expect(
+      verdict(false, {
+        output: { chunkFormat: "array-push", chunkLoading: "jsonp" },
+      }),
+    ).toBe(false);
+  });
+});
 
 describe("injectHotClient", () => {
   /** @type {EXPECTED_OBJECT[]} */
@@ -91,6 +169,70 @@ describe("injectHotClient", () => {
     );
 
     expect(entryCount(instance)).toBe(before);
+  });
+
+  // What happens to a project written against the README as it was before
+  // anything was injected for it. Nothing here should have to change.
+  describe("upgrading a project that wired hot itself", () => {
+    /**
+     * @returns {EXPECTED_OBJECT} the setup the README used to document
+     */
+    function documentedSetup() {
+      return compiler({
+        entry: ["webpack-dev-middleware/client", "./app.js"],
+        plugins: [new webpack.HotModuleReplacementPlugin()],
+      });
+    }
+
+    it("adds neither a second client nor a second plugin", () => {
+      const instance = documentedSetup();
+      const before = entryCount(instance);
+      const pluginsBefore = instance.hooks.compilation.taps.filter(
+        (tap) => tap.name === "HotModuleReplacementPlugin",
+      ).length;
+
+      injectHotClient(
+        [instance],
+        { path: "/__webpack_hmr", transport: "sse" },
+        logger,
+      );
+
+      expect(entryCount(instance)).toBe(before);
+      expect(
+        instance.hooks.compilation.taps.filter(
+          (tap) => tap.name === "HotModuleReplacementPlugin",
+        ),
+      ).toHaveLength(pluginsBefore);
+    });
+
+    it("says the plugin is now redundant", () => {
+      injectHotClient(
+        [documentedSetup()],
+        { path: "/__webpack_hmr", transport: "sse" },
+        logger,
+      );
+
+      expect(warnings.join("\n")).toContain(
+        "applies HotModuleReplacementPlugin",
+      );
+    });
+
+    it("adds the plugin to a project that only had the client entry", () => {
+      // This one was broken before: the client was there, nothing applied the
+      // update, and the runtime said so on every build.
+      const instance = compiler({
+        entry: ["webpack-dev-middleware/client", "./app.js"],
+      });
+
+      injectHotClient(
+        [instance],
+        { path: "/__webpack_hmr", transport: "sse" },
+        logger,
+      );
+
+      expect(hasHmrPlugin(instance)).toBe(true);
+      expect(warnings).toStrictEqual([]);
+    });
   });
 
   it("still adds the client next to another of the package's exports", () => {

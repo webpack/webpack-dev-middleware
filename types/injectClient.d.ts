@@ -36,9 +36,15 @@ declare namespace injectHotClient {
  */
 declare function hasClientEntry(compiler: Compiler): boolean;
 /**
- * Whether a compiler produces something a browser will run. A `web` or
- * universal target gets the client; `target: false` is `null` everywhere, so it
- * is excluded rather than treated as universal.
+ * Whether a compiler produces something a browser will run, which is the whole
+ * of what decides where the client goes.
+ *
+ * `platform` answers it for every target webpack resolves one from: `web` is
+ * true for `web`, `webworker`, `electron-renderer`, `electron-preload`, `nwjs`,
+ * `deno` and a browserslist query, and false for `node`, `async-node`,
+ * `electron-main` and a `nodeXX` version. A target that names no platform at
+ * all — `target: false`, or a bare `es2020` — leaves nothing to go on and gets
+ * no client; add the entry yourself there.
  * @param {Compiler} compiler compiler
  * @returns {boolean} true when the client belongs in this compilation
  */

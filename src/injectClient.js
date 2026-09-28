@@ -17,34 +17,26 @@ function clientEntry() {
 }
 
 /**
- * Whether a compiler produces something a browser will run. A `web` or
- * universal target gets the client; `target: false` is `null` everywhere, so it
- * is excluded rather than treated as universal.
+ * Whether a compiler produces something a browser will run, which is the whole
+ * of what decides where the client goes.
+ *
+ * `platform` answers it for every target webpack resolves one from: `web` is
+ * true for `web`, `webworker`, `electron-renderer`, `electron-preload`, `nwjs`,
+ * `deno` and a browserslist query, and false for `node`, `async-node`,
+ * `electron-main` and a `nodeXX` version. A target that names no platform at
+ * all — `target: false`, or a bare `es2020` — leaves nothing to go on and gets
+ * no client; add the entry yourself there.
  * @param {Compiler} compiler compiler
  * @returns {boolean} true when the client belongs in this compilation
  */
 function isWebTarget(compiler) {
   const { platform } = /** @type {EXPECTED_ANY} */ (compiler);
 
-  // webpack before 5.96 has no `platform`; there `target` is all there is.
-  if (!platform) {
-    const { target } = compiler.options;
-
-    if (target === false) {
-      return false;
-    }
-
-    if (typeof target === "undefined") {
-      return true;
-    }
-
-    const targets = Array.isArray(target) ? target : [target];
-
-    return targets.some(
-      (item) => typeof item === "string" && item.includes("web"),
-    );
-  }
-
+  // TODO remove the third clause once the `webpack` peer range starts at
+  // ^5.108.0, which is where `platform.universal` was added. Until then a
+  // universal target (`target: ["node", "web"]`) reports `universal:
+  // undefined` and is recognized by `web` and `node` both being null — which
+  // `target: false` also is, hence the guard for it.
   return Boolean(
     platform.web ||
     platform.universal ||
