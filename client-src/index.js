@@ -34,6 +34,7 @@ import stripAnsi from "./utils/strip-ansi.js";
  * @property {Record<string, string | string[]>=} ansiColors overrides for ANSI → HTML color mapping
  * @property {string=} openEditorEndpoint endpoint the overlay calls (GET `?fileName=file:line:column`) when a file reference is clicked; empty disables it
  * @property {boolean=} paginate show one problem at a time with prev/next navigation
+ * @property {string=} id id of the overlay element, for a package embedding this overlay that has its own id to keep
  */
 
 /**
@@ -297,6 +298,7 @@ function createReporter() {
             overlayStyles: options.overlay.styles,
             openEditorEndpoint: options.overlay.openEditorEndpoint,
             paginate: options.overlay.paginate,
+            id: options.overlay.id,
           }
         : {
             catchRuntimeError: options.overlay,

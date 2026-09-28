@@ -30,8 +30,18 @@ function encodeHtmlEntity(text) {
   });
 }
 
-const OVERLAY_ID = "webpack-dev-middleware-hot-overlay";
-const CARD_ID = `${OVERLAY_ID}-card`;
+const DEFAULT_OVERLAY_ID = "webpack-dev-middleware-hot-overlay";
+
+// The id of the overlay's element, which is what anything outside this module
+// has to find it by — a test, a screenshot tool, an integration that hides it.
+// Settable so a package embedding this overlay can keep the id its own users
+// already query, rather than having them all chase a rename.
+//
+// Read when the element is built and not after: the overlay is one element
+// shared by every copy of this module on the page, so the first copy to open it
+// names it. Two copies asking for different ids is a misconfiguration, not a
+// case to support.
+let overlayId = DEFAULT_OVERLAY_ID;
 
 // The overlay lives inside an `about:blank` iframe (same pattern as
 // webpack-dev-server) so page styles cannot leak into it and its styles cannot
@@ -525,7 +535,7 @@ function ensureOverlay() {
   state.focusOnRender = true;
 
   state.frame = document.createElement("iframe");
-  state.frame.id = OVERLAY_ID;
+  state.frame.id = overlayId;
   // An iframe with no accessible name is announced by its url, which here is
   // `about:blank`.
   state.frame.title = "Build errors and warnings";
@@ -593,7 +603,7 @@ function ensureOverlay() {
 
   // The card is the visible panel that holds the problem messages.
   state.card = frameDocument.createElement("div");
-  state.card.id = CARD_ID;
+  state.card.id = `${overlayId}-card`;
   applyStyle(state.card, styles);
   frameDocument.body.appendChild(state.card);
 
@@ -926,7 +936,7 @@ function attachRuntimeErrorListeners() {
 }
 
 /**
- * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number>, trustedTypesPolicyName?: string, catchRuntimeError?: boolean | ((error: Error) => boolean), openEditorEndpoint?: string, paginate?: boolean }} options options
+ * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number>, trustedTypesPolicyName?: string, catchRuntimeError?: boolean | ((error: Error) => boolean), openEditorEndpoint?: string, paginate?: boolean, id?: string }} options options
  * @returns {{ showProblems: typeof showProblems, clear: typeof clear }} overlay api
  */
 export default function configureOverlay(options) {
@@ -936,6 +946,10 @@ export default function configureOverlay(options) {
 
   if (options.openEditorEndpoint !== undefined) {
     openEditorEndpoint = options.openEditorEndpoint;
+  }
+
+  if (options.id) {
+    overlayId = options.id;
   }
 
   if (options.paginate !== undefined) {
