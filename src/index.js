@@ -558,10 +558,7 @@ function wdm(compiler, options = {}, isPlugin = false) {
       compilersToModify,
       {
         path: hotOptions.path || HOT_DEFAULT_PATH,
-        transport:
-          typeof hotOptions.transport === "string"
-            ? hotOptions.transport
-            : "sse",
+        transport: hotOptions.transport || "sse",
         inject: hotOptions.inject,
       },
       /** @type {Logger} */ (context.logger),

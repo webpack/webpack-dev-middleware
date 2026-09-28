@@ -490,6 +490,8 @@ module.exports = {
 
 A configuration that already has the client as an entry is left alone, so this keeps working without `hot.inject: false`; the check is a best effort over the `entry` shapes it can read, and `hot.inject: false` is the way out if it misses one. Nothing is injected into a compilation that does not target the browser.
 
+No client is added when [`hot.transport`](#hottransport) is a function either — the built-in one speaks Server-Sent Events and WebSocket, and a transport of your own carries whatever protocol you wrote it to carry, so the client that speaks it is yours to add. `HotModuleReplacementPlugin` is still applied for you, and `hot.inject: false` silences the reminder.
+
 Any of the options below can be set by adding a query string to the entry path:
 
 ```js

@@ -54,6 +54,10 @@ function isWebTarget(compiler) {
   );
 }
 
+// How the hot client is asked for by package name. Exact, because the package
+// exports other things under `client/`.
+const CLIENT_PACKAGE_REQUEST = "webpack-dev-middleware/client";
+
 /**
  * Whether this compilation already pulls the client in. Anyone who followed the
  * documentation before it was injected for them has it in `entry`, and a second
@@ -87,7 +91,11 @@ function hasClientEntry(compiler) {
 
   return requests.some(
     (request) =>
-      request.startsWith("webpack-dev-middleware/client") ||
+      // The hot client itself, with or without a query — not `./client/ws`,
+      // `./client/overlay` or any other subpath this package exports. None of
+      // those connects to anything, so finding one is not finding the client.
+      request === CLIENT_PACKAGE_REQUEST ||
+      request.startsWith(`${CLIENT_PACKAGE_REQUEST}?`) ||
       request.includes(`${path.sep}client${path.sep}index.js`) ||
       request.includes(`${path.sep}client-src${path.sep}index.js`),
   );
@@ -102,13 +110,20 @@ function hasClientEntry(compiler) {
  * query, so it agrees with the server by construction rather than by the
  * developer keeping two settings in step.
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: string, inject?: boolean }} options resolved hot options
+ * @param {{ path: string, transport: (string | EXPECTED_ANY), inject?: boolean }} options resolved hot options
  * @param {Logger} logger logger
  */
 function injectHotClient(compilers, options, logger) {
   if (options.inject === false) {
     return;
   }
+
+  // A transport of your own carries whatever protocol you wrote it to carry,
+  // and the built-in client speaks two. There is nothing to configure it with
+  // here, so the client that speaks it is yours to add — the plugin below
+  // still is not.
+  const custom = typeof options.transport === "function";
+  let warned = false;
 
   const query = new URLSearchParams({
     path: options.path,
@@ -124,9 +139,18 @@ function injectHotClient(compilers, options, logger) {
     const { webpack } = compiler;
 
     if (!hasClientEntry(compiler)) {
-      new webpack.EntryPlugin(compiler.context, entry, {
-        name: undefined,
-      }).apply(compiler);
+      if (custom) {
+        if (!warned) {
+          warned = true;
+          logger.warn(
+            "'hot.transport' is a function, so no client was added: the built-in one speaks Server-Sent Events and WebSocket, not a transport of your own. Add an entry for the client that speaks it — 'HotModuleReplacementPlugin' is still applied for you, and 'hot.inject: false' silences this.",
+          );
+        }
+      } else {
+        new webpack.EntryPlugin(compiler.context, entry, {
+          name: undefined,
+        }).apply(compiler);
+      }
     }
 
     const hmrPluginExists = compiler.options.plugins.some(
