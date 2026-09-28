@@ -16,6 +16,7 @@ import * as indicator from "./indicator.js";
 import configureOverlay from "./overlay.js";
 import applyUpdate from "./process-update.js";
 import { log, setLogLevel } from "./utils/log.js";
+import reloadPage from "./utils/reload.js";
 import sendMessage from "./utils/send-message.js";
 import stripAnsi from "./utils/strip-ansi.js";
 
@@ -42,7 +43,10 @@ import stripAnsi from "./utils/strip-ansi.js";
  * @property {string} path endpoint path
  * @property {number} timeout reconnection timeout in milliseconds
  * @property {boolean | OverlayOptions} overlay enable the in-page error overlay (same value shape as webpack-dev-server's `client.overlay`)
+ * @property {boolean} hot apply a build through Hot Module Replacement
+ * @property {boolean} liveReload reload the page on a build that changed something, when `hot` is off
  * @property {boolean} reload reload the page when HMR cannot apply the update
+ * @property {string} urlPrefix prefix of the page-url parameters that turn `hot` and `liveReload` off for one page
  * @property {LogLevel} logging logger level
  * @property {string} name limit updates to this compilation name
  * @property {boolean} autoConnect connect immediately when the entry runs
@@ -56,7 +60,10 @@ const options = {
   path: "/__webpack_hmr",
   timeout: 20 * 1000,
   overlay: true,
+  hot: true,
+  liveReload: true,
   reload: true,
+  urlPrefix: "webpack-dev-middleware",
   logging: "info",
   name: "",
   autoConnect: true,
@@ -124,6 +131,27 @@ function decodeOverlayOptions(overlayOptions) {
 setLogLevel(options.logging);
 
 /**
+ * Whether one of the page's own url parameters turns a setting off, which is
+ * how a single tab opts out of what the rest of the project is configured for
+ * — `?webpack-dev-middleware-live-reload=false` to stop a page reloading under
+ * you while you work in it, for instance. `urlPrefix` names them, so a server
+ * built on this middleware can keep the parameters its users already know.
+ * @param {string} setting `hot` or `live-reload`
+ * @returns {boolean} whether the page turned it off
+ */
+function turnedOffByUrl(setting) {
+  if (typeof self === "undefined" || !self.location) {
+    return false;
+  }
+
+  return (
+    self.location.search
+      .toLowerCase()
+      .indexOf(`${options.urlPrefix}-${setting}=false`) !== -1
+  );
+}
+
+/**
  * @param {Record<string, string>} overrides parsed query-string overrides
  */
 function setOverrides(overrides) {
@@ -176,10 +204,18 @@ function setOverrides(overrides) {
       options.reconnect = reconnect;
     }
   }
+  if (overrides.hot) options.hot = overrides.hot !== "false";
+  // Two different things, and webpack-dev-server spells them the same way:
+  // `live-reload` is what happens on a build when `hot` is off, `reload` is
+  // what happens when an update was tried and could not be applied.
   if (overrides["live-reload"]) {
-    options.reload = overrides["live-reload"] !== "false";
+    options.liveReload = overrides["live-reload"] !== "false";
+  }
+  if (overrides.liveReload) {
+    options.liveReload = overrides.liveReload !== "false";
   }
   if (overrides.reload) options.reload = overrides.reload !== "false";
+  if (overrides.urlPrefix) options.urlPrefix = overrides.urlPrefix;
   if (overrides.logging) {
     options.logging = /** @type {LogLevel} */ (overrides.logging);
   }
@@ -481,6 +517,19 @@ function processMessage(obj) {
       sendMessage("Invalid");
       break;
     }
+    case "reload": {
+      // The server asking for the page outright, for a change no compilation
+      // knows about — a file served from disk, say. Not a build, so `hot` and
+      // `liveReload` have no say in it; the page is stale either way.
+      log.info(
+        obj.file
+          ? `"${obj.file}" changed. Reloading...`
+          : "Reloading, as the server asked...",
+      );
+      sendMessage("Reload", obj.file);
+      reloadPage();
+      break;
+    }
     case "progress": {
       // Progress payloads carry no name — attribute them to the build that
       // most recently reported `building`.
@@ -533,11 +582,23 @@ function processMessage(obj) {
         sendMessage(obj.action === "built" ? "Ok" : "StillOk");
       }
       if (shouldApply) {
-        // Posted before the update is applied, in the shape
-        // webpack-dev-server has always used for this one — a bare string
-        // rather than the `{ type, data }` the others carry.
-        sendMessage.raw(`webpackHotUpdate${obj.hash}`);
-        applyUpdate(obj.hash, options, obj.name);
+        if (options.hot && !turnedOffByUrl("hot")) {
+          // Posted before the update is applied, in the shape
+          // webpack-dev-server has always used for this one — a bare string
+          // rather than the `{ type, data }` the others carry.
+          sendMessage.raw(`webpackHotUpdate${obj.hash}`);
+          applyUpdate(obj.hash, options, obj.name);
+        } else if (
+          // Without Hot Module Replacement the new code can only reach the
+          // page by loading it again. `sync` is left alone: it reports what
+          // the page is already running.
+          obj.action === "built" &&
+          options.liveReload &&
+          !turnedOffByUrl("live-reload")
+        ) {
+          log.info("App updated. Reloading...");
+          reloadPage();
+        }
       }
       break;
     }

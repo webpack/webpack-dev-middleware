@@ -90,9 +90,21 @@ export type ClientOptions = {
    */
   overlay: boolean | OverlayOptions;
   /**
+   * apply a build through Hot Module Replacement
+   */
+  hot: boolean;
+  /**
+   * reload the page on a build that changed something, when `hot` is off
+   */
+  liveReload: boolean;
+  /**
    * reload the page when HMR cannot apply the update
    */
   reload: boolean;
+  /**
+   * prefix of the page-url parameters that turn `hot` and `liveReload` off for one page
+   */
+  urlPrefix: string;
   /**
    * logger level
    */
