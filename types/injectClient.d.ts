@@ -52,6 +52,9 @@ declare function hasClientEntry(compiler: Compiler): boolean;
  * `electron-main` and a `nodeXX` version. A target that names no platform at
  * all — `target: false`, or a bare `es2020` — leaves nothing to go on and gets
  * no client; add the entry yourself there.
+ *
+ * Two of webpack's `web` platforms are not pages and have no `window`, which
+ * is the one thing the client's bootstrap needs, so they are left out.
  * @param {Compiler} compiler compiler
  * @returns {boolean} true when the client belongs in this compilation
  */

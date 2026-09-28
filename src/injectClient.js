@@ -27,18 +27,22 @@ function clientEntry() {
  * `electron-main` and a `nodeXX` version. A target that names no platform at
  * all — `target: false`, or a bare `es2020` — leaves nothing to go on and gets
  * no client; add the entry yourself there.
+ *
+ * Two of webpack's `web` platforms are not pages and have no `window`, which
+ * is the one thing the client's bootstrap needs, so they are left out.
  * @param {Compiler} compiler compiler
  * @returns {boolean} true when the client belongs in this compilation
  */
 function isWebTarget(compiler) {
   const { platform } = /** @type {EXPECTED_ANY} */ (compiler);
 
-  // TODO inject into `target: "webworker"` too, once the client connects
-  // without a `window` — its bootstrap does not, so a worker would carry a
-  // client that can never join. Only the worker target itself is excluded: a
-  // universal target that happens to include `webworker` reports `null` here
-  // and still runs in a browser.
-  if (platform.webworker === true) {
+  // A worker has no `window`, and Deno removed it in 2.0 — the client's
+  // bootstrap connects only where there is one, so either would carry a client
+  // that never joins. Each is matched as itself: a universal target that
+  // happens to include one of them reports `null` here and still runs in a
+  // browser, so it keeps its client.
+  // TODO let both back in once the client connects from `self` instead.
+  if (platform.webworker === true || platform.deno === true) {
     return false;
   }
 

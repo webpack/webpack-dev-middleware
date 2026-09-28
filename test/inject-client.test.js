@@ -45,7 +45,6 @@ describe("which targets get a client", () => {
     ["electron-preload", "electron-preload"],
     ["nwjs", "nwjs"],
     ["node-webkit", "node-webkit"],
-    ["deno", "deno"],
     ["browserslist: last 2 versions", "browserslist: last 2 versions"],
     ['["web", "es5"]', ["web", "es5"]],
     ['["node", "web"], a universal target', ["node", "web"]],
@@ -53,9 +52,11 @@ describe("which targets get a client", () => {
   ];
 
   const NOT_WEB = [
-    // A browser context, but not one this client can join: it connects from
-    // its bootstrap only when there is a `window`, and a worker has none.
+    // Both are contexts webpack calls `web`, and neither is a page: the
+    // client connects from its bootstrap only where there is a `window`, a
+    // worker has none, and Deno removed it in 2.0.
     ["webworker", "webworker"],
+    ["deno", "deno"],
     ["node", "node"],
     ["node14", "node14"],
     ["async-node", "async-node"],

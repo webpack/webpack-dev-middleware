@@ -507,18 +507,18 @@ A configuration that already has the client as an entry is left alone, so this k
 
 Only the ones a browser runs, decided by the compilation's [`target`](https://webpack.js.org/configuration/target/):
 
-| `target`                                                               | Gets the runtime |
-| :--------------------------------------------------------------------- | :--------------- |
-| unset (webpack's default), `web`, `browserslist: …`                    | yes              |
-| `electron-renderer`, `electron-preload`, `nwjs`, `node-webkit`, `deno` | yes              |
-| universal — `web` and `node` together, as in `["node", "web"]`         | yes              |
-| `node`, `node14`, `async-node`, `electron-main`                        | no               |
-| `webworker`                                                            | no               |
-| `false`, or a version with no platform such as `es2020`                | no               |
+| `target`                                                       | Gets the runtime |
+| :------------------------------------------------------------- | :--------------- |
+| unset (webpack's default), `web`, `browserslist: …`            | yes              |
+| `electron-renderer`, `electron-preload`, `nwjs`, `node-webkit` | yes              |
+| universal — `web` and `node` together, as in `["node", "web"]` | yes              |
+| `node`, `node14`, `async-node`, `electron-main`                | no               |
+| `webworker`, `deno`                                            | no               |
+| `false`, or a version with no platform such as `es2020`        | no               |
 
 So in a multi-compiler build the browser half gets a client and the server-rendering half does not, with nothing to configure.
 
-`webworker` is a browser context, but the client connects from its bootstrap only when there is a `window`, and a worker has none — it would be carried without ever joining, so it is left out until the client can connect without one.
+`webworker` and `deno` are contexts webpack counts as `web`, and neither is a page. The client connects from its bootstrap only where there is a `window`; a worker has none, and Deno removed it in 2.0. Either would carry the client without ever joining, so both are left out until it can connect without one.
 
 The last row names no platform for the middleware to go on; if it is a browser bundle, add the entry yourself as above.
 
