@@ -40,6 +40,9 @@ describe("which targets get a client", () => {
   const WEB = [
     ["nothing, so webpack's default", undefined],
     ["web", "web"],
+    // No document, but the transports and webpack's runtime are all an update
+    // needs — `test/e2e/worker.test.js` runs one.
+    ["webworker", "webworker"],
     ["electron-renderer", "electron-renderer"],
     ["electron13-renderer", "electron13-renderer"],
     ["electron-preload", "electron-preload"],
@@ -52,10 +55,8 @@ describe("which targets get a client", () => {
   ];
 
   const NOT_WEB = [
-    // Both are contexts webpack calls `web`, and neither is a page: the
-    // client connects from its bootstrap only where there is a `window`, a
-    // worker has none, and Deno removed it in 2.0.
-    ["webworker", "webworker"],
+    // Deno is a context webpack calls `web`, and the client's transports
+    // there are untested — unlike a worker, which is in the list above.
     ["deno", "deno"],
     ["node", "node"],
     ["node14", "node14"],

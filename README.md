@@ -512,28 +512,18 @@ Only the ones a browser runs, decided by the compilation's [`target`](https://we
 | `target`                                                       | Gets the runtime |
 | :------------------------------------------------------------- | :--------------- |
 | unset (webpack's default), `web`, `browserslist: …`            | yes              |
+| `webworker`                                                    | yes              |
 | `electron-renderer`, `electron-preload`, `nwjs`, `node-webkit` | yes              |
 | universal — `web` and `node` together, as in `["node", "web"]` | yes              |
 | `node`, `node14`, `async-node`, `electron-main`                | no               |
-| `webworker`, `deno`                                            | no               |
+| `deno`                                                         | no               |
 | `false`, or a version with no platform such as `es2020`        | no               |
 
 So in a multi-compiler build the browser half gets a client and the server-rendering half does not, with nothing to configure.
 
-`webworker` and `deno` are contexts webpack counts as `web`, and neither is a page. They are left out for different reasons.
+**Web workers are included.** A worker has no `window` and no document, but it has `EventSource`, `WebSocket` and webpack's runtime, which is all an update needs — so a worker compilation gets a client and applies updates in place, with the overlay and the building indicator left to the page. The one thing a worker cannot do is reload itself, since it has no `location.reload`; when an update cannot be applied the client says so and leaves the page that started the worker to reload it.
 
-**The client does run in a web worker.** It connects over either transport and applies updates in place — a worker has no `window`, but it has `EventSource`, `WebSocket` and webpack's runtime, which is all an update needs. What it cannot do is reload itself: there is no `location.reload` in a worker, so when an update cannot be applied the client says so and leaves the page that started the worker to reload it.
-
-It is not injected into worker compilations yet only because that would change what every worker bundle contains, which belongs in a major release. Until then, add it to the worker's configuration yourself:
-
-```js
-module.exports = {
-  target: "webworker",
-  entry: ["webpack-dev-middleware/client", "./src/worker.js"],
-};
-```
-
-`deno` stays out until it can be tested there — it has no `window` either, and whether the transports are available is not something this project's test suite can answer.
+`deno` is a context webpack also counts as `web`, and it stays out until it can be tested there — it has no `window` either, and whether the transports are available is not something this project's test suite can answer.
 
 The last row names no platform for the middleware to go on; if it is a browser bundle, add the entry yourself as above.
 

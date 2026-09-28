@@ -12,6 +12,5 @@ no document. A reload cannot happen from inside one either — there is no
 `location.reload` in a worker — so when an update cannot be applied the client
 says so once and leaves the page that started the worker to reload it.
 
-It is not injected into `target: "webworker"` compilations yet: that would
-change what every worker bundle contains, which belongs in a major release.
-Adding the entry to a worker configuration yourself works now.
+`target: "webworker"` compilations get a client from `hot` like any other
+browser target, so a worker is hot without a line of configuration.

@@ -27,39 +27,24 @@ function clientEntry() {
  * `electron-main` and a `nodeXX` version. A target that names no platform at
  * all — `target: false`, or a bare `es2020` — leaves nothing to go on and gets
  * no client; add the entry yourself there.
- *
- * Two of webpack's `web` platforms are not pages, and neither gets a client
- * yet — for different reasons, both recorded below.
  * @param {Compiler} compiler compiler
  * @returns {boolean} true when the client belongs in this compilation
  */
 function isWebTarget(compiler) {
   const { platform } = /** @type {EXPECTED_ANY} */ (compiler);
 
-  // TODO in the next major release, inject into `target: "webworker"` as well
-  // and drop it from here. The client runs there — it connects over both
-  // transports and applies updates in place, which `test/e2e/worker.test.js`
-  // covers — so this is not about capability. It is that putting the client
-  // into every worker bundle changes what those bundles contain, and that
-  // belongs in a major rather than in a minor. Until then, adding the entry to
-  // a worker configuration yourself works.
-  //
-  // Deno is a separate question and stays out until someone can run it: it has
-  // no `window` either, and whether it has `EventSource` is not something this
-  // suite can answer.
-  //
-  // Each is matched as itself. A universal target that happens to include one
-  // of them reports `null` here and still runs in a browser, so it keeps its
-  // client.
-  if (platform.webworker === true || platform.deno === true) {
+  // Deno has no `window`, and whether it has the transports is not something
+  // this suite can answer. Matched as itself: a universal target that includes
+  // it reports `null` here and still runs in a browser.
+  // TODO include Deno once it can be tested there.
+  if (platform.deno === true) {
     return false;
   }
 
-  // TODO remove the third clause once the `webpack` peer range starts at
-  // ^5.108.0, which is where `platform.universal` was added. Until then a
-  // universal target (`target: ["node", "web"]`) reports `universal:
-  // undefined` and is recognized by `web` and `node` both being null — which
-  // `target: false` also is, hence the guard for it.
+  // A universal target (`target: ["node", "web"]`) is `null` for both, which
+  // `target: false` also is — hence the guard for it.
+  // TODO drop the third clause once the `webpack` peer range starts at
+  // ^5.108.0, which added `platform.universal`.
   return Boolean(
     platform.web ||
     platform.universal ||

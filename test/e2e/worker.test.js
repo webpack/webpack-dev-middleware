@@ -28,10 +28,10 @@ function workerApp(text) {
 
 /**
  * Build and serve a `webworker` compilation, plus a page that starts it.
- * @param {{ transport?: ("sse" | "ws") }=} options options
+ * @param {{ transport?: ("sse" | "ws"), bare?: boolean }=} options options
  * @returns {Promise<EXPECTED_ANY>} the running app
  */
-async function createWorkerApp({ transport = "sse" } = {}) {
+async function createWorkerApp({ transport = "sse", bare = false } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wdm-worker-"));
   const entryFile = path.join(dir, "worker.js");
 
@@ -41,11 +41,14 @@ async function createWorkerApp({ transport = "sse" } = {}) {
     mode: "development",
     context: dir,
     target: "webworker",
-    // The worker bundle carries the client, exactly as it would if it were
-    // injected: same entry, same query.
-    entry: [`${CLIENT_ENTRY}?transport=${transport}`, entryFile],
+    // `bare`: neither the client entry nor the plugin, which is what a
+    // developer who only enabled `hot` has. Otherwise the client is carried
+    // exactly as injection would carry it.
+    entry: bare
+      ? [entryFile]
+      : [`${CLIENT_ENTRY}?transport=${transport}`, entryFile],
     output: { path: path.join(dir, "dist"), filename: "worker.js" },
-    plugins: [new webpack.HotModuleReplacementPlugin()],
+    plugins: bare ? [] : [new webpack.HotModuleReplacementPlugin()],
     infrastructureLogging: { level: "none" },
     stats: "none",
     devtool: false,
@@ -142,10 +145,11 @@ describe("the client inside a web worker", () => {
    * Start the worker, edit its source, and report what it sent and whether it
    * survived.
    * @param {("sse" | "ws")} transport transport to run over
+   * @param {boolean=} bare leave the client and the plugin to the middleware
    * @returns {Promise<{ values: string[], sameWorker: boolean }>} what happened
    */
-  async function runUpdate(transport) {
-    app = await createWorkerApp({ transport });
+  async function runUpdate(transport, bare = false) {
+    app = await createWorkerApp({ transport, bare });
     ({ page, browser } = await runBrowser());
 
     await page.goto(app.url);
@@ -176,6 +180,15 @@ describe("the client inside a web worker", () => {
 
   it("connects over WebSocket and applies an update in place", async () => {
     const { values, sameWorker } = await runUpdate("ws");
+
+    expect(values).toStrictEqual(["v1", "v2"]);
+    expect(sameWorker).toBe(true);
+  });
+
+  it("works with nothing in the configuration but the middleware", async () => {
+    // No client entry, no `HotModuleReplacementPlugin` — the whole of what
+    // this worker's author did was enable `hot`.
+    const { values, sameWorker } = await runUpdate("sse", true);
 
     expect(values).toStrictEqual(["v1", "v2"]);
     expect(sameWorker).toBe(true);
