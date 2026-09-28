@@ -177,6 +177,10 @@ type HotOptions = {
    * publish compilation progress events to the clients
    */
   progress?: boolean | undefined;
+  /**
+   * add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
+   */
+  inject?: boolean | undefined;
 };
 type Payload = {
   /**

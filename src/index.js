@@ -9,6 +9,8 @@ const memfs = require("memfs");
 const mime = require("mime-types");
 
 const { createHot } = require("./hot");
+const { HOT_DEFAULT_PATH } = require("./hot");
+const injectHotClient = require("./injectClient");
 const middleware = require("./middleware");
 const { nodeReadableToWebStream } = require("./utils");
 
@@ -548,6 +550,20 @@ function wdm(compiler, options = {}, isPlugin = false) {
   const compilersToModify = isMultipleCompiler(compiler)
     ? compiler.compilers.filter((item) => item.options.devServer !== false)
     : [compiler];
+
+  if (options.hot) {
+    const hotOptions = options.hot === true ? {} : options.hot;
+
+    injectHotClient(
+      compilersToModify,
+      {
+        path: hotOptions.path || HOT_DEFAULT_PATH,
+        transport: hotOptions.transport || "sse",
+        inject: hotOptions.inject,
+      },
+      /** @type {Logger} */ (context.logger),
+    );
+  }
 
   if (typeof options.writeToDisk === "function") {
     for (const compiler of compilersToModify) {

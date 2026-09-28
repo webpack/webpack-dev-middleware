@@ -32,7 +32,7 @@ export default class EventSourceClient {
     this.closed = false;
     this.lastActivity = Date.now();
 
-    this.client = new window.EventSource(url);
+    this.client = new self.EventSource(url);
 
     this.client.addEventListener("open", () => {
       if (this.closed) {

@@ -258,15 +258,17 @@ const WRAPPER_KEY = "__wdmEventSourceWrapper";
  */
 function getEventSourceWrapper() {
   const path = /** @type {string} */ (options.path);
-  if (!window[WRAPPER_KEY]) {
-    window[WRAPPER_KEY] = {};
+  // `self`, not `window`: the same object in a page, and the only one in a
+  // worker, where this client also runs.
+  if (!self[WRAPPER_KEY]) {
+    self[WRAPPER_KEY] = {};
   }
-  if (!window[WRAPPER_KEY][path]) {
+  if (!self[WRAPPER_KEY][path]) {
     // Cache the socket so multiple entries on the same page sharing the same
     // `options.path` reuse a single connection.
-    window[WRAPPER_KEY][path] = createClientSocket();
+    self[WRAPPER_KEY][path] = createClientSocket();
   }
-  return window[WRAPPER_KEY][path];
+  return self[WRAPPER_KEY][path];
 }
 
 // eslint-disable-next-line jsdoc/reject-any-type
@@ -598,7 +600,7 @@ export function setOptionsAndConnect(overrides) {
  */
 export function disconnect() {
   const path = /** @type {string} */ (options.path);
-  const wrappers = window[WRAPPER_KEY];
+  const wrappers = self[WRAPPER_KEY];
 
   if (wrappers && wrappers[path]) {
     wrappers[path].close();
@@ -613,14 +615,20 @@ if (typeof __resourceQuery === "string" && __resourceQuery.length > 0) {
   setOverrides(parseQuery(__resourceQuery));
 }
 
-if (typeof window !== "undefined") {
-  if (!window[REPORTER_KEY]) {
-    window[REPORTER_KEY] = createReporter();
-  }
-  reporter = window[REPORTER_KEY];
+// `self` is the window in a page and the global scope in a worker, which has
+// no `window` at all. Both have the transports, so both can connect; what a
+// worker does not have is a document, so the overlay and the indicator are
+// left to the page.
+if (typeof self !== "undefined") {
+  if (typeof document !== "undefined") {
+    if (!self[REPORTER_KEY]) {
+      self[REPORTER_KEY] = createReporter();
+    }
+    reporter = self[REPORTER_KEY];
 
-  // `true` keeps the badge this package has always shown.
-  indicator.configure(options.progress === "linear" ? "linear" : "circular");
+    // `true` keeps the badge this package has always shown.
+    indicator.configure(options.progress === "linear" ? "linear" : "circular");
+  }
 
   // Only what the transport in use needs has to exist: asking for a WebSocket
   // on a browser without `EventSource` is fine, and so is the reverse. An
@@ -633,7 +641,7 @@ if (typeof window !== "undefined") {
     missing =
       options.transport === "ws"
         ? typeof WebSocket === "undefined" && "WebSocket"
-        : typeof window.EventSource === "undefined" && "EventSource";
+        : typeof self.EventSource === "undefined" && "EventSource";
   }
 
   if (missing) {

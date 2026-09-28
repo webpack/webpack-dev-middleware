@@ -15,13 +15,23 @@ function toWebSocketURL(url) {
     return url;
   }
 
-  const anchor = document.createElement("a");
+  // An anchor resolves a relative url against the document, and works in
+  // browsers older than `URL`. A worker has no document but always has `URL`,
+  // so it takes the other path.
+  const absolute =
+    typeof document === "undefined"
+      ? new URL(url, self.location.href).href
+      : (() => {
+          const anchor = document.createElement("a");
 
-  anchor.href = url;
+          anchor.href = url;
 
-  // Read back, `href` is absolute, and its scheme maps one to one onto the
+          return anchor.href;
+        })();
+
+  // `href` is absolute either way, and its scheme maps one to one onto the
   // WebSocket ones: http to ws, https to wss.
-  return anchor.href.replace(/^http/i, "ws");
+  return absolute.replace(/^http/i, "ws");
 }
 
 /**

@@ -22,6 +22,7 @@
  * @property {HttpServer=} server HTTP server the `"ws"` transport answers upgrades on, when it is already built
  * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
  * @property {boolean=} progress publish compilation progress events to the clients
+ * @property {boolean=} inject add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
  */
 
 /**

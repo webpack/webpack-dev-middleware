@@ -302,6 +302,9 @@ describe("update processing (browser)", () => {
     app = await createHotApp({
       code: 'document.getElementById("app").textContent = "v1";',
       hmrPlugin: false,
+      // `hot` applies the plugin itself now, so the only way to reach a
+      // compilation without a hot runtime is to turn that off.
+      hot: { inject: false },
     });
     ({ page, browser } = await runBrowser());
     const console_ = collectConsole(page);
