@@ -71,6 +71,10 @@ export type OverlayOptions = {
    * show one problem at a time with prev/next navigation
    */
   paginate?: boolean | undefined;
+  /**
+   * id of the overlay element, for a package embedding this overlay that has its own id to keep
+   */
+  id?: string | undefined;
 };
 export type ClientOptions = {
   /**
