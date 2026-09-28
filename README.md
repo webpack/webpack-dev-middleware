@@ -805,6 +805,8 @@ Calls `fn(client, req)` with each client that joins the hot endpoint, and the re
 
 The middleware has no rule about who may listen and applies none — this is what it knows, so a server can apply its own. Close the client from `fn` to turn it away, and it is sent nothing at all, not even the catch-up the next client gets.
 
+What a rule can be built from is worth being clear about. `Host` is which server was asked for and `Origin` is which page is asking, so a rule about browsers usually reads both. Neither identifies the caller: `Origin` is something a browser sends on a page's behalf, and anything that is not a browser can leave it out or send whatever it likes. It is a useful signal for keeping other pages out of a development server, and it is not authentication — if it matters who is connecting, authenticate them.
+
 ```js
 instance.onConnect((client, req) => {
   // Which server was asked for, and which page is doing the asking. They
