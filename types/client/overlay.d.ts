@@ -7,14 +7,17 @@
 export function clear(source?: string | undefined): void;
 /**
  * @param {"errors" | "warnings"} type problem type
- * @param {string[]} lines messages to render
+ * @param {(string | import("./problem.js").Problem)[]} problems what to
+ * render: a message, or one of webpack's errors or warnings as
+ * `stats.toJson()` reports it — a server that sends those to the browser
+ * rather than formatting them itself has nothing to convert
  * @param {string=} source who reports them — each source (e.g. this client,
  * the webpack-dev-server client, the runtime error capture) keeps its own
  * slot and the overlay renders the union of every slot
  */
 export function showProblems(
   type: "errors" | "warnings",
-  lines: string[],
+  problems: (string | import("./problem.js").Problem)[],
   source?: string | undefined,
 ): void;
 /**
@@ -93,3 +96,4 @@ export type OverlayState = {
   catchRuntimeError: boolean | ((error: Error) => boolean);
 };
 export type EXPECTED_ANY = any;
+export { formatProblem, problemLine } from "./problem.js";

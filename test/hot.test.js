@@ -1,5 +1,6 @@
 import http from "node:http";
 
+import { problemLine } from "../client-src/problem";
 import createHot, {
   createEventStream,
   formatErrors,
@@ -152,8 +153,55 @@ describe("hot middleware (unit)", () => {
       ).toEqual(["./foo.js 1:1\nboom"]);
     });
 
-    it("tolerates missing moduleName and loc", () => {
-      expect(formatErrors([{ message: "boom" }])).toEqual([" \nboom"]);
+    it("says only the message when webpack named no module", () => {
+      // Not `" \nboom"`: the overlay reads the first line as the heading, so
+      // a line holding a single space is a heading with nothing in it.
+      expect(formatErrors([{ message: "boom" }])).toEqual(["boom"]);
+      expect(formatErrors([{ loc: "main", message: "boom" }])).toEqual([
+        "boom",
+      ]);
+    });
+
+    it("puts the module first and the loaders that built it after", () => {
+      expect(
+        formatErrors([
+          { moduleName: "babel-loader!./foo.js", loc: "1:1", message: "boom" },
+        ]),
+      ).toEqual(["./foo.js (babel-loader!./foo.js) 1:1\nboom"]);
+    });
+
+    it("names the file as well, when webpack named a different one", () => {
+      expect(
+        formatErrors([
+          { moduleName: "./foo.js", file: "./bar.js", message: "boom" },
+        ]),
+      ).toEqual(["./foo.js (./bar.js)\nboom"]);
+    });
+
+    it("does not name the same file twice", () => {
+      expect(
+        formatErrors([
+          { moduleName: "./foo.js", file: "./foo.js", message: "boom" },
+        ]),
+      ).toEqual(["./foo.js\nboom"]);
+      expect(formatErrors([{ file: "./foo.js", message: "boom" }])).toEqual([
+        "./foo.js\nboom",
+      ]);
+    });
+
+    // The browser runtime builds the same shape from an error object a server
+    // sends over instead of formatting, so the same build has to read the
+    // same way either way round.
+    it("agrees with what the browser builds from the same error", () => {
+      const errors = [
+        { moduleName: "./foo.js", loc: "1:1", message: "boom" },
+        { moduleName: "babel-loader!./foo.js", message: "boom" },
+        { moduleName: "./foo.js", file: "./bar.js", message: "boom" },
+        { file: "./foo.js", message: "boom" },
+        { loc: "main", message: "boom" },
+      ];
+
+      expect(formatErrors(errors)).toEqual(errors.map(problemLine));
     });
   });
 
