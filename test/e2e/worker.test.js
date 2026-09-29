@@ -19,7 +19,10 @@ const CLIENT_ENTRY = require.resolve("../../client-src/index.js");
  */
 function workerApp(text) {
   return `
-    self.postMessage({ value: ${JSON.stringify(text)}, at: self.__startedAt });
+    // Set once per worker and kept across updates, since an update replaces
+    // the module but not the global it hangs off. A new worker gets a new one.
+    self.__workerId = self.__workerId || String(Math.random());
+    self.postMessage({ value: ${JSON.stringify(text)}, worker: self.__workerId });
     if (module.hot) {
       module.hot.accept();
     }
@@ -155,19 +158,16 @@ describe("the client inside a web worker", () => {
     await page.goto(app.url);
     await waitForMessages(page, 1);
 
-    // Mark the running worker. A restart would lose it, so seeing it again
-    // proves the new code arrived as an update rather than a new worker.
-    await page.evaluate(() => {
-      globalThis.__marked = true;
-    });
-
     app.edit(workerApp("v2"));
 
     const messages = await waitForMessages(page, 2);
 
     return {
       values: messages.map((message) => message.value),
-      sameWorker: await page.evaluate(() => globalThis.__marked === true),
+      // Both messages naming the same worker is what says the update was
+      // applied in place. A marker on the page would say nothing: it would
+      // survive the worker being torn down and started again.
+      sameWorker: messages[0].worker === messages[1].worker,
     };
   }
 

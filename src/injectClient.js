@@ -330,6 +330,7 @@ function injectHotClient(compilers, options, logger) {
 }
 
 module.exports = injectHotClient;
+module.exports.clientQuery = clientQuery;
 module.exports.filterSource = filterSource;
 module.exports.hasClientEntry = hasClientEntry;
 module.exports.isWebTarget = isWebTarget;

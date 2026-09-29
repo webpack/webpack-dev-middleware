@@ -23,6 +23,7 @@ declare function injectHotClient(
 ): void;
 declare namespace injectHotClient {
   export {
+    clientQuery,
     filterSource,
     hasClientEntry,
     isWebTarget,
@@ -32,6 +33,12 @@ declare namespace injectHotClient {
     EXPECTED_ANY,
   };
 }
+/**
+ * The browser options, as the client reads them from its resource query.
+ * @param {EXPECTED_ANY} client the `hot.client` option
+ * @returns {Record<string, string>} query parameters
+ */
+declare function clientQuery(client: EXPECTED_ANY): Record<string, string>;
 /**
  * A filter as source the client can rebuild from.
  *
