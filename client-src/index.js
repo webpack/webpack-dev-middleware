@@ -140,16 +140,16 @@ setLogLevel(options.logging);
  * @returns {boolean} whether the page turned it off
  */
 function turnedOffByUrl(setting) {
-  if (typeof self === "undefined" || !self.location) {
-    return false;
-  }
-
   // Parsed rather than searched for as text: `?note=…-hot=false` carries the
   // words without being the parameter, and `…-hot=falsehood` is not `false`.
   // The name is compared case-insensitively on both sides, so a `urlPrefix`
   // with capitals in it works as written.
   const wanted = `${options.urlPrefix}-${setting}`.toLowerCase();
-  const parameters = parseQuery(self.location.search);
+  // Nowhere this runs is without a url, but nothing here needs one either: an
+  // empty query turns nothing off.
+  const search =
+    typeof self === "undefined" || !self.location ? "" : self.location.search;
+  const parameters = parseQuery(search);
   const names = Object.keys(parameters);
 
   for (let index = 0; index < names.length; index++) {

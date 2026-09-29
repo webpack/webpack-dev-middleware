@@ -96,6 +96,28 @@ describe("live reload (browser)", () => {
     expect(await readReloadMarker(page)).toBe(true);
   });
 
+  it("takes the camel-cased spelling as well", async () => {
+    // Both spellings are accepted: `live-reload` is what webpack-dev-server's
+    // entry query has always used, and `liveReload` is what an option set on
+    // the middleware in node serializes to.
+    app = await createHotApp({
+      query: "?hot=false&liveReload=false",
+      hmrPlugin: false,
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await settle();
+
+    expect(await appText(page)).toBe("v1");
+    expect(await readReloadMarker(page)).toBe(true);
+  });
+
   it("does not reload for a build that changed nothing", async () => {
     app = await createHotApp({
       query: "?hot=false",
