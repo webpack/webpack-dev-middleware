@@ -16,6 +16,33 @@
 /** @typedef {import("webpack").Configuration["stats"]} MiddlewareStatsOption */
 
 /**
+ * Everything the browser runtime reads, as it is set in node. One for one with
+ * what the entry query carries, so every option has both spellings: set it
+ * here and the injected entry carries it, or write it on the query of a client
+ * entry of your own.
+ *
+ * `transport`, `path` and `name` are the exception only in having a default
+ * the middleware knows — the resolved `hot.transport`, the resolved `hot.path`
+ * and the compilation's name. Setting one here replaces that, which is what a
+ * page reaching the endpoint through a proxy or another origin needs.
+ * @typedef {object} HotClientOptions
+ * @property {("sse" | "ws")=} transport which transport the runtime speaks, `hot.transport` by default
+ * @property {string=} path where the runtime connects, `hot.path` by default; may be an absolute url for an endpoint on another origin
+ * @property {string=} name limit the runtime to one compilation's builds, the compilation's own name by default
+ * @property {(boolean | Record<string, EXPECTED_ANY>)=} overlay show build problems and uncaught runtime errors in an overlay
+ * @property {(boolean | "circular" | "linear")=} progress show an indicator while a rebuild is in progress
+ * @property {boolean=} hot apply a build through Hot Module Replacement
+ * @property {boolean=} liveReload reload the page on a build that changed something, when `hot` is off
+ * @property {boolean=} reload reload the page when an update cannot be applied
+ * @property {string=} urlPrefix name of the page-url parameters that turn `hot` and `liveReload` off for a single page
+ * @property {("none" | "error" | "warn" | "info" | "log" | "verbose")=} logging how much the runtime logs to the browser console
+ * @property {number=} reconnect how many times to reconnect before giving up
+ * @property {number=} timeout how long the runtime tolerates silence before reconnecting, in milliseconds
+ * @property {boolean=} autoConnect connect as soon as the entry runs
+ * @property {boolean=} dynamicPublicPath prefix the path with the bundle's public path at runtime
+ */
+
+/**
  * @typedef {object} HotOptions
  * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)=} transport how events reach the clients, Server-Sent Events by default
  * @property {string=} path the path the endpoint is served at
@@ -24,7 +51,7 @@
  * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
  * @property {boolean=} progress publish compilation progress events to the clients
  * @property {boolean=} inject add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
- * @property {{ overlay?: boolean | Record<string, EXPECTED_ANY>, progress?: boolean | "circular" | "linear", reload?: boolean, logging?: "none" | "error" | "warn" | "info" | "log" | "verbose", reconnect?: number, timeout?: number, autoConnect?: boolean, dynamicPublicPath?: boolean }=} client options handed to the browser runtime through its entry query
+ * @property {HotClientOptions=} client options handed to the browser runtime through its entry query
  */
 
 /**

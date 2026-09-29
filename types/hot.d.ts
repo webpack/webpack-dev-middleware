@@ -47,6 +47,7 @@ declare namespace createHot {
     Duplex,
     StatsOptions,
     MiddlewareStatsOption,
+    HotClientOptions,
     HotOptions,
     Payload,
     EXPECTED_ANY,
@@ -168,6 +169,76 @@ type HttpServer = import("node:http").Server;
 type Duplex = import("node:stream").Duplex;
 type StatsOptions = import("webpack").StatsOptions;
 type MiddlewareStatsOption = import("webpack").Configuration["stats"];
+/**
+ * Everything the browser runtime reads, as it is set in node. One for one with
+ * what the entry query carries, so every option has both spellings: set it
+ * here and the injected entry carries it, or write it on the query of a client
+ * entry of your own.
+ *
+ * `transport`, `path` and `name` are the exception only in having a default
+ * the middleware knows — the resolved `hot.transport`, the resolved `hot.path`
+ * and the compilation's name. Setting one here replaces that, which is what a
+ * page reaching the endpoint through a proxy or another origin needs.
+ */
+type HotClientOptions = {
+  /**
+   * which transport the runtime speaks, `hot.transport` by default
+   */
+  transport?: ("sse" | "ws") | undefined;
+  /**
+   * where the runtime connects, `hot.path` by default; may be an absolute url for an endpoint on another origin
+   */
+  path?: string | undefined;
+  /**
+   * limit the runtime to one compilation's builds, the compilation's own name by default
+   */
+  name?: string | undefined;
+  /**
+   * show build problems and uncaught runtime errors in an overlay
+   */
+  overlay?: (boolean | Record<string, EXPECTED_ANY>) | undefined;
+  /**
+   * show an indicator while a rebuild is in progress
+   */
+  progress?: (boolean | "circular" | "linear") | undefined;
+  /**
+   * apply a build through Hot Module Replacement
+   */
+  hot?: boolean | undefined;
+  /**
+   * reload the page on a build that changed something, when `hot` is off
+   */
+  liveReload?: boolean | undefined;
+  /**
+   * reload the page when an update cannot be applied
+   */
+  reload?: boolean | undefined;
+  /**
+   * name of the page-url parameters that turn `hot` and `liveReload` off for a single page
+   */
+  urlPrefix?: string | undefined;
+  /**
+   * how much the runtime logs to the browser console
+   */
+  logging?:
+    ("none" | "error" | "warn" | "info" | "log" | "verbose") | undefined;
+  /**
+   * how many times to reconnect before giving up
+   */
+  reconnect?: number | undefined;
+  /**
+   * how long the runtime tolerates silence before reconnecting, in milliseconds
+   */
+  timeout?: number | undefined;
+  /**
+   * connect as soon as the entry runs
+   */
+  autoConnect?: boolean | undefined;
+  /**
+   * prefix the path with the bundle's public path at runtime
+   */
+  dynamicPublicPath?: boolean | undefined;
+};
 type HotOptions = {
   /**
    * how events reach the clients, Server-Sent Events by default
@@ -200,18 +271,7 @@ type HotOptions = {
   /**
    * options handed to the browser runtime through its entry query
    */
-  client?:
-    | {
-        overlay?: boolean | Record<string, EXPECTED_ANY>;
-        progress?: boolean | "circular" | "linear";
-        reload?: boolean;
-        logging?: "none" | "error" | "warn" | "info" | "log" | "verbose";
-        reconnect?: number;
-        timeout?: number;
-        autoConnect?: boolean;
-        dynamicPublicPath?: boolean;
-      }
-    | undefined;
+  client?: HotClientOptions | undefined;
 };
 type Payload = {
   /**

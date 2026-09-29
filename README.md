@@ -541,7 +541,7 @@ Two things do change, and `hot.inject: false` turns both off:
 
 One caveat: if the compiler was already watching before the middleware was created, the runtime appears from the next build onwards rather than the first one. Create the middleware before starting the watch to avoid it.
 
-No client is added when [`hot.transport`](#hottransport) is a function either — the built-in one speaks Server-Sent Events and WebSocket, and a transport of your own carries whatever protocol you wrote it to carry, so the client that speaks it is yours to add. `HotModuleReplacementPlugin` is still applied for you. `hot.inject: false` silences the reminder, and turns that off as well — apply the plugin yourself if you use it.
+No client is added when [`hot.transport`](#hottransport) is a function either — the built-in one speaks Server-Sent Events and WebSocket, and a transport of your own carries whatever protocol you wrote it to carry, so the client that speaks it is yours to add unless [`hot.client.transport`](#client-options) says which of the two yours speaks. `HotModuleReplacementPlugin` is still applied for you. `hot.inject: false` silences the reminder, and turns that off as well — apply the plugin yourself if you use it.
 
 The [client options](#client-options) below are set on the middleware, next to
 the rest of the hot configuration, and the injected entry carries them to the
@@ -555,9 +555,34 @@ app.use(
 );
 ```
 
-`transport`, `path` and `name` are not accepted there: the middleware knows all
-three already and sets them itself, so the runtime cannot be pointed somewhere
-the server is not listening.
+Every option below can be set either way, and they are the same options: what
+`hot.client` takes is what the query carries. `transport`, `path` and `name`
+differ only in having a value the middleware already knows — the resolved
+[`hot.transport`](#hottransport), the resolved [`hot.path`](#hotpath) and the
+compilation's own name — so setting one replaces that default rather than
+adding to it. That is what a page reaching the endpoint through a proxy or on
+another origin needs:
+
+```js
+app.use(
+  middleware(compiler, {
+    hot: { client: { path: "wss://dev.example.com/__webpack_hmr" } },
+  }),
+);
+```
+
+A [`hot.transport`](#hottransport) of your own gets no client by default, since
+the built-in one speaks Server-Sent Events and WebSocket and cannot know what
+yours carries. If yours carries one of those two, say which and the client is
+added as usual:
+
+```js
+app.use(
+  middleware(compiler, {
+    hot: { transport: myOwnStream, client: { transport: "sse" } },
+  }),
+);
+```
 
 The [`overlay` filters](#client-overlay-options) can be functions here as well.
 They travel to the browser as their own source, so write one as an arrow
@@ -600,22 +625,27 @@ as well.
 
 ### Client options
 
-|        Name         |       Type        |          Default           | Description                                                                                                                                                                                                                                                                      |
-| :-----------------: | :---------------: | :------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     `transport`     |     `string`      |          `"sse"`           | How the events are carried: `"sse"` or `"ws"`. Must match the server [`hot.transport`](#hottransport).                                                                                                                                                                           |
-|       `path`        |     `string`      |      `/__webpack_hmr`      | Path the endpoint is served at. Must match the server `hot.path`.                                                                                                                                                                                                                |
-|      `timeout`      |     `number`      |          `20000`           | Heartbeat watchdog timeout in milliseconds, and the interval between reconnections under `"sse"`.                                                                                                                                                                                |
-|     `reconnect`     |     `number`      |            `10`            | How many times `"ws"` reconnects before giving up. `"sse"` retries for as long as the page is open and ignores this.                                                                                                                                                             |
-|      `overlay`      | `boolean\|Object` |           `true`           | In-page overlay for problems: a boolean, or a JSON object — see [overlay options](#client-overlay-options). Same value shape as webpack-dev-server's [`client.overlay`](https://webpack.js.org/configuration/dev-server/#overlay), plus a few webpack-dev-middleware extensions. |
-|        `hot`        |     `boolean`     |           `true`           | Apply a build through Hot Module Replacement. Set to `false` for a project without `HotModuleReplacementPlugin`, and the page is reloaded instead — see `live-reload`.                                                                                                           |
-|    `live-reload`    |     `boolean`     |           `true`           | Reload the page on a build that changed something, when `hot` is off. A build that changed nothing is left alone. Set both this and `hot` to `false` and a build reaches the page only when you reload it yourself.                                                              |
-|      `reload`       |     `boolean`     |           `true`           | Fall back to a full page reload when an update cannot be applied through HMR (e.g. recovering from a broken build). Enabled by default, unlike webpack-hot-middleware; set to `false` to keep HMR-only. Unrelated to `live-reload`: this one is about an update that was tried.  |
-|     `urlPrefix`     |     `string`      | `"webpack-dev-middleware"` | Names the page-url parameters that turn `hot` and `live-reload` off for a single page — see [opting one page out](#opting-one-page-out). Change it if you are building a server of your own and want parameters named after it.                                                  |
-|      `logging`      |     `string`      |          `"info"`          | Logger level — one of `"none"`, `"error"`, `"warn"`, `"info"`, `"log"`, `"verbose"`. Uses webpack's runtime logger.                                                                                                                                                              |
-|       `name`        |     `string`      |            `""`            | Restrict updates to a specific compilation name (useful with multi-compiler).                                                                                                                                                                                                    |
-|    `autoConnect`    |     `boolean`     |           `true`           | Connect on load; set to `false` and call `setOptionsAndConnect()` manually.                                                                                                                                                                                                      |
-|     `progress`      |     `boolean`     |           `true`           | Show a small badge in the page while a rebuild is in progress (with the compilation percentage when the server enables `hot.progress`). Set to `false` to disable.                                                                                                               |
-| `dynamicPublicPath` |     `boolean`     |          `false`           | Prefix `path` with `__webpack_public_path__` at runtime. The leading slash of `path` is stripped and no other normalization is applied, so the public path should end with `/`.                                                                                                  |
+Each of these is set either on the middleware as `hot.client.<name>` or on the
+entry's query as `<name>=<value>`, with the same effect. `transport`, `path`
+and `name` default to what the middleware resolved rather than to the value in
+the table, which is what they are when nothing else is serving them.
+
+|        Name         |       Type        |          Default           | Description                                                                                                                                                                                                                                                                                           |
+| :-----------------: | :---------------: | :------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     `transport`     |     `string`      |          `"sse"`           | How the events are carried: `"sse"` or `"ws"`. Defaults to the server [`hot.transport`](#hottransport); override it only together with `path`, since a client asking this endpoint for a protocol it does not serve never connects — the middleware warns when it sees that.                          |
+|       `path`        |     `string`      |      `/__webpack_hmr`      | Where the runtime connects. Defaults to the server [`hot.path`](#hotpath); set it to an absolute url (`wss://dev.example.com/__webpack_hmr`) for an endpoint on another origin or behind a proxy. The query also accepts `webSocketURL`, which is what webpack-dev-server spells it.                  |
+|      `timeout`      |     `number`      |          `20000`           | Heartbeat watchdog timeout in milliseconds, and the interval between reconnections under `"sse"`.                                                                                                                                                                                                     |
+|     `reconnect`     |     `number`      |            `10`            | How many times `"ws"` reconnects before giving up. `"sse"` retries for as long as the page is open and ignores this.                                                                                                                                                                                  |
+|      `overlay`      | `boolean\|Object` |           `true`           | In-page overlay for problems: a boolean, or a JSON object — see [overlay options](#client-overlay-options). Same value shape as webpack-dev-server's [`client.overlay`](https://webpack.js.org/configuration/dev-server/#overlay), plus a few webpack-dev-middleware extensions.                      |
+|        `hot`        |     `boolean`     |           `true`           | Apply a build through Hot Module Replacement. Set to `false` for a project without `HotModuleReplacementPlugin`, and the page is reloaded instead — see `liveReload`.                                                                                                                                 |
+|    `liveReload`     |     `boolean`     |           `true`           | Reload the page on a build that changed something, when `hot` is off. A build that changed nothing is left alone. Set both this and `hot` to `false` and a build reaches the page only when you reload it yourself. The query also accepts `live-reload`, which is what webpack-dev-server spells it. |
+|      `reload`       |     `boolean`     |           `true`           | Fall back to a full page reload when an update cannot be applied through HMR (e.g. recovering from a broken build). Enabled by default, unlike webpack-hot-middleware; set to `false` to keep HMR-only. Unrelated to `liveReload`: this one is about an update that was tried.                        |
+|     `urlPrefix`     |     `string`      | `"webpack-dev-middleware"` | Names the page-url parameters that turn `hot` and `liveReload` off for a single page — see [opting one page out](#opting-one-page-out). Change it if you are building a server of your own and want parameters named after it.                                                                        |
+|      `logging`      |     `string`      |          `"info"`          | Logger level — one of `"none"`, `"error"`, `"warn"`, `"info"`, `"log"`, `"verbose"`. Uses webpack's runtime logger.                                                                                                                                                                                   |
+|       `name`        |     `string`      |            `""`            | Restrict updates to a specific compilation name (useful with multi-compiler).                                                                                                                                                                                                                         |
+|    `autoConnect`    |     `boolean`     |           `true`           | Connect on load; set to `false` and call `setOptionsAndConnect()` manually.                                                                                                                                                                                                                           |
+|     `progress`      |     `boolean`     |           `true`           | Show a small badge in the page while a rebuild is in progress (with the compilation percentage when the server enables `hot.progress`). Set to `false` to disable.                                                                                                                                    |
+| `dynamicPublicPath` |     `boolean`     |          `false`           | Prefix `path` with `__webpack_public_path__` at runtime. The leading slash of `path` is stripped and no other normalization is applied, so the public path should end with `/`.                                                                                                                       |
 
 #### A client of your own
 
@@ -813,7 +843,7 @@ Three layers, from build to presentation:
 
 ### Opting one page out
 
-A page can turn `hot` or `live-reload` off for itself with a url parameter,
+A page can turn `hot` or `liveReload` off for itself with a url parameter,
 without changing anything the project is configured with — useful when you are
 working _in_ a page that keeps reloading under you:
 
@@ -822,13 +852,15 @@ http://localhost:3000/?webpack-dev-middleware-live-reload=false
 http://localhost:3000/?webpack-dev-middleware-hot=false
 ```
 
-The `webpack-dev-middleware` part is the client's [`urlPrefix`](#client-options). The name is matched whole and case-insensitively, and only the value `false` turns anything off — a parameter that merely contains those words, or a value such as `falsehood`, is left alone.
+The `webpack-dev-middleware` part is the client's [`urlPrefix`](#client-options), so a server built on this middleware can set `hot.client.urlPrefix` and keep the parameters its own users already know. The name is matched whole and case-insensitively, and only the value `false` turns anything off — a parameter that merely contains those words, or a value such as `falsehood`, is left alone.
+
+The parameter itself is spelled `-live-reload`, keeping the name webpack-dev-server's users know, whichever spelling the option was set with.
 
 ### Reloading the page from the server
 
 Some changes belong to no compilation — a file served straight from disk, for
 instance — so nothing tells the page it is stale. Publish a `reload` and it
-loads itself again, whatever `hot` and `live-reload` are set to:
+loads itself again, whatever `hot` and `liveReload` are set to:
 
 ```js
 const instance = middleware(compiler, { hot: true });
