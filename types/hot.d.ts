@@ -4,6 +4,8 @@ export = createHot;
  * @property {string} path path the endpoint is served at
  * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)} transport how events reach the clients
  * @property {(server: HttpServer) => void} attach answer WebSocket upgrades on this server, a no-op for Server-Sent Events
+ * @property {(req: IncomingMessage, socket: Duplex, head: Buffer) => boolean} handleUpgrade answer one WebSocket upgrade, for a caller that owns the server's `upgrade` event and wants to decide each one; returns false when the request is not the endpoint's, or the transport does not answer upgrades
+ * @property {(fn: (client: EXPECTED_ANY, req: IncomingMessage) => void) => void} onConnect called with each client once it has joined, and the request it joined with, before anything is published to it
  * @property {(req: IncomingMessage, res: ServerResponse) => void} handle answer a request on the endpoint's path
  * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
  * @property {() => void} close end every client and detach the heartbeat
@@ -42,6 +44,7 @@ declare namespace createHot {
     IncomingMessage,
     ServerResponse,
     HttpServer,
+    Duplex,
     StatsOptions,
     MiddlewareStatsOption,
     HotOptions,
@@ -122,6 +125,18 @@ type HotInstance = {
    */
   attach: (server: HttpServer) => void;
   /**
+   * answer one WebSocket upgrade, for a caller that owns the server's `upgrade` event and wants to decide each one; returns false when the request is not the endpoint's, or the transport does not answer upgrades
+   */
+  handleUpgrade: (
+    req: IncomingMessage,
+    socket: Duplex,
+    head: Buffer,
+  ) => boolean;
+  /**
+   * called with each client once it has joined, and the request it joined with, before anything is published to it
+   */
+  onConnect: (fn: (client: EXPECTED_ANY, req: IncomingMessage) => void) => void;
+  /**
    * answer a request on the endpoint's path
    */
   handle: (req: IncomingMessage, res: ServerResponse) => void;
@@ -150,6 +165,7 @@ type StatsError = import("webpack").StatsError;
 type IncomingMessage = import("./index.js").IncomingMessage;
 type ServerResponse = import("./index.js").ServerResponse;
 type HttpServer = import("node:http").Server;
+type Duplex = import("node:stream").Duplex;
 type StatsOptions = import("webpack").StatsOptions;
 type MiddlewareStatsOption = import("webpack").Configuration["stats"];
 type HotOptions = {
@@ -262,9 +278,9 @@ type ClientStream<TClient extends unknown = StreamClient> = {
    */
   hasClients?: (() => boolean) | undefined;
   /**
-   * called with each client once it has joined
+   * called with each client once it has joined, and the request it joined with
    */
-  onConnect: (fn: (client: TClient) => void) => void;
+  onConnect: (fn: (client: TClient, req: IncomingMessage) => void) => void;
   /**
    * publish a payload to every client
    */
@@ -298,6 +314,12 @@ type ClientStream<TClient extends unknown = StreamClient> = {
    * stop answering upgrades
    */
   detach?: (() => void) | undefined;
+  /**
+   * answer one upgrade, for a caller that owns the server's `upgrade` event; returns false when the request is not this endpoint's
+   */
+  handleUpgrade?:
+    | ((req: IncomingMessage, socket: Duplex, head: Buffer) => boolean)
+    | undefined;
 };
 /**
  * Builds a transport of your own. The same calls `createHot` makes of the

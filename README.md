@@ -863,6 +863,73 @@ instance.attach(server);
 server.listen(3000);
 ```
 
+### `handleUpgrade(req, socket, head)`
+
+Answers one WebSocket upgrade, for a server that would rather decide each one than hand itself over with [`attach`](#attachserver). Keep your own `upgrade` listener and call this for the requests you accept — a request you do not want never reaches the endpoint, and no handshake happens.
+
+Returns `true` when the endpoint answered the upgrade, and `false` when it was not its request — because the path is another endpoint's, `hot` is disabled, the transport is Server-Sent Events, or the middleware is closed. A `false` is yours to finish: pass the socket to whatever else you serve, or destroy it.
+
+Use this or `attach`, not both: `attach` adds a listener of its own, which would answer the same upgrade a second time.
+
+#### Parameters
+
+##### `req`, `socket`, `head`
+
+The three arguments the server's [`upgrade`](https://nodejs.org/api/http.html#event-upgrade) event gives you, unchanged.
+
+```js
+const server = http.createServer(app);
+
+server.on("upgrade", (req, socket, head) => {
+  // Your rule, applied before a client can connect.
+  if (req.headers.origin !== "http://localhost:3000") {
+    socket.destroy();
+
+    return;
+  }
+
+  if (!instance.handleUpgrade(req, socket, head)) {
+    socket.destroy();
+  }
+});
+
+server.listen(3000);
+```
+
+### `onConnect(fn)`
+
+Calls `fn(client, req)` with each client that joins the hot endpoint, and the request it joined with, before anything is published to it. The same for both transports: `client` is the `ServerResponse` holding the event stream, or the `WebSocket`.
+
+The middleware has no rule about who may listen and applies none — this is what it knows, so a server can apply its own. Close the client from `fn` to turn it away, and it is sent nothing at all, not even the catch-up the next client gets.
+
+What a rule can be built from is worth being clear about. `Host` is which server was asked for and `Origin` is which page is asking, so a rule about browsers usually reads both. Neither identifies the caller: `Origin` is something a browser sends on a page's behalf, and anything that is not a browser can leave it out or send whatever it likes. It is a useful signal for keeping other pages out of a development server, and it is not authentication — if it matters who is connecting, authenticate them.
+
+```js
+instance.onConnect((client, req) => {
+  // Which server was asked for, and which page is doing the asking. They
+  // answer different questions and a rule usually needs both: a page on
+  // another origin can reach a server it knows the `Host` of, and a client
+  // that is not a browser sends no `Origin` at all.
+  if (
+    req.headers.host !== "localhost:3000" ||
+    req.headers.origin !== "http://localhost:3000"
+  ) {
+    client.end(); // or `client.close()` over a WebSocket
+  }
+});
+```
+
+Does nothing when `hot` is disabled.
+
+#### Parameters
+
+##### `fn`
+
+Type: `(client: ServerResponse | WebSocket, req: IncomingMessage) => void`
+Required: `Yes`
+
+Called once per client, in the order the subscribers were added.
+
 ### `close(callback)`
 
 Instructs `webpack-dev-middleware` instance to stop watching for file changes.

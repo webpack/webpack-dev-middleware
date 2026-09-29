@@ -8,6 +8,7 @@
 /** @typedef {import("./index.js").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index.js").ServerResponse} ServerResponse */
 /** @typedef {import("node:http").Server} HttpServer */
+/** @typedef {import("node:stream").Duplex} Duplex */
 
 // The object form only (no presets/booleans) — it is merged over the
 // middleware's own base options, which string or boolean forms cannot be.
@@ -67,12 +68,13 @@
  * @typedef {object} ClientStream
  * @property {((req: IncomingMessage, res: ServerResponse) => void)=} handler answer a request on the endpoint's path; without one a request there is answered `426 Upgrade Required`
  * @property {(() => boolean)=} hasClients true when at least one client is connected; without one a payload is built even if nobody is listening
- * @property {(fn: (client: TClient) => void) => void} onConnect called with each client once it has joined
+ * @property {(fn: (client: TClient, req: IncomingMessage) => void) => void} onConnect called with each client once it has joined, and the request it joined with
  * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
  * @property {(client: TClient, payload: Payload | { action: string }) => void} publishTo publish a payload to a single client
  * @property {() => void} close end every client and stop the heartbeat
  * @property {((server: HttpServer) => void)=} attach answer upgrades on this server
  * @property {(() => void)=} detach stop answering upgrades
+ * @property {((req: IncomingMessage, socket: Duplex, head: Buffer) => boolean)=} handleUpgrade answer one upgrade, for a caller that owns the server's `upgrade` event; returns false when the request is not this endpoint's
  */
 
 /**
@@ -120,6 +122,7 @@ const CLIENT_STREAM_METHODS = ["close", "onConnect", "publish", "publishTo"];
 const OPTIONAL_CLIENT_STREAM_METHODS = [
   "attach",
   "detach",
+  "handleUpgrade",
   "handler",
   "hasClients",
 ];
@@ -191,7 +194,7 @@ function createEventStream(heartbeat, logger) {
   let clientId = 0;
   /** @type {Map<number, ServerResponse>} */
   let clients = new Map();
-  /** @type {((client: StreamClient) => void) | undefined} */
+  /** @type {((client: StreamClient, req: IncomingMessage) => void) | undefined} */
   let onConnectFn;
 
   /**
@@ -317,7 +320,7 @@ function createEventStream(heartbeat, logger) {
       }
 
       if (onConnectFn) {
-        onConnectFn(res);
+        onConnectFn(res, req);
       }
     },
     publish(payload) {
@@ -519,6 +522,8 @@ function publishBundles(bundles, previousBundles, eventStream) {
  * @property {string} path path the endpoint is served at
  * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)} transport how events reach the clients
  * @property {(server: HttpServer) => void} attach answer WebSocket upgrades on this server, a no-op for Server-Sent Events
+ * @property {(req: IncomingMessage, socket: Duplex, head: Buffer) => boolean} handleUpgrade answer one WebSocket upgrade, for a caller that owns the server's `upgrade` event and wants to decide each one; returns false when the request is not the endpoint's, or the transport does not answer upgrades
+ * @property {(fn: (client: EXPECTED_ANY, req: IncomingMessage) => void) => void} onConnect called with each client once it has joined, and the request it joined with, before anything is published to it
  * @property {(req: IncomingMessage, res: ServerResponse) => void} handle answer a request on the endpoint's path
  * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
  * @property {() => void} close end every client and detach the heartbeat
@@ -572,13 +577,29 @@ function createHot(compiler, userOptions, statsOption) {
   let closed = false;
   let lastProgressPercent = -1;
 
-  // Catch a new client up wherever it joined from, as `sync` events carrying
-  // the last hashes.
-  eventStream.onConnect((client) => {
-    if (!valid || !latestBundles) {
+  // A transport takes one connect callback, so the subscribers are kept here
+  // instead.
+  /** @type {((client: EXPECTED_ANY, req: IncomingMessage) => void)[]} */
+  const connectListeners = [];
+
+  eventStream.onConnect((client, req) => {
+    // Subscribers run before the catch-up, so one that closes a client it does
+    // not want has done so by the time anything is published to it. Nothing
+    // here has to notice: `publishTo` already declines to write to a client
+    // that is no longer open.
+    for (const listener of connectListeners) {
+      listener(client, req);
+    }
+
+    // A listener is arbitrary code, and closing the middleware from one is a
+    // reasonable thing for it to do — there would be no stream left to catch
+    // this client up on.
+    if (closed || !valid || !latestBundles) {
       return;
     }
 
+    // Catch a new client up wherever it joined from, as `sync` events carrying
+    // the last hashes.
     for (const stats of latestBundles) {
       eventStream.publishTo(client, bundlePayload(stats, "sync"));
     }
@@ -674,6 +695,16 @@ function createHot(compiler, userOptions, statsOption) {
       }
 
       eventStream.attach(server);
+    },
+    onConnect(fn) {
+      connectListeners.push(fn);
+    },
+    handleUpgrade(req, socket, head) {
+      if (closed || !eventStream.handleUpgrade) {
+        return false;
+      }
+
+      return eventStream.handleUpgrade(req, socket, head);
     },
     handle(req, res) {
       // A request can race `close()` past the middleware intercept — end it
