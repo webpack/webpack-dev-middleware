@@ -1,7 +1,9 @@
 import webpack from "webpack";
 
 import injectHotClient, {
+  clientQuery,
   filterSource,
+  hasClientEntry,
   isWebTarget,
 } from "../src/injectClient";
 
@@ -485,5 +487,138 @@ describe("serializing an overlay filter", () => {
     expect(() => filterSource("runtimeErrors", unusable)).toThrow(
       /'hot.client.overlay.runtimeErrors'/,
     );
+  });
+});
+
+// What `hot.client` becomes in the entry's query. The shapes differ enough
+// that each is worth stating: a plain value, `overlay` as a boolean, and
+// `overlay` as an object whose filters travel as source.
+describe("the browser options as a query", () => {
+  it("passes a plain option through as text", () => {
+    expect(clientQuery({ logging: "warn", reconnect: 5 })).toStrictEqual({
+      logging: "warn",
+      reconnect: "5",
+    });
+  });
+
+  it("leaves out what was not set", () => {
+    expect(clientQuery({ logging: undefined, reload: false })).toStrictEqual({
+      reload: "false",
+    });
+  });
+
+  it("takes no options at all", () => {
+    expect(clientQuery()).toStrictEqual({});
+  });
+
+  it("keeps a boolean overlay a boolean", () => {
+    expect(clientQuery({ overlay: false })).toStrictEqual({
+      overlay: "false",
+    });
+  });
+
+  it("sends an overlay object as json, filters as source", () => {
+    const query = clientQuery({
+      overlay: {
+        warnings: false,
+        trustedTypesPolicyName: "mine",
+        errors: (message) => message.text.length > 0,
+      },
+    });
+    const overlay = JSON.parse(query.overlay);
+
+    // Flags and strings survive as themselves; only a filter is encoded.
+    expect(overlay.warnings).toBe(false);
+    expect(overlay.trustedTypesPolicyName).toBe("mine");
+    // Rebuilt the way the client rebuilds it, then asked: the source's exact
+    // spelling is the formatter's business, what it does is not.
+    // eslint-disable-next-line no-new-func
+    const rebuilt = new Function(
+      "message",
+      `var callback = ${decodeURIComponent(overlay.errors)}\n return callback(message)`,
+    );
+
+    expect(rebuilt({ text: "boom" })).toBe(true);
+    expect(rebuilt({ text: "" })).toBe(false);
+  });
+});
+
+describe("what injectHotClient leaves alone", () => {
+  /** @type {EXPECTED_OBJECT[]} */
+  let compilers = [];
+  /** @type {EXPECTED_OBJECT} */
+  const logger = { warn: () => {}, log: () => {} };
+
+  afterEach(() => {
+    for (const compiler of compilers) {
+      compiler.close(() => {});
+    }
+
+    compilers = [];
+  });
+
+  /**
+   * @param {EXPECTED_OBJECT=} config extra webpack configuration
+   * @returns {EXPECTED_OBJECT} tracked compiler
+   */
+  function compiler(config) {
+    const created = makeCompiler(config);
+
+    compilers.push(created);
+
+    return created;
+  }
+
+  it("adds nothing at all when inject is off", () => {
+    const instance = compiler();
+    const before = entryCount(instance);
+
+    injectHotClient(
+      [instance],
+      { path: "/__webpack_hmr", transport: "sse", inject: false },
+      logger,
+    );
+
+    expect(entryCount(instance)).toBe(before);
+    expect(hasHmrPlugin(instance)).toBe(false);
+  });
+
+  it("skips a compilation a browser does not run", () => {
+    const instance = compiler({ target: "node" });
+    const before = entryCount(instance);
+
+    injectHotClient(
+      [instance],
+      { path: "/__webpack_hmr", transport: "sse" },
+      logger,
+    );
+
+    expect(entryCount(instance)).toBe(before);
+    expect(hasHmrPlugin(instance)).toBe(false);
+  });
+
+  it("treats an entry it cannot read as having no client", () => {
+    // A function `entry` is computed per build, so there is nothing to look
+    // at — the client goes in, which is the safe way to be wrong.
+    const instance = compiler({ entry: () => "./app.js" });
+    const before = entryCount(instance);
+
+    expect(hasClientEntry(instance)).toBe(false);
+
+    injectHotClient(
+      [instance],
+      { path: "/__webpack_hmr", transport: "sse" },
+      logger,
+    );
+
+    expect(entryCount(instance)).toBe(before + 1);
+  });
+
+  it("says a compilation that has the client already has it", () => {
+    const instance = compiler({
+      entry: ["webpack-dev-middleware/client", "./app.js"],
+    });
+
+    expect(hasClientEntry(instance)).toBe(true);
   });
 });
