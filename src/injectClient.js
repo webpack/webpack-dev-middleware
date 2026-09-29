@@ -140,16 +140,111 @@ function hasClientEntry(compiler) {
   return missing !== null && missing.length === 0;
 }
 
+// Which `client` values the overlay reads as a filter rather than a flag. A
+// function cannot travel as JSON, so it goes as its source and the client
+// rebuilds it — the same encoding webpack-dev-server has always used.
+const OVERLAY_FILTERS = ["errors", "warnings", "runtimeErrors"];
+
+/**
+ * Whether source can stand where the client puts it — after `var callback =`.
+ * Compiled rather than run: nothing in it is executed here.
+ * @param {string} source a function's source
+ * @returns {boolean} true when it is an expression
+ */
+function isExpression(source) {
+  try {
+    // eslint-disable-next-line no-new-func
+    const compiled = new Function(`var callback = ${source}`);
+
+    return typeof compiled === "function";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A filter as source the client can rebuild from.
+ *
+ * An arrow function and a `function` both stringify to something that can be
+ * assigned; a method shorthand — `overlay: { errors(message) {} }` — does not,
+ * and would have gone over as `errors(message) {}` for the client to choke on.
+ * Making it a function expression is the whole of the difference.
+ * @param {string} option which filter it is, for the error
+ * @param {EXPECTED_ANY} filter the function given
+ * @returns {string} source the client can assign
+ */
+function filterSource(option, filter) {
+  const source = filter.toString();
+
+  if (isExpression(source)) {
+    return source;
+  }
+
+  if (isExpression(`function ${source}`)) {
+    return `function ${source}`;
+  }
+
+  // Said here rather than left for the browser: this is a configuration
+  // mistake, and the stack in a page would point at the client instead.
+  throw new Error(
+    `The 'hot.client.overlay.${option}' function could not be serialized for the browser. Write it as a function expression or an arrow function.`,
+  );
+}
+
+/**
+ * The browser options, as the client reads them from its resource query.
+ * @param {EXPECTED_ANY} client the `hot.client` option
+ * @returns {Record<string, string>} query parameters
+ */
+function clientQuery(client) {
+  /** @type {Record<string, string>} */
+  const query = {};
+
+  if (!client) {
+    return query;
+  }
+
+  for (const [key, value] of Object.entries(client)) {
+    if (typeof value === "undefined") {
+      continue;
+    }
+
+    if (key !== "overlay") {
+      query[key] = String(value);
+      continue;
+    }
+
+    if (typeof value !== "object" || value === null) {
+      query.overlay = String(value);
+      continue;
+    }
+
+    /** @type {Record<string, EXPECTED_ANY>} */
+    const overlay = {};
+
+    for (const [option, setting] of Object.entries(value)) {
+      overlay[option] =
+        OVERLAY_FILTERS.includes(option) && typeof setting === "function"
+          ? encodeURIComponent(filterSource(option, setting))
+          : setting;
+    }
+
+    query.overlay = JSON.stringify(overlay);
+  }
+
+  return query;
+}
+
 /**
  * Put the hot runtime into the compilation, so enabling `hot` is the whole of
  * what a developer has to do: no entry to add, no `HotModuleReplacementPlugin`
  * to remember, no configuration to change.
  *
- * The client is given the endpoint and the transport through its resource
- * query, so it agrees with the server by construction rather than by the
- * developer keeping two settings in step.
+ * The client is given the endpoint, the transport and the browser options
+ * through its resource query, so it agrees with the server by construction
+ * rather than by the developer keeping two settings in step.
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean }} options resolved hot options
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: EXPECTED_ANY }} options resolved hot options
  * @param {Logger} logger logger
  */
 function injectHotClient(compilers, options, logger) {
@@ -163,15 +258,17 @@ function injectHotClient(compilers, options, logger) {
   // still is not.
   let warned = false;
 
-  // Written as one expression so the entry is built from a transport that is
-  // known to name itself — a function has nothing to put in a query.
-  const entry =
+  // Written as one expression so the query is built from a transport that is
+  // known to name itself — a function has nothing to put in one.
+  /** @type {Record<string, string> | undefined} */
+  const query =
     typeof options.transport === "function"
       ? undefined
-      : `${clientEntry()}?${new URLSearchParams({
+      : {
           path: options.path,
           transport: options.transport,
-        })}`;
+          ...clientQuery(options.client),
+        };
 
   for (const compiler of compilers) {
     if (!isWebTarget(compiler)) {
@@ -183,25 +280,36 @@ function injectHotClient(compilers, options, logger) {
     const missing = entriesMissingClient(compiler);
 
     if (missing === null || missing.length > 0) {
-      if (entry === undefined) {
+      if (query === undefined) {
         if (!warned) {
           warned = true;
           logger.warn(
             "'hot.transport' is a function, so no client was added: the built-in one speaks Server-Sent Events and WebSocket, not a transport of your own. Add an entry for the client that speaks it — 'HotModuleReplacementPlugin' is still applied for you, and 'hot.inject: false' silences this.",
           );
         }
-      } else if (missing === null) {
-        // No entry point has one, so a single entry every one of them gets.
-        new webpack.EntryPlugin(compiler.context, entry, {
-          name: undefined,
-        }).apply(compiler);
       } else {
-        // Some already have it. Adding a global entry would give those a
-        // second copy, so the ones without it are named instead.
-        for (const name of missing) {
-          new webpack.EntryPlugin(compiler.context, entry, { name }).apply(
-            compiler,
-          );
+        // A named compilation tells its client its name, so each bundle
+        // reports only its own builds. Without it a page shows an overlay for
+        // a build error in code it does not contain.
+        const { name: compilation } = compiler.options;
+        const search = new URLSearchParams(
+          compilation ? { ...query, name: compilation } : query,
+        ).toString();
+        const entry = `${clientEntry()}?${search}`;
+
+        if (missing === null) {
+          // No entry point has one, so a single entry every one of them gets.
+          new webpack.EntryPlugin(compiler.context, entry, {
+            name: undefined,
+          }).apply(compiler);
+        } else {
+          // Some already have it. Adding a global entry would give those a
+          // second copy, so the ones without it are named instead.
+          for (const entryPoint of missing) {
+            new webpack.EntryPlugin(compiler.context, entry, {
+              name: entryPoint,
+            }).apply(compiler);
+          }
         }
       }
     }
@@ -222,5 +330,6 @@ function injectHotClient(compilers, options, logger) {
 }
 
 module.exports = injectHotClient;
+module.exports.filterSource = filterSource;
 module.exports.hasClientEntry = hasClientEntry;
 module.exports.isWebTarget = isWebTarget;

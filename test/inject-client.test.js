@@ -1,6 +1,9 @@
 import webpack from "webpack";
 
-import injectHotClient, { isWebTarget } from "../src/injectClient";
+import injectHotClient, {
+  filterSource,
+  isWebTarget,
+} from "../src/injectClient";
 
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_OBJECT */
@@ -408,5 +411,79 @@ describe("injectHotClient", () => {
 
       expect(warnings).toStrictEqual([]);
     });
+  });
+});
+
+// An overlay filter travels to the browser as its own source, which the client
+// puts after `var callback = `. Not every function stringifies into something
+// that can stand there.
+describe("serializing an overlay filter", () => {
+  /**
+   * @param {string} source the serialized filter
+   * @returns {boolean} whether the client could rebuild it
+   */
+  function theClientCanRebuild(source) {
+    try {
+      // The same shape `decodeOverlayOptions` builds in the browser.
+      // eslint-disable-next-line no-new-func
+      const rebuilt = new Function(
+        "message",
+        `var callback = ${source}\n return callback(message)`,
+      );
+
+      return typeof rebuilt === "function";
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * @param {EXPECTED_OBJECT} message a problem
+   * @returns {boolean} whether to show it
+   */
+  function classicFilter(message) {
+    return message.text.length > 0;
+  }
+
+  const arrowFilter = (message) => message.text.length > 0;
+
+  const { errors: shorthandFilter } = {
+    errors(message) {
+      return message.text.length > 0;
+    },
+  };
+
+  it("keeps an arrow function as it is", () => {
+    expect(filterSource("errors", arrowFilter)).toBe(arrowFilter.toString());
+    expect(theClientCanRebuild(filterSource("errors", arrowFilter))).toBe(true);
+  });
+
+  it("keeps a function as it is", () => {
+    expect(filterSource("warnings", classicFilter)).toBe(
+      classicFilter.toString(),
+    );
+    expect(theClientCanRebuild(filterSource("warnings", classicFilter))).toBe(
+      true,
+    );
+  });
+
+  it("makes a method shorthand into something assignable", () => {
+    // `overlay: { errors(message) { ... } }` stringifies to
+    // `errors(message) { ... }`, which is not an expression — the client threw
+    // on it before this.
+    expect(theClientCanRebuild(shorthandFilter.toString())).toBe(false);
+    expect(theClientCanRebuild(filterSource("errors", shorthandFilter))).toBe(
+      true,
+    );
+  });
+
+  it("says which option it could not serialize", () => {
+    // Nothing makes this assignable, and a stack in the browser would point at
+    // the client rather than at the configuration.
+    const unusable = { toString: () => "!!! not a function !!!" };
+
+    expect(() => filterSource("runtimeErrors", unusable)).toThrow(
+      /'hot.client.overlay.runtimeErrors'/,
+    );
   });
 });

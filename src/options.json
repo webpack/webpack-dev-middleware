@@ -228,6 +228,62 @@
               "description": "Add the hot client entry and HotModuleReplacementPlugin to the compilation. Turn it off to wire them yourself.",
               "link": "https://github.com/webpack/webpack-dev-middleware#hot",
               "type": "boolean"
+            },
+            "client": {
+              "description": "Options handed to the browser runtime through its entry query.",
+              "link": "https://github.com/webpack/webpack-dev-middleware#hot",
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "overlay": {
+                  "description": "Show build problems and uncaught runtime errors in an overlay.",
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "object"
+                    }
+                  ]
+                },
+                "progress": {
+                  "description": "Show an indicator while a rebuild is in progress.",
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "enum": ["circular", "linear"]
+                    }
+                  ]
+                },
+                "reload": {
+                  "description": "Reload the page when an update cannot be applied.",
+                  "type": "boolean"
+                },
+                "logging": {
+                  "description": "How much the runtime logs to the browser console.",
+                  "enum": ["none", "error", "warn", "info", "log", "verbose"]
+                },
+                "reconnect": {
+                  "description": "How many times to reconnect before giving up.",
+                  "type": "number",
+                  "minimum": 0
+                },
+                "timeout": {
+                  "description": "How long the runtime tolerates silence before reconnecting, in milliseconds.",
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "autoConnect": {
+                  "description": "Connect as soon as the entry runs.",
+                  "type": "boolean"
+                },
+                "dynamicPublicPath": {
+                  "description": "Prefix the endpoint path with the bundle's public path at runtime.",
+                  "type": "boolean"
+                }
+              }
             }
           }
         }

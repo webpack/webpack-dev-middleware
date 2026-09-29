@@ -180,7 +180,15 @@ async function createHotApp({
         fs.mkdirSync(appDir, { recursive: true });
         entryFiles[app.name] = path.join(appDir, "entry.js");
         fs.writeFileSync(entryFiles[app.name], app.code);
-        return makeConfig(app.name, appDir, entryFiles[app.name], clientQuery);
+        return makeConfig(
+          app.name,
+          appDir,
+          entryFiles[app.name],
+          clientQuery,
+          undefined,
+          undefined,
+          bare,
+        );
       });
       scripts = apps.map((app) => `/${app.name}.js`);
     } else {
@@ -225,6 +233,13 @@ async function createHotApp({
         res.setHeader(name, value);
       }
       res.end(pageHtml(scripts));
+    });
+    // One bundle per page, as a real multi-compiler build is served: each page
+    // then has exactly one client, and what it does with a sibling's build is
+    // visible rather than hidden behind the other client doing the same.
+    app.get("/page/:name", (req, res) => {
+      res.setHeader("Content-Type", "text/html");
+      res.end(pageHtml([`/${req.params.name}.js`]));
     });
     if (setup) {
       // Extra routes (e.g. an open-editor endpoint) mount before the

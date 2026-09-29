@@ -197,6 +197,21 @@ type HotOptions = {
    * add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
    */
   inject?: boolean | undefined;
+  /**
+   * options handed to the browser runtime through its entry query
+   */
+  client?:
+    | {
+        overlay?: boolean | Record<string, EXPECTED_ANY>;
+        progress?: boolean | "circular" | "linear";
+        reload?: boolean;
+        logging?: "none" | "error" | "warn" | "info" | "log" | "verbose";
+        reconnect?: number;
+        timeout?: number;
+        autoConnect?: boolean;
+        dynamicPublicPath?: boolean;
+      }
+    | undefined;
 };
 type Payload = {
   /**

@@ -5,6 +5,8 @@ import runBrowser from "../helpers/run-browser";
 
 jest.setTimeout(400000);
 
+const OVERLAY_SELECTOR = "#webpack-dev-middleware-hot-overlay";
+
 // Everything here runs against a webpack configuration that has neither the
 // client entry nor `HotModuleReplacementPlugin` — the whole of what a
 // developer did was enable `hot` on the middleware. If any of it needs a
@@ -79,6 +81,86 @@ describe("hot with nothing but the middleware (browser)", () => {
     });
 
     expect(console_.messages.join("\n")).not.toContain("connected");
+  });
+
+  it("hands the browser options to the runtime", async () => {
+    hotApp = await createHotApp({
+      bare: true,
+      code: acceptedApp("v1"),
+      // Set on the middleware, in node — the developer never touches the
+      // webpack configuration or the client's query.
+      hot: { client: { progress: "linear", logging: "none" } },
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    await page.evaluate((id) => {
+      globalThis.__shapes = [];
+
+      const record = () => {
+        const host = document.getElementById(id);
+
+        if (host) {
+          globalThis.__shapes.push(host.style.top);
+        }
+      };
+
+      new MutationObserver(record).observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+      setInterval(record, 10);
+    }, "webpack-dev-middleware-building-indicator");
+
+    hotApp.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    // `progress: "linear"` is the bar pinned to the top, not the badge.
+    expect(await page.evaluate(() => globalThis.__shapes)).toContain("0px");
+    // `logging: "none"` silences the runtime, including its "connected".
+    expect(console_.messages.join("\n")).not.toContain("connected");
+  });
+
+  it("gives each named compilation a client that ignores its siblings", async () => {
+    hotApp = await createHotApp({
+      bare: true,
+      apps: [
+        { name: "a", code: acceptedApp("a1") },
+        { name: "b", code: acceptedApp("b1") },
+      ],
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    // The page for one bundle only, so its client is the only one on it.
+    await page.goto(`${hotApp.url}page/a`);
+    await waitForAppText(page, "a1");
+
+    await page.evaluate(() => {
+      globalThis.notReloaded = true;
+    });
+
+    // Both compilations report to every client over the one stream, so the
+    // client is told the name of its own and ignores the rest. Without it this
+    // page would show a build error from code it does not contain.
+    hotApp.edit("b", "this is not valid javascript {{{");
+
+    // `b`'s build is logged before the name is looked at, so this says the
+    // event reached this page — waiting on a clock would only say that time
+    // passed, and could pass before a broken client had the chance to fail.
+    await console_.waitFor("bundle 'b' rebuilt");
+
+    expect(await page.$(OVERLAY_SELECTOR)).toBeNull();
+
+    // ... and the same page does show its own, so the silence above is the
+    // filter working rather than the overlay being broken.
+    hotApp.edit("a", "this is not valid javascript {{{");
+    await page.waitForSelector(OVERLAY_SELECTOR, { timeout: 30000 });
+
+    expect(await page.evaluate(() => globalThis.notReloaded)).toBe(true);
   });
 
   it("does not add a second client when one is already an entry", async () => {

@@ -24,6 +24,7 @@
  * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
  * @property {boolean=} progress publish compilation progress events to the clients
  * @property {boolean=} inject add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
+ * @property {{ overlay?: boolean | Record<string, EXPECTED_ANY>, progress?: boolean | "circular" | "linear", reload?: boolean, logging?: "none" | "error" | "warn" | "info" | "log" | "verbose", reconnect?: number, timeout?: number, autoConnect?: boolean, dynamicPublicPath?: boolean }=} client options handed to the browser runtime through its entry query
  */
 
 /**

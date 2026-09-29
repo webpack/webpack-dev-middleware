@@ -4,11 +4,11 @@ export = injectHotClient;
  * what a developer has to do: no entry to add, no `HotModuleReplacementPlugin`
  * to remember, no configuration to change.
  *
- * The client is given the endpoint and the transport through its resource
- * query, so it agrees with the server by construction rather than by the
- * developer keeping two settings in step.
+ * The client is given the endpoint, the transport and the browser options
+ * through its resource query, so it agrees with the server by construction
+ * rather than by the developer keeping two settings in step.
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean }} options resolved hot options
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: EXPECTED_ANY }} options resolved hot options
  * @param {Logger} logger logger
  */
 declare function injectHotClient(
@@ -17,11 +17,13 @@ declare function injectHotClient(
     path: string;
     transport: NonNullable<HotOptions["transport"]>;
     inject?: boolean;
+    client?: EXPECTED_ANY;
   },
   logger: Logger,
 ): void;
 declare namespace injectHotClient {
   export {
+    filterSource,
     hasClientEntry,
     isWebTarget,
     Compiler,
@@ -30,6 +32,18 @@ declare namespace injectHotClient {
     EXPECTED_ANY,
   };
 }
+/**
+ * A filter as source the client can rebuild from.
+ *
+ * An arrow function and a `function` both stringify to something that can be
+ * assigned; a method shorthand — `overlay: { errors(message) {} }` — does not,
+ * and would have gone over as `errors(message) {}` for the client to choke on.
+ * Making it a function expression is the whole of the difference.
+ * @param {string} option which filter it is, for the error
+ * @param {EXPECTED_ANY} filter the function given
+ * @returns {string} source the client can assign
+ */
+declare function filterSource(option: string, filter: EXPECTED_ANY): string;
 /**
  * Whether every entry point already pulls the client in.
  * @param {Compiler} compiler compiler
