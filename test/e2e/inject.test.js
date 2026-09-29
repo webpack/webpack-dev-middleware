@@ -133,6 +133,7 @@ describe("hot with nothing but the middleware (browser)", () => {
       ],
     });
     ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
 
     // The page for one bundle only, so its client is the only one on it.
     await page.goto(`${hotApp.url}page/a`);
@@ -146,9 +147,11 @@ describe("hot with nothing but the middleware (browser)", () => {
     // client is told the name of its own and ignores the rest. Without it this
     // page would show a build error from code it does not contain.
     hotApp.edit("b", "this is not valid javascript {{{");
-    await new Promise((resolve) => {
-      setTimeout(resolve, 4000);
-    });
+
+    // `b`'s build is logged before the name is looked at, so this says the
+    // event reached this page — waiting on a clock would only say that time
+    // passed, and could pass before a broken client had the chance to fail.
+    await console_.waitFor("bundle 'b' rebuilt");
 
     expect(await page.$(OVERLAY_SELECTOR)).toBeNull();
 

@@ -273,7 +273,7 @@
                 "timeout": {
                   "description": "How long the runtime tolerates silence before reconnecting, in milliseconds.",
                   "type": "number",
-                  "minimum": 0
+                  "exclusiveMinimum": 0
                 },
                 "autoConnect": {
                   "description": "Connect as soon as the entry runs.",

@@ -146,6 +146,52 @@ function hasClientEntry(compiler) {
 const OVERLAY_FILTERS = ["errors", "warnings", "runtimeErrors"];
 
 /**
+ * Whether source can stand where the client puts it — after `var callback =`.
+ * Compiled rather than run: nothing in it is executed here.
+ * @param {string} source a function's source
+ * @returns {boolean} true when it is an expression
+ */
+function isExpression(source) {
+  try {
+    // eslint-disable-next-line no-new-func
+    const compiled = new Function(`var callback = ${source}`);
+
+    return typeof compiled === "function";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A filter as source the client can rebuild from.
+ *
+ * An arrow function and a `function` both stringify to something that can be
+ * assigned; a method shorthand — `overlay: { errors(message) {} }` — does not,
+ * and would have gone over as `errors(message) {}` for the client to choke on.
+ * Making it a function expression is the whole of the difference.
+ * @param {string} option which filter it is, for the error
+ * @param {EXPECTED_ANY} filter the function given
+ * @returns {string} source the client can assign
+ */
+function filterSource(option, filter) {
+  const source = filter.toString();
+
+  if (isExpression(source)) {
+    return source;
+  }
+
+  if (isExpression(`function ${source}`)) {
+    return `function ${source}`;
+  }
+
+  // Said here rather than left for the browser: this is a configuration
+  // mistake, and the stack in a page would point at the client instead.
+  throw new Error(
+    `The 'hot.client.overlay.${option}' function could not be serialized for the browser. Write it as a function expression or an arrow function.`,
+  );
+}
+
+/**
  * The browser options, as the client reads them from its resource query.
  * @param {EXPECTED_ANY} client the `hot.client` option
  * @returns {Record<string, string>} query parameters
@@ -179,7 +225,7 @@ function clientQuery(client) {
     for (const [option, setting] of Object.entries(value)) {
       overlay[option] =
         OVERLAY_FILTERS.includes(option) && typeof setting === "function"
-          ? encodeURIComponent(setting.toString())
+          ? encodeURIComponent(filterSource(option, setting))
           : setting;
     }
 
@@ -284,5 +330,6 @@ function injectHotClient(compilers, options, logger) {
 }
 
 module.exports = injectHotClient;
+module.exports.filterSource = filterSource;
 module.exports.hasClientEntry = hasClientEntry;
 module.exports.isWebTarget = isWebTarget;

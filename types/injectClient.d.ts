@@ -23,6 +23,7 @@ declare function injectHotClient(
 ): void;
 declare namespace injectHotClient {
   export {
+    filterSource,
     hasClientEntry,
     isWebTarget,
     Compiler,
@@ -31,6 +32,18 @@ declare namespace injectHotClient {
     EXPECTED_ANY,
   };
 }
+/**
+ * A filter as source the client can rebuild from.
+ *
+ * An arrow function and a `function` both stringify to something that can be
+ * assigned; a method shorthand — `overlay: { errors(message) {} }` — does not,
+ * and would have gone over as `errors(message) {}` for the client to choke on.
+ * Making it a function expression is the whole of the difference.
+ * @param {string} option which filter it is, for the error
+ * @param {EXPECTED_ANY} filter the function given
+ * @returns {string} source the client can assign
+ */
+declare function filterSource(option: string, filter: EXPECTED_ANY): string;
 /**
  * Whether every entry point already pulls the client in.
  * @param {Compiler} compiler compiler

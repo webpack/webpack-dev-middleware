@@ -559,6 +559,27 @@ app.use(
 three already and sets them itself, so the runtime cannot be pointed somewhere
 the server is not listening.
 
+The [`overlay` filters](#client-overlay-options) can be functions here as well.
+They travel to the browser as their own source, so write one as an arrow
+function or a `function` — a method shorthand (`overlay: { errors(message) {} }`)
+works too, but anything that cannot be serialized is refused when the
+middleware is created rather than left to fail in the page:
+
+```js
+app.use(
+  middleware(compiler, {
+    hot: {
+      client: {
+        overlay: {
+          warnings: false,
+          errors: (error) => !error.message.includes("deprecated"),
+        },
+      },
+    },
+  }),
+);
+```
+
 `hot.client` is read only when the client is injected. With `hot.inject: false`,
 or for a client the configuration already has as an entry, the query string on
 the entry path is the only source — and it works either way:
