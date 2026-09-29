@@ -12,6 +12,21 @@ export function show(
   source?: string | undefined,
 ): void;
 /**
+ * Report what the running build is doing, without starting one.
+ *
+ * A progress payload carries no compilation name, so it cannot say whose
+ * build it belongs to. Letting it start one meant a payload from a
+ * still-running compilation could re-mark a sibling that had already finished
+ * — and would never report again — as building, leaving the badge on the page
+ * for good. Nothing is building means there is nothing to report about.
+ * @param {string=} text label text
+ * @param {number=} percent compilation progress (0-100)
+ */
+export function update(
+  text?: string | undefined,
+  percent?: number | undefined,
+): void;
+/**
  * Mark one source's build as finished, or remove the indicator entirely.
  * @param {string=} source when given, only that source is dropped and the
  * badge stays while any other source is still building; without it the badge

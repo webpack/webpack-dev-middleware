@@ -498,10 +498,6 @@ let customHandler;
 /** @type {((obj: HMRPayload) => void) | undefined} */
 let subscribeAllHandler;
 
-// Name of the build that most recently reported `building` — progress
-// payloads carry no name, so they are attributed to it.
-let lastBuildingName = "";
-
 /**
  * @param {HMRPayload} obj payload
  */
@@ -521,11 +517,12 @@ function processMessage(obj) {
         reporter.clearRuntimeProblems();
       }
       if (options.progress && typeof document !== "undefined") {
-        lastBuildingName = obj.name || "";
+        // Named, so the badge stays until every compilation that started has
+        // reported back — a sibling finishing is not this one finishing.
         indicator.show(
           obj.file ? `Rebuilding… (${obj.file})` : undefined,
           undefined,
-          lastBuildingName,
+          obj.name || "",
         );
       }
       sendMessage("Invalid");
@@ -545,13 +542,13 @@ function processMessage(obj) {
       break;
     }
     case "progress": {
-      // Progress payloads carry no name — attribute them to the build that
-      // most recently reported `building`.
+      // Reported rather than shown: a progress payload carries no name, so it
+      // cannot say whose build it is, and in a multi-compiler build one
+      // compilation's progress arrives while a sibling has already finished.
       if (options.progress && typeof document !== "undefined") {
-        indicator.show(
+        indicator.update(
           `Rebuilding… ${obj.percent}%${obj.message ? ` (${obj.message})` : ""}`,
           obj.percent,
-          lastBuildingName,
         );
       }
       sendMessage("Progress", obj);
