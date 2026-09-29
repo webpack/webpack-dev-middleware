@@ -163,6 +163,62 @@ describe("hot with nothing but the middleware (browser)", () => {
     expect(await page.evaluate(() => globalThis.notReloaded)).toBe(true);
   });
 
+  it("takes the options that used to be the query's alone", async () => {
+    hotApp = await createHotApp({
+      bare: true,
+      code: acceptedApp("v1"),
+      // Neither of these could be set in node before: `hot` and `liveReload`
+      // were readable from the entry query only.
+      hot: { client: { hot: false, liveReload: false } },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await page.evaluate(() => {
+      globalThis.notReloaded = true;
+    });
+
+    hotApp.edit(acceptedApp("v2"));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 4000);
+    });
+
+    // Each half of this fails differently if the option did not arrive: with
+    // `hot` still on the page would be showing "v2" with its marker intact,
+    // and with `liveReload` still on it would be showing "v2" with the marker
+    // gone. Only both arriving leaves the page as it is.
+    expect(
+      await page.evaluate(() => document.getElementById("app").textContent),
+    ).toBe("v1");
+    expect(await page.evaluate(() => globalThis.notReloaded)).toBe(true);
+  });
+
+  it("names the page's opt-out parameters from node", async () => {
+    hotApp = await createHotApp({
+      bare: true,
+      code: acceptedApp("v1"),
+      // What a server built on this middleware sets so the parameters its own
+      // users know keep working.
+      hot: { client: { urlPrefix: "my-server" } },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(`${hotApp.url}?my-server-hot=false`);
+    await waitForAppText(page, "v1");
+    await page.evaluate(() => {
+      globalThis.notReloaded = true;
+    });
+
+    hotApp.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    // The parameter was this prefix's, so this page took the build as a
+    // reload; under the default prefix it would have been an update and the
+    // marker would still be there.
+    expect(await page.evaluate(() => globalThis.notReloaded)).toBeUndefined();
+  });
+
   it("does not add a second client when one is already an entry", async () => {
     // Not `bare`: this configuration follows the documentation as it was
     // before the middleware injected anything.

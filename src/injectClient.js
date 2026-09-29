@@ -3,6 +3,7 @@ const path = require("node:path");
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("./index.js").Logger} Logger */
 /** @typedef {import("./hot.js").HotOptions} HotOptions */
+/** @typedef {import("./hot.js").HotClientOptions} HotClientOptions */
 
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_ANY */
@@ -244,7 +245,7 @@ function clientQuery(client) {
  * through its resource query, so it agrees with the server by construction
  * rather than by the developer keeping two settings in step.
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: EXPECTED_ANY }} options resolved hot options
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: HotClientOptions }} options resolved hot options
  * @param {Logger} logger logger
  */
 function injectHotClient(compilers, options, logger) {
@@ -252,23 +253,38 @@ function injectHotClient(compilers, options, logger) {
     return;
   }
 
-  // A transport of your own carries whatever protocol you wrote it to carry,
-  // and the built-in client speaks two. There is nothing to configure it with
-  // here, so the client that speaks it is yours to add — the plugin below
-  // still is not.
   let warned = false;
 
-  // Written as one expression so the query is built from a transport that is
-  // known to name itself — a function has nothing to put in one.
-  /** @type {Record<string, string> | undefined} */
-  const query =
+  // What the developer set in node, which wins over everything below it: these
+  // are the same options the query carries, so either spelling reaches the
+  // runtime and the one written by hand is the one that counts.
+  const client = clientQuery(options.client);
+
+  // A transport of your own carries whatever protocol you wrote it to carry,
+  // and the built-in client speaks two. When yours speaks one of them,
+  // `hot.client.transport` says which and the client is added as usual;
+  // without that there is nothing to point it at, so the client is yours to
+  // add — the plugin below still is not.
+  /** @type {string | undefined} */
+  const transport =
     typeof options.transport === "function"
-      ? undefined
-      : {
-          path: options.path,
-          transport: options.transport,
-          ...clientQuery(options.client),
-        };
+      ? client.transport
+      : options.transport;
+
+  // Overriding the transport is for a client that talks to something else, so
+  // it comes with an endpoint of its own. Without one it is pointed straight
+  // back at this middleware speaking the wrong protocol, which is a page that
+  // silently never connects.
+  if (
+    typeof options.transport === "string" &&
+    client.transport &&
+    client.transport !== options.transport &&
+    !client.path
+  ) {
+    logger.warn(
+      `'hot.client.transport' is '${client.transport}' while the endpoint serves '${options.transport}', so the client will not connect. Set them to the same thing, or give 'hot.client.path' the endpoint that does speak '${client.transport}'.`,
+    );
+  }
 
   for (const compiler of compilers) {
     if (!isWebTarget(compiler)) {
@@ -280,21 +296,28 @@ function injectHotClient(compilers, options, logger) {
     const missing = entriesMissingClient(compiler);
 
     if (missing === null || missing.length > 0) {
-      if (query === undefined) {
+      if (transport === undefined) {
         if (!warned) {
           warned = true;
           logger.warn(
-            "'hot.transport' is a function, so no client was added: the built-in one speaks Server-Sent Events and WebSocket, not a transport of your own. Add an entry for the client that speaks it — 'HotModuleReplacementPlugin' is still applied for you, and 'hot.inject: false' silences this.",
+            "'hot.transport' is a function, so no client was added: the built-in one speaks Server-Sent Events and WebSocket, not a transport of your own. Set 'hot.client.transport' if yours speaks one of them, or add an entry for the client that speaks it — 'HotModuleReplacementPlugin' is still applied for you, and 'hot.inject: false' silences this.",
           );
         }
       } else {
-        // A named compilation tells its client its name, so each bundle
-        // reports only its own builds. Without it a page shows an overlay for
-        // a build error in code it does not contain.
+        // The endpoint and the transport the middleware resolved, and the
+        // compilation's name so each bundle's client reports only its own
+        // builds — without that a page shows an overlay for a build error in
+        // code it does not contain. All three are defaults: `hot.client`
+        // carries the same options and is spread over them.
         const { name: compilation } = compiler.options;
-        const search = new URLSearchParams(
-          compilation ? { ...query, name: compilation } : query,
-        ).toString();
+        /** @type {Record<string, string>} */
+        const query = { path: options.path, transport };
+
+        if (compilation) {
+          query.name = compilation;
+        }
+
+        const search = new URLSearchParams({ ...query, ...client }).toString();
         const entry = `${clientEntry()}?${search}`;
 
         if (missing === null) {

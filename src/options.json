@@ -235,6 +235,19 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "transport": {
+                  "description": "Which transport the runtime speaks: `sse` or `ws`. Defaults to the resolved `hot.transport`.",
+                  "enum": ["sse", "ws"]
+                },
+                "path": {
+                  "description": "Where the runtime connects. Defaults to the resolved `hot.path`; may be an absolute url for an endpoint reached on another origin or through a proxy.",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "description": "Limit the runtime to one compilation's builds. Defaults to the compilation's own name.",
+                  "type": "string"
+                },
                 "overlay": {
                   "description": "Show build problems and uncaught runtime errors in an overlay.",
                   "anyOf": [
@@ -257,9 +270,22 @@
                     }
                   ]
                 },
+                "hot": {
+                  "description": "Apply a build through Hot Module Replacement.",
+                  "type": "boolean"
+                },
+                "liveReload": {
+                  "description": "Reload the page on a build that changed something, when `hot` is off.",
+                  "type": "boolean"
+                },
                 "reload": {
                   "description": "Reload the page when an update cannot be applied.",
                   "type": "boolean"
+                },
+                "urlPrefix": {
+                  "description": "Names the page-url parameters that turn `hot` and `liveReload` off for a single page.",
+                  "type": "string",
+                  "minLength": 1
                 },
                 "logging": {
                   "description": "How much the runtime logs to the browser console.",

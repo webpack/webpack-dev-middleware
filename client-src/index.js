@@ -134,10 +134,12 @@ setLogLevel(options.logging);
 /**
  * Whether one of the page's own url parameters turns a setting off, which is
  * how a single tab opts out of what the rest of the project is configured for
- * — `?webpack-dev-middleware-live-reload=false` to stop a page reloading under
+ * — `?webpack-dev-middleware-liveReload=false` to stop a page reloading under
  * you while you work in it, for instance. `urlPrefix` names them, so a server
- * built on this middleware can keep the parameters its users already know.
- * @param {string} setting `hot` or `live-reload`
+ * built on this middleware can name them after itself.
+ *
+ * The parameter is the option, spelled the one way the option is spelled.
+ * @param {("hot" | "liveReload")} setting which option the page may have turned off
  * @returns {boolean} whether the page turned it off
  */
 function turnedOffByUrl(setting) {
@@ -172,10 +174,8 @@ function setOverrides(overrides) {
   if (overrides.transport === "sse" || overrides.transport === "ws") {
     options.transport = overrides.transport;
   }
-  // webpack-dev-server spells the endpoint `webSocketURL`, and unlike `path`
-  // it carries the origin as well, which is what lets the page reach a server
-  // on another host.
-  if (overrides.webSocketURL) options.path = overrides.webSocketURL;
+  // Where the page connects, which may be an absolute url rather than a path
+  // when the endpoint is on another origin.
   if (overrides.path) options.path = overrides.path;
   if (overrides.timeout) {
     const timeout = Number(overrides.timeout);
@@ -216,12 +216,9 @@ function setOverrides(overrides) {
     }
   }
   if (overrides.hot) options.hot = overrides.hot !== "false";
-  // Two different things, and webpack-dev-server spells them the same way:
-  // `live-reload` is what happens on a build when `hot` is off, `reload` is
-  // what happens when an update was tried and could not be applied.
-  if (overrides["live-reload"]) {
-    options.liveReload = overrides["live-reload"] !== "false";
-  }
+  // Two different things: `liveReload` is what happens on a build when `hot`
+  // is off, `reload` is what happens when an update was tried and could not be
+  // applied.
   if (overrides.liveReload) {
     options.liveReload = overrides.liveReload !== "false";
   }
@@ -608,7 +605,7 @@ function processMessage(obj) {
           // the page is already running.
           obj.action === "built" &&
           options.liveReload &&
-          !turnedOffByUrl("live-reload")
+          !turnedOffByUrl("liveReload")
         ) {
           log.info("App updated. Reloading...");
           reloadPage();

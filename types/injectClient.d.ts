@@ -8,7 +8,7 @@ export = injectHotClient;
  * through its resource query, so it agrees with the server by construction
  * rather than by the developer keeping two settings in step.
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: EXPECTED_ANY }} options resolved hot options
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: HotClientOptions }} options resolved hot options
  * @param {Logger} logger logger
  */
 declare function injectHotClient(
@@ -17,7 +17,7 @@ declare function injectHotClient(
     path: string;
     transport: NonNullable<HotOptions["transport"]>;
     inject?: boolean;
-    client?: EXPECTED_ANY;
+    client?: HotClientOptions;
   },
   logger: Logger,
 ): void;
@@ -30,6 +30,7 @@ declare namespace injectHotClient {
     Compiler,
     Logger,
     HotOptions,
+    HotClientOptions,
     EXPECTED_ANY,
   };
 }
@@ -74,4 +75,5 @@ declare function isWebTarget(compiler: Compiler): boolean;
 type Compiler = import("webpack").Compiler;
 type Logger = import("./index.js").Logger;
 type HotOptions = import("./hot.js").HotOptions;
+type HotClientOptions = import("./hot.js").HotClientOptions;
 type EXPECTED_ANY = any;

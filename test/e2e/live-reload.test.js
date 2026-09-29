@@ -79,7 +79,7 @@ describe("live reload (browser)", () => {
 
   it("leaves the page alone when live reload is off as well", async () => {
     app = await createHotApp({
-      query: "?hot=false&live-reload=false",
+      query: "?hot=false&liveReload=false",
       hmrPlugin: false,
       code: acceptedApp("v1"),
     });
@@ -96,12 +96,12 @@ describe("live reload (browser)", () => {
     expect(await readReloadMarker(page)).toBe(true);
   });
 
-  it("takes the camel-cased spelling as well", async () => {
-    // Both spellings are accepted: `live-reload` is what webpack-dev-server's
-    // entry query has always used, and `liveReload` is what an option set on
-    // the middleware in node serializes to.
+  it("knows the option by one name only", async () => {
+    // `live-reload` was a second spelling of this. It is not one any more, so
+    // it reaches nothing and the page reloads as it would with no query at
+    // all — the failure a typo gets, which is what any other name gets too.
     app = await createHotApp({
-      query: "?hot=false&liveReload=false",
+      query: "?hot=false&live-reload=false",
       hmrPlugin: false,
       code: acceptedApp("v1"),
     });
@@ -112,10 +112,9 @@ describe("live reload (browser)", () => {
     await plantReloadMarker(page);
 
     app.edit(acceptedApp("v2"));
-    await settle();
+    await waitForAppText(page, "v2");
 
-    expect(await appText(page)).toBe("v1");
-    expect(await readReloadMarker(page)).toBe(true);
+    expect(await readReloadMarker(page)).toBeUndefined();
   });
 
   it("does not reload for a build that changed nothing", async () => {
@@ -149,7 +148,7 @@ describe("live reload (browser)", () => {
     ({ page, browser } = await runBrowser());
 
     await page.goto(
-      `${app.url}?webpack-dev-middleware-live-reload=false`.replace(
+      `${app.url}?webpack-dev-middleware-liveReload=false`.replace(
         /\/\?/,
         "/?",
       ),
@@ -177,7 +176,7 @@ describe("live reload (browser)", () => {
     // first carries them inside another parameter's value, and the second is
     // the parameter but with a value that only begins with "false".
     await page.goto(
-      `${app.url}?note=webpack-dev-middleware-live-reload=false&webpack-dev-middleware-live-reload=falsehood`,
+      `${app.url}?note=webpack-dev-middleware-liveReload=false&webpack-dev-middleware-liveReload=falsehood`,
     );
     await waitForAppText(page, "v1");
     await plantReloadMarker(page);
@@ -197,7 +196,7 @@ describe("live reload (browser)", () => {
     });
     ({ page, browser } = await runBrowser());
 
-    await page.goto(`${app.url}?MyServer-live-reload=false`);
+    await page.goto(`${app.url}?MyServer-liveReload=false`);
     await waitForAppText(page, "v1");
     await plantReloadMarker(page);
 
@@ -232,7 +231,7 @@ describe("live reload (browser)", () => {
     });
     ({ page, browser } = await runBrowser());
 
-    await page.goto(`${app.url}?my-server-live-reload=false`);
+    await page.goto(`${app.url}?my-server-liveReload=false`);
     await waitForAppText(page, "v1");
     await plantReloadMarker(page);
 
@@ -246,7 +245,7 @@ describe("live reload (browser)", () => {
   it("reloads when the server asks, whatever the build settings say", async () => {
     app = await createHotApp({
       // Neither mechanism would reload this page on a build.
-      query: "?hot=false&live-reload=false",
+      query: "?hot=false&liveReload=false",
       hmrPlugin: false,
       code: acceptedApp("v1"),
     });

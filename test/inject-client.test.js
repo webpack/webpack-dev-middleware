@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import webpack from "webpack";
 
 import injectHotClient, {
@@ -6,6 +9,7 @@ import injectHotClient, {
   hasClientEntry,
   isWebTarget,
 } from "../src/injectClient";
+import schema from "../src/options.json";
 
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_OBJECT */
@@ -620,5 +624,285 @@ describe("what injectHotClient leaves alone", () => {
     });
 
     expect(hasClientEntry(instance)).toBe(true);
+  });
+});
+
+// Every browser option has two spellings — `hot.client` in node, and the
+// injected entry's query — and they end in the same place. `transport`, `path`
+// and `name` are the ones the middleware knows a value for, so what matters
+// there is which of the two wins.
+describe("the entry query the client is given", () => {
+  /** @type {EXPECTED_OBJECT[]} */
+  let compilers = [];
+  /** @type {string[]} */
+  let warnings = [];
+  /** @type {EXPECTED_OBJECT} */
+  const logger = {
+    warn: (message) => warnings.push(message),
+    log: () => {},
+  };
+
+  afterEach(() => {
+    for (const compiler of compilers) {
+      compiler.close(() => {});
+    }
+
+    compilers = [];
+    warnings = [];
+  });
+
+  /**
+   * Inject with an `EntryPlugin` that records instead of applying, and report
+   * the query each added entry carries.
+   * @param {EXPECTED_OBJECT} options resolved hot options
+   * @param {EXPECTED_OBJECT=} config extra webpack configuration
+   * @returns {Record<string, string>[]} one parsed query per entry added
+   */
+  function queries(options, config) {
+    const instance = makeCompiler(config);
+
+    compilers.push(instance);
+
+    /** @type {string[]} */
+    const added = [];
+    const real = instance.webpack;
+
+    class RecordingEntryPlugin {
+      /**
+       * @param {string} _context context
+       * @param {string} entry entry request
+       */
+      constructor(_context, entry) {
+        added.push(entry);
+      }
+
+      apply() {}
+    }
+
+    instance.webpack = { ...real, EntryPlugin: RecordingEntryPlugin };
+
+    try {
+      injectHotClient([instance], options, logger);
+    } finally {
+      instance.webpack = real;
+    }
+
+    return added.map((entry) =>
+      Object.fromEntries(new URLSearchParams(entry.split("?")[1])),
+    );
+  }
+
+  it("carries the endpoint and the transport the middleware resolved", () => {
+    expect(queries({ path: "/__hmr", transport: "ws" })).toStrictEqual([
+      { path: "/__hmr", transport: "ws" },
+    ]);
+  });
+
+  it("names the compilation, so a client ignores its siblings", () => {
+    expect(
+      queries({ path: "/__webpack_hmr", transport: "sse" }, { name: "admin" }),
+    ).toStrictEqual([
+      { path: "/__webpack_hmr", transport: "sse", name: "admin" },
+    ]);
+  });
+
+  it("carries every browser option set in node", () => {
+    const [query] = queries({
+      path: "/__webpack_hmr",
+      transport: "sse",
+      client: {
+        hot: false,
+        liveReload: false,
+        urlPrefix: "my-server",
+        reload: false,
+        logging: "warn",
+        reconnect: 3,
+        timeout: 5000,
+        autoConnect: false,
+        dynamicPublicPath: true,
+        progress: "linear",
+        overlay: false,
+      },
+    });
+
+    expect(query).toStrictEqual({
+      path: "/__webpack_hmr",
+      transport: "sse",
+      hot: "false",
+      liveReload: "false",
+      urlPrefix: "my-server",
+      reload: "false",
+      logging: "warn",
+      reconnect: "3",
+      timeout: "5000",
+      autoConnect: "false",
+      dynamicPublicPath: "true",
+      progress: "linear",
+      overlay: "false",
+    });
+  });
+
+  it("lets the three the middleware knows be overridden", () => {
+    // A page behind a proxy reaches the endpoint on another origin, and its
+    // client is no longer one this middleware can address. Written in node, so
+    // it is the same option object as everything else.
+    const [query] = queries(
+      { path: "/__webpack_hmr", transport: "sse" },
+      { name: "admin" },
+    );
+
+    expect(query).toMatchObject({ path: "/__webpack_hmr", name: "admin" });
+
+    const [overridden] = queries(
+      {
+        path: "/__webpack_hmr",
+        transport: "sse",
+        client: {
+          path: "wss://dev.example.com/__hmr",
+          transport: "ws",
+          name: "",
+        },
+      },
+      { name: "admin" },
+    );
+
+    expect(overridden).toStrictEqual({
+      path: "wss://dev.example.com/__hmr",
+      transport: "ws",
+      name: "",
+    });
+  });
+
+  it("adds a client for a transport of your own that speaks a built-in one", () => {
+    // The stream is yours; what goes over it is Server-Sent Events, so the
+    // built-in client can speak to it once it is told so.
+    const transport = () => ({
+      close: () => {},
+      onConnect: () => {},
+      publish: () => {},
+      publishTo: () => {},
+    });
+
+    expect(
+      queries({
+        path: "/__webpack_hmr",
+        transport,
+        client: { transport: "sse" },
+      }),
+    ).toStrictEqual([{ path: "/__webpack_hmr", transport: "sse" }]);
+    expect(warnings).toStrictEqual([]);
+  });
+
+  it("still adds none for one that speaks neither", () => {
+    const transport = () => ({
+      close: () => {},
+      onConnect: () => {},
+      publish: () => {},
+      publishTo: () => {},
+    });
+
+    expect(queries({ path: "/__webpack_hmr", transport })).toStrictEqual([]);
+    expect(warnings.join("\n")).toContain("hot.client.transport");
+  });
+});
+
+// Overriding the transport points the client at a different server. Left
+// pointing at this one it would ask for a protocol the endpoint does not
+// serve, and a page that never connects says nothing about why.
+describe("a client transport that disagrees with the endpoint", () => {
+  /** @type {EXPECTED_OBJECT[]} */
+  let compilers = [];
+  /** @type {string[]} */
+  let warnings = [];
+  /** @type {EXPECTED_OBJECT} */
+  const logger = {
+    warn: (message) => warnings.push(message),
+    log: () => {},
+  };
+
+  afterEach(() => {
+    for (const compiler of compilers) {
+      compiler.close(() => {});
+    }
+
+    compilers = [];
+    warnings = [];
+  });
+
+  /**
+   * @param {EXPECTED_OBJECT} client the `hot.client` option
+   * @param {string=} transport the endpoint's transport
+   * @returns {string[]} what was warned about
+   */
+  function inject(client, transport = "sse") {
+    const instance = makeCompiler();
+
+    compilers.push(instance);
+
+    injectHotClient(
+      [instance],
+      { path: "/__webpack_hmr", transport, client },
+      logger,
+    );
+
+    return warnings;
+  }
+
+  it("says so when there is no other endpoint to reach", () => {
+    expect(inject({ transport: "ws" }).join("\n")).toContain(
+      "will not connect",
+    );
+  });
+
+  it("says nothing when the client has an endpoint of its own", () => {
+    expect(
+      inject({ transport: "ws", path: "wss://dev.example.com/__hmr" }),
+    ).toStrictEqual([]);
+  });
+
+  it("says nothing when the two agree", () => {
+    expect(inject({ transport: "sse" })).toStrictEqual([]);
+  });
+
+  it("says nothing when the client leaves the transport alone", () => {
+    expect(inject({ overlay: false })).toStrictEqual([]);
+  });
+});
+
+// The two ways of setting a browser option have to stay one set of names. A
+// name the client acts on that the schema refuses is an option with no node
+// spelling; one the schema takes that the client ignores silently does
+// nothing; two names for one setting is an alias. Both sides are read from
+// their own source, or this would just be a third place to forget.
+describe("node and the query take the same names", () => {
+  const clientSource = fs.readFileSync(
+    path.join(__dirname, "..", "client-src", "index.js"),
+    "utf8",
+  );
+
+  /** @type {string[]} every name the client acts on from its query */
+  const readByClient = [
+    ...new Set(
+      [
+        .../** @type {RegExpMatchArray} */ (
+          clientSource.match(/function setOverrides\([\s\S]*?\n\}/)
+        )[0].matchAll(/overrides(?:\.([A-Za-z]+)|\["([^"]+)"\])/g),
+      ].map((found) => found[1] || found[2]),
+    ),
+  ];
+
+  /** @type {string[]} every name `hot.client` accepts */
+  const takenInNode = Object.keys(
+    schema.properties.hot.anyOf[1].properties.client.properties,
+  );
+
+  it("reads something from the query at all", () => {
+    // The extraction above is regex over source; if it ever stops matching it
+    // would compare two empty lists and pass while saying nothing.
+    expect(readByClient.length).toBeGreaterThan(10);
+  });
+
+  it("is one set of names, with nothing on one side only", () => {
+    expect(readByClient.toSorted()).toStrictEqual(takenInNode.toSorted());
   });
 });
