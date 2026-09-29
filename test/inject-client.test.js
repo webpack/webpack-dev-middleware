@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import webpack from "webpack";
 
 import injectHotClient, {
@@ -6,6 +9,7 @@ import injectHotClient, {
   hasClientEntry,
   isWebTarget,
 } from "../src/injectClient";
+import schema from "../src/options.json";
 
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_OBJECT */
@@ -862,5 +866,43 @@ describe("a client transport that disagrees with the endpoint", () => {
 
   it("says nothing when the client leaves the transport alone", () => {
     expect(inject({ overlay: false })).toStrictEqual([]);
+  });
+});
+
+// The two ways of setting a browser option have to stay one set of names. A
+// name the client acts on that the schema refuses is an option with no node
+// spelling; one the schema takes that the client ignores silently does
+// nothing; two names for one setting is an alias. Both sides are read from
+// their own source, or this would just be a third place to forget.
+describe("node and the query take the same names", () => {
+  const clientSource = fs.readFileSync(
+    path.join(__dirname, "..", "client-src", "index.js"),
+    "utf8",
+  );
+
+  /** @type {string[]} every name the client acts on from its query */
+  const readByClient = [
+    ...new Set(
+      [
+        .../** @type {RegExpMatchArray} */ (
+          clientSource.match(/function setOverrides\([\s\S]*?\n\}/)
+        )[0].matchAll(/overrides(?:\.([A-Za-z]+)|\["([^"]+)"\])/g),
+      ].map((found) => found[1] || found[2]),
+    ),
+  ];
+
+  /** @type {string[]} every name `hot.client` accepts */
+  const takenInNode = Object.keys(
+    schema.properties.hot.anyOf[1].properties.client.properties,
+  );
+
+  it("reads something from the query at all", () => {
+    // The extraction above is regex over source; if it ever stops matching it
+    // would compare two empty lists and pass while saying nothing.
+    expect(readByClient.length).toBeGreaterThan(10);
+  });
+
+  it("is one set of names, with nothing on one side only", () => {
+    expect(readByClient.toSorted()).toStrictEqual(takenInNode.toSorted());
   });
 });
