@@ -364,7 +364,14 @@ function computeProblemsUnion() {
   const slots = [];
 
   for (const source of Object.keys(state.problemsBySource)) {
-    slots.push(state.problemsBySource[source]);
+    const slot = state.problemsBySource[source];
+
+    // A slot with nothing in it is not something to show. `showProblems`
+    // below no longer stores one, but a copy of this module from an older
+    // version of the package shares this state and still can.
+    if (slot && slot.lines.length > 0) {
+      slots.push(slot);
+    }
   }
 
   if (slots.length === 0) {
@@ -819,6 +826,16 @@ render = renderProblems;
  * slot and the overlay renders the union of every slot
  */
 export function showProblems(type, lines, source = "") {
+  // Nothing to report is not something to report. Kept as a slot, it made the
+  // union non-empty, which put an empty card on the page for the reader to
+  // dismiss by hand — and, once another source cleared, left the page covered
+  // by an overlay with no problems in it at all.
+  if (lines.length === 0) {
+    clear(source);
+
+    return;
+  }
+
   state.problemsBySource[source] = { type, lines: [...lines] };
 
   const union =

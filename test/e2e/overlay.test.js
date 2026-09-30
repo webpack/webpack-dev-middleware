@@ -1505,6 +1505,67 @@ describe("overlay shared state across bundled copies (browser)", () => {
     );
   });
 
+  // An empty list is what a source says when it has nothing to report. Kept
+  // as a slot it made the union non-empty, so the overlay mounted with
+  // nothing in it and stayed there for the reader to dismiss by hand.
+  it("shows nothing for a source that reports no problems", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", [], "a");
+    });
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it("takes an empty list as the source having nothing left", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["boom"], "a");
+    });
+    await overlayFrame();
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", [], "a");
+    });
+    await waitForNoOverlay(page);
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
+  it("leaves no empty overlay behind when the last real source clears", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    const state = await page.evaluate(() => {
+      globalThis.overlayA.showProblems("errors", ["real problem"], "a");
+      globalThis.overlayB.showProblems("warnings", [], "b");
+      globalThis.overlayA.clear("a");
+
+      const shared = globalThis.__webpack_dev_middleware_hot_overlay_state__;
+
+      return {
+        pageIndex: shared.pageIndex,
+        currentProblems: shared.currentProblems,
+        attached: Boolean(shared.frame && shared.frame.parentNode),
+      };
+    });
+
+    // Before, `b`'s empty slot kept the union alive: the card stayed on the
+    // page showing only its dismiss hint, on page `-1`.
+    expect(state.attached).toBe(false);
+    expect(state.currentProblems).toBeNull();
+    expect(state.pageIndex).toBe(0);
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+  });
+
   it("dismisses on Escape pressed inside the overlay frame", async () => {
     await start();
     await page.goto(hotApp.url);

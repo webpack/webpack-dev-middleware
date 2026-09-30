@@ -92,6 +92,36 @@ describe("building indicator (browser)", () => {
     expect(texts.some((text) => text.includes("%"))).toBe(true);
   });
 
+  it("goes away when every compilation of a multi-compiler build finishes", async () => {
+    // Two compilations publishing progress into one stream, and a progress
+    // payload carries no name to say whose it is. The guarantee is the same
+    // as for one: once nothing is building, nothing is on the page.
+    hotApp = await createHotApp({
+      hot: { progress: true },
+      apps: [
+        { name: "a", code: acceptedApp("a1") },
+        { name: "b", code: acceptedApp("b1") },
+      ],
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(`${hotApp.url}page/a`);
+    await waitForAppText(page, "a1");
+    await installBadgeSampler(page);
+
+    hotApp.edit("a", acceptedApp("a2"));
+    await waitForAppText(page, "a2");
+    hotApp.edit("b", acceptedApp("b2"));
+
+    expect(await page.evaluate(() => globalThis.__badgeSeen)).toBe(true);
+
+    await page.waitForFunction(
+      (id) => document.getElementById(id) === null,
+      { timeout: 60000 },
+      INDICATOR_ID,
+    );
+  });
+
   it("never appears when progress=false", async () => {
     hotApp = await createHotApp({
       query: "?progress=false",
@@ -250,6 +280,63 @@ describe("indicator shared state across bundled copies (browser)", () => {
 
   afterEach(async () => {
     ({ browser, app: hotApp } = await closeE2e(browser, hotApp));
+  });
+
+  // A progress payload carries no compilation name, so the client cannot say
+  // whose build it belongs to. It must therefore report on the build that is
+  // running rather than start one, or in a multi-compiler build a payload
+  // from one compilation re-marks a sibling that already finished — and will
+  // never report again — as building, and the badge never leaves the page.
+  it("does not let progress restart a build that already finished", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    const present = () =>
+      page.evaluate((id) => Boolean(document.getElementById(id)), INDICATOR_ID);
+
+    await page.evaluate(() => {
+      globalThis.indicatorA.show("Rebuilding…", undefined, "a");
+      globalThis.indicatorB.show("Rebuilding…", undefined, "b");
+    });
+
+    expect(await present()).toBe(true);
+
+    // `b` finishes; `a` is still going, so the badge stays.
+    await page.evaluate(() => {
+      globalThis.indicatorB.hide("b");
+    });
+
+    expect(await present()).toBe(true);
+
+    // `a`'s progress arrives. It says nothing about who it belongs to.
+    await page.evaluate(() => {
+      globalThis.indicatorA.update("Rebuilding… 50%", 50);
+    });
+
+    // ... and now `a` finishes too. Nothing is building any more.
+    await page.evaluate(() => {
+      globalThis.indicatorA.hide("a");
+    });
+
+    expect(await present()).toBe(false);
+  });
+
+  it("reports nothing when no build is running", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.indicatorA.update("Rebuilding… 50%", 50);
+    });
+
+    // A payload with no build behind it has nothing to report about, and
+    // putting a badge up for it would leave one nothing takes down.
+    expect(
+      await page.evaluate(
+        (id) => Boolean(document.getElementById(id)),
+        INDICATOR_ID,
+      ),
+    ).toBe(false);
   });
 
   it("stops a sweep when motion is declined mid-build, and recovers", async () => {
