@@ -311,6 +311,27 @@ function highlightCodeFrame(html) {
     .join("\n");
 }
 
+// A frame whose path leads nowhere a reader can open: webpack's own generated
+// runtime, which is emitted code with no file behind it. It turns up in a
+// stack trace as an absolute path, which a reference below matches, so
+// offering to open it would ask the endpoint for something it cannot do.
+//
+// Node's internals need no entry here: a real frame for one is
+// `node:internal/modules/cjs/loader:1105:14`, with no file extension, and a
+// reference is only recognized with one.
+const GENERATED_RUNTIME_LINE = /webpack[\\/]runtime[\\/]/;
+
+// A file reference in a message or a stack frame. Four shapes, because a stack
+// carries more than webpack's own relative paths: `./src/app.js`,
+// `/home/me/app.js`, `C:\src\app.js`, and any of those behind a `file://` url.
+//
+// The leading boundary is what keeps the path inside a url — the `/app.js` of
+// `https://example.test/app.js` — out of it. Matched rather than looked behind,
+// which this file's ES5 baseline has no syntax for, and re-emitted below.
+// `linkify` makes the urls themselves clickable, and runs after this.
+const FILE_REFERENCE =
+  /(^|[\s(['"])((?:file:\/\/)?(?:\/?[A-Za-z]:[\\/]|\.{1,2}[\\/]|\/)[\w.-]*(?:[\\/][\w.-]+)*\.\w+)(:\d+:\d+|\s\d+:\d+)?/g;
+
 /**
  * Highlight the file references webpack reports. The header reference (the one
  * with a `line:col` location, e.g. `./src/render.js 7:2`) is rendered as a file
@@ -319,31 +340,43 @@ function highlightCodeFrame(html) {
  * @returns {string} HTML with file references styled
  */
 function highlightFilePath(html) {
-  return html.replace(
-    /(\.{1,2}\/[\w./-]+\.\w+)(:\d+:\d+|\s\d+:\d+)?/g,
-    (match, filePath, location) => {
-      if (!location) {
-        return (
-          `<span style="color:${theme.accent}; text-decoration:underline; ` +
-          `text-underline-offset:2px;">${match}</span>`
-        );
-      }
+  return html
+    .split("\n")
+    .map((line) =>
+      GENERATED_RUNTIME_LINE.test(line) ? line : highlightPaths(line),
+    )
+    .join("\n");
+}
 
-      if (openEditorEndpoint) {
-        const position = location.trim().replace(/^:/, "");
+/**
+ * The file references on one line.
+ * @param {string} line one line of message HTML
+ * @returns {string} the line with its file references styled
+ */
+function highlightPaths(line) {
+  return line.replace(FILE_REFERENCE, (match, before, filePath, location) => {
+    if (!location) {
+      return (
+        `${before}<span style="color:${theme.accent}; ` +
+        'text-decoration:underline; text-underline-offset:2px;">' +
+        `${filePath}</span>`
+      );
+    }
 
-        return (
-          `<span style="color:${theme.accent}; cursor:pointer; ` +
-          'text-decoration:underline; text-underline-offset:2px;" ' +
-          `data-open-file="${filePath}:${position}" ` +
-          'title="Click to open in your editor">' +
-          `${filePath}</span>${location}\n`
-        );
-      }
+    if (openEditorEndpoint) {
+      const position = location.trim().replace(/^:/, "");
 
-      return `<span style="color:${theme.accent};">${filePath}</span>${location}\n`;
-    },
-  );
+      return (
+        `${before}<span style="color:${theme.accent}; cursor:pointer; ` +
+        'text-decoration:underline; text-underline-offset:2px;" ' +
+        `data-open-file="${filePath}:${position}" ` +
+        'title="Click to open in your editor">' +
+        `${filePath}</span>${location}`
+      );
+    }
+
+    return `${before}<span style="color:${theme.accent};">${filePath}</span>${location}`;
+  });
 }
 
 /**
@@ -610,11 +643,36 @@ function ensureOverlay() {
         : null;
 
     if (opener && openEditorEndpoint && typeof fetch === "function") {
-      fetch(
-        `${openEditorEndpoint}?fileName=${encodeURIComponent(
-          opener.getAttribute("data-open-file"),
-        )}`,
-      );
+      const reference = opener.getAttribute("data-open-file");
+
+      // Said rather than swallowed. Nothing visible happens when the endpoint
+      // is not served, or has no editor to open, and a reader who clicked is
+      // left wondering whether they missed. `title` so the answer is on the
+      // reference they clicked, the console for the detail.
+      /**
+       * @param {string} reason why it did not open
+       */
+      const failed = (reason) => {
+        opener.setAttribute(
+          "title",
+          `Could not open ${reference} in your editor`,
+        );
+        // eslint-disable-next-line no-console
+        console.error(
+          `[webpack-dev-middleware] Could not open ${reference} in your editor: ${reason}. ` +
+            `The overlay asked '${openEditorEndpoint}', which is served by whoever set 'openEditorEndpoint'.`,
+        );
+      };
+
+      fetch(`${openEditorEndpoint}?fileName=${encodeURIComponent(reference)}`)
+        .then((response) => {
+          if (!response.ok) {
+            failed(`the endpoint answered ${response.status}`);
+          }
+        })
+        .catch((error) => {
+          failed(error && error.message ? error.message : "the request failed");
+        });
     }
   });
 

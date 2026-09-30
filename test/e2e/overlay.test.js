@@ -844,6 +844,49 @@ describe("error overlay (browser)", () => {
     );
   });
 
+  it("says so when the editor endpoint cannot open the file", async () => {
+    hotApp = await createHotApp({
+      query: '?overlay={"openEditorEndpoint":"/__open-editor"}',
+      code: acceptedApp("v1"),
+      setup: (server) => {
+        server.get("/__open-editor", (_req, res) => {
+          res.status(500).end();
+        });
+      },
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+
+    hotApp.edit("broken for a broken editor {{{");
+    const frame = await waitForOverlay(page);
+    const chip = await frame.waitForSelector("[data-open-file]", {
+      timeout: 30000,
+    });
+
+    await chip.click();
+
+    // Nothing visible happens when the endpoint cannot do it, so a reader who
+    // clicked is left wondering whether they missed the reference.
+    await console_.waitFor("Could not open ./app.js:1:7 in your editor");
+    await frame.waitForFunction(
+      () =>
+        document
+          .querySelector("[data-open-file]")
+          .getAttribute("title")
+          .indexOf("Could not open") === 0,
+      { timeout: 30000 },
+    );
+
+    expect(
+      await chip.evaluate((element) => element.getAttribute("title")),
+    ).toBe("Could not open ./app.js:1:7 in your editor");
+    // The reason and which endpoint was asked, so it can be checked.
+    expect(console_.messages.join("\n")).toContain("answered 500");
+    expect(console_.messages.join("\n")).toContain("/__open-editor");
+  });
+
   it("opens the clicked file reference through the configured endpoint", async () => {
     /** @type {string[]} */
     const opened = [];
@@ -957,6 +1000,54 @@ describe("error overlay (browser)", () => {
     expect(await frame.evaluate(() => document.body.textContent)).toContain(
       "broken by csp",
     );
+  });
+
+  it("renders styled under a strict style-src CSP", async () => {
+    hotApp = await createHotApp({
+      code: acceptedApp("v1"),
+      // No `'unsafe-inline'`: the parser drops every `style` attribute in
+      // inserted HTML, which is how `ansi-html` and the highlighters colour a
+      // message. `normalizeInlineStyles` re-applies them through the CSSOM,
+      // which CSP always allows — nothing here worked by accident.
+      pageHeaders: {
+        "Content-Security-Policy": "default-src 'self'; style-src 'self'",
+      },
+    });
+    ({ page, browser } = await runBrowser());
+    /** @type {string[]} */
+    const pageErrors = [];
+
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    hotApp.edit("broken by csp {{{");
+
+    const frame = await waitForOverlay(page);
+    await frame.waitForFunction(() =>
+      document.body.textContent.includes("Module parse failed"),
+    );
+
+    const styled = await frame.evaluate(() => {
+      const card = document.getElementById(
+        "webpack-dev-middleware-hot-overlay-card",
+      );
+      const withStyle = [...card.querySelectorAll("[style]")];
+
+      return {
+        card: card.style.background,
+        // Every `style` attribute the parser ignored is on the element.
+        applied: withStyle.filter((element) => element.style.cssText.length > 0)
+          .length,
+        total: withStyle.length,
+      };
+    });
+
+    expect(styled.total).toBeGreaterThan(0);
+    expect(styled.applied).toBe(styled.total);
+    expect(styled.card).toBe("rgb(16, 22, 25)");
+    expect(pageErrors).toStrictEqual([]);
   });
 
   it("does not appear when overlay=false", async () => {
@@ -1615,6 +1706,154 @@ describe("overlay shared state across bundled copies (browser)", () => {
     expect(await frame.evaluate(() => document.body.textContent)).toContain(
       "1 / 2",
     );
+  });
+
+  // A stack frame carries more than webpack's own relative paths, and the
+  // reference has to be recognized before it can be clicked.
+  it("recognizes absolute, Windows and file:// references", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      // A reference is only offered for opening when an endpoint can serve it.
+      globalThis.overlayA.default({ openEditorEndpoint: "/__open-editor" });
+      globalThis.overlayA.showProblems(
+        "errors",
+        [
+          [
+            "Boom",
+            "    at one (/home/me/src/app.js:3:1)",
+            "    at two (C:\\work\\src\\app.js:4:2)",
+            "    at three (file:///home/me/src/other.js:5:3)",
+            "    at four (./src/relative.js:6:4)",
+          ].join("\n"),
+        ],
+        "a",
+      );
+    });
+
+    const frame = await overlayFrame();
+    const opened = await frame.evaluate(() =>
+      [...document.querySelectorAll("[data-open-file]")].map((el) =>
+        el.getAttribute("data-open-file"),
+      ),
+    );
+
+    expect(opened).toStrictEqual([
+      "/home/me/src/app.js:3:1",
+      "C:\\work\\src\\app.js:4:2",
+      "file:///home/me/src/other.js:5:3",
+      "./src/relative.js:6:4",
+    ]);
+  });
+
+  it("keeps a stack frame on its own one line", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.default({ openEditorEndpoint: "/__open-editor" });
+      globalThis.overlayA.showProblems(
+        "errors",
+        [
+          [
+            "Boom",
+            "    at one (/home/me/src/app.js:3:1)",
+            "    at two (/home/me/src/b.js:4:2) and then some",
+          ].join("\n"),
+        ],
+        "a",
+      );
+    });
+
+    const frame = await overlayFrame();
+    // The message element rather than the whole card: the dismiss hint is a
+    // sibling, and its text runs onto the last line without one between them.
+    const lines = await frame.evaluate(() => {
+      const card = document.getElementById(
+        "webpack-dev-middleware-hot-overlay-card",
+      );
+      const body = [...card.children].find((element) =>
+        element.textContent.includes("    at one"),
+      );
+
+      return body.textContent
+        .split("\n")
+        .filter((line) => line.indexOf("    at ") === 0);
+    });
+
+    // A reference is styled in place, and what follows it on the line — the
+    // closing bracket of a frame, and anything after — stays with it. The
+    // replacement used to end in a newline, which was invisible while only
+    // webpack's own end-of-line header matched and broke every frame once
+    // more than that did.
+    expect(lines).toStrictEqual([
+      "    at one (/home/me/src/app.js:3:1)",
+      "    at two (/home/me/src/b.js:4:2) and then some",
+    ]);
+  });
+
+  it("leaves a url's path to the url", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.default({ openEditorEndpoint: "/__open-editor" });
+      globalThis.overlayA.showProblems(
+        "errors",
+        ["See https://example.test/docs/app.js for more"],
+        "a",
+      );
+    });
+
+    const frame = await overlayFrame();
+
+    // The `/docs/app.js` of a url is part of the url, which `linkify` makes
+    // clickable — offering to open it in an editor would be nonsense.
+    expect(
+      await frame.evaluate(
+        () => document.querySelectorAll("[data-open-file]").length,
+      ),
+    ).toBe(0);
+    expect(
+      await frame.evaluate(() =>
+        document.querySelector("a").getAttribute("href"),
+      ),
+    ).toBe("https://example.test/docs/app.js");
+  });
+
+  it("offers nothing for a frame no editor can open", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.default({ openEditorEndpoint: "/__open-editor" });
+      globalThis.overlayA.showProblems(
+        "errors",
+        [
+          [
+            "Boom",
+            "    at ./src/app.js:1:1",
+            "    at __webpack_require__ (/app/webpack/runtime/require.js:12:3)",
+          ].join("\n"),
+        ],
+        "a",
+      );
+    });
+
+    const frame = await overlayFrame();
+
+    // Webpack's generated runtime is emitted code with no file behind it, and
+    // it reaches here as an absolute path, which a reference now matches — so
+    // without the line being skipped it would be offered for opening and the
+    // endpoint asked for something it cannot do.
+    expect(
+      await frame.evaluate(() =>
+        [...document.querySelectorAll("[data-open-file]")].map((el) =>
+          el.getAttribute("data-open-file"),
+        ),
+      ),
+    ).toStrictEqual(["./src/app.js:1:1"]);
   });
 
   it("dismisses on Escape pressed inside the overlay frame", async () => {
