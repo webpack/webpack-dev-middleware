@@ -367,11 +367,11 @@ function highlightPaths(line) {
         'text-decoration:underline; text-underline-offset:2px;" ' +
         `data-open-file="${filePath}:${position}" ` +
         'title="Click to open in your editor">' +
-        `${filePath}</span>${location}\n`
+        `${filePath}</span>${location}`
       );
     }
 
-    return `${before}<span style="color:${theme.accent};">${filePath}</span>${location}\n`;
+    return `${before}<span style="color:${theme.accent};">${filePath}</span>${location}`;
   });
 }
 

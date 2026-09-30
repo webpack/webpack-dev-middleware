@@ -1747,6 +1747,52 @@ describe("overlay shared state across bundled copies (browser)", () => {
     ]);
   });
 
+  it("keeps a stack frame on its own one line", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.default({ openEditorEndpoint: "/__open-editor" });
+      globalThis.overlayA.showProblems(
+        "errors",
+        [
+          [
+            "Boom",
+            "    at one (/home/me/src/app.js:3:1)",
+            "    at two (/home/me/src/b.js:4:2) and then some",
+          ].join("\n"),
+        ],
+        "a",
+      );
+    });
+
+    const frame = await overlayFrame();
+    // The message element rather than the whole card: the dismiss hint is a
+    // sibling, and its text runs onto the last line without one between them.
+    const lines = await frame.evaluate(() => {
+      const card = document.getElementById(
+        "webpack-dev-middleware-hot-overlay-card",
+      );
+      const body = [...card.children].find((element) =>
+        element.textContent.includes("    at one"),
+      );
+
+      return body.textContent
+        .split("\n")
+        .filter((line) => line.indexOf("    at ") === 0);
+    });
+
+    // A reference is styled in place, and what follows it on the line — the
+    // closing bracket of a frame, and anything after — stays with it. The
+    // replacement used to end in a newline, which was invisible while only
+    // webpack's own end-of-line header matched and broke every frame once
+    // more than that did.
+    expect(lines).toStrictEqual([
+      "    at one (/home/me/src/app.js:3:1)",
+      "    at two (/home/me/src/b.js:4:2) and then some",
+    ]);
+  });
+
   it("leaves a url's path to the url", async () => {
     await start();
     await page.goto(hotApp.url);
