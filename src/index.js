@@ -247,8 +247,12 @@ const internalValidate = (compiler, options) => {
     return;
   }
 
-  // TODO in the next major release bump minimum supported webpack version and
-  // remove this fallback in favor of `compiler.validate` (above).
+  // TODO in the next major release raise the `webpack` peer range to ^5.106.0
+  // and delete this fallback, the `Schema` typedef above, and the
+  // `schema-utils` dependency with it — `compiler.validate` is the whole of
+  // what validation needs from 5.106 on, and webpack carries its own copy of
+  // `schema-utils` to do it with.
+  //
   // The precompiled validator answers the common case in ~2ms, against the
   // ~160ms `schema-utils` spends compiling the schema on its first call, so
   // `./options.json` stays unread until something is actually wrong.
