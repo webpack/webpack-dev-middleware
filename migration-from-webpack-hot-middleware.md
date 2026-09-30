@@ -163,8 +163,8 @@ module.exports = [
 | `log`                  | Removed. The middleware logs through the compiler's [infrastructure logger](https://webpack.js.org/configuration/infrastructurelogging/); use `infrastructureLogging.level` to quiet it.                                                                                                                                                |
 
 New: [`hot.progress`](README.md#hotprogress) publishes compilation progress to
-the clients, and [`hot.allowedOrigins`](README.md#hotallowedorigins) says which
-origins may read the endpoint from a page on another one.
+the clients, and [`hot.cors`](README.md#hotcors) says which origins may read
+the endpoint from a page on another one.
 
 ### Client options
 
@@ -239,11 +239,12 @@ errors, warnings }`. Only [`subscribeAll`](#6-programmatic-api) consumers that
 - **The endpoint is no longer readable from every origin.**
   `webpack-hot-middleware` answers it with `Access-Control-Allow-Origin: *`, so
   any site open in the same browser can read your builds — including the module
-  paths and source frames a failed build reports. The middleware sends no such
-  grant, leaving the browser's same-origin rule in place. If your page is served
-  from a different origin than the middleware, name it in
-  [`hot.allowedOrigins`](README.md#hotallowedorigins); `true` restores the old
-  behavior wholesale.
+  paths and source frames a failed build reports. The middleware grants only
+  local origins (`localhost`, `127.0.0.1`, `[::1]`, any port), which covers both
+  a page served by the middleware itself and one on another port of the same
+  machine. If your page is served from anywhere else, name it in
+  [`hot.cors`](README.md#hotcors); `cors: true` restores the old behavior
+  wholesale.
 - **Server logging goes through webpack.** `webpack built <hash> in <n>ms` lines
   came from hot middleware's own `log`; build reporting is now the dev
   middleware's [`stats`](README.md#stats) option and the infrastructure logger.

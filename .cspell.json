@@ -39,7 +39,9 @@
     "noopener",
     "noreferrer",
     "webworker",
-    "nwjs"
+    "nwjs",
+    "expressjs",
+    "wildcarded"
   ],
   "ignorePaths": [
     "CHANGELOG.md",

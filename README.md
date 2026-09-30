@@ -329,16 +329,16 @@ See [Hot Module Replacement client](#hot-module-replacement-client) for which co
 
 The object form accepts these options:
 
-|                    Name                    |         Type          |      Default       | Description                                                |
-| :----------------------------------------: | :-------------------: | :----------------: | :--------------------------------------------------------- |
-|      **[`transport`](#hottransport)**      | `string \| function`  |      `'sse'`       | How events reach the clients.                              |
-|           **[`path`](#hotpath)**           |       `string`        | `'/__webpack_hmr'` | Path the endpoint is served at.                            |
-|      **[`heartbeat`](#hotheartbeat)**      |       `number`        |      `10000`       | Interval (in milliseconds) between keep-alive frames.      |
-|         **[`server`](#hotserver)**         |       `object`        |    `undefined`     | HTTP server the `'ws'` transport answers upgrades on.      |
-|       **[`progress`](#hotprogress)**       |       `boolean`       |      `false`       | Publish compilation progress events to the clients.        |
-| **[`allowedOrigins`](#hotallowedorigins)** | `boolean \| string[]` |      `false`       | Origins allowed to read the `'sse'` endpoint cross-origin. |
-|         **[`inject`](#hotinject)**         |       `boolean`       |       `true`       | Add the client entry and `HotModuleReplacementPlugin`.     |
-|   **[`statsOptions`](#hotstatsoptions)**   |       `object`        |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).            |
+|                  Name                  |                              Type                               |      Default       | Description                                                             |
+| :------------------------------------: | :-------------------------------------------------------------: | :----------------: | :---------------------------------------------------------------------- |
+|    **[`transport`](#hottransport)**    |                      `string \| function`                       |      `'sse'`       | How events reach the clients.                                           |
+|         **[`path`](#hotpath)**         |                            `string`                             | `'/__webpack_hmr'` | Path the endpoint is served at.                                         |
+|    **[`heartbeat`](#hotheartbeat)**    |                            `number`                             |      `10000`       | Interval (in milliseconds) between keep-alive frames.                   |
+|       **[`server`](#hotserver)**       |                            `object`                             |    `undefined`     | HTTP server the `'ws'` transport answers upgrades on.                   |
+|     **[`progress`](#hotprogress)**     |                            `boolean`                            |      `false`       | Publish compilation progress events to the clients.                     |
+|         **[`cors`](#hotcors)**         | `boolean \| string \| string[] \| RegExp \| function \| object` |   local origins    | Which origins may read the `'sse'` endpoint from a page on another one. |
+|       **[`inject`](#hotinject)**       |                            `boolean`                            |       `true`       | Add the client entry and `HotModuleReplacementPlugin`.                  |
+| **[`statsOptions`](#hotstatsoptions)** |                            `object`                             |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).                         |
 
 #### `hot.transport`
 
@@ -452,36 +452,52 @@ Default: `false`
 
 Publish compilation progress events (`{ action: "progress", percent, message }`) to the clients using webpack's `ProgressPlugin`. The bundled client shows the percentage in its building badge (see the client `progress` option).
 
-#### `hot.allowedOrigins`
+#### `hot.cors`
 
-Type: `Boolean | '*' | String[]`
-Default: `false`
+Type: `Boolean | String | RegExp | (String | RegExp)[] | Function | { origin }`
+Default: `/^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/`
 
 Which origins may read the [`'sse'`](#hottransport) endpoint from a page on another origin.
 
-A payload carries a build's module paths and, when a build fails, the source frames webpack puts in the error — so a page that can read the stream can read parts of your source. By default the middleware sends no cross-origin grant, which leaves the browser's own same-origin rule in place: only a page served from the endpoint's own origin can read it. That covers the normal setup, where the page and the middleware are the same server, and it is why nothing needs to be set here for it to work.
+A payload carries a build's module paths and, when a build fails, the source frames webpack puts in the error — so a page that can read the stream can read parts of your source. By default only **local** origins may: `localhost` and anything under it, `127.0.0.1` and `[::1]`, on any port and either scheme. A page on another port of the same machine is the one cross-origin case that is normal in development, and nothing a remote site can be served from looks like one. This is the same default, for the same reason, as Vite's [`server.cors`](https://vite.dev/config/server-options#server-cors).
 
-Set it when the page is **not** on the endpoint's origin — a front end on `:3000` against the middleware on `:8080`, or a client pointed elsewhere with the client [`path`](#client-options) option. List the origins the page is served from, written as a browser sends them (scheme, host and port, no trailing slash):
+Nothing needs to be set for the normal setup, where the page and the middleware are the same server: a browser sends no `Origin` at all for a same-origin `EventSource`, so no grant is needed to read it.
+
+Name your own origins when the page is served from somewhere the default does not cover — a dev domain in your hosts file, a remote dev box, a container:
 
 ```js
 app.use(
   middleware(compiler, {
-    hot: {
-      allowedOrigins: ["http://localhost:3000", "http://127.0.0.1:3000"],
-    },
+    hot: { cors: ["https://app.test", /^https:\/\/\w+\.dev\.internal$/] },
   }),
 );
 ```
 
-`true` (or `'*'`) grants every origin. That is what the middleware did before this option existed, and what [`webpack-hot-middleware`](https://www.npmjs.com/package/webpack-hot-middleware) still does — it lets **any** site loaded in the same browser read your builds, so name your origins instead wherever you can:
+Every accepted form:
+
+| Value                  | Meaning                                                                          |
+| :--------------------- | :------------------------------------------------------------------------------- |
+| `false`                | No grant at all. Only the endpoint's own origin can read the stream.             |
+| `true`                 | `Access-Control-Allow-Origin: *` — every origin, including remote ones.          |
+| `'https://app.test'`   | That one origin.                                                                 |
+| `['https://app.test']` | Any in the list; entries may be strings or regular expressions.                  |
+| `/\.test$/`            | Any origin the pattern matches. Anchor it, or it will match more than you think. |
+| `(origin) => boolean`  | Asked about each origin.                                                         |
+| `{ origin: … }`        | Any of the above, so a `cors` written for Vite or `expressjs/cors` fits here.    |
+
+An allowed origin is echoed back rather than wildcarded, with `Vary: Origin` alongside it.
+
+`true` is what the middleware did before this option existed, and what [`webpack-hot-middleware`](https://www.npmjs.com/package/webpack-hot-middleware) still does. It lets **any** site loaded in the same browser read your builds, so prefer naming your origins:
 
 ```js
-app.use(middleware(compiler, { hot: { allowedOrigins: true } }));
+app.use(middleware(compiler, { hot: { cors: true } }));
 ```
 
 > [!IMPORTANT]
 >
 > This option is a grant, not a check: a request is never refused, the browser is only told whether it may hand the response to the page. It therefore does nothing for the [`'ws'`](#hottransport) transport, because a WebSocket handshake is not subject to CORS — a page on any origin can open one, and the browser will not stop it. A `'ws'` endpoint reachable by an untrusted page has to be refused by the server that owns the upgrade: read the request's `Origin` in [`onConnect(fn)`](#onconnectfn) and close the client, or take the upgrade yourself with [`handleUpgrade`](#handleupgradereq-socket-head) and refuse before the handshake. That is where [webpack-dev-server](https://github.com/webpack/webpack-dev-server) does it, with its `allowedHosts` option; the middleware deliberately holds no such policy of its own.
+>
+> The default also trusts every other server on the developer's own machine, because it cannot tell them apart from your dev server. If one of them serves content someone else controls, set `cors` to the origins you actually use.
 
 #### `hot.inject`
 

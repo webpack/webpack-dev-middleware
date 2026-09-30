@@ -50,18 +50,26 @@
  * @property {HttpServer=} server HTTP server the `"ws"` transport answers upgrades on, when it is already built
  * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
  * @property {boolean=} progress publish compilation progress events to the clients
- * @property {AllowedOrigins=} allowedOrigins origins allowed to read the Server-Sent Events endpoint cross-origin; none by default
+ * @property {CorsOption=} cors which origins may read the Server-Sent Events endpoint from a page on another one; the local ones by default
  * @property {boolean=} inject add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
  * @property {HotClientOptions=} client options handed to the browser runtime through its entry query
+ */
+
+/**
+ * What an origin is matched against: one origin, several, a pattern, or a
+ * question asked of each.
+ * @typedef {string | RegExp | (string | RegExp)[] | ((origin: string) => boolean)} CorsOrigin
  */
 
 /**
  * Which origins may read the event stream, as a CORS grant rather than a check:
  * a request is never refused, it is only told whether the browser may hand the
  * response to the page. `false` sends no grant, which leaves the browser's own
- * same-origin rule in place; `true` (or `"*"`) grants every origin; a list
- * grants the ones it names.
- * @typedef {boolean | "*" | string[]} AllowedOrigins
+ * same-origin rule in place; `true` grants every origin; anything else is
+ * matched against the request's own, which is echoed back when it is allowed.
+ * `{ origin }` is accepted as well, so a `cors` written for Vite or
+ * `expressjs/cors` reads the same here.
+ * @typedef {boolean | CorsOrigin | { origin?: CorsOrigin | boolean }} CorsOption
  */
 
 /**
@@ -133,12 +141,16 @@ const { getRequestHeader } = require("./utils.js");
 const HOT_DEFAULT_PATH = "/__webpack_hmr";
 const HOT_DEFAULT_HEARTBEAT = 10 * 1000;
 const HOT_DEFAULT_TRANSPORT = "sse";
-// No cross-origin grant. Until this option existed the endpoint answered every
-// request with `Access-Control-Allow-Origin: *`, inherited from
-// `webpack-hot-middleware`, which let any site a developer had open read the
-// stream — and with it the module paths and source frames a failed build
-// reports.
-const HOT_DEFAULT_ALLOWED_ORIGINS = false;
+// Only the machine the build is running on. Until this option existed the
+// endpoint answered every request with `Access-Control-Allow-Origin: *`,
+// inherited from `webpack-hot-middleware`, which let any site a developer had
+// open read the stream — and with it the module paths and source frames a
+// failed build reports. A page on another port of the same machine is the one
+// cross-origin case that is normal in development, and nothing a remote site
+// can be served from matches this, so it stays allowed and the rest does not.
+// The same default, and the same reasoning, as Vite's `server.cors`.
+const HOT_DEFAULT_CORS =
+  /^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/;
 const PLUGIN_NAME = "DevMiddleware";
 
 /**
@@ -231,31 +243,96 @@ function checkClientStream(stream) {
 }
 
 /**
- * Add the cross-origin grant the `allowedOrigins` option asks for, if any.
+ * Does one origin match what the `cors` option allows?
+ * @param {string} origin the origin the request carried
+ * @param {CorsOrigin} allowed what the option allows
+ * @returns {boolean} true when the origin is allowed
+ */
+function matchOrigin(origin, allowed) {
+  if (typeof allowed === "function") {
+    return Boolean(allowed(origin));
+  }
+
+  if (typeof allowed === "string") {
+    return allowed === "*" || allowed === origin;
+  }
+
+  if (Array.isArray(allowed)) {
+    for (const each of allowed) {
+      if (matchOrigin(origin, each)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  return allowed.test(origin);
+}
+
+/**
+ * Read the `cors` option once, into the three answers the handshake has: no
+ * grant at all, a grant to everyone, or a question to ask of each origin.
+ * @param {CorsOption} cors the option, as it was given
+ * @returns {false | "*" | ((origin: string) => boolean)} the resolved grant
+ */
+function resolveCors(cors) {
+  if (cors === false || cors === true) {
+    return cors && "*";
+  }
+
+  // `{ origin }`, as Vite and `expressjs/cors` are configured, so a
+  // configuration written for one of those reads the same here.
+  const allowed =
+    typeof cors === "object" &&
+    !Array.isArray(cors) &&
+    !(cors instanceof RegExp)
+      ? cors.origin
+      : cors;
+
+  if (allowed === false || typeof allowed === "undefined") {
+    return false;
+  }
+
+  if (allowed === "*") {
+    return "*";
+  }
+
+  // `origin: true` reflects whatever asked, which is how `expressjs/cors`
+  // reads it — a grant to everyone, but named rather than wildcarded.
+  if (allowed === true) {
+    return () => true;
+  }
+
+  return (origin) => matchOrigin(origin, allowed);
+}
+
+/**
+ * Add the cross-origin grant the `cors` option asks for, if any.
  *
  * Without a grant the browser will not hand a cross-origin `EventSource`
  * response to the page, which is what keeps a build's errors — module paths and
  * the source frames webpack puts in a parse error — from being readable by any
  * site the developer happens to have open. Nothing is rejected here: a refusal
  * is the host's to make, through `onConnect`.
- * @param {AllowedOrigins} allowedOrigins which origins may read the stream
+ * @param {false | "*" | ((origin: string) => boolean)} cors the resolved grant
  * @param {IncomingMessage} req the request joining the stream
  * @param {Record<string, string>} headers the response headers, added to in place
  */
-function allowOrigin(allowedOrigins, req, headers) {
-  if (allowedOrigins === false) {
+function applyCors(cors, req, headers) {
+  if (cors === false) {
     return;
   }
 
-  if (allowedOrigins === true || allowedOrigins === "*") {
+  if (cors === "*") {
     headers["Access-Control-Allow-Origin"] = "*";
     return;
   }
 
   // The header names a single origin, so the request's own is echoed back when
-  // it is one of the listed ones. `Vary` goes out either way: without it a
-  // cache that kept this response could hand it to a page on another origin,
-  // grant and all.
+  // it is an allowed one. `Vary` goes out either way: without it a cache that
+  // kept this response could hand it to a page on another origin, grant and
+  // all.
   headers.Vary = "Origin";
 
   // Through the framework abstraction: a request does not always carry
@@ -263,7 +340,7 @@ function allowOrigin(allowedOrigins, req, headers) {
   // reading the property straight off it grants nothing to anyone.
   const origin = getRequestHeader(req, "origin");
 
-  if (typeof origin === "string" && allowedOrigins.includes(origin)) {
+  if (typeof origin === "string" && cors(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
   }
 }
@@ -271,10 +348,11 @@ function allowOrigin(allowedOrigins, req, headers) {
 /**
  * @param {number} heartbeat heartbeat interval in milliseconds
  * @param {Logger} logger logger
- * @param {AllowedOrigins=} allowedOrigins which origins may read the stream, none by default
+ * @param {CorsOption=} cors which origins may read the stream, the local ones by default
  * @returns {EventStream} event stream
  */
-function createEventStream(heartbeat, logger, allowedOrigins = false) {
+function createEventStream(heartbeat, logger, cors = HOT_DEFAULT_CORS) {
+  const corsGrant = resolveCors(cors);
   let clientId = 0;
   /** @type {Map<number, ServerResponse>} */
   let clients = new Map();
@@ -356,7 +434,7 @@ function createEventStream(heartbeat, logger, allowedOrigins = false) {
         "X-Accel-Buffering": "no",
       };
 
-      allowOrigin(allowedOrigins, req, headers);
+      applyCors(corsGrant, req, headers);
 
       const { httpVersion, socket } = req;
       const isHttp1 = !(Number.parseInt(httpVersion, 10) >= 2);
@@ -650,7 +728,7 @@ function createHot(compiler, userOptions, statsOption) {
   const path = options.path || HOT_DEFAULT_PATH;
   const heartbeat = options.heartbeat ?? HOT_DEFAULT_HEARTBEAT;
   const transport = options.transport || HOT_DEFAULT_TRANSPORT;
-  const allowedOrigins = options.allowedOrigins ?? HOT_DEFAULT_ALLOWED_ORIGINS;
+  const cors = options.cors ?? HOT_DEFAULT_CORS;
   const { statsOptions } = options;
   const logger = compiler.getInfrastructureLogger("webpack-dev-middleware");
 
@@ -673,7 +751,7 @@ function createHot(compiler, userOptions, statsOption) {
     eventStream = createWebSocketStream({ heartbeat, path }, logger);
     transportName = "a WebSocket";
   } else {
-    eventStream = createEventStream(heartbeat, logger, allowedOrigins);
+    eventStream = createEventStream(heartbeat, logger, cors);
     transportName = "Server-Sent Events";
   }
 
@@ -856,7 +934,7 @@ function createHot(compiler, userOptions, statsOption) {
 }
 
 module.exports = createHot;
-module.exports.HOT_DEFAULT_ALLOWED_ORIGINS = HOT_DEFAULT_ALLOWED_ORIGINS;
+module.exports.HOT_DEFAULT_CORS = HOT_DEFAULT_CORS;
 module.exports.HOT_DEFAULT_HEARTBEAT = HOT_DEFAULT_HEARTBEAT;
 module.exports.HOT_DEFAULT_PATH = HOT_DEFAULT_PATH;
 module.exports.HOT_DEFAULT_TRANSPORT = HOT_DEFAULT_TRANSPORT;

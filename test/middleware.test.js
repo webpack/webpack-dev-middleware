@@ -7238,7 +7238,7 @@ describe.each([
     // the source frames webpack puts in a parse error, so that grant let any
     // site the developer had open read their source. Each framework gets its
     // own `writeHead`, so each one is asked.
-    it("sends no cross-origin grant by default", async () => {
+    it("grants nothing to a remote origin by default", async () => {
       const compiler = getCompiler(webpackConfig);
       [server, req, instance] = await frameworkFactory(
         name,
@@ -7255,27 +7255,15 @@ describe.each([
       expect(res.headers["access-control-allow-origin"]).toBeUndefined();
     });
 
-    it("sends a permissive CORS header when every origin is granted", async () => {
+    it("grants a local origin by default", async () => {
+      // A page on another port of the same machine, which is the one
+      // cross-origin case that is normal in development.
       const compiler = getCompiler(webpackConfig);
       [server, req, instance] = await frameworkFactory(
         name,
         framework,
         compiler,
-        { hot: { allowedOrigins: true } },
-      );
-
-      const res = await readSseHandshake(req.get("/__webpack_hmr"));
-
-      expect(res.headers["access-control-allow-origin"]).toBe("*");
-    });
-
-    it("echoes an origin the grant names", async () => {
-      const compiler = getCompiler(webpackConfig);
-      [server, req, instance] = await frameworkFactory(
-        name,
-        framework,
-        compiler,
-        { hot: { allowedOrigins: ["http://localhost:3000"] } },
+        { hot: true },
       );
 
       const res = await readSseHandshake(
@@ -7284,6 +7272,58 @@ describe.each([
 
       expect(res.headers["access-control-allow-origin"]).toBe(
         "http://localhost:3000",
+      );
+      expect(res.headers.vary).toBe("Origin");
+    });
+
+    it("sends a permissive CORS header when every origin is granted", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: { cors: true } },
+      );
+
+      const res = await readSseHandshake(
+        req.get("/__webpack_hmr").set("Origin", "https://evil.example"),
+      );
+
+      expect(res.headers["access-control-allow-origin"]).toBe("*");
+    });
+
+    it("grants nothing at all when cors is off", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: { cors: false } },
+      );
+
+      const res = await readSseHandshake(
+        req.get("/__webpack_hmr").set("Origin", "http://localhost:3000"),
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.headers["access-control-allow-origin"]).toBeUndefined();
+    });
+
+    it("echoes an origin the grant names", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: { cors: ["https://app.test"] } },
+      );
+
+      const res = await readSseHandshake(
+        req.get("/__webpack_hmr").set("Origin", "https://app.test"),
+      );
+
+      expect(res.headers["access-control-allow-origin"]).toBe(
+        "https://app.test",
       );
       expect(res.headers.vary).toBe("Origin");
     });

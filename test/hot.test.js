@@ -350,6 +350,7 @@ describe("hot middleware (unit)", () => {
       };
       const fakeReq = {
         httpVersion: "1.1",
+        headers: {},
         socket: { setKeepAlive: () => {} },
         on: () => {},
       };
@@ -374,6 +375,7 @@ describe("hot middleware (unit)", () => {
       };
       const fakeReq = {
         httpVersion: "1.1",
+        headers: {},
         socket: { setKeepAlive: () => {} },
         on: () => {},
       };
@@ -400,6 +402,7 @@ describe("hot middleware (unit)", () => {
       };
       const fakeReq = {
         httpVersion: "1.1",
+        headers: {},
         socket: { setKeepAlive: () => {} },
         on: () => {},
       };
@@ -497,104 +500,180 @@ describe("hot middleware (unit)", () => {
     // `Access-Control-Allow-Origin: *`, inherited from `webpack-hot-middleware`.
     // A payload carries a build's module paths and the source frames webpack
     // puts in a parse error, so that grant let any site the developer had open
-    // read their source. The grant is now asked for, and nothing is rejected
-    // here either way — a refusal is the host's, through `onConnect`.
+    // read their source. The grant is now scoped, and nothing is rejected here
+    // either way — a refusal is the host's, through `onConnect`.
     describe("the cross-origin grant", () => {
-      it("grants nothing by default", () => {
-        const stream = createEventStream(5000, noopLogger);
-        const { headers } = attachClient(stream, {
-          headers: { origin: "https://evil.example" },
+      /**
+       * The grant one client is given, and nothing else about the handshake.
+       * @param {EXPECTED_ANY} cors the `cors` option, `undefined` for the default
+       * @param {string=} origin the origin the request carries, if any
+       * @returns {{ allow: string | undefined, vary: string | undefined }} the headers that decide it
+       */
+      const grantFor = (cors, origin) => {
+        const stream =
+          cors === undefined
+            ? createEventStream(5000, noopLogger)
+            : createEventStream(5000, noopLogger, cors);
+        const { headers } = attachClient(
+          stream,
+          origin === undefined ? {} : { headers: { origin } },
+        );
+
+        stream.close();
+
+        return {
+          allow: headers["Access-Control-Allow-Origin"],
+          vary: headers.Vary,
+        };
+      };
+
+      // Vite's default, for Vite's reason: a page on another port of the same
+      // machine is the one cross-origin case that is normal in development,
+      // and nothing a remote site can be served from looks like one.
+      describe("by default", () => {
+        it.each([
+          "http://localhost:3000",
+          "http://localhost",
+          "https://localhost:8080",
+          "http://app.localhost:3000",
+          "http://127.0.0.1:3000",
+          "http://[::1]:3000",
+        ])("grants the local origin %s", (origin) => {
+          expect(grantFor(undefined, origin)).toStrictEqual({
+            allow: origin,
+            vary: "Origin",
+          });
         });
 
-        expect(headers["Access-Control-Allow-Origin"]).toBeUndefined();
-        expect(headers.Vary).toBeUndefined();
-
-        stream.close();
-      });
-
-      it("still serves a client that sent no origin at all", () => {
-        // Which is every same-origin `EventSource`: a browser sends no `Origin`
-        // for one, so the default must not be read as a refusal.
-        const stream = createEventStream(5000, noopLogger);
-        const { headers, writes } = attachClient(stream);
-
-        expect(headers["Content-Type"]).toBe("text/event-stream;charset=utf-8");
-        expect(writes).toContain("\n");
-
-        stream.close();
-      });
-
-      for (const allowed of [true, "*"]) {
-        it(`grants every origin for ${JSON.stringify(allowed)}`, () => {
-          const stream = createEventStream(5000, noopLogger, allowed);
-          const { headers } = attachClient(stream, {
-            headers: { origin: "https://evil.example" },
+        it.each([
+          "https://evil.example",
+          // The pattern is anchored at both ends, so neither half of a
+          // hostname that merely contains a local one counts as one.
+          "http://localhost.evil.example",
+          "http://127.0.0.1.evil.example",
+          "http://192.168.1.10:3000",
+          // What a sandboxed frame or a `file:` page sends.
+          "null",
+        ])("grants nothing to %s", (origin) => {
+          expect(grantFor(undefined, origin)).toStrictEqual({
+            allow: undefined,
+            vary: "Origin",
           });
+        });
 
-          expect(headers["Access-Control-Allow-Origin"]).toBe("*");
+        it("still serves a client that sent no origin at all", () => {
+          // Which is every same-origin `EventSource`: a browser sends no
+          // `Origin` for one, so the default must not be read as a refusal.
+          const stream = createEventStream(5000, noopLogger);
+          const { headers, writes } = attachClient(stream);
+
+          expect(headers["Content-Type"]).toBe(
+            "text/event-stream;charset=utf-8",
+          );
+          expect(writes).toContain("\n");
 
           stream.close();
         });
-      }
+      });
 
-      it("echoes an origin the list names", () => {
-        const stream = createEventStream(5000, noopLogger, [
-          "http://localhost:3000",
-          "http://127.0.0.1:3000",
-        ]);
-        const { headers } = attachClient(stream, {
-          headers: { origin: "http://127.0.0.1:3000" },
+      it("grants every origin for true", () => {
+        expect(grantFor(true, "https://evil.example")).toStrictEqual({
+          allow: "*",
+          vary: undefined,
         });
+      });
 
-        expect(headers["Access-Control-Allow-Origin"]).toBe(
-          "http://127.0.0.1:3000",
+      it("grants nothing at all for false", () => {
+        expect(grantFor(false, "http://localhost:3000")).toStrictEqual({
+          allow: undefined,
+          vary: undefined,
+        });
+      });
+
+      it("takes one origin as a string", () => {
+        expect(
+          grantFor("http://localhost:3000", "http://localhost:3000"),
+        ).toStrictEqual({ allow: "http://localhost:3000", vary: "Origin" });
+        expect(
+          grantFor("http://localhost:3000", "https://evil.example").allow,
+        ).toBeUndefined();
+      });
+
+      it("takes a list, of strings and patterns together", () => {
+        const cors = ["http://localhost:3000", /^https:\/\/\w+\.test$/];
+
+        expect(grantFor(cors, "http://localhost:3000").allow).toBe(
+          "http://localhost:3000",
         );
-        // Otherwise a cache holding this response could hand it, grant and
-        // all, to a page on another origin.
-        expect(headers.Vary).toBe("Origin");
-
-        stream.close();
+        expect(grantFor(cors, "https://app.test").allow).toBe(
+          "https://app.test",
+        );
+        expect(grantFor(cors, "https://evil.example").allow).toBeUndefined();
       });
 
-      it("grants nothing to an origin the list leaves out", () => {
-        const stream = createEventStream(5000, noopLogger, [
-          "http://localhost:3000",
-        ]);
-        const { headers } = attachClient(stream, {
-          headers: { origin: "https://evil.example" },
+      it("takes a pattern", () => {
+        expect(grantFor(/^http:\/\/app\./, "http://app.test").allow).toBe(
+          "http://app.test",
+        );
+        expect(
+          grantFor(/^http:\/\/app\./, "http://evil.test").allow,
+        ).toBeUndefined();
+      });
+
+      it("asks a function about each origin", () => {
+        const cors = (origin) => origin.endsWith(".internal");
+
+        expect(grantFor(cors, "http://build.internal").allow).toBe(
+          "http://build.internal",
+        );
+        expect(grantFor(cors, "https://evil.example").allow).toBeUndefined();
+      });
+
+      // So a `cors` written for Vite or `expressjs/cors` reads the same here.
+      describe("as an { origin } object", () => {
+        it("takes the same values", () => {
+          expect(grantFor({ origin: ["http://a"] }, "http://a").allow).toBe(
+            "http://a",
+          );
+          expect(grantFor({ origin: /^http:\/\/a/ }, "http://a").allow).toBe(
+            "http://a",
+          );
         });
 
-        expect(headers["Access-Control-Allow-Origin"]).toBeUndefined();
-        expect(headers.Vary).toBe("Origin");
+        it("reflects every origin for true", () => {
+          // Which is how `expressjs/cors` reads it: everyone, but named rather
+          // than wildcarded.
+          expect(
+            grantFor({ origin: true }, "https://evil.example"),
+          ).toStrictEqual({ allow: "https://evil.example", vary: "Origin" });
+        });
 
-        stream.close();
+        it("grants nothing for false, or for no origin key at all", () => {
+          expect(
+            grantFor({ origin: false }, "http://localhost:3000").allow,
+          ).toBeUndefined();
+          expect(grantFor({}, "http://localhost:3000").allow).toBeUndefined();
+        });
       });
 
-      it("grants nothing for a list and no origin", () => {
-        const stream = createEventStream(5000, noopLogger, [
-          "http://localhost:3000",
-        ]);
-        const { headers } = attachClient(stream);
-
-        expect(headers["Access-Control-Allow-Origin"]).toBeUndefined();
-
-        stream.close();
+      it("grants nothing when there is no origin to echo", () => {
+        expect(grantFor(["http://localhost:3000"]).allow).toBeUndefined();
       });
 
       it("does not read two origins as one", () => {
         // Node joins repeated headers with a comma, so a request carrying
-        // `Origin` twice arrives as one string. Matching it against the list
-        // has to fail rather than match either half.
-        const stream = createEventStream(5000, noopLogger, [
-          "http://localhost:3000",
-        ]);
-        const { headers } = attachClient(stream, {
-          headers: { origin: "http://localhost:3000, https://evil.example" },
-        });
-
-        expect(headers["Access-Control-Allow-Origin"]).toBeUndefined();
-
-        stream.close();
+        // `Origin` twice arrives as one string. Matching it has to fail rather
+        // than match either half.
+        expect(
+          grantFor(
+            ["http://localhost:3000"],
+            "http://localhost:3000, https://evil.example",
+          ).allow,
+        ).toBeUndefined();
+        expect(
+          grantFor(undefined, "http://localhost:3000, https://evil.example")
+            .allow,
+        ).toBeUndefined();
       });
     });
 
@@ -626,6 +705,7 @@ describe("hot middleware (unit)", () => {
       let closeHandler = () => {};
       const fakeReq = {
         httpVersion: "1.1",
+        headers: {},
         socket: { setKeepAlive: () => {} },
         on: (event, fn) => {
           if (event === "close") closeHandler = fn;

@@ -23,7 +23,7 @@ declare function createHot(
 ): HotInstance;
 declare namespace createHot {
   export {
-    HOT_DEFAULT_ALLOWED_ORIGINS,
+    HOT_DEFAULT_CORS,
     HOT_DEFAULT_HEARTBEAT,
     HOT_DEFAULT_PATH,
     HOT_DEFAULT_TRANSPORT,
@@ -50,7 +50,8 @@ declare namespace createHot {
     MiddlewareStatsOption,
     HotClientOptions,
     HotOptions,
-    AllowedOrigins,
+    CorsOrigin,
+    CorsOption,
     Payload,
     EXPECTED_ANY,
     WebSocketLikeClient,
@@ -60,7 +61,7 @@ declare namespace createHot {
     EventStream,
   };
 }
-declare const HOT_DEFAULT_ALLOWED_ORIGINS: false;
+declare const HOT_DEFAULT_CORS: RegExp;
 declare const HOT_DEFAULT_HEARTBEAT: number;
 declare const HOT_DEFAULT_PATH: "/__webpack_hmr";
 declare const HOT_DEFAULT_TRANSPORT: "sse";
@@ -74,13 +75,13 @@ declare function checkClientStream(
 /**
  * @param {number} heartbeat heartbeat interval in milliseconds
  * @param {Logger} logger logger
- * @param {AllowedOrigins=} allowedOrigins which origins may read the stream, none by default
+ * @param {CorsOption=} cors which origins may read the stream, the local ones by default
  * @returns {EventStream} event stream
  */
 declare function createEventStream(
   heartbeat: number,
   logger: Logger,
-  allowedOrigins?: AllowedOrigins | undefined,
+  cors?: CorsOption | undefined,
 ): EventStream;
 /**
  * @param {(string | StatsError)[]} errors errors or warnings
@@ -270,9 +271,9 @@ type HotOptions = {
    */
   progress?: boolean | undefined;
   /**
-   * origins allowed to read the Server-Sent Events endpoint cross-origin; none by default
+   * which origins may read the Server-Sent Events endpoint from a page on another one; the local ones by default
    */
-  allowedOrigins?: AllowedOrigins | undefined;
+  cors?: CorsOption | undefined;
   /**
    * add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
    */
@@ -283,13 +284,26 @@ type HotOptions = {
   client?: HotClientOptions | undefined;
 };
 /**
+ * What an origin is matched against: one origin, several, a pattern, or a
+ * question asked of each.
+ */
+type CorsOrigin =
+  string | RegExp | (string | RegExp)[] | ((origin: string) => boolean);
+/**
  * Which origins may read the event stream, as a CORS grant rather than a check:
  * a request is never refused, it is only told whether the browser may hand the
  * response to the page. `false` sends no grant, which leaves the browser's own
- * same-origin rule in place; `true` (or `"*"`) grants every origin; a list
- * grants the ones it names.
+ * same-origin rule in place; `true` grants every origin; anything else is
+ * matched against the request's own, which is echoed back when it is allowed.
+ * `{ origin }` is accepted as well, so a `cors` written for Vite or
+ * `expressjs/cors` reads the same here.
  */
-type AllowedOrigins = boolean | "*" | string[];
+type CorsOption =
+  | boolean
+  | CorsOrigin
+  | {
+      origin?: CorsOrigin | boolean;
+    };
 type Payload = {
   /**
    * action
