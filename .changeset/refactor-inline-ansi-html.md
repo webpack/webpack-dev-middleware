@@ -24,5 +24,11 @@ things it got wrong are fixed:
 - A closing sequence with nothing open emitted an unmatched `</span>`. The
   highlighters wrap their own spans around this output, so a stray close could
   end one of theirs early.
+- Every closing tag was a `</span>`, whatever was open. `\u001b[3m` opens an
+  `<i>`, so an unclosed italic came out as `<i>x</span>`, and an interleaved
+  sequence crossed its tags: `<i><span>x</i></span>`. Each open element now
+  carries its own closing tag, so the markup nests whatever the sequences do.
 
-The conversion had no test of its own while it was a dependency. It has 19 now.
+The conversion had no test of its own while it was a dependency. It has 25 now,
+one of which walks every three-sequence combination and checks the result
+nests.

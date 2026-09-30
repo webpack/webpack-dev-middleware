@@ -9,3 +9,16 @@ export function setColors(colors: Record<string, string | string[]>): void;
  * @returns {string} the text, with its colours as markup
  */
 export default function ansiHTML(text: string): string;
+/**
+ * One element this opened, and the tag that closes it.
+ */
+export type Open = {
+  /**
+   * the parameter that opened it
+   */
+  parameter: string;
+  /**
+   * the tag that closes it
+   */
+  closing: string;
+};

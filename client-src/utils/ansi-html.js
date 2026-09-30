@@ -163,27 +163,51 @@ export function setColors(colors) {
 }
 
 /**
+ * One element this opened, and the tag that closes it.
+ * @typedef {object} Open
+ * @property {string} parameter the parameter that opened it
+ * @property {string} closing the tag that closes it
+ */
+
+/**
  * Apply one SGR parameter.
+ *
+ * The stack carries each open element's own closing tag. The package this
+ * replaced stacked the parameters instead and closed with a hardcoded
+ * `</span>`, so a `<i>` opened by `\u001b[3m` was closed with `</span>` and an
+ * interleaved sequence crossed its tags — `<i><span>x</i></span>`. Whatever
+ * this produces nests, because the highlighters wrap their own spans around
+ * it afterwards and crossed tags there take the card's markup with them.
  * @param {string} parameter the parameter, as it was written
- * @param {string[]} stack parameters whose span is still open
+ * @param {Open[]} stack elements still open, outermost first
  * @returns {string} what it becomes
  */
 function applyParameter(parameter, stack) {
   const open = openTags[parameter];
 
-  // An empty style is still a tag to open: the stack has to stay balanced, or
-  // a later close would end the wrong span.
   if (typeof open !== "undefined") {
-    // Already open, so this closes it — what the package did, kept.
-    if (stack.indexOf(parameter) !== -1) {
-      stack.pop();
+    // The same parameter again closes what it opened — what the package did,
+    // kept — and with it everything opened inside, so the nesting holds.
+    for (let index = stack.length - 1; index >= 0; index--) {
+      if (stack[index].parameter === parameter) {
+        let out = "";
 
-      return "</span>";
+        while (stack.length > index) {
+          out += /** @type {Open} */ (stack.pop()).closing;
+        }
+
+        return out;
+      }
     }
 
-    stack.push(parameter);
+    const isTag = open.charAt(0) === "<";
 
-    if (open.charAt(0) === "<") {
+    stack.push({
+      parameter,
+      closing: isTag ? `</${open.slice(1)}` : "</span>",
+    });
+
+    if (isTag) {
       return open;
     }
 
@@ -193,20 +217,20 @@ function applyParameter(parameter, stack) {
     return open === "" ? "<span>" : `<span style="${open};">`;
   }
 
-  const close = closeTags[parameter];
-
-  if (typeof close !== "undefined") {
+  if (typeof closeTags[parameter] !== "undefined") {
     // Nothing open is nothing to close. The package emitted the tag anyway,
-    // which put an unmatched `</span>` into the card — and the highlighters
-    // run after this and wrap their own spans around it, so a stray close
-    // could end one of theirs early.
+    // which put an unmatched `</span>` into the card — and a stray close can
+    // end a span one of the highlighters opened around this.
     if (stack.length === 0) {
       return "";
     }
 
-    stack.pop();
-
-    return close;
+    // The innermost element closes, with its own tag. Which parameter a closer
+    // belongs to is not tracked: `\u001b[3m\u001b[31mx\u001b[23m` cannot close
+    // the italic without crossing the colour span, so the italic runs to the
+    // end of the message instead. Reading further than the sequence asked is
+    // the lesser of the two.
+    return /** @type {Open} */ (stack.pop()).closing;
   }
 
   return "";
@@ -224,7 +248,7 @@ export default function ansiHTML(text) {
     return text;
   }
 
-  /** @type {string[]} */
+  /** @type {Open[]} */
   const stack = [];
   let result = text.replace(SGR, (match, parameters) => {
     // `\u001b[m` is `\u001b[0m` written short.
@@ -238,10 +262,10 @@ export default function ansiHTML(text) {
     return out;
   });
 
-  // Whatever is still open, closed, so the markup cannot leak into the rest of
-  // the card.
-  for (let index = 0; index < stack.length; index++) {
-    result += "</span>";
+  // Whatever is still open, closed with its own tag and innermost first, so
+  // the markup cannot leak into the rest of the card.
+  while (stack.length > 0) {
+    result += /** @type {Open} */ (stack.pop()).closing;
   }
 
   return result;

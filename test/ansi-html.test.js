@@ -107,6 +107,100 @@ describe("ansi colours as html", () => {
     );
   });
 
+  // The package stacked parameters and closed with a hardcoded `</span>`, so
+  // an element opened as a tag was closed as a span, and interleaved
+  // sequences crossed their tags. The highlighters wrap their own spans around
+  // this output afterwards, and crossed tags there take the card with them.
+  describe("closes what is actually open", () => {
+    it("closes an unclosed tag with its own tag", () => {
+      // Was `<i>x</span>`.
+      expect(ansiHTML(`${ITALIC}x`)).toBe("<i>x</i>");
+    });
+
+    it("does not close a tag with a span's closer", () => {
+      // Was `<i>x</span>`, leaving the `<i>` open for the rest of the card.
+      expect(ansiHTML(`${ITALIC}x${NO_COLOR}`)).toBe("<i>x</i>");
+    });
+
+    it("keeps a colour inside a tag nested", () => {
+      // Was `<i><span style="…">x</i></span>` — crossed.
+      expect(ansiHTML(`${ITALIC}${RED}x${NO_ITALIC}`)).toBe(
+        '<i><span style="color:#ff3348;">x</span></i>',
+      );
+    });
+
+    it("keeps a tag inside a colour nested", () => {
+      // Was `<span style="…"><i>x</span></span>`.
+      expect(ansiHTML(`${RED}${ITALIC}x${NO_COLOR}`)).toBe(
+        '<span style="color:#ff3348;"><i>x</i></span>',
+      );
+    });
+
+    it("closes back through everything a repeat opened inside itself", () => {
+      expect(ansiHTML(`${RED}a${ITALIC}b${RED}c`)).toBe(
+        '<span style="color:#ff3348;">a<i>b</i></span>c',
+      );
+    });
+
+    it("never produces markup that does not nest", () => {
+      // Case by case only covers what someone thought of. This walks the
+      // output of every short combination and checks each closing tag matches
+      // the innermost thing still open.
+      const sequences = [
+        ITALIC,
+        NO_ITALIC,
+        UNDER,
+        NO_UNDER,
+        RED,
+        NO_COLOR,
+        BOLD,
+        NO_BOLD,
+        RESET,
+        INVERSE,
+        RED_BG,
+        NO_BG,
+      ];
+
+      /**
+       * @param {string} html markup
+       * @returns {string[]} the tags left open, if any
+       */
+      const unclosed = (html) => {
+        /** @type {string[]} */
+        const open = [];
+
+        for (const tag of html.match(/<\/?[a-z]+/g) || []) {
+          if (tag.charAt(1) === "/") {
+            const name = tag.slice(2);
+
+            // A close with nothing open, or one that does not match what is
+            // innermost, is markup that does not nest.
+            if (open.pop() !== name) {
+              return [`mismatched ${tag}`];
+            }
+          } else {
+            open.push(tag.slice(1));
+          }
+        }
+
+        return open;
+      };
+
+      for (const first of sequences) {
+        for (const second of sequences) {
+          for (const third of sequences) {
+            const input = `${first}a${second}b${third}c`;
+
+            expect({ input, unclosed: unclosed(ansiHTML(input)) }).toEqual({
+              input,
+              unclosed: [],
+            });
+          }
+        }
+      }
+    });
+  });
+
   it("leaves an escape that is not a colour alone", () => {
     // A screen clear is not this function's business, and mangling it would
     // put an escape in front of the reader.
