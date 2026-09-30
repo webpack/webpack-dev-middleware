@@ -1,7 +1,6 @@
-import ansiHTML from "ansi-html-community";
-
 import { problemLine } from "./problem.js";
 import theme from "./theme.js";
+import ansiHTML, { setColors } from "./utils/ansi-html.js";
 
 // Re-exported so a consumer that shows problems in the console as well as in
 // the overlay has one import for both. `./client/problem` is the same thing
@@ -136,6 +135,11 @@ const colors = {
   lightgrey: "ebe7e3",
   darkgrey: "6d7891",
 };
+
+// At load, the way the package this replaced initialised itself: a message can
+// carry colours before anyone has configured anything, and `ansiColors` below
+// only re-reads the palette when it has changed it.
+setColors(colors);
 
 /**
  * @typedef {object} OverlayState
@@ -1000,7 +1004,7 @@ export default function configureOverlay(options) {
         colors[color] = options.ansiColors[color];
       }
     }
-    ansiHTML.setColors(colors);
+    setColors(colors);
   }
 
   if (options.overlayStyles) {
