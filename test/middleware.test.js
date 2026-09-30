@@ -7232,7 +7232,13 @@ describe.each([
       expect(res.headers["content-type"]).toMatch(/text\/event-stream/);
     });
 
-    it("sends a permissive CORS header", async () => {
+    // The endpoint used to answer every request with
+    // `Access-Control-Allow-Origin: *`, inherited from
+    // `webpack-hot-middleware`. A payload carries a build's module paths and
+    // the source frames webpack puts in a parse error, so that grant let any
+    // site the developer had open read their source. Each framework gets its
+    // own `writeHead`, so each one is asked.
+    it("sends no cross-origin grant by default", async () => {
       const compiler = getCompiler(webpackConfig);
       [server, req, instance] = await frameworkFactory(
         name,
@@ -7241,9 +7247,45 @@ describe.each([
         { hot: true },
       );
 
+      const res = await readSseHandshake(
+        req.get("/__webpack_hmr").set("Origin", "https://evil.example"),
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.headers["access-control-allow-origin"]).toBeUndefined();
+    });
+
+    it("sends a permissive CORS header when every origin is granted", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: { allowedOrigins: true } },
+      );
+
       const res = await readSseHandshake(req.get("/__webpack_hmr"));
 
       expect(res.headers["access-control-allow-origin"]).toBe("*");
+    });
+
+    it("echoes an origin the grant names", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: { allowedOrigins: ["http://localhost:3000"] } },
+      );
+
+      const res = await readSseHandshake(
+        req.get("/__webpack_hmr").set("Origin", "http://localhost:3000"),
+      );
+
+      expect(res.headers["access-control-allow-origin"]).toBe(
+        "http://localhost:3000",
+      );
+      expect(res.headers.vary).toBe("Origin");
     });
 
     describe("SSE payload", () => {

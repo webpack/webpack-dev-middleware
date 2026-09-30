@@ -219,6 +219,27 @@
               "description": "Publish compilation progress events to the clients.",
               "type": "boolean"
             },
+            "allowedOrigins": {
+              "description": "Origins allowed to read the Server-Sent Events endpoint cross-origin. None by default, so only a page on the endpoint's own origin can read it. `true` grants every origin, which lets any site the developer has open read the build's errors, including the source frames webpack puts in them.",
+              "link": "https://github.com/webpack/webpack-dev-middleware#hot",
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "enum": ["*"]
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "description": "An origin, written as the browser sends it: scheme, host and port, with no trailing slash.",
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1
+                }
+              ]
+            },
             "statsOptions": {
               "description": "Deprecated, do not use, will be removed in the next major release. Use the `stats` option instead, which decides whether a payload carries errors and warnings.",
               "type": "object",

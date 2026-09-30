@@ -329,15 +329,16 @@ See [Hot Module Replacement client](#hot-module-replacement-client) for which co
 
 The object form accepts these options:
 
-|                  Name                  |         Type         |      Default       | Description                                            |
-| :------------------------------------: | :------------------: | :----------------: | :----------------------------------------------------- |
-|    **[`transport`](#hottransport)**    | `string \| function` |      `'sse'`       | How events reach the clients.                          |
-|         **[`path`](#hotpath)**         |       `string`       | `'/__webpack_hmr'` | Path the endpoint is served at.                        |
-|    **[`heartbeat`](#hotheartbeat)**    |       `number`       |      `10000`       | Interval (in milliseconds) between keep-alive frames.  |
-|       **[`server`](#hotserver)**       |       `object`       |    `undefined`     | HTTP server the `'ws'` transport answers upgrades on.  |
-|     **[`progress`](#hotprogress)**     |      `boolean`       |      `false`       | Publish compilation progress events to the clients.    |
-|       **[`inject`](#hotinject)**       |      `boolean`       |       `true`       | Add the client entry and `HotModuleReplacementPlugin`. |
-| **[`statsOptions`](#hotstatsoptions)** |       `object`       |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).        |
+|                    Name                    |         Type          |      Default       | Description                                                |
+| :----------------------------------------: | :-------------------: | :----------------: | :--------------------------------------------------------- |
+|      **[`transport`](#hottransport)**      | `string \| function`  |      `'sse'`       | How events reach the clients.                              |
+|           **[`path`](#hotpath)**           |       `string`        | `'/__webpack_hmr'` | Path the endpoint is served at.                            |
+|      **[`heartbeat`](#hotheartbeat)**      |       `number`        |      `10000`       | Interval (in milliseconds) between keep-alive frames.      |
+|         **[`server`](#hotserver)**         |       `object`        |    `undefined`     | HTTP server the `'ws'` transport answers upgrades on.      |
+|       **[`progress`](#hotprogress)**       |       `boolean`       |      `false`       | Publish compilation progress events to the clients.        |
+| **[`allowedOrigins`](#hotallowedorigins)** | `boolean \| string[]` |      `false`       | Origins allowed to read the `'sse'` endpoint cross-origin. |
+|         **[`inject`](#hotinject)**         |       `boolean`       |       `true`       | Add the client entry and `HotModuleReplacementPlugin`.     |
+|   **[`statsOptions`](#hotstatsoptions)**   |       `object`        |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).            |
 
 #### `hot.transport`
 
@@ -450,6 +451,37 @@ Type: `Boolean`
 Default: `false`
 
 Publish compilation progress events (`{ action: "progress", percent, message }`) to the clients using webpack's `ProgressPlugin`. The bundled client shows the percentage in its building badge (see the client `progress` option).
+
+#### `hot.allowedOrigins`
+
+Type: `Boolean | '*' | String[]`
+Default: `false`
+
+Which origins may read the [`'sse'`](#hottransport) endpoint from a page on another origin.
+
+A payload carries a build's module paths and, when a build fails, the source frames webpack puts in the error — so a page that can read the stream can read parts of your source. By default the middleware sends no cross-origin grant, which leaves the browser's own same-origin rule in place: only a page served from the endpoint's own origin can read it. That covers the normal setup, where the page and the middleware are the same server, and it is why nothing needs to be set here for it to work.
+
+Set it when the page is **not** on the endpoint's origin — a front end on `:3000` against the middleware on `:8080`, or a client pointed elsewhere with the client [`path`](#client-options) option. List the origins the page is served from, written as a browser sends them (scheme, host and port, no trailing slash):
+
+```js
+app.use(
+  middleware(compiler, {
+    hot: {
+      allowedOrigins: ["http://localhost:3000", "http://127.0.0.1:3000"],
+    },
+  }),
+);
+```
+
+`true` (or `'*'`) grants every origin. That is what the middleware did before this option existed, and what [`webpack-hot-middleware`](https://www.npmjs.com/package/webpack-hot-middleware) still does — it lets **any** site loaded in the same browser read your builds, so name your origins instead wherever you can:
+
+```js
+app.use(middleware(compiler, { hot: { allowedOrigins: true } }));
+```
+
+> [!IMPORTANT]
+>
+> This option is a grant, not a check: a request is never refused, the browser is only told whether it may hand the response to the page. It therefore does nothing for the [`'ws'`](#hottransport) transport, because a WebSocket handshake is not subject to CORS — a page on any origin can open one, and the browser will not stop it. A `'ws'` endpoint reachable by an untrusted page has to be refused by the server that owns the upgrade: read the request's `Origin` in [`onConnect(fn)`](#onconnectfn) and close the client, or take the upgrade yourself with [`handleUpgrade`](#handleupgradereq-socket-head) and refuse before the handshake. That is where [webpack-dev-server](https://github.com/webpack/webpack-dev-server) does it, with its `allowedHosts` option; the middleware deliberately holds no such policy of its own.
 
 #### `hot.inject`
 

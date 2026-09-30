@@ -88,6 +88,9 @@ function attachClient(eventStream, reqOverrides = {}) {
     httpVersion: "1.1",
     socket: { setKeepAlive: () => {} },
     on: () => {},
+    // A real request always carries these, even when empty, and the handshake
+    // reads `Origin` off them.
+    headers: {},
     ...reqOverrides,
   };
   eventStream.handler(req, res);
@@ -488,6 +491,111 @@ describe("hot middleware (unit)", () => {
       const { headers } = attachClient(stream, { httpVersion: "2.0" });
       expect(headers.Connection).toBeUndefined();
       stream.close();
+    });
+
+    // The endpoint used to answer every request with
+    // `Access-Control-Allow-Origin: *`, inherited from `webpack-hot-middleware`.
+    // A payload carries a build's module paths and the source frames webpack
+    // puts in a parse error, so that grant let any site the developer had open
+    // read their source. The grant is now asked for, and nothing is rejected
+    // here either way — a refusal is the host's, through `onConnect`.
+    describe("the cross-origin grant", () => {
+      it("grants nothing by default", () => {
+        const stream = createEventStream(5000, noopLogger);
+        const { headers } = attachClient(stream, {
+          headers: { origin: "https://evil.example" },
+        });
+
+        expect(headers["Access-Control-Allow-Origin"]).toBeUndefined();
+        expect(headers.Vary).toBeUndefined();
+
+        stream.close();
+      });
+
+      it("still serves a client that sent no origin at all", () => {
+        // Which is every same-origin `EventSource`: a browser sends no `Origin`
+        // for one, so the default must not be read as a refusal.
+        const stream = createEventStream(5000, noopLogger);
+        const { headers, writes } = attachClient(stream);
+
+        expect(headers["Content-Type"]).toBe("text/event-stream;charset=utf-8");
+        expect(writes).toContain("\n");
+
+        stream.close();
+      });
+
+      for (const allowed of [true, "*"]) {
+        it(`grants every origin for ${JSON.stringify(allowed)}`, () => {
+          const stream = createEventStream(5000, noopLogger, allowed);
+          const { headers } = attachClient(stream, {
+            headers: { origin: "https://evil.example" },
+          });
+
+          expect(headers["Access-Control-Allow-Origin"]).toBe("*");
+
+          stream.close();
+        });
+      }
+
+      it("echoes an origin the list names", () => {
+        const stream = createEventStream(5000, noopLogger, [
+          "http://localhost:3000",
+          "http://127.0.0.1:3000",
+        ]);
+        const { headers } = attachClient(stream, {
+          headers: { origin: "http://127.0.0.1:3000" },
+        });
+
+        expect(headers["Access-Control-Allow-Origin"]).toBe(
+          "http://127.0.0.1:3000",
+        );
+        // Otherwise a cache holding this response could hand it, grant and
+        // all, to a page on another origin.
+        expect(headers.Vary).toBe("Origin");
+
+        stream.close();
+      });
+
+      it("grants nothing to an origin the list leaves out", () => {
+        const stream = createEventStream(5000, noopLogger, [
+          "http://localhost:3000",
+        ]);
+        const { headers } = attachClient(stream, {
+          headers: { origin: "https://evil.example" },
+        });
+
+        expect(headers["Access-Control-Allow-Origin"]).toBeUndefined();
+        expect(headers.Vary).toBe("Origin");
+
+        stream.close();
+      });
+
+      it("grants nothing for a list and no origin", () => {
+        const stream = createEventStream(5000, noopLogger, [
+          "http://localhost:3000",
+        ]);
+        const { headers } = attachClient(stream);
+
+        expect(headers["Access-Control-Allow-Origin"]).toBeUndefined();
+
+        stream.close();
+      });
+
+      it("does not read two origins as one", () => {
+        // Node joins repeated headers with a comma, so a request carrying
+        // `Origin` twice arrives as one string. Matching it against the list
+        // has to fail rather than match either half.
+        const stream = createEventStream(5000, noopLogger, [
+          "http://localhost:3000",
+        ]);
+        const { headers } = attachClient(stream, {
+          headers: { origin: "http://localhost:3000, https://evil.example" },
+        });
+
+        expect(headers["Access-Control-Allow-Origin"]).toBeUndefined();
+
+        stream.close();
+      });
     });
 
     it("broadcasts events to every attached client", () => {

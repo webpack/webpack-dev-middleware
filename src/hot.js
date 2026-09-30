@@ -50,8 +50,18 @@
  * @property {HttpServer=} server HTTP server the `"ws"` transport answers upgrades on, when it is already built
  * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
  * @property {boolean=} progress publish compilation progress events to the clients
+ * @property {AllowedOrigins=} allowedOrigins origins allowed to read the Server-Sent Events endpoint cross-origin; none by default
  * @property {boolean=} inject add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
  * @property {HotClientOptions=} client options handed to the browser runtime through its entry query
+ */
+
+/**
+ * Which origins may read the event stream, as a CORS grant rather than a check:
+ * a request is never refused, it is only told whether the browser may hand the
+ * response to the page. `false` sends no grant, which leaves the browser's own
+ * same-origin rule in place; `true` (or `"*"`) grants every origin; a list
+ * grants the ones it names.
+ * @typedef {boolean | "*" | string[]} AllowedOrigins
  */
 
 /**
@@ -118,10 +128,17 @@
 /** @typedef {ClientStream} EventStream */
 
 const createWebSocketStream = require("./servers/WebSocketServer.js");
+const { getRequestHeader } = require("./utils.js");
 
 const HOT_DEFAULT_PATH = "/__webpack_hmr";
 const HOT_DEFAULT_HEARTBEAT = 10 * 1000;
 const HOT_DEFAULT_TRANSPORT = "sse";
+// No cross-origin grant. Until this option existed the endpoint answered every
+// request with `Access-Control-Allow-Origin: *`, inherited from
+// `webpack-hot-middleware`, which let any site a developer had open read the
+// stream — and with it the module paths and source frames a failed build
+// reports.
+const HOT_DEFAULT_ALLOWED_ORIGINS = false;
 const PLUGIN_NAME = "DevMiddleware";
 
 /**
@@ -214,11 +231,50 @@ function checkClientStream(stream) {
 }
 
 /**
+ * Add the cross-origin grant the `allowedOrigins` option asks for, if any.
+ *
+ * Without a grant the browser will not hand a cross-origin `EventSource`
+ * response to the page, which is what keeps a build's errors — module paths and
+ * the source frames webpack puts in a parse error — from being readable by any
+ * site the developer happens to have open. Nothing is rejected here: a refusal
+ * is the host's to make, through `onConnect`.
+ * @param {AllowedOrigins} allowedOrigins which origins may read the stream
+ * @param {IncomingMessage} req the request joining the stream
+ * @param {Record<string, string>} headers the response headers, added to in place
+ */
+function allowOrigin(allowedOrigins, req, headers) {
+  if (allowedOrigins === false) {
+    return;
+  }
+
+  if (allowedOrigins === true || allowedOrigins === "*") {
+    headers["Access-Control-Allow-Origin"] = "*";
+    return;
+  }
+
+  // The header names a single origin, so the request's own is echoed back when
+  // it is one of the listed ones. `Vary` goes out either way: without it a
+  // cache that kept this response could hand it to a page on another origin,
+  // grant and all.
+  headers.Vary = "Origin";
+
+  // Through the framework abstraction: a request does not always carry
+  // `headers` of its own — under Hono it answers `getHeader` instead, and
+  // reading the property straight off it grants nothing to anyone.
+  const origin = getRequestHeader(req, "origin");
+
+  if (typeof origin === "string" && allowedOrigins.includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+}
+
+/**
  * @param {number} heartbeat heartbeat interval in milliseconds
  * @param {Logger} logger logger
+ * @param {AllowedOrigins=} allowedOrigins which origins may read the stream, none by default
  * @returns {EventStream} event stream
  */
-function createEventStream(heartbeat, logger) {
+function createEventStream(heartbeat, logger, allowedOrigins = false) {
   let clientId = 0;
   /** @type {Map<number, ServerResponse>} */
   let clients = new Map();
@@ -293,13 +349,14 @@ function createEventStream(heartbeat, logger) {
 
       /** @type {Record<string, string>} */
       const headers = {
-        "Access-Control-Allow-Origin": "*",
         "Content-Type": "text/event-stream;charset=utf-8",
         "Cache-Control": "no-cache, no-transform",
         // While behind nginx, the event stream should not be buffered:
         // http://nginx.org/docs/http/ngx_http_proxy_module.html#proxy_buffering
         "X-Accel-Buffering": "no",
       };
+
+      allowOrigin(allowedOrigins, req, headers);
 
       const { httpVersion, socket } = req;
       const isHttp1 = !(Number.parseInt(httpVersion, 10) >= 2);
@@ -593,6 +650,7 @@ function createHot(compiler, userOptions, statsOption) {
   const path = options.path || HOT_DEFAULT_PATH;
   const heartbeat = options.heartbeat ?? HOT_DEFAULT_HEARTBEAT;
   const transport = options.transport || HOT_DEFAULT_TRANSPORT;
+  const allowedOrigins = options.allowedOrigins ?? HOT_DEFAULT_ALLOWED_ORIGINS;
   const { statsOptions } = options;
   const logger = compiler.getInfrastructureLogger("webpack-dev-middleware");
 
@@ -615,7 +673,7 @@ function createHot(compiler, userOptions, statsOption) {
     eventStream = createWebSocketStream({ heartbeat, path }, logger);
     transportName = "a WebSocket";
   } else {
-    eventStream = createEventStream(heartbeat, logger);
+    eventStream = createEventStream(heartbeat, logger, allowedOrigins);
     transportName = "Server-Sent Events";
   }
 
@@ -798,6 +856,7 @@ function createHot(compiler, userOptions, statsOption) {
 }
 
 module.exports = createHot;
+module.exports.HOT_DEFAULT_ALLOWED_ORIGINS = HOT_DEFAULT_ALLOWED_ORIGINS;
 module.exports.HOT_DEFAULT_HEARTBEAT = HOT_DEFAULT_HEARTBEAT;
 module.exports.HOT_DEFAULT_PATH = HOT_DEFAULT_PATH;
 module.exports.HOT_DEFAULT_TRANSPORT = HOT_DEFAULT_TRANSPORT;
