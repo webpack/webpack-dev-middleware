@@ -6,6 +6,9 @@
 /** @typedef {import("../hot.js").Logger} Logger */
 /** @typedef {import("../hot.js").Payload} Payload */
 /** @typedef {import("../hot.js").ClientStream} ClientStream */
+/** @typedef {import("../hot.js").CorsOption} CorsOption */
+
+const { isUpgradeAllowed, resolveCors } = require("../cors.js");
 
 // How often a client is pinged to find out whether it is still there. A client
 // that has not answered the previous ping is dropped rather than pinged again.
@@ -33,11 +36,13 @@ function requireWsServer() {
  * @param {object} options options
  * @param {string} options.path the path the endpoint is served at
  * @param {number} options.heartbeat heartbeat interval in milliseconds
+ * @param {CorsOption=} options.cors which origins may connect, the local ones by default
  * @param {Logger} logger logger
  * @returns {ClientStream} client stream
  */
-function createWebSocketStream({ path, heartbeat }, logger) {
+function createWebSocketStream({ path, heartbeat, cors }, logger) {
   const WebSocketServerImplementation = requireWsServer();
+  const corsGrant = resolveCors(cors);
   /** @type {Set<WebSocket>} */
   const clients = new Set();
   /** @type {((client: WebSocket, req: IncomingMessage) => void) | undefined} */
@@ -158,6 +163,26 @@ function createWebSocketStream({ path, heartbeat }, logger) {
     // endpoints instead of leaving the socket hanging.
     if (!implementation.shouldHandle(req)) {
       return false;
+    }
+
+    // A handshake is not subject to CORS: a browser sends `Origin` and pays no
+    // attention to what comes back, so the `cors` option can only be honoured
+    // on this wire by refusing the upgrade — before it completes, rather than
+    // closing the client afterwards, so nothing is ever published to it.
+    if (!isUpgradeAllowed(corsGrant, req)) {
+      logger.warn(
+        `A client from the origin "${req.headers.origin}" was refused. Add it to the 'hot.cors' option to allow it.`,
+      );
+
+      // Answered rather than dropped: a socket destroyed without a response
+      // reads to the client as the server going away, and reconnecting
+      // forever. The upgrade is still this endpoint's, so `true`.
+      socket.write(
+        "HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n",
+      );
+      socket.destroy();
+
+      return true;
     }
 
     implementation.handleUpgrade(req, socket, head, (client) => {

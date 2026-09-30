@@ -357,19 +357,19 @@ const server = http.createServer(instance);
 instance.attach(server);
 ```
 
-A plain `GET` on the path under `'ws'` answers `426 Upgrade Required`.
+A plain `GET` on the path under `'ws'` answers `426 Upgrade Required`. A handshake from an origin [`hot.cors`](#hotcors) does not allow is refused with `403`, since a handshake is not subject to CORS and refusing is the only way that option can hold on this wire.
 
-A **function** builds a transport of your own. It is called with the resolved `path` and `heartbeat` and a logger, and must return a client stream. Four methods are required:
+A **function** builds a transport of your own. It is called with the resolved `path`, `heartbeat` and [`cors`](#hotcors) and a logger, and must return a client stream. Four methods are required:
 
 ```js
 /**
- * @param {{ path: string, heartbeat: number }} options
+ * @param {{ path: string, heartbeat: number, cors: CorsOption | undefined }} options
  * @param {Logger} logger
  * @returns {ClientStream}
  */
 middleware(compiler, {
   hot: {
-    transport: ({ path, heartbeat }, logger) => ({
+    transport: ({ path, heartbeat, cors }, logger) => ({
       // Call `fn` with each client once it has joined. It is what catches a
       // client up with the last hashes, so it can apply the next update.
       onConnect(fn) {},
@@ -457,11 +457,11 @@ Publish compilation progress events (`{ action: "progress", percent, message }`)
 Type: `Boolean | String | RegExp | (String | RegExp)[] | Function | { origin }`
 Default: `/^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/`
 
-Which origins may read the [`'sse'`](#hottransport) endpoint from a page on another origin.
+Which origins may reach the endpoint from a page on another origin, over **either** [transport](#hottransport).
 
 A payload carries a build's module paths and, when a build fails, the source frames webpack puts in the error — so a page that can read the stream can read parts of your source. By default only **local** origins may: `localhost` and anything under it, `127.0.0.1` and `[::1]`, on any port and either scheme. A page on another port of the same machine is the one cross-origin case that is normal in development, and nothing a remote site can be served from looks like one. This is the same default, for the same reason, as Vite's [`server.cors`](https://vite.dev/config/server-options#server-cors).
 
-Nothing needs to be set for the normal setup, where the page and the middleware are the same server: a browser sends no `Origin` at all for a same-origin `EventSource`, so no grant is needed to read it.
+Nothing needs to be set for the normal setup, where the page and the middleware are the same server.
 
 Name your own origins when the page is served from somewhere the default does not cover — a dev domain in your hosts file, a remote dev box, a container:
 
@@ -477,15 +477,13 @@ Every accepted form:
 
 | Value                  | Meaning                                                                          |
 | :--------------------- | :------------------------------------------------------------------------------- |
-| `false`                | No grant at all. Only the endpoint's own origin can read the stream.             |
-| `true`                 | `Access-Control-Allow-Origin: *` — every origin, including remote ones.          |
+| `false`                | Nothing but the endpoint's own origin.                                           |
+| `true`                 | Every origin, including remote ones.                                             |
 | `'https://app.test'`   | That one origin.                                                                 |
 | `['https://app.test']` | Any in the list; entries may be strings or regular expressions.                  |
 | `/\.test$/`            | Any origin the pattern matches. Anchor it, or it will match more than you think. |
 | `(origin) => boolean`  | Asked about each origin.                                                         |
 | `{ origin: … }`        | Any of the above, so a `cors` written for Vite or `expressjs/cors` fits here.    |
-
-An allowed origin is echoed back rather than wildcarded, with `Vary: Origin` alongside it.
 
 `true` is what the middleware did before this option existed, and what [`webpack-hot-middleware`](https://www.npmjs.com/package/webpack-hot-middleware) still does. It lets **any** site loaded in the same browser read your builds, so prefer naming your origins:
 
@@ -493,11 +491,28 @@ An allowed origin is echoed back rather than wildcarded, with `Vary: Origin` alo
 app.use(middleware(compiler, { hot: { cors: true } }));
 ```
 
+**What "may reach it" means differs by transport**, because the two wires enforce it in different places:
+
+|                                | [`'sse'`](#hottransport)                                                                                            | [`'ws'`](#hottransport)                                                                                    |
+| :----------------------------- | :------------------------------------------------------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------------- |
+| How it is enforced             | The response carries a grant, or does not. Nothing is ever refused; the browser decides what to do with it.         | The upgrade is **refused** with `403` before the handshake completes.                                      |
+| An allowed origin              | Echoed back in `Access-Control-Allow-Origin`, with `Vary: Origin` — or `*` for `true`.                              | The handshake proceeds.                                                                                    |
+| A request with no origin       | Served. Every same-origin `EventSource` is one: a browser sends no `Origin` for one, and needs no grant to read it. | Allowed. Browsers always send `Origin` on a handshake, so this is a Node client, a health check or a test. |
+| The origin it was addressed as | Served, and the browser never consults these headers for a same-origin read anyway.                                 | Allowed whatever `cors` says — it is the page the middleware is serving, not another origin.               |
+
+A handshake is not subject to CORS: a browser sends `Origin` and pays no attention to what comes back, so on that wire the option can only be honoured by refusing. That refusal applies to [`attach(server)`](#attachserver) and [`handleUpgrade(req, socket, head)`](#handleupgradereq-socket-head) alike.
+
+> [!TIP]
+>
+> If your server already decides for itself who may connect — the way [webpack-dev-server](https://github.com/webpack/webpack-dev-server) does with `allowedHosts` — set `cors: true` so yours is the only rule and the middleware's default does not refuse first. A refusal is logged with the origin and this remedy, so you will see which it was.
+
+A **function** [transport](#hottransport) of your own is handed the option as it was given, as `cors`, and decides for itself what to do with it.
+
 > [!IMPORTANT]
 >
-> This option is a grant, not a check: a request is never refused, the browser is only told whether it may hand the response to the page. It therefore does nothing for the [`'ws'`](#hottransport) transport, because a WebSocket handshake is not subject to CORS — a page on any origin can open one, and the browser will not stop it. A `'ws'` endpoint reachable by an untrusted page has to be refused by the server that owns the upgrade: read the request's `Origin` in [`onConnect(fn)`](#onconnectfn) and close the client, or take the upgrade yourself with [`handleUpgrade`](#handleupgradereq-socket-head) and refuse before the handshake. That is where [webpack-dev-server](https://github.com/webpack/webpack-dev-server) does it, with its `allowedHosts` option; the middleware deliberately holds no such policy of its own.
+> The default trusts every other server on the developer's own machine, because it cannot tell them apart from your dev server. If one of them serves content someone else controls, set `cors` to the origins you actually use.
 >
-> The default also trusts every other server on the developer's own machine, because it cannot tell them apart from your dev server. If one of them serves content someone else controls, set `cors` to the origins you actually use.
+> This is about who may reach the endpoint, and nothing else. It does not decide who may reach the **assets** the middleware serves, which is your server's to answer — with a `Cross-Origin-Resource-Policy` response header, or with whatever your framework's own CORS middleware does.
 
 #### `hot.inject`
 

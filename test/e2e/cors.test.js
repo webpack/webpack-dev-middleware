@@ -87,6 +87,80 @@ describe("reading the event stream from another origin (browser)", () => {
     );
   });
 
+  // The same option over the other transport, where it can only be honoured by
+  // refusing the upgrade: a handshake is not subject to CORS, so the browser
+  // sends `Origin` and pays no attention to what comes back. Which means the
+  // page here is told nothing beyond "it failed" — the refusal is the `403` on
+  // the wire, and what the browser does with it is what these check.
+  describe("over a WebSocket", () => {
+    /**
+     * Open a socket on another origin from inside the page.
+     * @param {string} socketUrl the endpoint, on an origin the page is not on
+     * @returns {Promise<"open" | "error">} which event arrived first
+     */
+    const connectFromPage = (socketUrl) =>
+      page.evaluate(
+        (url) =>
+          new Promise((resolve) => {
+            const socket = new WebSocket(url);
+            const settle = (result) => {
+              socket.close();
+              resolve(result);
+            };
+
+            socket.addEventListener("open", () => settle("open"));
+            socket.addEventListener("error", () => settle("error"));
+          }),
+        socketUrl,
+      );
+
+    /**
+     * Serve the app over the `ws` transport, then open its page on `host` and
+     * a socket on `127.0.0.1`.
+     * @param {EXPECTED_ANY} hot the middleware's `hot` option
+     * @param {string} host the host to load the page from
+     * @returns {Promise<"open" | "error">} what the browser made of the socket
+     */
+    const connectAcrossOrigins = async (hot, host) => {
+      hotApp = await createHotApp({
+        code: "console.log('app')",
+        transport: "ws",
+        hot,
+      });
+      ({ page, browser } = await runBrowser());
+
+      const { port } = new URL(hotApp.url);
+
+      await page.goto(`http://${host}:${port}/`);
+
+      return connectFromPage(`ws://127.0.0.1:${port}/__webpack_hmr`);
+    };
+
+    it("refuses an origin the default does not allow", async () => {
+      await expect(connectAcrossOrigins(true, "127.0.0.2")).resolves.toBe(
+        "error",
+      );
+    });
+
+    it("allows another origin on the same machine by default", async () => {
+      await expect(connectAcrossOrigins(true, "localhost")).resolves.toBe(
+        "open",
+      );
+    });
+
+    it("refuses even a local origin once cors is off", async () => {
+      await expect(
+        connectAcrossOrigins({ cors: false }, "localhost"),
+      ).resolves.toBe("error");
+    });
+
+    it("allows any origin once every one of them is granted", async () => {
+      await expect(
+        connectAcrossOrigins({ cors: true }, "127.0.0.2"),
+      ).resolves.toBe("open");
+    });
+  });
+
   it("leaves the page's own origin alone", async () => {
     // The default must not be read as a refusal: a browser sends no `Origin`
     // at all for a same-origin `EventSource`, which is how every client

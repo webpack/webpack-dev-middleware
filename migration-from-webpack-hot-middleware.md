@@ -163,7 +163,7 @@ module.exports = [
 | `log`                  | Removed. The middleware logs through the compiler's [infrastructure logger](https://webpack.js.org/configuration/infrastructurelogging/); use `infrastructureLogging.level` to quiet it.                                                                                                                                                |
 
 New: [`hot.progress`](README.md#hotprogress) publishes compilation progress to
-the clients, and [`hot.cors`](README.md#hotcors) says which origins may read
+the clients, and [`hot.cors`](README.md#hotcors) says which origins may reach
 the endpoint from a page on another one.
 
 ### Client options

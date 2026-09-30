@@ -1630,21 +1630,119 @@ describe("createHot over a WebSocket", () => {
     expect(JSON.parse(messages[0]).hash).toBe("still-answers");
   });
 
+  // The `cors` option reaches this transport too, and the only way it can be
+  // honoured on this wire is by refusing the upgrade: a handshake is not
+  // subject to CORS, so a browser sends `Origin` and pays no attention to what
+  // comes back. Refused before the handshake completes, so nothing is ever
+  // published to a client that should not have one.
+  describe("the cross-origin grant", () => {
+    it("refuses an origin the default does not allow", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler());
+
+      await expect(
+        connect(endpoint.url, { origin: "https://evil.example" }),
+      ).rejects.toThrow("Unexpected server response: 403");
+    });
+
+    it("allows another origin on the same machine", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler());
+      const { socket } = await connect(endpoint.url, {
+        origin: "http://localhost:3000",
+      });
+
+      expect(socket.readyState).toBe(socket.OPEN);
+    });
+
+    it("allows a client that sent no origin at all", async () => {
+      // Which is every client that is not a browser — a Node client, a
+      // proxy's health check, this test. Browsers always send one.
+      const endpoint = await serveOverWs(makeFakeCompiler());
+      const { socket } = await connect(endpoint.url);
+
+      expect(socket.readyState).toBe(socket.OPEN);
+    });
+
+    it("allows the origin it was addressed as, whatever the option says", async () => {
+      // The page the middleware is serving. `EventSource` gets this for free,
+      // since the browser knows a same-origin read needs no grant; an upgrade
+      // has to work it out from the request.
+      const endpoint = await serveOverWs(makeFakeCompiler(), { cors: false });
+      const { port } = new URL(endpoint.url.replace("ws:", "http:"));
+      const { socket } = await connect(endpoint.url, {
+        origin: `http://127.0.0.1:${port}`,
+      });
+
+      expect(socket.readyState).toBe(socket.OPEN);
+    });
+
+    it("refuses every other origin once cors is off", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler(), { cors: false });
+
+      await expect(
+        connect(endpoint.url, { origin: "http://localhost:3000" }),
+      ).rejects.toThrow("Unexpected server response: 403");
+    });
+
+    it("allows an origin the option names", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler(), {
+        cors: ["https://app.test"],
+      });
+      const { socket } = await connect(endpoint.url, {
+        origin: "https://app.test",
+      });
+
+      expect(socket.readyState).toBe(socket.OPEN);
+    });
+
+    it("answers the refusal rather than dropping the socket", async () => {
+      // A socket destroyed without a response reads to the client as the
+      // server going away, and a client that reconnects would do it forever.
+      const endpoint = await serveOverWs(makeFakeCompiler());
+
+      await expect(
+        connect(endpoint.url, { origin: "https://evil.example" }),
+      ).rejects.toThrow(/403/);
+    });
+
+    it("refuses through handleUpgrade as well", async () => {
+      // Which is the path a server that owns its own `upgrade` event takes —
+      // so the option holds there too, and such a server sets `cors` to say
+      // otherwise.
+      const endpoint = await serveOverWs(
+        makeFakeCompiler(),
+        {},
+        (hot, server) => {
+          server.on("upgrade", (req, socket, head) => {
+            hot.handleUpgrade(req, socket, head);
+          });
+        },
+      );
+
+      await expect(
+        connect(endpoint.url, { origin: "https://evil.example" }),
+      ).rejects.toThrow("Unexpected server response: 403");
+    });
+  });
+
   it("lets the server refuse a client before the handshake", async () => {
     const compiler = makeFakeCompiler();
-    const endpoint = await serveOverWs(compiler, {}, (hot, server) => {
-      server.on("upgrade", (req, socket, head) => {
-        // The rule is the server's own — the middleware has none, and never
-        // sees this request.
-        if (req.headers.origin !== "http://allowed.test") {
-          socket.destroy();
+    // `cors: true` leaves the server's rule the only one, which is how a
+    // server that owns the upgrade and has its own policy uses this.
+    const endpoint = await serveOverWs(
+      compiler,
+      { cors: true },
+      (hot, server) => {
+        server.on("upgrade", (req, socket, head) => {
+          if (req.headers.origin !== "http://allowed.test") {
+            socket.destroy();
 
-          return;
-        }
+            return;
+          }
 
-        hot.handleUpgrade(req, socket, head);
-      });
-    });
+          hot.handleUpgrade(req, socket, head);
+        });
+      },
+    );
 
     await expect(connect(endpoint.url)).rejects.toThrow(
       /timed out connecting|ECONNREFUSED|socket hang up|Unexpected server response/,

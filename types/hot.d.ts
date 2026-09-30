@@ -61,7 +61,7 @@ declare namespace createHot {
     EventStream,
   };
 }
-declare const HOT_DEFAULT_CORS: RegExp;
+import { HOT_DEFAULT_CORS } from "./cors.js";
 declare const HOT_DEFAULT_HEARTBEAT: number;
 declare const HOT_DEFAULT_PATH: "/__webpack_hmr";
 declare const HOT_DEFAULT_TRANSPORT: "sse";
@@ -271,7 +271,7 @@ type HotOptions = {
    */
   progress?: boolean | undefined;
   /**
-   * which origins may read the Server-Sent Events endpoint from a page on another one; the local ones by default
+   * which origins may reach the endpoint from a page on another one; the local ones by default
    */
   cors?: CorsOption | undefined;
   /**
@@ -435,6 +435,7 @@ type ClientStreamFactory<TClient extends unknown = StreamClient> = (
   options: {
     path: string;
     heartbeat: number;
+    cors: CorsOption | undefined;
   },
   logger: Logger,
 ) => ClientStream<TClient>;
