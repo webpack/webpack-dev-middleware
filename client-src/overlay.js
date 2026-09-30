@@ -1,6 +1,12 @@
 import ansiHTML from "ansi-html-community";
 
+import { problemLine } from "./problem.js";
 import theme from "./theme.js";
+
+// Re-exported so a consumer that shows problems in the console as well as in
+// the overlay has one import for both. `./client/problem` is the same thing
+// without the overlay, for one that only formats.
+export { formatProblem, problemLine } from "./problem.js";
 
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_ANY */
@@ -820,23 +826,30 @@ render = renderProblems;
 
 /**
  * @param {"errors" | "warnings"} type problem type
- * @param {string[]} lines messages to render
+ * @param {(string | import("./problem.js").Problem)[]} problems what to
+ * render: a message, or one of webpack's errors or warnings as
+ * `stats.toJson()` reports it — a server that sends those to the browser
+ * rather than formatting them itself has nothing to convert
  * @param {string=} source who reports them — each source (e.g. this client,
  * the webpack-dev-server client, the runtime error capture) keeps its own
  * slot and the overlay renders the union of every slot
  */
-export function showProblems(type, lines, source = "") {
+export function showProblems(type, problems, source = "") {
   // Nothing to report is not something to report. Kept as a slot, it made the
   // union non-empty, which put an empty card on the page for the reader to
   // dismiss by hand — and, once another source cleared, left the page covered
   // by an overlay with no problems in it at all.
-  if (lines.length === 0) {
+  if (problems.length === 0) {
     clear(source);
 
     return;
   }
 
-  state.problemsBySource[source] = { type, lines: [...lines] };
+  const lines = problems.map((problem) =>
+    typeof problem === "string" ? problem : problemLine(problem),
+  );
+
+  state.problemsBySource[source] = { type, lines };
 
   const union =
     /** @type {{ type: "errors" | "warnings", lines: string[] }} */

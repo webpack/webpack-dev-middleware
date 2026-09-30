@@ -1566,6 +1566,57 @@ describe("overlay shared state across bundled copies (browser)", () => {
     expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
   });
 
+  it("takes one of webpack's problems as it comes", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    // A server that sends error objects to the browser rather than formatting
+    // them first has nothing to convert — which is the whole of what
+    // webpack-dev-server had to write for itself.
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems(
+        "errors",
+        [
+          {
+            moduleName: "babel-loader!./src/app.js",
+            loc: "3:11",
+            message: "Unexpected token",
+            stack: ["  at parse (babel)"],
+          },
+        ],
+        "a",
+      );
+    });
+
+    const frame = await overlayFrame();
+    const text = await frame.evaluate(() => document.body.textContent);
+
+    expect(text).toContain("./src/app.js");
+    expect(text).toContain("babel-loader!./src/app.js");
+    expect(text).toContain("3:11");
+    expect(text).toContain("Unexpected token");
+    expect(text).toContain("at parse (babel)");
+  });
+
+  it("mixes problems and plain messages in one set", async () => {
+    await start();
+    await page.goto(hotApp.url);
+
+    await page.evaluate(() => {
+      globalThis.overlayA.showProblems(
+        "errors",
+        ["a plain message", { moduleName: "./src/b.js", message: "an object" }],
+        "a",
+      );
+    });
+
+    const frame = await overlayFrame();
+
+    expect(await frame.evaluate(() => document.body.textContent)).toContain(
+      "1 / 2",
+    );
+  });
+
   it("dismisses on Escape pressed inside the overlay frame", async () => {
     await start();
     await page.goto(hotApp.url);

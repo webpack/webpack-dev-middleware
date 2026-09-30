@@ -388,11 +388,36 @@ function formatErrors(errors) {
     return /** @type {string[]} */ (errors);
   }
 
+  // The same shape the browser runtime builds from an error object, so a
+  // problem reads the same whether this formatted it or a server sent the
+  // object over and `client/problem` did. Written out rather than shared:
+  // this half is CommonJS in node, that half is an ES module in a bundle.
   return /** @type {StatsError[]} */ (errors).map((error) => {
-    const moduleName = error.moduleName || "";
-    const loc = error.loc || "";
+    const file = error.file || "";
+    const request = error.moduleName || "";
+    const loaded = request.includes("!");
+    const moduleName = loaded ? request.replace(/^(\s|\S)*!/, "") : request;
 
-    return `${moduleName} ${loc}\n${error.message}`;
+    let where = moduleName || file;
+
+    if (where) {
+      if (loaded) {
+        where += ` (${request})`;
+      }
+
+      if (moduleName && file && file !== moduleName) {
+        where += ` (${file})`;
+      }
+
+      if (error.loc) {
+        where += ` ${error.loc}`;
+      }
+    }
+
+    // Nothing on the first line rather than a line holding a single space,
+    // which is what an error webpack names no module for used to send — and
+    // the overlay reads that first line as the heading.
+    return where ? `${where}\n${error.message}` : `${error.message}`;
   });
 }
 

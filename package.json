@@ -41,6 +41,10 @@
       "types": "./types/client/overlay.d.ts",
       "default": "./client/overlay.js"
     },
+    "./client/problem": {
+      "types": "./types/client/problem.d.ts",
+      "default": "./client/problem.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "dist/index.js",
