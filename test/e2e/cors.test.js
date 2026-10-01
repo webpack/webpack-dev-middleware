@@ -147,7 +147,14 @@ describe("reading the event stream from another origin (browser)", () => {
 
       await page.goto(`http://${host}:${port}/`);
 
-      return connectFromPage(`ws://127.0.0.1:${port}/__webpack_hmr`);
+      // The fixture asks for a token, and this test builds its own url rather
+      // than using the injected client's — so it carries the one the
+      // middleware resolved.
+      const token = encodeURIComponent(hotApp.instance.token);
+
+      return connectFromPage(
+        `ws://127.0.0.1:${port}/__webpack_hmr?token=${token}`,
+      );
     };
 
     it("refuses an origin the default does not allow", async () => {
