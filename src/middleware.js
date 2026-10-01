@@ -186,21 +186,30 @@ async function getFilenameFromUrl(context, url) {
         compilation.outputOptions.path || "",
       );
 
-      // Strip the `pathname` property from the `publicPath` option from the start of requested url
+      // What is left of the request once the `publicPath` prefix is off, and
+      // what gets joined onto the output root.
       // `/complex/foo.js` => `foo.js`
-      // and add outputPath
-      // `foo.js` => `/home/user/my-project/dist/foo.js`
-      filename = path.join(
-        outputPath,
-        pathname.slice(publicPathPathname.length),
-      );
+      const relativePathname = pathname.slice(publicPathPathname.length);
 
-      // The resolved filename must stay within `outputPath`. When `publicPath`
-      // has no trailing slash a sibling path can share its prefix (for example
-      // `/assets../secret` starts with `/assets`), so the stripped remainder may
-      // contain `..` that escapes the output root once joined. The `..` guard
-      // above runs on the un-stripped pathname and does not catch this, so
-      // verify containment on the final path.
+      // A `..` in that remainder walks out of the output root, and the guard
+      // above catches almost none of them: it tests the *normalized* whole
+      // pathname, where `/public/../secret` has become `secret` with no `..`
+      // segment left to match, and `/assets../secret` never had a `..` segment
+      // to begin with — it is a sibling that merely shares the prefix, which a
+      // `publicPath` with no trailing slash makes possible. So the remainder is
+      // checked on its own, before it is joined onto anything.
+      if (UP_PATH_REGEXP.test(path.normalize(`./${relativePathname}`))) {
+        throw new FilenameError("Forbidden", 403);
+      }
+
+      // `foo.js` => `/home/user/my-project/dist/foo.js`
+      filename = path.join(outputPath, relativePathname);
+
+      // ... and whatever that resolved to has to be inside the output root.
+      // Nothing above is expected to let an escape through any more, which is
+      // the point of keeping this: it is the one check that reasons about the
+      // final path rather than the shape of the request, so it still holds if
+      // some encoding or platform quirk gets past the others.
       const relative = path.relative(outputPath, filename);
 
       if (
