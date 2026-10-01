@@ -1,0 +1,31 @@
+name: "webpack-dev-middleware CodeQL config"
+
+# `security-extended` over the default suite: the default set is tuned to be
+# quiet, and the queries this project most wants are in the extended one —
+# client-side cross-site scripting, `innerHTML` built from input, path
+# traversal through a request, and inefficient regular expressions. All four
+# describe something this package actually does: it renders a build's output
+# as HTML and serves files from a url.
+queries:
+  - uses: security-extended
+
+paths:
+  - src
+  - client-src
+  - scripts
+
+# Build output, and the fixtures tests compile on purpose. `dist/`, `client/`
+# and `types/` are generated from `src/` and `client-src/`, so analysing them
+# reports the same finding twice and points at a file nobody edits. The
+# fixtures under `test/` are deliberately broken or deliberately hostile —
+# that is what they are for.
+paths-ignore:
+  - dist
+  - client
+  - types
+  - coverage
+  - coverage-e2e
+  - coverage-client
+  - test/fixtures
+  - test/outputs
+  - examples/**/dist

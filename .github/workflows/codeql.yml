@@ -1,0 +1,55 @@
+name: CodeQL
+
+# What the test suite cannot do: the tests check the cases somebody thought of,
+# and this reads every path through the code for the shapes that have bitten
+# this package before — markup built from a build's output, a filename built
+# from a request, a regular expression run on either.
+on:
+  push:
+    branches:
+      - main
+      - next
+      - hot-middleware
+  pull_request:
+    branches:
+      - main
+      - next
+      - hot-middleware
+  # Queries and models improve between pushes, so the code is re-read even when
+  # it has not changed. Not on the hour: schedules at :00 are the busiest and
+  # are delayed the longest.
+  schedule:
+    - cron: "41 4 * * 1"
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      # To upload the results to code scanning.
+      security-events: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          # One language, so no matrix: this package is JavaScript, and the
+          # `.d.ts` files are generated from it.
+          languages: javascript-typescript
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          category: "/language:javascript-typescript"
