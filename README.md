@@ -1290,6 +1290,69 @@ app.use((err, req, res, next) => {
 });
 ```
 
+## Security
+
+A development server is reachable by anything that can reach the machine it runs on, and a bundle is your source. The middleware is one part of your server, so it only answers for its own part — this is the line, so that nothing is assumed to be covered that is not.
+
+### What the middleware answers for
+
+[`hot.cors`](#hotcors) decides which origins may reach the hot endpoint, over either transport. Its default allows only local origins, so a site the developer merely has open cannot read a build's module paths or the source frames webpack puts in a failed build's errors. That is the whole of it, and it is a default rather than a policy: the middleware never hands out access it was not asked for.
+
+### What your server answers for
+
+Anything whose answer depends on how your server is exposed, which the middleware has no way to know.
+
+**Who may load the assets.** A `<script>` tag ignores the same-origin policy, so a site that knows your port and output path can load a bundle and read it back out of webpack's module registry. `Cross-Origin-Resource-Policy` stops that:
+
+```js
+app.use((_req, res, next) => {
+  res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+  next();
+});
+
+app.use(middleware(compiler, { hot: true }));
+```
+
+Deliberately not the middleware's default: module federation remotes and micro-frontends load development bundles cross-origin on purpose, and only your server knows whether yours is one of them.
+
+**Which hostnames you answer to.** Nothing here reads the `Host` header, so a name that resolves to your machine reaches your server — which is how DNS rebinding turns a public domain into a request to `localhost`. Match the hostnames you expect, and refuse the rest:
+
+```js
+const ALLOWED = new Set(["localhost:8080", "127.0.0.1:8080"]);
+
+app.use((req, res, next) => {
+  if (!ALLOWED.has(req.headers.host)) {
+    res.status(403).end("Invalid Host header");
+    return;
+  }
+
+  next();
+});
+```
+
+**Who may connect, when you have a rule of your own.** If your server already decides this — reading the `Origin` in [`onConnect(fn)`](#onconnectfn), or owning the upgrade with [`handleUpgrade`](#handleupgradereq-socket-head) — set `cors: true` so yours is the only rule and the middleware's default does not refuse first:
+
+```js
+const instance = middleware(compiler, {
+  hot: { transport: "ws", cors: true },
+});
+
+server.on("upgrade", (req, socket, head) => {
+  if (!myOwnRuleAllows(req)) {
+    socket.destroy();
+    return;
+  }
+
+  if (!instance.handleUpgrade(req, socket, head)) {
+    socket.destroy();
+  }
+});
+```
+
+### Or let the server that has all of this do it
+
+[webpack-dev-server](https://github.com/webpack/webpack-dev-server) is this middleware with every one of the above already wired up — `allowedHosts`, the cross-origin checks, the response headers — so none of it is yours to write.
+
 ## FAQ
 
 ### Avoid blocking requests to non-webpack resources.
