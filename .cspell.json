@@ -41,7 +41,8 @@
     "webworker",
     "nwjs",
     "expressjs",
-    "wildcarded"
+    "wildcarded",
+    "jshttp"
   ],
   "ignorePaths": [
     "CHANGELOG.md",

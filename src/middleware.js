@@ -2,8 +2,6 @@ const path = require("node:path");
 const querystring = require("node:querystring");
 const { finished } = require("node:stream");
 
-const mime = require("mime-types");
-
 const { pathMatch: hotPathMatch } = require("./hot");
 
 const {
@@ -982,7 +980,9 @@ function wrapper(context) {
       ) {
         removeResponseHeader(res, "Content-Type");
         // content-type name (like application/javascript; charset=utf-8) or false
-        const contentType = mime.contentType(path.extname(filename));
+        const contentType = context.mimeTypes.contentType(
+          path.extname(filename),
+        );
 
         // Only set content-type header if media type is known
         // https://tools.ietf.org/html/rfc7231#section-3.1.1.5
