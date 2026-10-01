@@ -1394,6 +1394,11 @@ const isOverlayAsking = (req) =>
   req.headers["sec-fetch-site"] === "same-origin";
 
 app.get("/__open-editor", (req, res) => {
+  // Nothing about this response is worth keeping: it exists for the side
+  // effect, carries no body, and which answer is correct depends on who asked.
+  // A stored one could be handed to a caller the checks below would refuse.
+  res.setHeader("Cache-Control", "no-store");
+
   if (!isOverlayAsking(req, res)) {
     res.status(403).end("Not an allowed caller");
     return;
@@ -1446,6 +1451,11 @@ That is the one definition to swap. The route, and every path check in it, stays
 const OVERLAY_ORIGINS = new Set(["http://localhost:8080"]);
 
 const isOverlayAsking = (req, res) => {
+  // Before the check rather than after it: the refusal depends on the origin
+  // too, so neither answer may be reused across origins. The middleware's own
+  // hot endpoint does the same — see `src/cors.js`.
+  res.setHeader("Vary", "Origin");
+
   if (!OVERLAY_ORIGINS.has(req.headers.origin)) {
     return false;
   }
