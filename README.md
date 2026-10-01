@@ -337,6 +337,7 @@ The object form accepts these options:
 |       **[`server`](#hotserver)**       |                            `object`                             |    `undefined`     | HTTP server the `'ws'` transport answers upgrades on.                                   |
 |     **[`progress`](#hotprogress)**     |                            `boolean`                            |      `false`       | Publish compilation progress events to the clients.                                     |
 |         **[`cors`](#hotcors)**         | `boolean \| string \| string[] \| RegExp \| function \| object` |     see below      | Which origins may reach the endpoint from a page on another one, over either transport. |
+|        **[`token`](#hottoken)**        |                       `boolean \| string`                       |     see below      | A secret the injected client carries and the endpoint requires, over either transport.  |
 |       **[`inject`](#hotinject)**       |                            `boolean`                            |       `true`       | Add the client entry and `HotModuleReplacementPlugin`.                                  |
 | **[`statsOptions`](#hotstatsoptions)** |                            `object`                             |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).                                         |
 
@@ -536,6 +537,62 @@ A **function** [transport](#hottransport) of your own is handed the option as it
 > The local-origins set trusts every other server on the developer's own machine, because it cannot tell them apart from your dev server. If one of them serves content someone else controls, set `cors` to the origins you actually use.
 >
 > This is about who may reach the endpoint, and nothing else. It does not decide who may reach the **assets** the middleware serves, which is your server's to answer — with a `Cross-Origin-Resource-Policy` response header, or with whatever your framework's own CORS middleware does.
+
+#### `hot.token`
+
+Type: `Boolean | String`
+Default: `false`
+
+A secret the injected client carries and the endpoint requires. Reaching the stream then takes something a page has to have been **given**, rather than a header a browser may or may not send.
+
+[`cors`](#hotcors) is answered by `Origin`, and that is the weakness: a browser omits `Origin` and the whole `Sec-Fetch-*` family when the destination is not [potentially trustworthy](https://w3c.github.io/webappsec-secure-contexts/#is-origin-trustworthy) — plain `http` to anything but `localhost`, which is what `host: '0.0.0.0'` gives you. webpack-dev-server shipped two fixes built on those headers and both were bypassed exactly that way ([CVE-2026-6402](https://github.com/advisories/GHSA-79cf-xcqc-c78w), then [CVE-2026-14620](https://github.com/advisories/GHSA-f5vj-f2hx-8m93)). A token asks the browser to volunteer nothing.
+
+**Off by default, on both transports**, and `true` in the next major release. A token only reaches the browser on the entry this middleware adds, and `inject` being on does not mean an entry was added — it is skipped when every entry point already pulls the client in, when [`hot.transport`](#hottransport) is a function, and for a non-web target. Requiring one by default would turn each of those into a `403` on every client.
+
+Turn it on, which is all the normal setup needs — the client is injected, so it is handed the token and uses it:
+
+```js
+app.use(middleware(compiler, { hot: { token: true } }));
+```
+
+If you turn it on where no client was injected, the middleware says so rather than leaving you with an unexplained `403`:
+
+```
+[webpack-dev-middleware] 'hot.token' requires a token on the endpoint, but no
+client entry was added to hand one over, so every client will be refused.
+```
+
+> [!IMPORTANT]
+>
+> **What a token does not protect.** The client reads it from its entry query, so it is a string in the bundle. Anything that can already read your bundle cross-origin can read the token out of it — and over plain `http` to a non-`localhost` address, nothing stops that unless your server sends `Cross-Origin-Resource-Policy`. The token hardens every case where the bundle is not readable; where it is, your source has already gone and the stream is the smaller loss. Closing that needs the response header and a `Host` allowlist, which are [your server's](#security) to set.
+
+**Wiring the client yourself.** The token travels in the entry this middleware adds, so `hot.inject: false` turns the requirement off — there would be no way to hand one over, and requiring it would refuse a client you wired correctly.
+
+A configuration that already lists the client as an entry is the other half of that: it is built before the middleware exists, so it cannot carry a token minted per run. Give it one of your own instead, which both sides can know in advance:
+
+```js
+const token = "a-secret-of-my-own";
+
+// webpack.config.js
+entry: [`webpack-dev-middleware/client?token=${token}`, "./src/index.js"];
+
+// and the middleware
+app.use(middleware(compiler, { hot: { transport: "ws", token } }));
+```
+
+Or read the minted one off the instance, for a client you serve yourself:
+
+```js
+const instance = middleware(compiler, {
+  hot: { transport: "ws", token: true },
+});
+
+app.get("/my-client-config.json", (_req, res) => {
+  res.json({ token: instance.token });
+});
+```
+
+`false` requires none, which is the default.
 
 #### `hot.inject`
 

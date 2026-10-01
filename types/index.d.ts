@@ -389,6 +389,10 @@ type AdditionalMethods<
    */
   onConnect: OnConnect;
   /**
+   * the secret the hot endpoint requires, for a client of your own to put on the url; false when it requires none, undefined when `hot` is off
+   */
+  token?: (string | false | undefined) | undefined;
+  /**
    * close
    */
   close: Close;

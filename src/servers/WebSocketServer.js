@@ -10,6 +10,7 @@
 
 const {
   HOT_DEFAULT_CORS_WS,
+  isTokenValid,
   isUpgradeAllowed,
   resolveCors,
 } = require("../utils.js");
@@ -41,10 +42,14 @@ function requireWsServer() {
  * @param {string} options.path the path the endpoint is served at
  * @param {number} options.heartbeat heartbeat interval in milliseconds
  * @param {CorsOption=} options.cors which origins may connect, the local ones by default
+ * @param {(string | false)=} options.token the token the endpoint requires, or false for none
  * @param {Logger} logger logger
  * @returns {ClientStream} client stream
  */
-function createWebSocketStream({ path, heartbeat, cors }, logger) {
+function createWebSocketStream(
+  { path, heartbeat, cors, token = false },
+  logger,
+) {
   const WebSocketServerImplementation = requireWsServer();
   const corsGrant = resolveCors(cors ?? HOT_DEFAULT_CORS_WS);
   /** @type {Set<WebSocket>} */
@@ -173,6 +178,19 @@ function createWebSocketStream({ path, heartbeat, cors }, logger) {
     // attention to what comes back, so the `cors` option can only be honoured
     // on this wire by refusing the upgrade — before it completes, rather than
     // closing the client afterwards, so nothing is ever published to it.
+    if (!isTokenValid(token, req)) {
+      logger.warn(
+        `An upgrade to "${req.url}" was refused: it carried no valid 'token'. The injected client is given one; a client of your own has to pass it, or set 'hot.token' to a value it can use.`,
+      );
+
+      socket.write(
+        "HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n",
+      );
+      socket.destroy();
+
+      return true;
+    }
+
     if (!isUpgradeAllowed(corsGrant, req)) {
       logger.warn(
         `A client from the origin "${req.headers.origin}" was refused. Add it to the 'hot.cors' option to allow it.`,

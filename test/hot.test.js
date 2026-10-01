@@ -1458,7 +1458,12 @@ describe("createHot over a WebSocket", () => {
 
     cleanups.push(stop);
 
-    return { hot, url: `ws://127.0.0.1:${port}${hot.path}`, stop };
+    // The injected client is handed the token through its entry query, so a
+    // test client carries it the same way whenever one was asked for. The
+    // tests that are about the token build their own url.
+    const token = hot.token ? `?token=${encodeURIComponent(hot.token)}` : "";
+
+    return { hot, url: `ws://127.0.0.1:${port}${hot.path}${token}`, stop };
   }
 
   /**
@@ -1603,10 +1608,10 @@ describe("createHot over a WebSocket", () => {
     await until(() => joined.length > 0);
 
     // Same as the Server-Sent Events stream: the request a client arrived
-    // with, headers and all, so a caller can judge it.
-    expect(joined[0].headers.host).toBe(
-      endpoint.url.replace("ws://", "").replace(endpoint.hot.path, ""),
-    );
+    // with, headers and all, so a caller can judge it. Read off the url rather
+    // than stripped out of it, so the token query does not end up in the
+    // expected host.
+    expect(joined[0].headers.host).toBe(new URL(endpoint.url).host);
   });
 
   it("publishes nothing to a client a subscriber closed", async () => {
@@ -1685,6 +1690,98 @@ describe("createHot over a WebSocket", () => {
   // subject to CORS, so a browser sends `Origin` and pays no attention to what
   // comes back. Refused before the handshake completes, so nothing is ever
   // published to a client that should not have one.
+  describe("the token", () => {
+    // Off by default on both transports: a token only reaches the browser on
+    // the entry the middleware adds, and there are several ways for no entry
+    // to be added — so requiring one by default would refuse every client of
+    // a setup that wired itself.
+    it("is required of nobody by default", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler());
+
+      expect(endpoint.hot.token).toBe(false);
+
+      const { socket } = await connect(endpoint.url);
+
+      expect(socket.readyState).toBe(socket.OPEN);
+    });
+
+    it("is minted per run when it is turned on", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler(), { token: true });
+
+      expect(typeof endpoint.hot.token).toBe("string");
+      expect(/** @type {string} */ (endpoint.hot.token).length).toBeGreaterThan(
+        8,
+      );
+
+      const second = await serveOverWs(makeFakeCompiler(), { token: true });
+
+      expect(second.hot.token).not.toBe(endpoint.hot.token);
+    });
+
+    it("refuses a handshake that carries none", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler(), { token: true });
+      const withoutToken = endpoint.url.replace(/\?token=.*$/, "");
+
+      await expect(connect(withoutToken)).rejects.toThrow(
+        "Unexpected server response: 403",
+      );
+    });
+
+    it("refuses a handshake that carries the wrong one", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler(), { token: true });
+      const wrong = endpoint.url.replace(/\?token=.*$/, "?token=not-the-token");
+
+      await expect(connect(wrong)).rejects.toThrow(
+        "Unexpected server response: 403",
+      );
+    });
+
+    it("refuses one that is right apart from its length", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler(), { token: true });
+      const truncated = endpoint.url.slice(0, -1);
+
+      await expect(connect(truncated)).rejects.toThrow(
+        "Unexpected server response: 403",
+      );
+    });
+
+    it("takes a token of your own, for a client you wrote", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler(), {
+        token: "a-token-of-my-own",
+      });
+
+      expect(endpoint.hot.token).toBe("a-token-of-my-own");
+
+      const { socket } = await connect(endpoint.url);
+
+      expect(socket.readyState).toBe(socket.OPEN);
+    });
+
+    it("requires none when it is turned off", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler(), { token: false });
+
+      expect(endpoint.hot.token).toBe(false);
+
+      const { socket } = await connect(endpoint.url);
+
+      expect(socket.readyState).toBe(socket.OPEN);
+    });
+
+    // The token is checked before the origin, so a caller without one learns
+    // nothing about which origins the endpoint would have allowed.
+    it("is checked before the origin", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler(), {
+        token: true,
+        cors: "https://allowed.example",
+      });
+      const withoutToken = endpoint.url.replace(/\?token=.*$/, "");
+
+      await expect(
+        connect(withoutToken, { origin: "https://allowed.example" }),
+      ).rejects.toThrow("Unexpected server response: 403");
+    });
+  });
+
   describe("the cross-origin grant", () => {
     it("refuses an origin the default does not allow", async () => {
       const endpoint = await serveOverWs(makeFakeCompiler());
@@ -1873,7 +1970,14 @@ describe("createHot over a transport of your own", () => {
     });
 
     // Resolved, not raw: a transport should not have to re-apply the defaults.
-    expect(received).toEqual({ heartbeat: 1234, path: "/__custom" });
+    // `cors` and `token` come through too, so a transport of your own can
+    // enforce the same two rules the built-in ones do.
+    expect(received).toEqual({
+      cors: undefined,
+      heartbeat: 1234,
+      path: "/__custom",
+      token: false,
+    });
 
     hot.close();
   });

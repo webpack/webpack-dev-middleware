@@ -51,6 +51,7 @@
  * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
  * @property {boolean=} progress publish compilation progress events to the clients
  * @property {CorsOption=} cors which origins may reach the endpoint from a page on another one; the local ones by default
+ * @property {(boolean | string)=} token a secret the injected client carries and the endpoint requires; `true` mints one per run, a string uses that one, `false` requires none. Defaults to `false` on both transports; `true` in the next major release
  * @property {boolean=} inject add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
  * @property {HotClientOptions=} client options handed to the browser runtime through its entry query
  */
@@ -128,7 +129,7 @@
  * built-in two are made of whatever this returns.
  * @template {EXPECTED_ANY} [TClient=StreamClient]
  * @callback ClientStreamFactory
- * @param {{ path: string, heartbeat: number, cors: CorsOption | undefined }} options the endpoint's path and heartbeat interval, and the origins it is meant to allow
+ * @param {{ path: string, heartbeat: number, cors: CorsOption | undefined, token: string | false }} options the endpoint's path and heartbeat interval, the origins it is meant to allow, and the token it should require
  * @param {Logger} logger logger
  * @returns {ClientStream<TClient>} client stream
  */
@@ -141,7 +142,13 @@
 // module paths and source frames a failed build reports. Both transports
 // honour it now, each the only way it can be honoured on that wire: the event
 // stream withholds the grant, and an upgrade is refused.
-const { HOT_DEFAULT_CORS_SSE, applyCors, resolveCors } = require("./utils.js");
+const {
+  HOT_DEFAULT_CORS_SSE,
+  applyCors,
+  isTokenValid,
+  resolveCors,
+  resolveToken,
+} = require("./utils.js");
 
 const HOT_DEFAULT_PATH = "/__webpack_hmr";
 const HOT_DEFAULT_HEARTBEAT = 10 * 1000;
@@ -241,9 +248,10 @@ function checkClientStream(stream) {
  * @param {number} heartbeat heartbeat interval in milliseconds
  * @param {Logger} logger logger
  * @param {CorsOption=} cors which origins may read the stream, the local ones by default
+ * @param {(string | false)=} token the token the endpoint requires, or false for none
  * @returns {EventStream} event stream
  */
-function createEventStream(heartbeat, logger, cors) {
+function createEventStream(heartbeat, logger, cors, token = false) {
   const corsGrant = resolveCors(cors ?? HOT_DEFAULT_CORS_SSE);
   let clientId = 0;
   /** @type {Map<number, ServerResponse>} */
@@ -314,6 +322,17 @@ function createEventStream(heartbeat, logger, cors) {
         if (!res.writableEnded) {
           res.end();
         }
+        return;
+      }
+
+      // Before the stream, and without the CORS grant: a caller that does not
+      // carry the token is told nothing about who may read this endpoint.
+      if (!isTokenValid(token, req)) {
+        logger.warn(
+          `A request to "${req.url}" was refused: it carried no valid 'token'. The injected client is given one; a client of your own has to pass it, or set 'hot.token' to a value it can use.`,
+        );
+        res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end("Forbidden");
         return;
       }
 
@@ -601,6 +620,7 @@ function publishBundles(bundles, previousBundles, eventStream) {
  * @typedef {object} HotInstance
  * @property {string} path path the endpoint is served at
  * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)} transport how events reach the clients
+ * @property {string | false} token the secret the endpoint requires, or false when it requires none; the injected client is given it
  * @property {(server: HttpServer) => void} attach answer WebSocket upgrades on this server, a no-op for Server-Sent Events
  * @property {(req: IncomingMessage, socket: Duplex, head: Buffer) => boolean} handleUpgrade answer one WebSocket upgrade, for a caller that owns the server's `upgrade` event and wants to decide each one; returns false when the request is not the endpoint's, or the transport does not answer upgrades
  * @property {(fn: (client: EXPECTED_ANY, req: IncomingMessage) => void) => void} onConnect called with each client once it has joined, and the request it joined with, before anything is published to it
@@ -622,6 +642,13 @@ function createHot(compiler, userOptions, statsOption) {
   const transport = options.transport || HOT_DEFAULT_TRANSPORT;
   const { cors } = options;
   const { statsOptions } = options;
+  // `inject: false` turns it off: the token reaches the browser through the
+  // entry this middleware adds, so with nothing injected there is no way to
+  // hand one over, and requiring it would refuse a client the developer wired
+  // correctly. Off by default either way — see `HOT_DEFAULT_TOKEN`.
+  const token = resolveToken(
+    options.inject === false ? (options.token ?? false) : options.token,
+  );
   const logger = compiler.getInfrastructureLogger("webpack-dev-middleware");
 
   // TODO in the next major release remove `statsOptions` and this warning
@@ -638,7 +665,7 @@ function createHot(compiler, userOptions, statsOption) {
 
   if (typeof transport === "function") {
     eventStream = checkClientStream(
-      transport({ heartbeat, path, cors }, logger),
+      transport({ heartbeat, path, cors, token }, logger),
     );
     transportName = "a custom transport";
   } else if (transport === "ws") {
@@ -648,10 +675,13 @@ function createHot(compiler, userOptions, statsOption) {
 
     const createWebSocketStream = require("./servers/WebSocketServer.js");
 
-    eventStream = createWebSocketStream({ heartbeat, path, cors }, logger);
+    eventStream = createWebSocketStream(
+      { heartbeat, path, cors, token },
+      logger,
+    );
     transportName = "a WebSocket";
   } else {
-    eventStream = createEventStream(heartbeat, logger, cors);
+    eventStream = createEventStream(heartbeat, logger, cors, token);
     transportName = "Server-Sent Events";
   }
 
@@ -778,6 +808,7 @@ function createHot(compiler, userOptions, statsOption) {
   return {
     path,
     transport,
+    token,
     attach(server) {
       if (closed || !eventStream.attach) {
         return;

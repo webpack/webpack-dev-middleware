@@ -118,6 +118,7 @@ export type MimeDbEntry = {
 export const CORS_LOCAL_ORIGINS: RegExp;
 export const HOT_DEFAULT_CORS_SSE: true;
 export const HOT_DEFAULT_CORS_WS: RegExp;
+export const HOT_DEFAULT_TOKEN: false;
 /**
  * Add the cross-origin grant the `cors` option asks for, if any.
  *
@@ -340,8 +341,10 @@ export function initState<
  * The client is given the endpoint, the transport and the browser options
  * through its resource query, so it agrees with the server by construction
  * rather than by the developer keeping two settings in step.
+ */
+/**
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: HotClientOptions }} options resolved hot options
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: HotClientOptions, token?: string | false }} options resolved hot options
  * @param {Logger} logger logger
  */
 export function injectHotClient(
@@ -351,6 +354,7 @@ export function injectHotClient(
     transport: NonNullable<HotOptions["transport"]>;
     inject?: boolean;
     client?: HotClientOptions;
+    token?: string | false;
   },
   logger: Logger,
 ): void;
@@ -366,6 +370,21 @@ export function injectHotClient(
  * @returns {boolean} true when the two are the same origin
  */
 export function isSameOrigin(req: IncomingMessage, origin: string): boolean;
+/**
+ * Does the request carry the token the endpoint requires?
+ *
+ * Compared in constant time. The comparison is not a plausible oracle — a
+ * token lives for one run of one dev server — but a length-dependent early
+ * return would be the kind of thing a reader has to reason about, and
+ * `timingSafeEqual` costs nothing here.
+ * @param {string | false} expected the resolved token, or false when none is required
+ * @param {IncomingMessage} req the request
+ * @returns {boolean} true when the request may proceed
+ */
+export function isTokenValid(
+  expected: string | false,
+  req: IncomingMessage,
+): boolean;
 /**
  * May this WebSocket handshake go ahead?
  *
@@ -501,6 +520,14 @@ export function removeResponseHeader<
  * @returns {CorsGrant} the resolved answer
  */
 export function resolveCors(cors: CorsOption): CorsGrant;
+/**
+ * The token the endpoint will require, if any.
+ * @param {boolean | string | undefined} option the `hot.token` option
+ * @returns {string | false} the token, or false when the endpoint requires none
+ */
+export function resolveToken(
+  option: boolean | string | undefined,
+): string | false;
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res
