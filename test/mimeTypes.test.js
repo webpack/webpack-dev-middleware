@@ -3,7 +3,7 @@ import db from "mime-db";
 // can be held to it rather than to a list someone wrote out by hand.
 import mimeTypes from "mime-types";
 
-import createMimeTypes from "../src/mimeTypes";
+import { createMimeTypes } from "../src/utils";
 
 const mime = createMimeTypes();
 

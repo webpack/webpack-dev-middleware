@@ -1,4 +1,4 @@
-import { CORS_LOCAL_ORIGINS } from "../../src/cors";
+import { CORS_LOCAL_ORIGINS } from "../../src/utils";
 import { closeE2e } from "../helpers/e2e";
 import createHotApp from "../helpers/hot-app";
 import runBrowser from "../helpers/run-browser";

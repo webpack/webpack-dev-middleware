@@ -12,7 +12,7 @@ const {
   HOT_DEFAULT_CORS_WS,
   isUpgradeAllowed,
   resolveCors,
-} = require("../cors.js");
+} = require("../utils.js");
 
 // How often a client is pinged to find out whether it is still there. A client
 // that has not answered the previous ping is dropped rather than pinged again.

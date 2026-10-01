@@ -141,8 +141,7 @@
 // module paths and source frames a failed build reports. Both transports
 // honour it now, each the only way it can be honoured on that wire: the event
 // stream withholds the grant, and an upgrade is refused.
-const { HOT_DEFAULT_CORS_SSE, applyCors, resolveCors } = require("./cors.js");
-const createWebSocketStream = require("./servers/WebSocketServer.js");
+const { HOT_DEFAULT_CORS_SSE, applyCors, resolveCors } = require("./utils.js");
 
 const HOT_DEFAULT_PATH = "/__webpack_hmr";
 const HOT_DEFAULT_HEARTBEAT = 10 * 1000;
@@ -643,6 +642,12 @@ function createHot(compiler, userOptions, statsOption) {
     );
     transportName = "a custom transport";
   } else if (transport === "ws") {
+    // Required here rather than at the top: it pulls in `ws`, and the default
+    // transport is Server-Sent Events, so a project that never asks for a
+    // WebSocket should not pay to load either.
+
+    const createWebSocketStream = require("./servers/WebSocketServer.js");
+
     eventStream = createWebSocketStream({ heartbeat, path, cors }, logger);
     transportName = "a WebSocket";
   } else {
