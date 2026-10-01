@@ -142,34 +142,16 @@
 // module paths and source frames a failed build reports. Both transports
 // honour it now, each the only way it can be honoured on that wire: the event
 // stream withholds the grant, and an upgrade is refused.
-// The CORS and token rules themselves live with the transports that enforce
-// them, in `./servers`. What is left here is the default each one starts from
-// and the mint that hands a token to both.
-const { HOT_DEFAULT_CORS_SSE, resolveToken } = require("./utils.js");
+// The CORS rules, and the default each transport starts from, live with the
+// transport that applies them in `./servers`. What is left here is the mint
+// that hands one token to whichever of them is built.
+const { resolveToken } = require("./utils.js");
 
 const HOT_DEFAULT_PATH = "/__webpack_hmr";
 const HOT_DEFAULT_HEARTBEAT = 10 * 1000;
 const HOT_DEFAULT_TRANSPORT = "sse";
 const PLUGIN_NAME = "DevMiddleware";
 
-/**
- * @param {string | undefined} url url
- * @param {string} expected expected pathname
- * @returns {boolean} true when the url pathname matches the expected path
- */
-function pathMatch(url, expected) {
-  if (!url) return false;
-
-  try {
-    return new URL(url, "http://localhost").pathname === expected;
-  } catch {
-    return false;
-  }
-}
-
-// What a transport has to do for itself. Missing one of these would throw from
-// wherever the stream is first published to, which is a long way from the
-// option that built it.
 /**
  * Load the module for the transport that was chosen, and only that one.
  *
@@ -187,6 +169,9 @@ function requireServer(name) {
     : require("./servers/EventSourceServer.js");
 }
 
+// What a transport has to do for itself. Missing one of these would throw from
+// wherever the stream is first published to, which is a long way from the
+// option that built it.
 const CLIENT_STREAM_METHODS = ["close", "onConnect", "publish", "publishTo"];
 
 // What it may also do. Absent is fine; present and not a function is not — that
@@ -701,7 +686,6 @@ function createHot(compiler, userOptions, statsOption) {
 }
 
 module.exports = createHot;
-module.exports.HOT_DEFAULT_CORS_SSE = HOT_DEFAULT_CORS_SSE;
 module.exports.HOT_DEFAULT_HEARTBEAT = HOT_DEFAULT_HEARTBEAT;
 module.exports.HOT_DEFAULT_PATH = HOT_DEFAULT_PATH;
 module.exports.HOT_DEFAULT_TRANSPORT = HOT_DEFAULT_TRANSPORT;
@@ -718,6 +702,5 @@ module.exports.createEventStream = (heartbeat, logger, cors, token) =>
   requireServer("EventSourceServer")(heartbeat, logger, cors, token);
 module.exports.createHot = createHot;
 module.exports.formatErrors = formatErrors;
-module.exports.pathMatch = pathMatch;
 module.exports.publishBundles = publishBundles;
 module.exports.toBundles = toBundles;

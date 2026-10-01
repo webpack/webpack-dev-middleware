@@ -6,12 +6,21 @@
 /** @typedef {import("../hot.js").StreamClient} StreamClient */
 /** @typedef {import("../hot.js").CorsOption} CorsOption */
 
-const {
-  HOT_DEFAULT_CORS_SSE,
-  applyCors,
-  isTokenValid,
-  resolveCors,
-} = require("../utils.js");
+const { applyCors, isTokenValid, resolveCors } = require("../utils.js");
+
+// TODO in the next major release default the Server-Sent Events endpoint to
+// `CORS_LOCAL_ORIGINS` too, so one default covers both transports, and say so
+// in the changelog as a breaking change.
+//
+// Until 8.4 the endpoint answered every request with
+// `Access-Control-Allow-Origin: *`, inherited from `webpack-hot-middleware`,
+// and no option could turn it off. That grant let any site a developer had
+// open read the stream — and with it the module paths and source frames a
+// failed build reports — so the local-origins set is what it should be. But
+// narrowing it would stop a page served from anywhere else reading its own
+// build, which is a break, and this release is a minor. So it stays as it
+// shipped, and `cors` is how you narrow it today.
+const HOT_DEFAULT_CORS_SSE = true;
 
 /**
  * @param {number} heartbeat heartbeat interval in milliseconds

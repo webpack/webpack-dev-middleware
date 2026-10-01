@@ -116,8 +116,6 @@ export type MimeDbEntry = {
 /** @typedef {import("./hot.js").CorsOption} CorsOption */
 /** @typedef {import("./hot.js").CorsOrigin} CorsOrigin */
 export const CORS_LOCAL_ORIGINS: RegExp;
-export const HOT_DEFAULT_CORS_SSE: true;
-export const HOT_DEFAULT_CORS_WS: RegExp;
 export const HOT_DEFAULT_TOKEN: false;
 /**
  * Add the cross-origin grant the `cors` option asks for, if any.
@@ -495,6 +493,16 @@ export function parseHttpDate(date: string): number;
  * @returns {string[]} tokens
  */
 export function parseTokenList(str: string): string[];
+/**
+ * Does a url's pathname match an expected path exactly?
+ *
+ * Pathname only: the hot endpoint is reached with a query on it — the client's
+ * options, and the token — and with a fragment from a page that has one.
+ * @param {string | undefined} url url
+ * @param {string} expected expected pathname
+ * @returns {boolean} true when the url pathname matches the expected path
+ */
+export function pathMatch(url: string | undefined, expected: string): boolean;
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res

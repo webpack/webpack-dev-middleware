@@ -2,8 +2,6 @@ const path = require("node:path");
 const querystring = require("node:querystring");
 const { finished } = require("node:stream");
 
-const { pathMatch: hotPathMatch } = require("./hot");
-
 const {
   createReadStreamOrReadFile,
   destroyStream,
@@ -23,6 +21,7 @@ const {
   memorize,
   parseHttpDate,
   parseTokenList,
+  pathMatch: hotPathMatch,
   pipe,
   removeResponseHeader,
   send,
