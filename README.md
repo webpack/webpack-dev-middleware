@@ -329,16 +329,16 @@ See [Hot Module Replacement client](#hot-module-replacement-client) for which co
 
 The object form accepts these options:
 
-|                  Name                  |                              Type                               |      Default       | Description                                                             |
-| :------------------------------------: | :-------------------------------------------------------------: | :----------------: | :---------------------------------------------------------------------- |
-|    **[`transport`](#hottransport)**    |                      `string \| function`                       |      `'sse'`       | How events reach the clients.                                           |
-|         **[`path`](#hotpath)**         |                            `string`                             | `'/__webpack_hmr'` | Path the endpoint is served at.                                         |
-|    **[`heartbeat`](#hotheartbeat)**    |                            `number`                             |      `10000`       | Interval (in milliseconds) between keep-alive frames.                   |
-|       **[`server`](#hotserver)**       |                            `object`                             |    `undefined`     | HTTP server the `'ws'` transport answers upgrades on.                   |
-|     **[`progress`](#hotprogress)**     |                            `boolean`                            |      `false`       | Publish compilation progress events to the clients.                     |
-|         **[`cors`](#hotcors)**         | `boolean \| string \| string[] \| RegExp \| function \| object` |   local origins    | Which origins may read the `'sse'` endpoint from a page on another one. |
-|       **[`inject`](#hotinject)**       |                            `boolean`                            |       `true`       | Add the client entry and `HotModuleReplacementPlugin`.                  |
-| **[`statsOptions`](#hotstatsoptions)** |                            `object`                             |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).                         |
+|                  Name                  |                              Type                               |      Default       | Description                                                                             |
+| :------------------------------------: | :-------------------------------------------------------------: | :----------------: | :-------------------------------------------------------------------------------------- |
+|    **[`transport`](#hottransport)**    |                      `string \| function`                       |      `'sse'`       | How events reach the clients.                                                           |
+|         **[`path`](#hotpath)**         |                            `string`                             | `'/__webpack_hmr'` | Path the endpoint is served at.                                                         |
+|    **[`heartbeat`](#hotheartbeat)**    |                            `number`                             |      `10000`       | Interval (in milliseconds) between keep-alive frames.                                   |
+|       **[`server`](#hotserver)**       |                            `object`                             |    `undefined`     | HTTP server the `'ws'` transport answers upgrades on.                                   |
+|     **[`progress`](#hotprogress)**     |                            `boolean`                            |      `false`       | Publish compilation progress events to the clients.                                     |
+|         **[`cors`](#hotcors)**         | `boolean \| string \| string[] \| RegExp \| function \| object` |   local origins    | Which origins may reach the endpoint from a page on another one, over either transport. |
+|       **[`inject`](#hotinject)**       |                            `boolean`                            |       `true`       | Add the client entry and `HotModuleReplacementPlugin`.                                  |
+| **[`statsOptions`](#hotstatsoptions)** |                            `object`                             |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).                                         |
 
 #### `hot.transport`
 
@@ -359,7 +359,7 @@ instance.attach(server);
 
 A plain `GET` on the path under `'ws'` answers `426 Upgrade Required`. A handshake from an origin [`hot.cors`](#hotcors) does not allow is refused with `403`, since a handshake is not subject to CORS and refusing is the only way that option can hold on this wire.
 
-A **function** builds a transport of your own. It is called with the resolved `path`, `heartbeat` and [`cors`](#hotcors) and a logger, and must return a client stream. Four methods are required:
+A **function** builds a transport of your own. It is called with the resolved `path` and `heartbeat`, the [`cors`](#hotcors) option as it was given, and a logger, and must return a client stream. Four methods are required:
 
 ```js
 /**

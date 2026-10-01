@@ -47,6 +47,15 @@ function matchOrigin(origin, allowed) {
     return false;
   }
 
+  // `test()` on a `g` or `y` pattern leaves `lastIndex` at the end of the
+  // match, and the option is resolved once and reused for every request — so
+  // the next request from the same origin would start matching mid-string and
+  // be refused, alternating allowed and not. Only those two flags read
+  // `lastIndex`, so only they need it reset.
+  if (allowed.global || allowed.sticky) {
+    allowed.lastIndex = 0;
+  }
+
   return allowed.test(origin);
 }
 

@@ -620,6 +620,30 @@ describe("hot middleware (unit)", () => {
         ).toBeUndefined();
       });
 
+      // `test()` on a `g` or `y` pattern leaves `lastIndex` at the end of the
+      // match, and the option is resolved once and then reused for every
+      // request — so the same origin was granted and refused by turns. One
+      // instance, asked twice, is the whole test: a pattern written fresh each
+      // time would never show it.
+      it.each([
+        ["global", /^http:\/\/a$/g],
+        ["sticky", /^http:\/\/a$/y],
+      ])(
+        "matches a %s pattern on every request, not every other one",
+        (_name, cors) => {
+          expect(grantFor(cors, "http://a").allow).toBe("http://a");
+          expect(grantFor(cors, "http://a").allow).toBe("http://a");
+          expect(grantFor(cors, "http://a").allow).toBe("http://a");
+        },
+      );
+
+      it("matches a global pattern inside a list on every request", () => {
+        const cors = ["http://b", /^http:\/\/a$/g];
+
+        expect(grantFor(cors, "http://a").allow).toBe("http://a");
+        expect(grantFor(cors, "http://a").allow).toBe("http://a");
+      });
+
       it("asks a function about each origin", () => {
         const cors = (origin) => origin.endsWith(".internal");
 
