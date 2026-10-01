@@ -6,12 +6,12 @@ const path = require("node:path");
 // eslint-disable-next-line n/no-unsupported-features/node-builtins
 const { ReadableStream } = require("node:stream/web");
 const memfs = require("memfs");
-const mime = require("mime-types");
 
 const { createHot } = require("./hot");
 const { HOT_DEFAULT_PATH } = require("./hot");
 const injectHotClient = require("./injectClient");
 const middleware = require("./middleware");
+const createMimeTypes = require("./mimeTypes");
 const { nodeReadableToWebStream } = require("./utils");
 
 const noop = () => {};
@@ -26,6 +26,7 @@ const noop = () => {};
 /** @typedef {import("./middleware").FilenameWithExtra} FilenameWithExtra */
 /** @typedef {import("./hot").HotOptions} HotOptions */
 /** @typedef {import("./hot").HotInstance} HotInstance */
+/** @typedef {import("./mimeTypes").MimeTypes} MimeTypes */
 
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_ANY */
@@ -87,6 +88,7 @@ const noop = () => {};
  * @property {Logger} logger logger
  * @property {OutputFileSystem} outputFileSystem output file system
  * @property {HotInstance=} hot hot module replacement instance
+ * @property {MimeTypes} mimeTypes extension to media type, for this instance
  */
 
 /**
@@ -485,17 +487,6 @@ function hookForWriteToDisk(compiler, context) {
 function wdm(compiler, options = {}, isPlugin = false) {
   internalValidate(compiler, options);
 
-  const { mimeTypes } = options;
-
-  if (mimeTypes) {
-    const { types } = mime;
-
-    // mimeTypes from user provided options should take priority
-    // over existing, known types
-    // @ts-expect-error
-    mime.types = { ...types, ...mimeTypes };
-  }
-
   /**
    * @type {WithOptional<Context<RequestInternal, ResponseInternal>, "watching" | "outputFileSystem">}
    */
@@ -506,6 +497,10 @@ function wdm(compiler, options = {}, isPlugin = false) {
     options,
     compiler,
     logger: compiler.getInfrastructureLogger("webpack-dev-middleware"),
+    // Per instance, with the `mimeTypes` option over the known extensions
+    // rather than written into them: the table `mime-types` exports is one
+    // object shared by everything in the process that requires it.
+    mimeTypes: createMimeTypes(options.mimeTypes),
   };
 
   // Adding hooks

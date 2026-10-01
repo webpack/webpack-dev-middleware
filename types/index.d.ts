@@ -30,6 +30,7 @@ declare namespace wdm {
     FilenameWithExtra,
     HotOptions,
     HotInstance,
+    MimeTypes,
     EXPECTED_ANY,
     EXPECTED_FUNCTION,
     ExtendedServerResponse,
@@ -135,6 +136,7 @@ type ReadStream = import("fs").ReadStream;
 type FilenameWithExtra = import("./middleware").FilenameWithExtra;
 type HotOptions = import("./hot").HotOptions;
 type HotInstance = import("./hot").HotInstance;
+type MimeTypes = import("./mimeTypes").MimeTypes;
 type EXPECTED_ANY = any;
 type EXPECTED_FUNCTION = Function;
 type ExtendedServerResponse = {
@@ -221,6 +223,10 @@ type Context<
    * hot module replacement instance
    */
   hot?: HotInstance | undefined;
+  /**
+   * extension to media type, for this instance
+   */
+  mimeTypes: MimeTypes;
 };
 type FilledContext<
   RequestInternal extends IncomingMessage = import("node:http").IncomingMessage,
