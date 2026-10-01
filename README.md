@@ -1382,6 +1382,16 @@ server.on("upgrade", (req, socket, head) => {
 const root = fs.realpathSync(path.resolve(__dirname));
 
 app.get("/__open-editor", (req, res) => {
+  // Who asked, before which file. Opening an editor is a side effect, and
+  // nothing is read back, so any page the developer happens to be visiting can
+  // trigger it with a bare `<img src="http://localhost:8080/__open-editor?...">`
+  // — no CORS involved. The overlay's own request is `same-origin`, or
+  // `same-site` when the endpoint is on another port, never `cross-site`.
+  if (req.headers["sec-fetch-site"] === "cross-site") {
+    res.status(403).end("Cross-site request");
+    return;
+  }
+
   // The trailing position, not the first colon: a Windows path starts with a
   // drive letter and a colon of its own.
   const file = String(req.query.fileName || "").replace(/:\d+:\d+$/, "");
@@ -1418,6 +1428,8 @@ app.get("/__open-editor", (req, res) => {
   res.end();
 });
 ```
+
+If you point `openEditorEndpoint` at a genuinely different site rather than a path or another port, that `cross-site` check is the one thing above you have to replace — your own overlay is cross-site too, by then. Compare the `Origin` against the origins you serve the overlay from instead, and keep every other check as it is.
 
 ### Or let the server that has all of this do it
 
