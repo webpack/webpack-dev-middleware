@@ -1394,7 +1394,7 @@ const isOverlayAsking = (req) =>
   req.headers["sec-fetch-site"] === "same-origin";
 
 app.get("/__open-editor", (req, res) => {
-  if (!isOverlayAsking(req)) {
+  if (!isOverlayAsking(req, res)) {
     res.status(403).end("Not an allowed caller");
     return;
   }
@@ -1445,7 +1445,21 @@ That is the one definition to swap. The route, and every path check in it, stays
 ```js
 const OVERLAY_ORIGINS = new Set(["http://localhost:8080"]);
 
-const isOverlayAsking = (req) => OVERLAY_ORIGINS.has(req.headers.origin);
+const isOverlayAsking = (req, res) => {
+  if (!OVERLAY_ORIGINS.has(req.headers.origin)) {
+    return false;
+  }
+
+  // Allowing the caller is only half of it: the overlay reads the response of
+  // a cross-origin `fetch`, and without this the browser discards it. The file
+  // still opens — the request reached you — but the overlay says it could not,
+  // which is worse than either outcome on its own. Echoing the origin back is
+  // safe here because the allowlist already refused everything else, including
+  // a request carrying no `Origin` at all.
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
+
+  return true;
+};
 ```
 
 **Over plain `http` to anything but `localhost`, neither check can work.** Browsers send `Sec-Fetch-*` only to a potentially trustworthy destination, so a dev server on `http://192.168.1.5:8080` — what `host: "0.0.0.0"` gives you, opened from a phone — gets no Fetch Metadata and no `Origin` on either the overlay's request or an attack. Measured in Chromium, not inferred: both arrive bare and indistinguishable. The guard above then refuses everything, which is the safe direction to fail but does mean the chips stop opening files. Reach the dev server over `localhost` or `https` to have it work, and note that binding the route to loopback does not help by itself — the browser running the attacker's page is on the developer's machine, so `localhost` is reachable from it.
