@@ -1374,6 +1374,31 @@ server.on("upgrade", (req, socket, head) => {
 });
 ```
 
+**Which file an editor is asked to open.** The path the overlay sends to your [`openEditorEndpoint`](#client-overlay-options) comes out of the build's error text, which a loader or a dependency writes — so it is not necessarily a file in your project. An error message carrying `/root/.ssh/id_rsa.pub:1:1` becomes a chip like any other, and clicking it asks your endpoint to open that. Nobody reads the file back, and the reference is shown before it is clicked, but the endpoint is the only place that knows where the project is. Resolve and check before handing anything to an editor:
+
+```js
+const root = path.resolve(__dirname);
+
+app.get("/__open-editor", (req, res) => {
+  // The trailing position, not the first colon: a Windows path starts with a
+  // drive letter and a colon of its own.
+  const file = String(req.query.fileName || "").replace(/:\d+:\d+$/, "");
+  const resolved = path.resolve(root, file);
+
+  // `path.relative` rather than `startsWith`: a sibling directory shares the
+  // prefix of the root it sits next to.
+  const relative = path.relative(root, resolved);
+
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) {
+    res.status(403).end("Outside the project");
+    return;
+  }
+
+  launchEditor(resolved);
+  res.end();
+});
+```
+
 ### Or let the server that has all of this do it
 
 [webpack-dev-server](https://github.com/webpack/webpack-dev-server) is this middleware with every one of the above already wired up — `allowedHosts`, the cross-origin checks, the response headers — so none of it is yours to write.
