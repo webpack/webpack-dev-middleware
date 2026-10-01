@@ -1382,13 +1382,17 @@ server.on("upgrade", (req, socket, head) => {
 const root = fs.realpathSync(path.resolve(__dirname));
 
 app.get("/__open-editor", (req, res) => {
-  // Who asked, before which file. Opening an editor is a side effect, and
+  // Who asked, before which file. Opening an editor is a side effect and
   // nothing is read back, so any page the developer happens to be visiting can
   // trigger it with a bare `<img src="http://localhost:8080/__open-editor?...">`
-  // — no CORS involved. The overlay's own request is `same-origin`, or
-  // `same-site` when the endpoint is on another port, never `cross-site`.
-  if (req.headers["sec-fetch-site"] === "cross-site") {
-    res.status(403).end("Cross-site request");
+  // — no CORS, nothing for the browser to refuse on your behalf.
+  //
+  // Only the overlay asking this server for a path of its own says
+  // `same-origin`. An `<img>` from another port on the same host says
+  // `same-site`, one from another host `cross-site`. So require the single
+  // value rather than refusing `cross-site`, which is one shape out of several.
+  if (req.headers["sec-fetch-site"] !== "same-origin") {
+    res.status(403).end("Not a same-origin request");
     return;
   }
 
@@ -1429,7 +1433,24 @@ app.get("/__open-editor", (req, res) => {
 });
 ```
 
-If you point `openEditorEndpoint` at a genuinely different site rather than a path or another port, that `cross-site` check is the one thing above you have to replace — your own overlay is cross-site too, by then. Compare the `Origin` against the origins you serve the overlay from instead, and keep every other check as it is.
+Refusing anything that is not `same-origin` is deliberately the strict reading, and it has two consequences worth knowing before you copy it.
+
+**An endpoint on another origin needs the other check.** Point `openEditorEndpoint` at another port or host and the overlay's own request becomes `same-site` or `cross-site`, so the guard above would refuse it. Check the `Origin` there instead — and require it to be present, which is what makes that check equivalent rather than weaker: a cross-origin `fetch` always sends it, while an `<img>` or a `<form>` cannot send one at all.
+
+```js
+const OVERLAY_ORIGINS = new Set(["http://localhost:8080"]);
+
+app.get("/__open-editor", (req, res) => {
+  if (!OVERLAY_ORIGINS.has(req.headers.origin)) {
+    res.status(403).end("Not an allowed origin");
+    return;
+  }
+
+  resolveAndOpen(req, res); // every path check from above, unchanged
+});
+```
+
+**Over plain `http` to anything but `localhost`, neither check can work.** Browsers send `Sec-Fetch-*` only to a potentially trustworthy destination, so a dev server on `http://192.168.1.5:8080` — what `host: "0.0.0.0"` gives you, opened from a phone — gets no Fetch Metadata and no `Origin` on either the overlay's request or an attack. Measured in Chromium, not inferred: both arrive bare and indistinguishable. The guard above then refuses everything, which is the safe direction to fail but does mean the chips stop opening files. Reach the dev server over `localhost` or `https` to have it work, and note that binding the route to loopback does not help by itself — the browser running the attacker's page is on the developer's machine, so `localhost` is reachable from it.
 
 ### Or let the server that has all of this do it
 
