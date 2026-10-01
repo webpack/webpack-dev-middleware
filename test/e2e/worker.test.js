@@ -12,6 +12,11 @@ jest.setTimeout(400000);
 
 const CLIENT_ENTRY = require.resolve("../../client-src/index.js");
 
+// This fixture asks for a token and wires the client entry itself — before the
+// middleware exists, so a minted one could not be in the query. A fixed one is
+// what hand-wiring requires.
+const WORKER_TOKEN = "worker-fixed-token";
+
 /**
  * A worker that reports what it is running and takes updates in place.
  * @param {string} text what this version reports
@@ -49,7 +54,10 @@ async function createWorkerApp({ transport = "sse", bare = false } = {}) {
     // exactly as injection would carry it.
     entry: bare
       ? [entryFile]
-      : [`${CLIENT_ENTRY}?transport=${transport}`, entryFile],
+      : [
+          `${CLIENT_ENTRY}?transport=${transport}&token=${WORKER_TOKEN}`,
+          entryFile,
+        ],
     output: { path: path.join(dir, "dist"), filename: "worker.js" },
     plugins: bare ? [] : [new webpack.HotModuleReplacementPlugin()],
     infrastructureLogging: { level: "none" },
@@ -58,7 +66,9 @@ async function createWorkerApp({ transport = "sse", bare = false } = {}) {
     watchOptions: { aggregateTimeout: 50, poll: 100 },
   });
 
-  const instance = middleware(compiler, { hot: { transport } });
+  const instance = middleware(compiler, {
+    hot: { transport, token: WORKER_TOKEN },
+  });
 
   /** @type {((stats: EXPECTED_ANY) => void)[]} */
   const buildWaiters = [];

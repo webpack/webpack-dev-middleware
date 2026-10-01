@@ -73,13 +73,6 @@ declare const HOT_DEFAULT_TRANSPORT: "sse";
 declare function checkClientStream(
   stream: ClientStream<EXPECTED_ANY>,
 ): ClientStream<EXPECTED_ANY>;
-/**
- * @param {number} heartbeat heartbeat interval in milliseconds
- * @param {Logger} logger logger
- * @param {CorsOption=} cors which origins may read the stream, the local ones by default
- * @param {(string | false)=} token the token the endpoint requires, or false for none
- * @returns {EventStream} event stream
- */
 declare function createEventStream(
   heartbeat: number,
   logger: Logger,
