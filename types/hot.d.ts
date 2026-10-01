@@ -24,7 +24,6 @@ declare function createHot(
 ): HotInstance;
 declare namespace createHot {
   export {
-    HOT_DEFAULT_CORS_SSE,
     HOT_DEFAULT_HEARTBEAT,
     HOT_DEFAULT_PATH,
     HOT_DEFAULT_TRANSPORT,
@@ -32,7 +31,6 @@ declare namespace createHot {
     createEventStream,
     createHot,
     formatErrors,
-    pathMatch,
     publishBundles,
     toBundles,
     HotInstance,
@@ -62,7 +60,6 @@ declare namespace createHot {
     EventStream,
   };
 }
-import { HOT_DEFAULT_CORS_SSE } from "./utils.js";
 declare const HOT_DEFAULT_HEARTBEAT: number;
 declare const HOT_DEFAULT_PATH: "/__webpack_hmr";
 declare const HOT_DEFAULT_TRANSPORT: "sse";
@@ -84,12 +81,6 @@ declare function createEventStream(
  * @returns {string[]} flat strings
  */
 declare function formatErrors(errors: (string | StatsError)[]): string[];
-/**
- * @param {string | undefined} url url
- * @param {string} expected expected pathname
- * @returns {boolean} true when the url pathname matches the expected path
- */
-declare function pathMatch(url: string | undefined, expected: string): boolean;
 /**
  * Publish one event per bundle. Bundles whose hash did not change are
  * published as `sync`, so their clients do not fetch a hot-update manifest

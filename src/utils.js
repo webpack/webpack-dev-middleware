@@ -730,24 +730,6 @@ function nodeReadableToWebStream(stream) {
 const CORS_LOCAL_ORIGINS =
   /^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/;
 
-// TODO in the next major release default the Server-Sent Events endpoint to
-// `CORS_LOCAL_ORIGINS` too, so one default covers both transports, and say so
-// in the changelog as a breaking change.
-//
-// Until 8.4 the endpoint answered every request with
-// `Access-Control-Allow-Origin: *`, inherited from `webpack-hot-middleware`,
-// and no option could turn it off. That grant let any site a developer had
-// open read the stream — and with it the module paths and source frames a
-// failed build reports — so the local-origins set is what it should be. But
-// narrowing it would stop a page served from anywhere else reading its own
-// build, which is a break, and this release is a minor. So it stays as it
-// shipped, and `cors` is how you narrow it today.
-const HOT_DEFAULT_CORS_SSE = true;
-
-// The WebSocket transport is new in this release, so there is no behavior to
-// keep and it starts where the other one is going.
-const HOT_DEFAULT_CORS_WS = CORS_LOCAL_ORIGINS;
-
 // A secret the injected client carries and the endpoint requires, so reaching
 // the stream takes something a page has to have been given rather than a
 // header a browser may or may not send.
@@ -982,6 +964,25 @@ function resolveToken(option) {
   // padding, so the query carries 12 characters and no `=`. The same size Vite
   // and Rsbuild use for theirs.
   return crypto.randomBytes(9).toString("base64url");
+}
+
+/**
+ * Does a url's pathname match an expected path exactly?
+ *
+ * Pathname only: the hot endpoint is reached with a query on it — the client's
+ * options, and the token — and with a fragment from a page that has one.
+ * @param {string | undefined} url url
+ * @param {string} expected expected pathname
+ * @returns {boolean} true when the url pathname matches the expected path
+ */
+function pathMatch(url, expected) {
+  if (!url) return false;
+
+  try {
+    return new URL(url, "http://localhost").pathname === expected;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -1640,8 +1641,6 @@ function injectHotClient(compilers, options, logger) {
 
 module.exports = {
   CORS_LOCAL_ORIGINS,
-  HOT_DEFAULT_CORS_SSE,
-  HOT_DEFAULT_CORS_WS,
   HOT_DEFAULT_TOKEN,
   applyCors,
   clientQuery,
@@ -1674,6 +1673,7 @@ module.exports = {
   nodeReadableToWebStream,
   parseHttpDate,
   parseTokenList,
+  pathMatch,
   pipe,
   removeResponseHeader,
   resolveCors,

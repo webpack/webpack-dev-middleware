@@ -4,10 +4,11 @@ import { problemLine } from "../client-src/problem";
 import createHot, {
   createEventStream,
   formatErrors,
-  pathMatch,
   toBundles,
 } from "../src/hot";
-import { CORS_LOCAL_ORIGINS } from "../src/utils";
+// `pathMatch` lives with the other request helpers now; the endpoint it routes
+// to is still what these cases are about, so they stay here.
+import { CORS_LOCAL_ORIGINS, pathMatch } from "../src/utils";
 
 jest.spyOn(globalThis.console, "log").mockImplementation();
 

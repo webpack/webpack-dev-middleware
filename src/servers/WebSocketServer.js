@@ -9,11 +9,15 @@
 /** @typedef {import("../hot.js").CorsOption} CorsOption */
 
 const {
-  HOT_DEFAULT_CORS_WS,
+  CORS_LOCAL_ORIGINS,
   isTokenValid,
   isUpgradeAllowed,
   resolveCors,
 } = require("../utils.js");
+
+// The WebSocket transport is new in this release, so there is no behavior to
+// keep and it starts where the other one is going.
+const HOT_DEFAULT_CORS_WS = CORS_LOCAL_ORIGINS;
 
 // How often a client is pinged to find out whether it is still there. A client
 // that has not answered the previous ping is dropped rather than pinged again.
