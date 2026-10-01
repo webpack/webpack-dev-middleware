@@ -3882,6 +3882,30 @@ describe.each([
 </body>
 </html>`);
         });
+
+        it("should refuse a traversal that lands back inside the root", async () => {
+          // `..` that walks out and straight back in resolves to a file that
+          // *is* inside the output root, so the containment check on the final
+          // path has nothing to object to — this one is refused by the guard on
+          // the stripped remainder instead. Served, it would be a second
+          // spelling of `/static/index.html`, and a spelling whose shape is
+          // indistinguishable from an escape.
+          const response = await req.get("/static../dist/index.html");
+
+          expect(response.statusCode).toBe(403);
+        });
+
+        it.each([
+          // cspell:disable-next-line -- `%2f` runs into the filename
+          "/static..%2fsecret.txt",
+          "/static%2e%2e/secret.txt",
+          "/static/../secret.txt",
+        ])("should not allow to get files above root with %s", async (url) => {
+          const response = await req.get(url);
+
+          expect(response.statusCode).not.toBe(200);
+          expect(response.text).not.toContain("TOP SECRET");
+        });
       });
 
       describe("should call the next middleware for finished or errored requests when forwardError is enabled", () => {
