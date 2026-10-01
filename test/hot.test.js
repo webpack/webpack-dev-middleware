@@ -1,6 +1,7 @@
 import http from "node:http";
 
 import { problemLine } from "../client-src/problem";
+import { CORS_LOCAL_ORIGINS } from "../src/cors";
 import createHot, {
   createEventStream,
   formatErrors,
@@ -527,37 +528,22 @@ describe("hot middleware (unit)", () => {
         };
       };
 
-      // Vite's default, for Vite's reason: a page on another port of the same
-      // machine is the one cross-origin case that is normal in development,
-      // and nothing a remote site can be served from looks like one.
+      // Until 8.4 this endpoint answered every request with
+      // `Access-Control-Allow-Origin: *`, with no option to turn it off, so
+      // that is what the default still is: narrowing it would stop a page
+      // served from anywhere else reading its own build, and that is a break.
+      // The WebSocket transport is new and starts narrow — see its own tests.
+      // TODO in the next major release this becomes the local origins too.
       describe("by default", () => {
         it.each([
           "http://localhost:3000",
-          "http://localhost",
-          "https://localhost:8080",
-          "http://app.localhost:3000",
-          "http://127.0.0.1:3000",
-          "http://[::1]:3000",
-        ])("grants the local origin %s", (origin) => {
-          expect(grantFor(undefined, origin)).toStrictEqual({
-            allow: origin,
-            vary: "Origin",
-          });
-        });
-
-        it.each([
           "https://evil.example",
-          // The pattern is anchored at both ends, so neither half of a
-          // hostname that merely contains a local one counts as one.
-          "http://localhost.evil.example",
-          "http://127.0.0.1.evil.example",
           "http://192.168.1.10:3000",
-          // What a sandboxed frame or a `file:` page sends.
           "null",
-        ])("grants nothing to %s", (origin) => {
+        ])("grants %s, as it did before the option existed", (origin) => {
           expect(grantFor(undefined, origin)).toStrictEqual({
-            allow: undefined,
-            vary: "Origin",
+            allow: "*",
+            vary: undefined,
           });
         });
 
@@ -573,6 +559,42 @@ describe("hot middleware (unit)", () => {
           expect(writes).toContain("\n");
 
           stream.close();
+        });
+      });
+
+      // What the default becomes in the next major, and what the WebSocket
+      // transport already does. Vite's `server.cors` default, for Vite's
+      // reason: a page on another port of the same machine is the one
+      // cross-origin case that is normal in development.
+      describe("the local origins", () => {
+        it.each([
+          "http://localhost:3000",
+          "http://localhost",
+          "https://localhost:8080",
+          "http://app.localhost:3000",
+          "http://127.0.0.1:3000",
+          "http://[::1]:3000",
+        ])("grant the local origin %s", (origin) => {
+          expect(grantFor(CORS_LOCAL_ORIGINS, origin)).toStrictEqual({
+            allow: origin,
+            vary: "Origin",
+          });
+        });
+
+        it.each([
+          "https://evil.example",
+          // The pattern is anchored at both ends, so neither half of a
+          // hostname that merely contains a local one counts as one.
+          "http://localhost.evil.example",
+          "http://127.0.0.1.evil.example",
+          "http://192.168.1.10:3000",
+          // What a sandboxed frame or a `file:` page sends.
+          "null",
+        ])("grant nothing to %s", (origin) => {
+          expect(grantFor(CORS_LOCAL_ORIGINS, origin)).toStrictEqual({
+            allow: undefined,
+            vary: "Origin",
+          });
         });
       });
 
@@ -694,9 +716,13 @@ describe("hot middleware (unit)", () => {
             "http://localhost:3000, https://evil.example",
           ).allow,
         ).toBeUndefined();
+        // And a pattern has to refuse it too, which is what anchoring the
+        // local-origins one at both ends is for.
         expect(
-          grantFor(undefined, "http://localhost:3000, https://evil.example")
-            .allow,
+          grantFor(
+            CORS_LOCAL_ORIGINS,
+            "http://localhost:3000, https://evil.example",
+          ).allow,
         ).toBeUndefined();
       });
     });

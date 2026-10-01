@@ -336,7 +336,7 @@ The object form accepts these options:
 |    **[`heartbeat`](#hotheartbeat)**    |                            `number`                             |      `10000`       | Interval (in milliseconds) between keep-alive frames.                                   |
 |       **[`server`](#hotserver)**       |                            `object`                             |    `undefined`     | HTTP server the `'ws'` transport answers upgrades on.                                   |
 |     **[`progress`](#hotprogress)**     |                            `boolean`                            |      `false`       | Publish compilation progress events to the clients.                                     |
-|         **[`cors`](#hotcors)**         | `boolean \| string \| string[] \| RegExp \| function \| object` |   local origins    | Which origins may reach the endpoint from a page on another one, over either transport. |
+|         **[`cors`](#hotcors)**         | `boolean \| string \| string[] \| RegExp \| function \| object` |     see below      | Which origins may reach the endpoint from a page on another one, over either transport. |
 |       **[`inject`](#hotinject)**       |                            `boolean`                            |       `true`       | Add the client entry and `HotModuleReplacementPlugin`.                                  |
 | **[`statsOptions`](#hotstatsoptions)** |                            `object`                             |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).                                         |
 
@@ -455,15 +455,38 @@ Publish compilation progress events (`{ action: "progress", percent, message }`)
 #### `hot.cors`
 
 Type: `Boolean | String | RegExp | (String | RegExp)[] | Function | { origin }`
-Default: `/^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/`
+Default: `true` for [`'sse'`](#hottransport), the local origins for [`'ws'`](#hottransport)
 
 Which origins may reach the endpoint from a page on another origin, over **either** [transport](#hottransport).
 
-A payload carries a build's module paths and, when a build fails, the source frames webpack puts in the error — so a page that can read the stream can read parts of your source. By default only **local** origins may: `localhost` and anything under it, `127.0.0.1` and `[::1]`, on any port and either scheme. A page on another port of the same machine is the one cross-origin case that is normal in development, and nothing a remote site can be served from looks like one. This is the same default, for the same reason, as Vite's [`server.cors`](https://vite.dev/config/server-options#server-cors).
+A payload carries a build's module paths and, when a build fails, the source frames webpack puts in the error — so a page that can read the stream can read parts of your source.
+
+The two transports start from different places, because one of them has shipped before and the other has not:
+
+| Transport | Default               | Why                                                                                                                                                                                                                          |
+| :-------- | :-------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `'sse'`   | `true` — every origin | What the endpoint has always done. Narrowing it would stop a page served from another origin reading its own build, which is a breaking change, so it waits for a major release. **Set `cors` yourself to narrow it today.** |
+| `'ws'`    | the local origins     | New in this release, so there is no behavior to keep: `localhost` and anything under it, `127.0.0.1` and `[::1]`, any port, either scheme.                                                                                   |
+
+A page on another port of the same machine is the one cross-origin case that is normal in development, and nothing a remote site can be served from looks like one — which is why the local origins are where both are headed. It is the same set, for the same reason, as Vite's [`server.cors`](https://vite.dev/config/server-options#server-cors) default.
+
+> [!TIP]
+>
+> To get there now, name them yourself. In the next major release this is what `'sse'` will do on its own:
+>
+> ```js
+> app.use(
+>   middleware(compiler, {
+>     hot: {
+>       cors: /^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/,
+>     },
+>   }),
+> );
+> ```
 
 Nothing needs to be set for the normal setup, where the page and the middleware are the same server.
 
-Name your own origins when the page is served from somewhere the default does not cover — a dev domain in your hosts file, a remote dev box, a container:
+Name your own origins when the page is served from somewhere else — a dev domain in your hosts file, a remote dev box, a container:
 
 ```js
 app.use(
@@ -510,7 +533,7 @@ A **function** [transport](#hottransport) of your own is handed the option as it
 
 > [!IMPORTANT]
 >
-> The default trusts every other server on the developer's own machine, because it cannot tell them apart from your dev server. If one of them serves content someone else controls, set `cors` to the origins you actually use.
+> The local-origins set trusts every other server on the developer's own machine, because it cannot tell them apart from your dev server. If one of them serves content someone else controls, set `cors` to the origins you actually use.
 >
 > This is about who may reach the endpoint, and nothing else. It does not decide who may reach the **assets** the middleware serves, which is your server's to answer — with a `Cross-Origin-Resource-Policy` response header, or with whatever your framework's own CORS middleware does.
 
@@ -1296,7 +1319,9 @@ A development server is reachable by anything that can reach the machine it runs
 
 ### What the middleware answers for
 
-[`hot.cors`](#hotcors) decides which origins may reach the hot endpoint, over either transport. Its default allows only local origins, so a site the developer merely has open cannot read a build's module paths or the source frames webpack puts in a failed build's errors. That is the whole of it, and it is a default rather than a policy: the middleware never hands out access it was not asked for.
+[`hot.cors`](#hotcors) decides which origins may reach the hot endpoint, over either transport. That is the whole of it.
+
+Mind its defaults, which differ by transport and are not both where they are headed: `'ws'` allows only local origins, while `'sse'` still allows **every** origin, because narrowing it is a breaking change waiting on a major release. **Set `cors` yourself** and a site the developer merely has open cannot read a build's module paths or the source frames webpack puts in a failed build's errors.
 
 ### What your server answers for
 

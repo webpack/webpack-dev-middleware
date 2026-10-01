@@ -1,3 +1,4 @@
+import { CORS_LOCAL_ORIGINS } from "../../src/cors";
 import { closeE2e } from "../helpers/e2e";
 import createHotApp from "../helpers/hot-app";
 import runBrowser from "../helpers/run-browser";
@@ -67,12 +68,25 @@ describe("reading the event stream from another origin (browser)", () => {
     return readFromPage(`http://127.0.0.1:${port}/__webpack_hmr`);
   };
 
-  it("refuses an origin the default does not allow", async () => {
-    await expect(readAcrossOrigins(true, "127.0.0.2")).resolves.toBe("error");
+  // The event stream has always granted every origin, and narrowing that
+  // would stop a page served from another origin reading its own build — so
+  // the default stays as it shipped.
+  // TODO in the next major release this becomes the local origins, and this
+  // test becomes the `cors: CORS_LOCAL_ORIGINS` one below.
+  it("allows any origin by default, as it did before the option", async () => {
+    await expect(readAcrossOrigins(true, "127.0.0.2")).resolves.toBe("open");
   });
 
-  it("allows another origin on the same machine by default", async () => {
-    await expect(readAcrossOrigins(true, "localhost")).resolves.toBe("open");
+  it("refuses an origin the local ones do not cover", async () => {
+    await expect(
+      readAcrossOrigins({ cors: CORS_LOCAL_ORIGINS }, "127.0.0.2"),
+    ).resolves.toBe("error");
+  });
+
+  it("allows another origin on the same machine when narrowed to them", async () => {
+    await expect(
+      readAcrossOrigins({ cors: CORS_LOCAL_ORIGINS }, "localhost"),
+    ).resolves.toBe("open");
   });
 
   it("refuses even a local origin once cors is off", async () => {

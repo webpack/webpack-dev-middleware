@@ -236,15 +236,14 @@ errors, warnings }`. Only [`subscribeAll`](#6-programmatic-api) consumers that
   invalidated and which file triggered it.
 - **The endpoint answers `GET` only.** Other methods fall through to the normal
   middleware pipeline rather than opening a stream.
-- **The endpoint is no longer readable from every origin.**
-  `webpack-hot-middleware` answers it with `Access-Control-Allow-Origin: *`, so
-  any site open in the same browser can read your builds — including the module
-  paths and source frames a failed build reports. The middleware grants only
-  local origins (`localhost`, `127.0.0.1`, `[::1]`, any port), which covers both
-  a page served by the middleware itself and one on another port of the same
-  machine. If your page is served from anywhere else, name it in
-  [`hot.cors`](README.md#hotcors); `cors: true` restores the old behavior
-  wholesale.
+- **Who may read the endpoint is now yours to say.** Both
+  `webpack-hot-middleware` and this middleware's event stream answer every
+  request with `Access-Control-Allow-Origin: *`, so any site open in the same
+  browser can read your builds — including the module paths and source frames a
+  failed build reports. That default has not changed yet, but
+  [`hot.cors`](README.md#hotcors) now lets you narrow it, and the `ws`
+  transport already starts narrow (local origins only). Worth setting while you
+  are here.
 - **Server logging goes through webpack.** `webpack built <hash> in <n>ms` lines
   came from hot middleware's own `log`; build reporting is now the dev
   middleware's [`stats`](README.md#stats) option and the infrastructure logger.

@@ -9,12 +9,30 @@ const { getRequestHeader } = require("./utils.js");
 // `127.0.0.1` and `[::1]`, on any port and either scheme. A page on another
 // port of the same machine is the one cross-origin case that is normal in
 // development, and nothing a remote site can be served from matches this. The
-// same default, and the same reasoning, as Vite's `server.cors`.
+// same set, and the same reasoning, as Vite's `server.cors` default.
 //
 // Anchored at both ends on purpose: `http://localhost.evil.example` must not
 // read as a local origin.
-const HOT_DEFAULT_CORS =
+const CORS_LOCAL_ORIGINS =
   /^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/;
+
+// TODO in the next major release default the Server-Sent Events endpoint to
+// `CORS_LOCAL_ORIGINS` too, so one default covers both transports, and say so
+// in the changelog as a breaking change.
+//
+// Until 8.4 the endpoint answered every request with
+// `Access-Control-Allow-Origin: *`, inherited from `webpack-hot-middleware`,
+// and no option could turn it off. That grant let any site a developer had
+// open read the stream — and with it the module paths and source frames a
+// failed build reports — so the local-origins set is what it should be. But
+// narrowing it would stop a page served from anywhere else reading its own
+// build, which is a break, and this release is a minor. So it stays as it
+// shipped, and `cors` is how you narrow it today.
+const HOT_DEFAULT_CORS_SSE = true;
+
+// The WebSocket transport is new in this release, so there is no behavior to
+// keep and it starts where the other one is going.
+const HOT_DEFAULT_CORS_WS = CORS_LOCAL_ORIGINS;
 
 /**
  * The resolved answer to "may this origin read the stream": no origin may, any
@@ -62,10 +80,10 @@ function matchOrigin(origin, allowed) {
 /**
  * Read the `cors` option once, so each request costs a call rather than a walk
  * back through every form the option can take.
- * @param {CorsOption=} cors the option, as it was given
+ * @param {CorsOption} cors the option, as it was given, or the transport's default when it was not
  * @returns {CorsGrant} the resolved answer
  */
-function resolveCors(cors = HOT_DEFAULT_CORS) {
+function resolveCors(cors) {
   if (cors === false || cors === true) {
     return cors && "*";
   }
@@ -196,7 +214,9 @@ function isUpgradeAllowed(grant, req) {
   return grant === "*" || grant(origin);
 }
 
-module.exports.HOT_DEFAULT_CORS = HOT_DEFAULT_CORS;
+module.exports.CORS_LOCAL_ORIGINS = CORS_LOCAL_ORIGINS;
+module.exports.HOT_DEFAULT_CORS_SSE = HOT_DEFAULT_CORS_SSE;
+module.exports.HOT_DEFAULT_CORS_WS = HOT_DEFAULT_CORS_WS;
 module.exports.applyCors = applyCors;
 module.exports.isSameOrigin = isSameOrigin;
 module.exports.isUpgradeAllowed = isUpgradeAllowed;

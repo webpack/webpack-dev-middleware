@@ -8,7 +8,11 @@
 /** @typedef {import("../hot.js").ClientStream} ClientStream */
 /** @typedef {import("../hot.js").CorsOption} CorsOption */
 
-const { isUpgradeAllowed, resolveCors } = require("../cors.js");
+const {
+  HOT_DEFAULT_CORS_WS,
+  isUpgradeAllowed,
+  resolveCors,
+} = require("../cors.js");
 
 // How often a client is pinged to find out whether it is still there. A client
 // that has not answered the previous ping is dropped rather than pinged again.
@@ -42,7 +46,7 @@ function requireWsServer() {
  */
 function createWebSocketStream({ path, heartbeat, cors }, logger) {
   const WebSocketServerImplementation = requireWsServer();
-  const corsGrant = resolveCors(cors);
+  const corsGrant = resolveCors(cors ?? HOT_DEFAULT_CORS_WS);
   /** @type {Set<WebSocket>} */
   const clients = new Set();
   /** @type {((client: WebSocket, req: IncomingMessage) => void) | undefined} */

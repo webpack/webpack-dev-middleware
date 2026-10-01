@@ -19,6 +19,7 @@ import request from "supertest";
 import { Stats } from "webpack";
 
 import middleware from "../src";
+import { CORS_LOCAL_ORIGINS } from "../src/cors";
 
 import webpackMultiConfig from "./fixtures/webpack.array.config";
 import webpackMultiDevServerFalseConfig from "./fixtures/webpack.array.dev-server-false";
@@ -7238,7 +7239,12 @@ describe.each([
     // the source frames webpack puts in a parse error, so that grant let any
     // site the developer had open read their source. Each framework gets its
     // own `writeHead`, so each one is asked.
-    it("grants nothing to a remote origin by default", async () => {
+    // The endpoint has always answered every request with
+    // `Access-Control-Allow-Origin: *`, and narrowing that would stop a page
+    // served from another origin reading its own build — so the default stays
+    // as it shipped and `cors` is how you narrow it.
+    // TODO in the next major release this becomes the local origins.
+    it("grants every origin by default, as it did before the option", async () => {
       const compiler = getCompiler(webpackConfig);
       [server, req, instance] = await frameworkFactory(
         name,
@@ -7252,10 +7258,10 @@ describe.each([
       );
 
       expect(res.status).toBe(200);
-      expect(res.headers["access-control-allow-origin"]).toBeUndefined();
+      expect(res.headers["access-control-allow-origin"]).toBe("*");
     });
 
-    it("grants a local origin by default", async () => {
+    it("grants a local origin when narrowed to them", async () => {
       // A page on another port of the same machine, which is the one
       // cross-origin case that is normal in development.
       const compiler = getCompiler(webpackConfig);
@@ -7263,7 +7269,7 @@ describe.each([
         name,
         framework,
         compiler,
-        { hot: true },
+        { hot: { cors: CORS_LOCAL_ORIGINS } },
       );
 
       const res = await readSseHandshake(

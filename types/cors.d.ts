@@ -7,7 +7,9 @@ export type IncomingMessage = import("node:http").IncomingMessage;
 export type CorsOption = import("./hot.js").CorsOption;
 export type CorsOrigin = import("./hot.js").CorsOrigin;
 export type Logger = import("./hot.js").Logger;
-export const HOT_DEFAULT_CORS: RegExp;
+export const CORS_LOCAL_ORIGINS: RegExp;
+export const HOT_DEFAULT_CORS_SSE: true;
+export const HOT_DEFAULT_CORS_WS: RegExp;
 /**
  * Add the cross-origin grant the `cors` option asks for, if any.
  *
@@ -79,7 +81,7 @@ export function matchOrigin(origin: string, allowed: CorsOrigin): boolean;
 /**
  * Read the `cors` option once, so each request costs a call rather than a walk
  * back through every form the option can take.
- * @param {CorsOption=} cors the option, as it was given
+ * @param {CorsOption} cors the option, as it was given, or the transport's default when it was not
  * @returns {CorsGrant} the resolved answer
  */
-export function resolveCors(cors?: CorsOption | undefined): CorsGrant;
+export function resolveCors(cors: CorsOption): CorsGrant;

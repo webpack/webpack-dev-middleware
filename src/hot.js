@@ -141,7 +141,7 @@
 // module paths and source frames a failed build reports. Both transports
 // honour it now, each the only way it can be honoured on that wire: the event
 // stream withholds the grant, and an upgrade is refused.
-const { HOT_DEFAULT_CORS, applyCors, resolveCors } = require("./cors.js");
+const { HOT_DEFAULT_CORS_SSE, applyCors, resolveCors } = require("./cors.js");
 const createWebSocketStream = require("./servers/WebSocketServer.js");
 
 const HOT_DEFAULT_PATH = "/__webpack_hmr";
@@ -245,7 +245,7 @@ function checkClientStream(stream) {
  * @returns {EventStream} event stream
  */
 function createEventStream(heartbeat, logger, cors) {
-  const corsGrant = resolveCors(cors);
+  const corsGrant = resolveCors(cors ?? HOT_DEFAULT_CORS_SSE);
   let clientId = 0;
   /** @type {Map<number, ServerResponse>} */
   let clients = new Map();
@@ -829,7 +829,7 @@ function createHot(compiler, userOptions, statsOption) {
 }
 
 module.exports = createHot;
-module.exports.HOT_DEFAULT_CORS = HOT_DEFAULT_CORS;
+module.exports.HOT_DEFAULT_CORS_SSE = HOT_DEFAULT_CORS_SSE;
 module.exports.HOT_DEFAULT_HEARTBEAT = HOT_DEFAULT_HEARTBEAT;
 module.exports.HOT_DEFAULT_PATH = HOT_DEFAULT_PATH;
 module.exports.HOT_DEFAULT_TRANSPORT = HOT_DEFAULT_TRANSPORT;

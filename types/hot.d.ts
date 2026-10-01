@@ -23,7 +23,7 @@ declare function createHot(
 ): HotInstance;
 declare namespace createHot {
   export {
-    HOT_DEFAULT_CORS,
+    HOT_DEFAULT_CORS_SSE,
     HOT_DEFAULT_HEARTBEAT,
     HOT_DEFAULT_PATH,
     HOT_DEFAULT_TRANSPORT,
@@ -61,7 +61,7 @@ declare namespace createHot {
     EventStream,
   };
 }
-import { HOT_DEFAULT_CORS } from "./cors.js";
+import { HOT_DEFAULT_CORS_SSE } from "./cors.js";
 declare const HOT_DEFAULT_HEARTBEAT: number;
 declare const HOT_DEFAULT_PATH: "/__webpack_hmr";
 declare const HOT_DEFAULT_TRANSPORT: "sse";
