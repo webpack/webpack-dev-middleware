@@ -1374,6 +1374,106 @@ server.on("upgrade", (req, socket, head) => {
 });
 ```
 
+**Which file an editor is asked to open.** The path the overlay sends to your [`openEditorEndpoint`](#client-overlay-options) comes out of the build's error text, which a loader or a dependency writes — so it is not necessarily a file in your project. An error message carrying `/root/.ssh/id_rsa.pub:1:1` becomes a chip like any other, and clicking it asks your endpoint to open that. Nobody reads the file back, and the reference is shown before it is clicked, but the endpoint is the only place that knows where the project is. Resolve and check before handing anything to an editor:
+
+```js
+// `realpath` here too, or every file under a symlinked root is refused —
+// which `/tmp` is on macOS.
+const root = fs.realpathSync(path.resolve(__dirname));
+
+// Who asked, before which file. Opening an editor is a side effect and nothing
+// is read back, so any page the developer happens to be visiting can trigger it
+// with a bare `<img src="http://localhost:8080/__open-editor?...">` — no CORS,
+// nothing for the browser to refuse on your behalf.
+//
+// Only the overlay asking this server for a path of its own says `same-origin`.
+// An `<img>` from another port on the same host says `same-site`, one from
+// another host `cross-site`. So require the single value rather than refusing
+// `cross-site`, which is one shape out of several.
+const isOverlayAsking = (req) =>
+  req.headers["sec-fetch-site"] === "same-origin";
+
+app.get("/__open-editor", (req, res) => {
+  // Nothing about this response is worth keeping: it exists for the side
+  // effect, carries no body, and which answer is correct depends on who asked.
+  // A stored one could be handed to a caller the checks below would refuse.
+  res.setHeader("Cache-Control", "no-store");
+
+  if (!isOverlayAsking(req, res)) {
+    res.status(403).end("Not an allowed caller");
+    return;
+  }
+
+  // The trailing position, not the first colon: a Windows path starts with a
+  // drive letter and a colon of its own.
+  const file = String(req.query.fileName || "").replace(/:\d+:\d+$/, "");
+
+  let resolved;
+
+  try {
+    // `realpath`, not just `resolve`: a symlink inside the project can point
+    // outside it, and the check below compares the names it is given rather
+    // than where they lead. A package can ship one, and `node_modules` is
+    // inside the root. It also answers "no such file" for a reference to
+    // something that was never there.
+    resolved = fs.realpathSync(path.resolve(root, file));
+  } catch {
+    res.status(404).end("No such file");
+    return;
+  }
+
+  // `path.relative` rather than `startsWith`: a sibling directory shares the
+  // prefix of the root it sits next to.
+  const relative = path.relative(root, resolved);
+
+  if (
+    !relative ||
+    relative === ".." ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative)
+  ) {
+    res.status(403).end("Outside the project");
+    return;
+  }
+
+  launchEditor(resolved);
+  res.end();
+});
+```
+
+Refusing anything that is not `same-origin` is deliberately the strict reading, and it has two consequences worth knowing before you copy it.
+
+**An endpoint on another origin needs the other check.** Point `openEditorEndpoint` at another port or host and the overlay's own request becomes `same-site` or `cross-site`, so the guard above would refuse it. Check the `Origin` there instead — and require it to be present, which is what makes that check equivalent rather than weaker: a cross-origin `fetch` always sends it, while an `<img>` or a `<form>` cannot send one at all.
+
+That is the one definition to swap. The route, and every path check in it, stays exactly as above:
+
+```js
+const OVERLAY_ORIGINS = new Set(["http://localhost:8080"]);
+
+const isOverlayAsking = (req, res) => {
+  // Before the check rather than after it: the refusal depends on the origin
+  // too, so neither answer may be reused across origins. The middleware's own
+  // hot endpoint does the same — see `src/cors.js`.
+  res.setHeader("Vary", "Origin");
+
+  if (!OVERLAY_ORIGINS.has(req.headers.origin)) {
+    return false;
+  }
+
+  // Allowing the caller is only half of it: the overlay reads the response of
+  // a cross-origin `fetch`, and without this the browser discards it. The file
+  // still opens — the request reached you — but the overlay says it could not,
+  // which is worse than either outcome on its own. Echoing the origin back is
+  // safe here because the allowlist already refused everything else, including
+  // a request carrying no `Origin` at all.
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
+
+  return true;
+};
+```
+
+**Over plain `http` to anything but `localhost`, neither check can work.** Browsers send `Sec-Fetch-*` only to a potentially trustworthy destination, so a dev server on `http://192.168.1.5:8080` — what `host: "0.0.0.0"` gives you, opened from a phone — gets no Fetch Metadata and no `Origin` on either the overlay's request or an attack. Measured in Chromium, not inferred: both arrive bare and indistinguishable. The guard above then refuses everything, which is the safe direction to fail but does mean the chips stop opening files. Reach the dev server over `localhost` or `https` to have it work, and note that binding the route to loopback does not help by itself — the browser running the attacker's page is on the developer's machine, so `localhost` is reachable from it.
+
 ### Or let the server that has all of this do it
 
 [webpack-dev-server](https://github.com/webpack/webpack-dev-server) is this middleware with every one of the above already wired up — `allowedHosts`, the cross-origin checks, the response headers — so none of it is yours to write.
