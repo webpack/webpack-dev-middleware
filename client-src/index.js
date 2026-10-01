@@ -4,11 +4,6 @@
 // ES5 (see `babel.config.js`) and sticks to ES5 runtime APIs — `EventSource`
 // and `Promise` (both required by HMR itself) are the only exceptions.
 
-// TODO in the next major release add an `exports` field to package.json
-// (`.`, `./client`, `./client/indicator`, `./client/overlay`, `./package.json`).
-// Adding it now is a breaking change: it would hide every other path of the
-// package (e.g. `webpack-dev-middleware/dist/...`) from existing users.
-
 import EventSourceClient from "./clients/EventSourceClient.js";
 import WebSocketClient from "./clients/WebSocketClient.js";
 import createSocket from "./clients/createSocket.js";
