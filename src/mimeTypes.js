@@ -140,7 +140,14 @@ function getTables() {
  * @returns {MimeTypes} the lookup
  */
 function createMimeTypes(extra) {
-  const has = extra && Object.keys(extra).length > 0;
+  // Copied, not held: the option used to be spread into a table once, so the
+  // object a caller passed stopped mattering the moment the middleware was
+  // built, and two instances given the same object could not reach each
+  // other through it. A null prototype so `constructor` and `toString` are
+  // not extensions anything resolves to.
+  const registered = extra
+    ? Object.assign(Object.create(null), extra)
+    : undefined;
 
   /**
    * The media type an extension, a `.extension`, or a whole path resolves to.
@@ -161,11 +168,8 @@ function createMimeTypes(extra) {
     }
 
     // The option first: registering an extension is how it is overridden.
-    if (
-      has &&
-      Object.hasOwn(/** @type {Record<string, string>} */ (extra), extension)
-    ) {
-      return /** @type {Record<string, string>} */ (extra)[extension];
+    if (registered && registered[extension] !== undefined) {
+      return registered[extension];
     }
 
     return getTables().types[extension] || false;

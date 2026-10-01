@@ -162,6 +162,21 @@ describe("extension to media type", () => {
       expect(mimeTypes.lookup(".js")).toBe("text/javascript");
     });
 
+    it("is read once, when the middleware is built", () => {
+      // The option used to be spread into a table at construction, so the
+      // object a caller passed stopped mattering afterwards — and two
+      // instances handed the same object could not reach each other through
+      // it. Held live, both would have changed.
+      const option = { aaa: "text/first" };
+      const instance = createMimeTypes(option);
+
+      option.aaa = "text/mutated";
+      /** @type {Record<string, string>} */ (option).bbb = "text/added-later";
+
+      expect(instance.lookup("aaa")).toBe("text/first");
+      expect(instance.lookup("bbb")).toBe(false);
+    });
+
     it("does not read an inherited property as a registered type", () => {
       // `{}` carries `constructor` and `toString` from its prototype, and an
       // extension by either name would otherwise resolve to a function.
