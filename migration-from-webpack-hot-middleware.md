@@ -163,7 +163,8 @@ module.exports = [
 | `log`                  | Removed. The middleware logs through the compiler's [infrastructure logger](https://webpack.js.org/configuration/infrastructurelogging/); use `infrastructureLogging.level` to quiet it.                                                                                                                                                |
 
 New: [`hot.progress`](README.md#hotprogress) publishes compilation progress to
-the clients.
+the clients, and [`hot.cors`](README.md#hotcors) says which origins may reach
+the endpoint from a page on another one.
 
 ### Client options
 
@@ -235,6 +236,14 @@ errors, warnings }`. Only [`subscribeAll`](#6-programmatic-api) consumers that
   invalidated and which file triggered it.
 - **The endpoint answers `GET` only.** Other methods fall through to the normal
   middleware pipeline rather than opening a stream.
+- **Who may read the endpoint is now yours to say.** Both
+  `webpack-hot-middleware` and this middleware's event stream answer every
+  request with `Access-Control-Allow-Origin: *`, so any site open in the same
+  browser can read your builds — including the module paths and source frames a
+  failed build reports. That default has not changed yet, but
+  [`hot.cors`](README.md#hotcors) now lets you narrow it, and the `ws`
+  transport already starts narrow (local origins only). Worth setting while you
+  are here.
 - **Server logging goes through webpack.** `webpack built <hash> in <n>ms` lines
   came from hot middleware's own `log`; build reporting is now the dev
   middleware's [`stats`](README.md#stats) option and the infrastructure logger.

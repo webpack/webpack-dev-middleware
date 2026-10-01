@@ -19,6 +19,7 @@ import request from "supertest";
 import { Stats } from "webpack";
 
 import middleware from "../src";
+import { CORS_LOCAL_ORIGINS } from "../src/cors";
 
 import webpackMultiConfig from "./fixtures/webpack.array.config";
 import webpackMultiDevServerFalseConfig from "./fixtures/webpack.array.dev-server-false";
@@ -7256,7 +7257,18 @@ describe.each([
       expect(res.headers["content-type"]).toMatch(/text\/event-stream/);
     });
 
-    it("sends a permissive CORS header", async () => {
+    // The endpoint used to answer every request with
+    // `Access-Control-Allow-Origin: *`, inherited from
+    // `webpack-hot-middleware`. A payload carries a build's module paths and
+    // the source frames webpack puts in a parse error, so that grant let any
+    // site the developer had open read their source. Each framework gets its
+    // own `writeHead`, so each one is asked.
+    // The endpoint has always answered every request with
+    // `Access-Control-Allow-Origin: *`, and narrowing that would stop a page
+    // served from another origin reading its own build — so the default stays
+    // as it shipped and `cors` is how you narrow it.
+    // TODO in the next major release this becomes the local origins.
+    it("grants every origin by default, as it did before the option", async () => {
       const compiler = getCompiler(webpackConfig);
       [server, req, instance] = await frameworkFactory(
         name,
@@ -7265,9 +7277,85 @@ describe.each([
         { hot: true },
       );
 
-      const res = await readSseHandshake(req.get("/__webpack_hmr"));
+      const res = await readSseHandshake(
+        req.get("/__webpack_hmr").set("Origin", "https://evil.example"),
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.headers["access-control-allow-origin"]).toBe("*");
+    });
+
+    it("grants a local origin when narrowed to them", async () => {
+      // A page on another port of the same machine, which is the one
+      // cross-origin case that is normal in development.
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: { cors: CORS_LOCAL_ORIGINS } },
+      );
+
+      const res = await readSseHandshake(
+        req.get("/__webpack_hmr").set("Origin", "http://localhost:3000"),
+      );
+
+      expect(res.headers["access-control-allow-origin"]).toBe(
+        "http://localhost:3000",
+      );
+      expect(res.headers.vary).toBe("Origin");
+    });
+
+    it("sends a permissive CORS header when every origin is granted", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: { cors: true } },
+      );
+
+      const res = await readSseHandshake(
+        req.get("/__webpack_hmr").set("Origin", "https://evil.example"),
+      );
 
       expect(res.headers["access-control-allow-origin"]).toBe("*");
+    });
+
+    it("grants nothing at all when cors is off", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: { cors: false } },
+      );
+
+      const res = await readSseHandshake(
+        req.get("/__webpack_hmr").set("Origin", "http://localhost:3000"),
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.headers["access-control-allow-origin"]).toBeUndefined();
+    });
+
+    it("echoes an origin the grant names", async () => {
+      const compiler = getCompiler(webpackConfig);
+      [server, req, instance] = await frameworkFactory(
+        name,
+        framework,
+        compiler,
+        { hot: { cors: ["https://app.test"] } },
+      );
+
+      const res = await readSseHandshake(
+        req.get("/__webpack_hmr").set("Origin", "https://app.test"),
+      );
+
+      expect(res.headers["access-control-allow-origin"]).toBe(
+        "https://app.test",
+      );
+      expect(res.headers.vary).toBe("Origin");
     });
 
     describe("SSE payload", () => {

@@ -6,6 +6,7 @@ export = createWebSocketStream;
  * @param {object} options options
  * @param {string} options.path the path the endpoint is served at
  * @param {number} options.heartbeat heartbeat interval in milliseconds
+ * @param {CorsOption=} options.cors which origins may connect, the local ones by default
  * @param {Logger} logger logger
  * @returns {ClientStream} client stream
  */
@@ -13,9 +14,11 @@ declare function createWebSocketStream(
   {
     path,
     heartbeat,
+    cors,
   }: {
     path: string;
     heartbeat: number;
+    cors?: CorsOption | undefined;
   },
   logger: Logger,
 ): ClientStream;
@@ -31,16 +34,9 @@ declare namespace createWebSocketStream {
     Logger,
     Payload,
     ClientStream,
+    CorsOption,
   };
 }
-/** @typedef {import("node:http").Server} HttpServer */
-/** @typedef {import("node:http").IncomingMessage} IncomingMessage */
-/** @typedef {import("node:stream").Duplex} Duplex */
-/** @typedef {import("ws").WebSocket} WebSocket */
-/** @typedef {typeof import("ws").WebSocketServer} WsServerConstructor */
-/** @typedef {import("../hot.js").Logger} Logger */
-/** @typedef {import("../hot.js").Payload} Payload */
-/** @typedef {import("../hot.js").ClientStream} ClientStream */
 declare const WS_DEFAULT_HEARTBEAT: number;
 type HttpServer = import("node:http").Server;
 type IncomingMessage = import("node:http").IncomingMessage;
@@ -50,3 +46,4 @@ type WsServerConstructor = typeof import("ws").WebSocketServer;
 type Logger = import("../hot.js").Logger;
 type Payload = import("../hot.js").Payload;
 type ClientStream = import("../hot.js").ClientStream;
+type CorsOption = import("../hot.js").CorsOption;

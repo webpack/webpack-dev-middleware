@@ -50,8 +50,26 @@
  * @property {HttpServer=} server HTTP server the `"ws"` transport answers upgrades on, when it is already built
  * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
  * @property {boolean=} progress publish compilation progress events to the clients
+ * @property {CorsOption=} cors which origins may reach the endpoint from a page on another one; the local ones by default
  * @property {boolean=} inject add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
  * @property {HotClientOptions=} client options handed to the browser runtime through its entry query
+ */
+
+/**
+ * What an origin is matched against: one origin, several, a pattern, or a
+ * question asked of each.
+ * @typedef {string | RegExp | (string | RegExp)[] | ((origin: string) => boolean)} CorsOrigin
+ */
+
+/**
+ * Which origins may read the event stream, as a CORS grant rather than a check:
+ * a request is never refused, it is only told whether the browser may hand the
+ * response to the page. `false` sends no grant, which leaves the browser's own
+ * same-origin rule in place; `true` grants every origin; anything else is
+ * matched against the request's own, which is echoed back when it is allowed.
+ * `{ origin }` is accepted as well, so a `cors` written for Vite or
+ * `expressjs/cors` reads the same here.
+ * @typedef {boolean | CorsOrigin | { origin?: CorsOrigin | boolean }} CorsOption
  */
 
 /**
@@ -110,13 +128,20 @@
  * built-in two are made of whatever this returns.
  * @template {EXPECTED_ANY} [TClient=StreamClient]
  * @callback ClientStreamFactory
- * @param {{ path: string, heartbeat: number }} options the endpoint's path and heartbeat interval
+ * @param {{ path: string, heartbeat: number, cors: CorsOption | undefined }} options the endpoint's path and heartbeat interval, and the origins it is meant to allow
  * @param {Logger} logger logger
  * @returns {ClientStream<TClient>} client stream
  */
 
 /** @typedef {ClientStream} EventStream */
 
+// Until the `cors` option existed the endpoint answered every request with
+// `Access-Control-Allow-Origin: *`, inherited from `webpack-hot-middleware`,
+// which let any site a developer had open read the stream — and with it the
+// module paths and source frames a failed build reports. Both transports
+// honour it now, each the only way it can be honoured on that wire: the event
+// stream withholds the grant, and an upgrade is refused.
+const { HOT_DEFAULT_CORS_SSE, applyCors, resolveCors } = require("./cors.js");
 const createWebSocketStream = require("./servers/WebSocketServer.js");
 
 const HOT_DEFAULT_PATH = "/__webpack_hmr";
@@ -216,9 +241,11 @@ function checkClientStream(stream) {
 /**
  * @param {number} heartbeat heartbeat interval in milliseconds
  * @param {Logger} logger logger
+ * @param {CorsOption=} cors which origins may read the stream, the local ones by default
  * @returns {EventStream} event stream
  */
-function createEventStream(heartbeat, logger) {
+function createEventStream(heartbeat, logger, cors) {
+  const corsGrant = resolveCors(cors ?? HOT_DEFAULT_CORS_SSE);
   let clientId = 0;
   /** @type {Map<number, ServerResponse>} */
   let clients = new Map();
@@ -293,13 +320,14 @@ function createEventStream(heartbeat, logger) {
 
       /** @type {Record<string, string>} */
       const headers = {
-        "Access-Control-Allow-Origin": "*",
         "Content-Type": "text/event-stream;charset=utf-8",
         "Cache-Control": "no-cache, no-transform",
         // While behind nginx, the event stream should not be buffered:
         // http://nginx.org/docs/http/ngx_http_proxy_module.html#proxy_buffering
         "X-Accel-Buffering": "no",
       };
+
+      applyCors(corsGrant, req, headers);
 
       const { httpVersion, socket } = req;
       const isHttp1 = !(Number.parseInt(httpVersion, 10) >= 2);
@@ -593,6 +621,7 @@ function createHot(compiler, userOptions, statsOption) {
   const path = options.path || HOT_DEFAULT_PATH;
   const heartbeat = options.heartbeat ?? HOT_DEFAULT_HEARTBEAT;
   const transport = options.transport || HOT_DEFAULT_TRANSPORT;
+  const { cors } = options;
   const { statsOptions } = options;
   const logger = compiler.getInfrastructureLogger("webpack-dev-middleware");
 
@@ -609,13 +638,15 @@ function createHot(compiler, userOptions, statsOption) {
   let transportName;
 
   if (typeof transport === "function") {
-    eventStream = checkClientStream(transport({ heartbeat, path }, logger));
+    eventStream = checkClientStream(
+      transport({ heartbeat, path, cors }, logger),
+    );
     transportName = "a custom transport";
   } else if (transport === "ws") {
-    eventStream = createWebSocketStream({ heartbeat, path }, logger);
+    eventStream = createWebSocketStream({ heartbeat, path, cors }, logger);
     transportName = "a WebSocket";
   } else {
-    eventStream = createEventStream(heartbeat, logger);
+    eventStream = createEventStream(heartbeat, logger, cors);
     transportName = "Server-Sent Events";
   }
 
@@ -798,6 +829,7 @@ function createHot(compiler, userOptions, statsOption) {
 }
 
 module.exports = createHot;
+module.exports.HOT_DEFAULT_CORS_SSE = HOT_DEFAULT_CORS_SSE;
 module.exports.HOT_DEFAULT_HEARTBEAT = HOT_DEFAULT_HEARTBEAT;
 module.exports.HOT_DEFAULT_PATH = HOT_DEFAULT_PATH;
 module.exports.HOT_DEFAULT_TRANSPORT = HOT_DEFAULT_TRANSPORT;

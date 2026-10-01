@@ -1,6 +1,7 @@
 import http from "node:http";
 
 import { problemLine } from "../client-src/problem";
+import { CORS_LOCAL_ORIGINS } from "../src/cors";
 import createHot, {
   createEventStream,
   formatErrors,
@@ -88,6 +89,9 @@ function attachClient(eventStream, reqOverrides = {}) {
     httpVersion: "1.1",
     socket: { setKeepAlive: () => {} },
     on: () => {},
+    // A real request always carries these, even when empty, and the handshake
+    // reads `Origin` off them.
+    headers: {},
     ...reqOverrides,
   };
   eventStream.handler(req, res);
@@ -347,6 +351,7 @@ describe("hot middleware (unit)", () => {
       };
       const fakeReq = {
         httpVersion: "1.1",
+        headers: {},
         socket: { setKeepAlive: () => {} },
         on: () => {},
       };
@@ -371,6 +376,7 @@ describe("hot middleware (unit)", () => {
       };
       const fakeReq = {
         httpVersion: "1.1",
+        headers: {},
         socket: { setKeepAlive: () => {} },
         on: () => {},
       };
@@ -397,6 +403,7 @@ describe("hot middleware (unit)", () => {
       };
       const fakeReq = {
         httpVersion: "1.1",
+        headers: {},
         socket: { setKeepAlive: () => {} },
         on: () => {},
       };
@@ -490,6 +497,236 @@ describe("hot middleware (unit)", () => {
       stream.close();
     });
 
+    // The endpoint used to answer every request with
+    // `Access-Control-Allow-Origin: *`, inherited from `webpack-hot-middleware`.
+    // A payload carries a build's module paths and the source frames webpack
+    // puts in a parse error, so that grant let any site the developer had open
+    // read their source. The grant is now scoped, and nothing is rejected here
+    // either way — a refusal is the host's, through `onConnect`.
+    describe("the cross-origin grant", () => {
+      /**
+       * The grant one client is given, and nothing else about the handshake.
+       * @param {EXPECTED_ANY} cors the `cors` option, `undefined` for the default
+       * @param {string=} origin the origin the request carries, if any
+       * @returns {{ allow: string | undefined, vary: string | undefined }} the headers that decide it
+       */
+      const grantFor = (cors, origin) => {
+        const stream =
+          cors === undefined
+            ? createEventStream(5000, noopLogger)
+            : createEventStream(5000, noopLogger, cors);
+        const { headers } = attachClient(
+          stream,
+          origin === undefined ? {} : { headers: { origin } },
+        );
+
+        stream.close();
+
+        return {
+          allow: headers["Access-Control-Allow-Origin"],
+          vary: headers.Vary,
+        };
+      };
+
+      // Until 8.4 this endpoint answered every request with
+      // `Access-Control-Allow-Origin: *`, with no option to turn it off, so
+      // that is what the default still is: narrowing it would stop a page
+      // served from anywhere else reading its own build, and that is a break.
+      // The WebSocket transport is new and starts narrow — see its own tests.
+      // TODO in the next major release this becomes the local origins too.
+      describe("by default", () => {
+        it.each([
+          "http://localhost:3000",
+          "https://evil.example",
+          "http://192.168.1.10:3000",
+          "null",
+        ])("grants %s, as it did before the option existed", (origin) => {
+          expect(grantFor(undefined, origin)).toStrictEqual({
+            allow: "*",
+            vary: undefined,
+          });
+        });
+
+        it("still serves a client that sent no origin at all", () => {
+          // Which is every same-origin `EventSource`: a browser sends no
+          // `Origin` for one, so the default must not be read as a refusal.
+          const stream = createEventStream(5000, noopLogger);
+          const { headers, writes } = attachClient(stream);
+
+          expect(headers["Content-Type"]).toBe(
+            "text/event-stream;charset=utf-8",
+          );
+          expect(writes).toContain("\n");
+
+          stream.close();
+        });
+      });
+
+      // What the default becomes in the next major, and what the WebSocket
+      // transport already does. Vite's `server.cors` default, for Vite's
+      // reason: a page on another port of the same machine is the one
+      // cross-origin case that is normal in development.
+      describe("the local origins", () => {
+        it.each([
+          "http://localhost:3000",
+          "http://localhost",
+          "https://localhost:8080",
+          "http://app.localhost:3000",
+          "http://127.0.0.1:3000",
+          "http://[::1]:3000",
+        ])("grant the local origin %s", (origin) => {
+          expect(grantFor(CORS_LOCAL_ORIGINS, origin)).toStrictEqual({
+            allow: origin,
+            vary: "Origin",
+          });
+        });
+
+        it.each([
+          "https://evil.example",
+          // The pattern is anchored at both ends, so neither half of a
+          // hostname that merely contains a local one counts as one.
+          "http://localhost.evil.example",
+          "http://127.0.0.1.evil.example",
+          "http://192.168.1.10:3000",
+          // What a sandboxed frame or a `file:` page sends.
+          "null",
+        ])("grant nothing to %s", (origin) => {
+          expect(grantFor(CORS_LOCAL_ORIGINS, origin)).toStrictEqual({
+            allow: undefined,
+            vary: "Origin",
+          });
+        });
+      });
+
+      it("grants every origin for true", () => {
+        expect(grantFor(true, "https://evil.example")).toStrictEqual({
+          allow: "*",
+          vary: undefined,
+        });
+      });
+
+      it("grants nothing at all for false", () => {
+        expect(grantFor(false, "http://localhost:3000")).toStrictEqual({
+          allow: undefined,
+          vary: undefined,
+        });
+      });
+
+      it("takes one origin as a string", () => {
+        expect(
+          grantFor("http://localhost:3000", "http://localhost:3000"),
+        ).toStrictEqual({ allow: "http://localhost:3000", vary: "Origin" });
+        expect(
+          grantFor("http://localhost:3000", "https://evil.example").allow,
+        ).toBeUndefined();
+      });
+
+      it("takes a list, of strings and patterns together", () => {
+        const cors = ["http://localhost:3000", /^https:\/\/\w+\.test$/];
+
+        expect(grantFor(cors, "http://localhost:3000").allow).toBe(
+          "http://localhost:3000",
+        );
+        expect(grantFor(cors, "https://app.test").allow).toBe(
+          "https://app.test",
+        );
+        expect(grantFor(cors, "https://evil.example").allow).toBeUndefined();
+      });
+
+      it("takes a pattern", () => {
+        expect(grantFor(/^http:\/\/app\./, "http://app.test").allow).toBe(
+          "http://app.test",
+        );
+        expect(
+          grantFor(/^http:\/\/app\./, "http://evil.test").allow,
+        ).toBeUndefined();
+      });
+
+      // `test()` on a `g` or `y` pattern leaves `lastIndex` at the end of the
+      // match, and the option is resolved once and then reused for every
+      // request — so the same origin was granted and refused by turns. One
+      // instance, asked twice, is the whole test: a pattern written fresh each
+      // time would never show it.
+      it.each([
+        ["global", /^http:\/\/a$/g],
+        ["sticky", /^http:\/\/a$/y],
+      ])(
+        "matches a %s pattern on every request, not every other one",
+        (_name, cors) => {
+          expect(grantFor(cors, "http://a").allow).toBe("http://a");
+          expect(grantFor(cors, "http://a").allow).toBe("http://a");
+          expect(grantFor(cors, "http://a").allow).toBe("http://a");
+        },
+      );
+
+      it("matches a global pattern inside a list on every request", () => {
+        const cors = ["http://b", /^http:\/\/a$/g];
+
+        expect(grantFor(cors, "http://a").allow).toBe("http://a");
+        expect(grantFor(cors, "http://a").allow).toBe("http://a");
+      });
+
+      it("asks a function about each origin", () => {
+        const cors = (origin) => origin.endsWith(".internal");
+
+        expect(grantFor(cors, "http://build.internal").allow).toBe(
+          "http://build.internal",
+        );
+        expect(grantFor(cors, "https://evil.example").allow).toBeUndefined();
+      });
+
+      // So a `cors` written for Vite or `expressjs/cors` reads the same here.
+      describe("as an { origin } object", () => {
+        it("takes the same values", () => {
+          expect(grantFor({ origin: ["http://a"] }, "http://a").allow).toBe(
+            "http://a",
+          );
+          expect(grantFor({ origin: /^http:\/\/a/ }, "http://a").allow).toBe(
+            "http://a",
+          );
+        });
+
+        it("reflects every origin for true", () => {
+          // Which is how `expressjs/cors` reads it: everyone, but named rather
+          // than wildcarded.
+          expect(
+            grantFor({ origin: true }, "https://evil.example"),
+          ).toStrictEqual({ allow: "https://evil.example", vary: "Origin" });
+        });
+
+        it("grants nothing for false, or for no origin key at all", () => {
+          expect(
+            grantFor({ origin: false }, "http://localhost:3000").allow,
+          ).toBeUndefined();
+          expect(grantFor({}, "http://localhost:3000").allow).toBeUndefined();
+        });
+      });
+
+      it("grants nothing when there is no origin to echo", () => {
+        expect(grantFor(["http://localhost:3000"]).allow).toBeUndefined();
+      });
+
+      it("does not read two origins as one", () => {
+        // Node joins repeated headers with a comma, so a request carrying
+        // `Origin` twice arrives as one string. Matching it has to fail rather
+        // than match either half.
+        expect(
+          grantFor(
+            ["http://localhost:3000"],
+            "http://localhost:3000, https://evil.example",
+          ).allow,
+        ).toBeUndefined();
+        // And a pattern has to refuse it too, which is what anchoring the
+        // local-origins one at both ends is for.
+        expect(
+          grantFor(
+            CORS_LOCAL_ORIGINS,
+            "http://localhost:3000, https://evil.example",
+          ).allow,
+        ).toBeUndefined();
+      });
+    });
+
     it("broadcasts events to every attached client", () => {
       const stream = createEventStream(5000, noopLogger);
       const clients = [
@@ -518,6 +755,7 @@ describe("hot middleware (unit)", () => {
       let closeHandler = () => {};
       const fakeReq = {
         httpVersion: "1.1",
+        headers: {},
         socket: { setKeepAlive: () => {} },
         on: (event, fn) => {
           if (event === "close") closeHandler = fn;
@@ -1442,21 +1680,119 @@ describe("createHot over a WebSocket", () => {
     expect(JSON.parse(messages[0]).hash).toBe("still-answers");
   });
 
+  // The `cors` option reaches this transport too, and the only way it can be
+  // honoured on this wire is by refusing the upgrade: a handshake is not
+  // subject to CORS, so a browser sends `Origin` and pays no attention to what
+  // comes back. Refused before the handshake completes, so nothing is ever
+  // published to a client that should not have one.
+  describe("the cross-origin grant", () => {
+    it("refuses an origin the default does not allow", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler());
+
+      await expect(
+        connect(endpoint.url, { origin: "https://evil.example" }),
+      ).rejects.toThrow("Unexpected server response: 403");
+    });
+
+    it("allows another origin on the same machine", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler());
+      const { socket } = await connect(endpoint.url, {
+        origin: "http://localhost:3000",
+      });
+
+      expect(socket.readyState).toBe(socket.OPEN);
+    });
+
+    it("allows a client that sent no origin at all", async () => {
+      // Which is every client that is not a browser — a Node client, a
+      // proxy's health check, this test. Browsers always send one.
+      const endpoint = await serveOverWs(makeFakeCompiler());
+      const { socket } = await connect(endpoint.url);
+
+      expect(socket.readyState).toBe(socket.OPEN);
+    });
+
+    it("allows the origin it was addressed as, whatever the option says", async () => {
+      // The page the middleware is serving. `EventSource` gets this for free,
+      // since the browser knows a same-origin read needs no grant; an upgrade
+      // has to work it out from the request.
+      const endpoint = await serveOverWs(makeFakeCompiler(), { cors: false });
+      const { port } = new URL(endpoint.url.replace("ws:", "http:"));
+      const { socket } = await connect(endpoint.url, {
+        origin: `http://127.0.0.1:${port}`,
+      });
+
+      expect(socket.readyState).toBe(socket.OPEN);
+    });
+
+    it("refuses every other origin once cors is off", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler(), { cors: false });
+
+      await expect(
+        connect(endpoint.url, { origin: "http://localhost:3000" }),
+      ).rejects.toThrow("Unexpected server response: 403");
+    });
+
+    it("allows an origin the option names", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler(), {
+        cors: ["https://app.test"],
+      });
+      const { socket } = await connect(endpoint.url, {
+        origin: "https://app.test",
+      });
+
+      expect(socket.readyState).toBe(socket.OPEN);
+    });
+
+    it("answers the refusal rather than dropping the socket", async () => {
+      // A socket destroyed without a response reads to the client as the
+      // server going away, and a client that reconnects would do it forever.
+      const endpoint = await serveOverWs(makeFakeCompiler());
+
+      await expect(
+        connect(endpoint.url, { origin: "https://evil.example" }),
+      ).rejects.toThrow(/403/);
+    });
+
+    it("refuses through handleUpgrade as well", async () => {
+      // Which is the path a server that owns its own `upgrade` event takes —
+      // so the option holds there too, and such a server sets `cors` to say
+      // otherwise.
+      const endpoint = await serveOverWs(
+        makeFakeCompiler(),
+        {},
+        (hot, server) => {
+          server.on("upgrade", (req, socket, head) => {
+            hot.handleUpgrade(req, socket, head);
+          });
+        },
+      );
+
+      await expect(
+        connect(endpoint.url, { origin: "https://evil.example" }),
+      ).rejects.toThrow("Unexpected server response: 403");
+    });
+  });
+
   it("lets the server refuse a client before the handshake", async () => {
     const compiler = makeFakeCompiler();
-    const endpoint = await serveOverWs(compiler, {}, (hot, server) => {
-      server.on("upgrade", (req, socket, head) => {
-        // The rule is the server's own — the middleware has none, and never
-        // sees this request.
-        if (req.headers.origin !== "http://allowed.test") {
-          socket.destroy();
+    // `cors: true` leaves the server's rule the only one, which is how a
+    // server that owns the upgrade and has its own policy uses this.
+    const endpoint = await serveOverWs(
+      compiler,
+      { cors: true },
+      (hot, server) => {
+        server.on("upgrade", (req, socket, head) => {
+          if (req.headers.origin !== "http://allowed.test") {
+            socket.destroy();
 
-          return;
-        }
+            return;
+          }
 
-        hot.handleUpgrade(req, socket, head);
-      });
-    });
+          hot.handleUpgrade(req, socket, head);
+        });
+      },
+    );
 
     await expect(connect(endpoint.url)).rejects.toThrow(
       /timed out connecting|ECONNREFUSED|socket hang up|Unexpected server response/,

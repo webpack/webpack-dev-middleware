@@ -23,6 +23,7 @@ declare function createHot(
 ): HotInstance;
 declare namespace createHot {
   export {
+    HOT_DEFAULT_CORS_SSE,
     HOT_DEFAULT_HEARTBEAT,
     HOT_DEFAULT_PATH,
     HOT_DEFAULT_TRANSPORT,
@@ -49,6 +50,8 @@ declare namespace createHot {
     MiddlewareStatsOption,
     HotClientOptions,
     HotOptions,
+    CorsOrigin,
+    CorsOption,
     Payload,
     EXPECTED_ANY,
     WebSocketLikeClient,
@@ -58,6 +61,7 @@ declare namespace createHot {
     EventStream,
   };
 }
+import { HOT_DEFAULT_CORS_SSE } from "./cors.js";
 declare const HOT_DEFAULT_HEARTBEAT: number;
 declare const HOT_DEFAULT_PATH: "/__webpack_hmr";
 declare const HOT_DEFAULT_TRANSPORT: "sse";
@@ -71,11 +75,13 @@ declare function checkClientStream(
 /**
  * @param {number} heartbeat heartbeat interval in milliseconds
  * @param {Logger} logger logger
+ * @param {CorsOption=} cors which origins may read the stream, the local ones by default
  * @returns {EventStream} event stream
  */
 declare function createEventStream(
   heartbeat: number,
   logger: Logger,
+  cors?: CorsOption | undefined,
 ): EventStream;
 /**
  * @param {(string | StatsError)[]} errors errors or warnings
@@ -265,6 +271,10 @@ type HotOptions = {
    */
   progress?: boolean | undefined;
   /**
+   * which origins may reach the endpoint from a page on another one; the local ones by default
+   */
+  cors?: CorsOption | undefined;
+  /**
    * add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
    */
   inject?: boolean | undefined;
@@ -273,6 +283,27 @@ type HotOptions = {
    */
   client?: HotClientOptions | undefined;
 };
+/**
+ * What an origin is matched against: one origin, several, a pattern, or a
+ * question asked of each.
+ */
+type CorsOrigin =
+  string | RegExp | (string | RegExp)[] | ((origin: string) => boolean);
+/**
+ * Which origins may read the event stream, as a CORS grant rather than a check:
+ * a request is never refused, it is only told whether the browser may hand the
+ * response to the page. `false` sends no grant, which leaves the browser's own
+ * same-origin rule in place; `true` grants every origin; anything else is
+ * matched against the request's own, which is echoed back when it is allowed.
+ * `{ origin }` is accepted as well, so a `cors` written for Vite or
+ * `expressjs/cors` reads the same here.
+ */
+type CorsOption =
+  | boolean
+  | CorsOrigin
+  | {
+      origin?: CorsOrigin | boolean;
+    };
 type Payload = {
   /**
    * action
@@ -404,6 +435,7 @@ type ClientStreamFactory<TClient extends unknown = StreamClient> = (
   options: {
     path: string;
     heartbeat: number;
+    cors: CorsOption | undefined;
   },
   logger: Logger,
 ) => ClientStream<TClient>;
