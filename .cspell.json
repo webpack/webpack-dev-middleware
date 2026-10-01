@@ -42,7 +42,8 @@
     "nwjs",
     "expressjs",
     "wildcarded",
-    "jshttp"
+    "jshttp",
+    "realpath"
   ],
   "ignorePaths": [
     "CHANGELOG.md",

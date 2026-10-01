@@ -1377,19 +1377,39 @@ server.on("upgrade", (req, socket, head) => {
 **Which file an editor is asked to open.** The path the overlay sends to your [`openEditorEndpoint`](#client-overlay-options) comes out of the build's error text, which a loader or a dependency writes — so it is not necessarily a file in your project. An error message carrying `/root/.ssh/id_rsa.pub:1:1` becomes a chip like any other, and clicking it asks your endpoint to open that. Nobody reads the file back, and the reference is shown before it is clicked, but the endpoint is the only place that knows where the project is. Resolve and check before handing anything to an editor:
 
 ```js
-const root = path.resolve(__dirname);
+// `realpath` here too, or every file under a symlinked root is refused —
+// which `/tmp` is on macOS.
+const root = fs.realpathSync(path.resolve(__dirname));
 
 app.get("/__open-editor", (req, res) => {
   // The trailing position, not the first colon: a Windows path starts with a
   // drive letter and a colon of its own.
   const file = String(req.query.fileName || "").replace(/:\d+:\d+$/, "");
-  const resolved = path.resolve(root, file);
+
+  let resolved;
+
+  try {
+    // `realpath`, not just `resolve`: a symlink inside the project can point
+    // outside it, and the check below compares the names it is given rather
+    // than where they lead. A package can ship one, and `node_modules` is
+    // inside the root. It also answers "no such file" for a reference to
+    // something that was never there.
+    resolved = fs.realpathSync(path.resolve(root, file));
+  } catch {
+    res.status(404).end("No such file");
+    return;
+  }
 
   // `path.relative` rather than `startsWith`: a sibling directory shares the
   // prefix of the root it sits next to.
   const relative = path.relative(root, resolved);
 
-  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) {
+  if (
+    !relative ||
+    relative === ".." ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative)
+  ) {
     res.status(403).end("Outside the project");
     return;
   }
