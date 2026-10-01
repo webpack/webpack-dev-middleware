@@ -8,6 +8,13 @@ const webpack = require("webpack");
 const middleware = require("../../src");
 
 const CLIENT_ENTRY = require.resolve("../../client-src/index.js");
+
+// These fixtures ask for a token, so the e2e runs cover an endpoint that
+// requires one. They wire the client entry themselves, which happens before
+// the middleware exists, so there is no minted token to put in the query — a
+// fixed one is what a developer wiring their own entry has to use, so it is
+// what the fixtures use.
+const E2E_TOKEN = "e2e-fixed-token";
 const CLIENT_SRC = path.join(__dirname, "..", "..", "client-src");
 const COLLECT_COVERAGE = Boolean(process.env.E2E_COVERAGE);
 
@@ -63,6 +70,7 @@ function pageHtml(scripts) {
  * @param {string=} publicPath output public path
  * @param {boolean=} hmrPlugin include HotModuleReplacementPlugin
  * @param {boolean=} bare omit the client entry and the plugin, leaving both to the middleware
+ * @param {string=} token the token a hand-wired client entry has to carry, "" when the middleware injects one
  * @returns {EXPECTED_ANY} webpack configuration
  */
 function makeConfig(
@@ -73,10 +81,14 @@ function makeConfig(
   publicPath = "/",
   hmrPlugin = true,
   bare = false,
+  token = "",
 ) {
-  const clientQuery = name
-    ? `?name=${name}${query ? `&${query.replace(/^\?/, "")}` : ""}`
-    : query;
+  const parts = [
+    ...(name ? [`name=${name}`] : []),
+    ...(query ? [query.replace(/^\?/, "")] : []),
+    ...(token ? [`token=${token}`] : []),
+  ];
+  const clientQuery = parts.length > 0 ? `?${parts.join("&")}` : "";
 
   return {
     ...(name ? { name } : {}),
@@ -188,6 +200,7 @@ async function createHotApp({
           undefined,
           undefined,
           bare,
+          transport === "ws" && !bare ? E2E_TOKEN : "",
         );
       });
       scripts = apps.map((app) => `/${app.name}.js`);
@@ -202,6 +215,7 @@ async function createHotApp({
         publicPath,
         hmrPlugin,
         bare,
+        transport === "ws" && !bare ? E2E_TOKEN : "",
       );
       scripts = [`${publicPath}main.js`];
     }
@@ -220,7 +234,14 @@ async function createHotApp({
     instance = middleware(compiler, {
       hot:
         transport === "ws" && hot
-          ? { ...(hot === true ? {} : hot), transport: "ws" }
+          ? {
+              ...(hot === true ? {} : hot),
+              transport: "ws",
+              // Fixed, so the entry wired above can carry it. `bare` has the
+              // middleware inject the client, which would be handed a minted
+              // one, but one token for both paths keeps the fixtures alike.
+              token: E2E_TOKEN,
+            }
           : hot,
       stats,
     });

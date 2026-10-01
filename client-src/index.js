@@ -45,6 +45,7 @@ import stripAnsi from "./utils/strip-ansi.js";
  * @property {string} urlPrefix prefix of the page-url parameters that turn `hot` and `liveReload` off for one page
  * @property {LogLevel} logging logger level
  * @property {string} name limit updates to this compilation name
+ * @property {string} token the secret the endpoint requires, when it requires one, put on the connection url — empty when it requires none
  * @property {boolean} autoConnect connect immediately when the entry runs
  * @property {number=} reconnect how many times to reconnect before giving up, unset to use the transport's default
  * @property {boolean | "circular" | "linear"} progress show an indicator while a rebuild is in progress — `true` and `"circular"` a small badge, `"linear"` a thin bar across the top of the viewport
@@ -62,6 +63,10 @@ const options = {
   urlPrefix: "webpack-dev-middleware",
   logging: "info",
   name: "",
+  // The secret the endpoint requires, when it requires one. Put on the url
+  // rather than sent as a header: neither `EventSource` nor `WebSocket` lets a
+  // page set one.
+  token: "",
   autoConnect: true,
   progress: true,
 };
@@ -172,6 +177,7 @@ function setOverrides(overrides) {
   // Where the page connects, which may be an absolute url rather than a path
   // when the endpoint is on another origin.
   if (overrides.path) options.path = overrides.path;
+  if (overrides.token) options.token = overrides.token;
   if (overrides.timeout) {
     const timeout = Number(overrides.timeout);
 
@@ -269,12 +275,29 @@ function getClient() {
 }
 
 /**
+ * The endpoint url, carrying the token when the endpoint requires one.
+ *
+ * On the url because neither `EventSource` nor `WebSocket` lets a page set a
+ * request header, so there is nowhere else to put it.
+ * @returns {string} the url to connect to
+ */
+function endpoint() {
+  const path = /** @type {string} */ (options.path);
+
+  if (!options.token) {
+    return path;
+  }
+
+  return `${path}${path.includes("?") ? "&" : "?"}token=${encodeURIComponent(options.token)}`;
+}
+
+/**
  * @returns {ReturnType<typeof createSocket>} a socket on the current options
  */
 function createClientSocket() {
   const isEventSource = options.transport !== "ws";
 
-  return createSocket(getClient(), /** @type {string} */ (options.path), {
+  return createSocket(getClient(), endpoint(), {
     clientOptions: { timeout: options.timeout },
     // Server-Sent Events are retried for as long as the page is open, at the
     // steady interval its watchdog already uses: a dev server is expected to

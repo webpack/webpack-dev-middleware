@@ -748,6 +748,38 @@ const HOT_DEFAULT_CORS_SSE = true;
 // keep and it starts where the other one is going.
 const HOT_DEFAULT_CORS_WS = CORS_LOCAL_ORIGINS;
 
+// A secret the injected client carries and the endpoint requires, so reaching
+// the stream takes something a page has to have been given rather than a
+// header a browser may or may not send.
+//
+// Why a secret and not a better header check: `cors` is answered by `Origin`,
+// and the `Origin`/`Sec-Fetch-*` family is absent entirely when the
+// destination is not potentially trustworthy — plain `http` to anything but
+// `localhost`. webpack-dev-server shipped two fixes built on those headers and
+// both were bypassed that way (CVE-2026-6402, then CVE-2026-14620). A token
+// does not ask the browser to volunteer anything.
+//
+// What it does not do: the client reads it from its entry query, so it is a
+// string in the bundle. An attacker who can already read the bundle
+// cross-origin — the same plain-`http`-to-a-LAN-address case, where nothing
+// sets `Cross-Origin-Resource-Policy` — reads the token with it. Closing that
+// needs the response header and a host allowlist, which belong to whoever owns
+// the server. This hardens every case where the bundle is not readable, and is
+// defence in depth in the case where it is.
+//
+// Off by default on BOTH transports, because requiring one by default breaks
+// a client the middleware did not inject — and `inject` being on does not mean
+// a client was injected. An entry is skipped when every entry point already
+// pulls the client in (the developer wired it themselves, which the README
+// documents), when `hot.transport` is a function, and for a non-web target.
+// In each of those the endpoint would demand a token nothing had been given,
+// and every client would be refused with a `403`.
+//
+// TODO in the next major release default both to `true`, alongside the `cors`
+// default above, and hand the token to a client the middleware did not inject
+// some way that does not depend on the entry query.
+const HOT_DEFAULT_TOKEN = false;
+
 /**
  * The resolved answer to "may this origin read the stream": no origin may, any
  * origin may, or ask this.
@@ -926,6 +958,69 @@ function isUpgradeAllowed(grant, req) {
   }
 
   return grant === "*" || grant(origin);
+}
+
+/**
+ * The token the endpoint will require, if any.
+ * @param {boolean | string | undefined} option the `hot.token` option
+ * @returns {string | false} the token, or false when the endpoint requires none
+ */
+function resolveToken(option) {
+  // A token of your own, for a consumer that has to be able to construct the
+  // url without being handed one — a script, or a client you wrote.
+  if (typeof option === "string") {
+    return option.length > 0 ? option : false;
+  }
+
+  const wanted = option ?? HOT_DEFAULT_TOKEN;
+
+  if (!wanted) {
+    return false;
+  }
+
+  // 9 bytes rather than a round 8 or 16: `base64url` encodes it without
+  // padding, so the query carries 12 characters and no `=`. The same size Vite
+  // and Rsbuild use for theirs.
+  return crypto.randomBytes(9).toString("base64url");
+}
+
+/**
+ * Does the request carry the token the endpoint requires?
+ *
+ * Compared in constant time. The comparison is not a plausible oracle — a
+ * token lives for one run of one dev server — but a length-dependent early
+ * return would be the kind of thing a reader has to reason about, and
+ * `timingSafeEqual` costs nothing here.
+ * @param {string | false} expected the resolved token, or false when none is required
+ * @param {IncomingMessage} req the request
+ * @returns {boolean} true when the request may proceed
+ */
+function isTokenValid(expected, req) {
+  if (expected === false) {
+    return true;
+  }
+
+  let given;
+
+  try {
+    given = new URL(
+      /** @type {string} */ (req.url),
+      "http://localhost",
+    ).searchParams.get("token");
+  } catch {
+    return false;
+  }
+
+  if (typeof given !== "string") {
+    return false;
+  }
+
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+
+  // `timingSafeEqual` throws on a length mismatch rather than returning false,
+  // and the length of the expected token is not a secret.
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 // --------------------------------------------------------------------------
@@ -1413,8 +1508,11 @@ function clientQuery(client) {
  * The client is given the endpoint, the transport and the browser options
  * through its resource query, so it agrees with the server by construction
  * rather than by the developer keeping two settings in step.
+ */
+
+/**
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: HotClientOptions }} options resolved hot options
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: HotClientOptions, token?: string | false }} options resolved hot options
  * @param {Logger} logger logger
  */
 function injectHotClient(compilers, options, logger) {
@@ -1423,6 +1521,9 @@ function injectHotClient(compilers, options, logger) {
   }
 
   let warned = false;
+  // A token only reaches the browser on the entry added below, so a required
+  // one with nothing added would refuse every client.
+  let injected = false;
 
   // What the developer set in node, which wins over everything below it: these
   // are the same options the query carries, so either spelling reaches the
@@ -1482,12 +1583,18 @@ function injectHotClient(compilers, options, logger) {
         /** @type {Record<string, string>} */
         const query = { path: options.path, transport };
 
+        if (options.token) {
+          query.token = options.token;
+        }
+
         if (compilation) {
           query.name = compilation;
         }
 
         const search = new URLSearchParams({ ...query, ...client }).toString();
         const entry = `${clientEntry()}?${search}`;
+
+        injected = true;
 
         if (missing === null) {
           // No entry point has one, so a single entry every one of them gets.
@@ -1519,12 +1626,23 @@ function injectHotClient(compilers, options, logger) {
       new webpack.HotModuleReplacementPlugin().apply(compiler);
     }
   }
+
+  // Every path above can decline to add an entry — every entry point already
+  // pulls the client in, `hot.transport` is a function, the target is not the
+  // web — and the endpoint still requires whatever token it was given. Said
+  // here rather than left as a `403` with no explanation.
+  if (options.token && !injected) {
+    logger.warn(
+      `'hot.token' requires a token on the endpoint, but no client entry was added to hand one over, so every client will be refused. Put 'token=${options.token}' on the query of the client you added yourself, read it from the middleware's 'token' property, or set 'hot.token: false'.`,
+    );
+  }
 }
 
 module.exports = {
   CORS_LOCAL_ORIGINS,
   HOT_DEFAULT_CORS_SSE,
   HOT_DEFAULT_CORS_WS,
+  HOT_DEFAULT_TOKEN,
   applyCors,
   clientQuery,
   createMimeTypes,
@@ -1547,6 +1665,7 @@ module.exports = {
   initState,
   injectHotClient,
   isSameOrigin,
+  isTokenValid,
   isUpgradeAllowed,
   isWebTarget,
   matchOrigin,
@@ -1558,6 +1677,7 @@ module.exports = {
   pipe,
   removeResponseHeader,
   resolveCors,
+  resolveToken,
   send,
   setResponseHeader,
   setState,
