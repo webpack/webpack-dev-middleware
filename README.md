@@ -1453,7 +1453,7 @@ const OVERLAY_ORIGINS = new Set(["http://localhost:8080"]);
 const isOverlayAsking = (req, res) => {
   // Before the check rather than after it: the refusal depends on the origin
   // too, so neither answer may be reused across origins. The middleware's own
-  // hot endpoint does the same — see `src/cors.js`.
+  // hot endpoint does the same — see `applyCors` in `src/utils.js`.
   res.setHeader("Vary", "Origin");
 
   if (!OVERLAY_ORIGINS.has(req.headers.origin)) {

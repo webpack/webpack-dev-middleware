@@ -19,7 +19,7 @@ import request from "supertest";
 import { Stats } from "webpack";
 
 import middleware from "../src";
-import { CORS_LOCAL_ORIGINS } from "../src/cors";
+import { CORS_LOCAL_ORIGINS } from "../src/utils";
 
 import webpackMultiConfig from "./fixtures/webpack.array.config";
 import webpackMultiDevServerFalseConfig from "./fixtures/webpack.array.dev-server-false";

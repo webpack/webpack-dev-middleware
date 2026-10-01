@@ -1,9 +1,22 @@
+// Everything the middleware needs that is not the middleware itself: the
+// framework shims, the response helpers, the CORS rules for the hot endpoint,
+// the media-type table and the client injection.
+//
+// One module rather than five. These were all loaded on every require of this
+// package anyway — `index.js` and `hot.js` pulled each of them in at the top —
+// so folding them together drops four module resolutions without changing what
+// gets parsed. The parts that are genuinely conditional are not here: the
+// WebSocket server is required when a `ws` transport is built, and `mime-db`
+// when the first type is looked up.
+
 const crypto = require("node:crypto");
+const path = require("node:path");
 
 /** @typedef {import("./index").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index").ServerResponse} ServerResponse */
 /** @typedef {import("./index").OutputFileSystem} OutputFileSystem */
 /** @typedef {import("./index").EXPECTED_ANY} EXPECTED_ANY */
+/** @typedef {import("./index").Logger} Logger */
 
 const matchHtmlRegExp = /["'&<>]/;
 
@@ -695,11 +708,831 @@ function nodeReadableToWebStream(stream) {
   });
 }
 
+// --------------------------------------------------------------------------
+// CORS, for the hot endpoint
+//
+// Who may reach the event stream or open a WebSocket to it. The middleware
+// decides the default here because it writes the header itself; the policy is
+// the server's, through `hot.cors`.
+// --------------------------------------------------------------------------
+
+/** @typedef {import("./hot.js").CorsOption} CorsOption */
+/** @typedef {import("./hot.js").CorsOrigin} CorsOrigin */
+
+// Only the machine the build is running on: `localhost` and anything under it,
+// `127.0.0.1` and `[::1]`, on any port and either scheme. A page on another
+// port of the same machine is the one cross-origin case that is normal in
+// development, and nothing a remote site can be served from matches this. The
+// same set, and the same reasoning, as Vite's `server.cors` default.
+//
+// Anchored at both ends on purpose: `http://localhost.evil.example` must not
+// read as a local origin.
+const CORS_LOCAL_ORIGINS =
+  /^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/;
+
+// TODO in the next major release default the Server-Sent Events endpoint to
+// `CORS_LOCAL_ORIGINS` too, so one default covers both transports, and say so
+// in the changelog as a breaking change.
+//
+// Until 8.4 the endpoint answered every request with
+// `Access-Control-Allow-Origin: *`, inherited from `webpack-hot-middleware`,
+// and no option could turn it off. That grant let any site a developer had
+// open read the stream — and with it the module paths and source frames a
+// failed build reports — so the local-origins set is what it should be. But
+// narrowing it would stop a page served from anywhere else reading its own
+// build, which is a break, and this release is a minor. So it stays as it
+// shipped, and `cors` is how you narrow it today.
+const HOT_DEFAULT_CORS_SSE = true;
+
+// The WebSocket transport is new in this release, so there is no behavior to
+// keep and it starts where the other one is going.
+const HOT_DEFAULT_CORS_WS = CORS_LOCAL_ORIGINS;
+
+/**
+ * The resolved answer to "may this origin read the stream": no origin may, any
+ * origin may, or ask this.
+ * @typedef {false | "*" | ((origin: string) => boolean)} CorsGrant
+ */
+
+/**
+ * Does one origin match what the `cors` option allows?
+ * @param {string} origin the origin the request carried
+ * @param {CorsOrigin} allowed what the option allows
+ * @returns {boolean} true when the origin is allowed
+ */
+function matchOrigin(origin, allowed) {
+  if (typeof allowed === "function") {
+    return Boolean(allowed(origin));
+  }
+
+  if (typeof allowed === "string") {
+    return allowed === "*" || allowed === origin;
+  }
+
+  if (Array.isArray(allowed)) {
+    for (const each of allowed) {
+      if (matchOrigin(origin, each)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // `test()` on a `g` or `y` pattern leaves `lastIndex` at the end of the
+  // match, and the option is resolved once and reused for every request — so
+  // the next request from the same origin would start matching mid-string and
+  // be refused, alternating allowed and not. Only those two flags read
+  // `lastIndex`, so only they need it reset.
+  if (allowed.global || allowed.sticky) {
+    allowed.lastIndex = 0;
+  }
+
+  return allowed.test(origin);
+}
+
+/**
+ * Read the `cors` option once, so each request costs a call rather than a walk
+ * back through every form the option can take.
+ * @param {CorsOption} cors the option, as it was given, or the transport's default when it was not
+ * @returns {CorsGrant} the resolved answer
+ */
+function resolveCors(cors) {
+  if (cors === false || cors === true) {
+    return cors && "*";
+  }
+
+  // `{ origin }`, as Vite and `expressjs/cors` are configured, so a
+  // configuration written for one of those reads the same here.
+  const allowed =
+    typeof cors === "object" &&
+    !Array.isArray(cors) &&
+    !(cors instanceof RegExp)
+      ? cors.origin
+      : cors;
+
+  if (allowed === false || typeof allowed === "undefined") {
+    return false;
+  }
+
+  if (allowed === "*") {
+    return "*";
+  }
+
+  // `origin: true` reflects whatever asked, which is how `expressjs/cors`
+  // reads it — every origin, but named rather than wildcarded.
+  if (allowed === true) {
+    return () => true;
+  }
+
+  return (origin) => matchOrigin(origin, allowed);
+}
+
+/**
+ * Is this request's origin the one it was sent to?
+ *
+ * The middleware never knows the url it is mounted under, so its own origin is
+ * only ever readable from the request: whatever answered is whatever the client
+ * addressed. Both sides carry the port when it is not the scheme's default, so
+ * they are compared as they arrived.
+ * @param {IncomingMessage} req the request
+ * @param {string} origin the `Origin` it carried
+ * @returns {boolean} true when the two are the same origin
+ */
+function isSameOrigin(req, origin) {
+  try {
+    // `"null"` — what a sandboxed frame or a `file:` page sends — does not
+    // parse, and so is never the same origin as anything.
+    return new URL(origin).host === getRequestHeader(req, "host");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Add the cross-origin grant the `cors` option asks for, if any.
+ *
+ * Without a grant the browser will not hand a cross-origin `EventSource`
+ * response to the page, which is what keeps a build's errors — module paths and
+ * the source frames webpack puts in a parse error — from being readable by any
+ * site the developer happens to have open. Nothing is rejected: the request is
+ * answered either way, and the browser decides what to do with it.
+ *
+ * No same-origin case to handle here, unlike an upgrade: a browser sends no
+ * `Origin` at all for a same-origin `EventSource`, and would not consult these
+ * headers if it did.
+ * @param {CorsGrant} grant the resolved grant
+ * @param {IncomingMessage} req the request joining the stream
+ * @param {Record<string, string>} headers the response headers, added to in place
+ */
+function applyCors(grant, req, headers) {
+  if (grant === false) {
+    return;
+  }
+
+  if (grant === "*") {
+    headers["Access-Control-Allow-Origin"] = "*";
+    return;
+  }
+
+  // The header names a single origin, so the request's own is echoed back when
+  // it is an allowed one. `Vary` goes out either way: without it a cache that
+  // kept this response could hand it to a page on another origin, grant and
+  // all.
+  headers.Vary = "Origin";
+
+  // Through the framework abstraction: a request does not always carry
+  // `headers` of its own — under Hono it answers `getHeader` instead, and
+  // reading the property straight off it grants nothing to anyone.
+  const origin = getRequestHeader(req, "origin");
+
+  if (typeof origin === "string" && grant(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+}
+
+/**
+ * May this WebSocket handshake go ahead?
+ *
+ * A handshake is not subject to CORS — a browser sends `Origin` and pays no
+ * attention to what comes back — so the same option can only be honoured here
+ * by refusing the upgrade. Two cases are allowed whatever the option says,
+ * because neither is a page on another origin reading the stream.
+ *
+ * A request with no `Origin` at all is not a browser: browsers always send one
+ * on a handshake, while a Node client, a proxy's health check or a test
+ * harness does not, and refusing those would break them for nothing.
+ *
+ * A request whose `Origin` is the one it was addressed to is the page the
+ * middleware is serving. `EventSource` gets this for free, since the browser
+ * knows a same-origin read needs no grant; an upgrade has to work it out.
+ * @param {CorsGrant} grant the resolved grant
+ * @param {IncomingMessage} req the request being upgraded
+ * @returns {boolean} true when the upgrade may proceed
+ */
+function isUpgradeAllowed(grant, req) {
+  const origin = getRequestHeader(req, "origin");
+
+  if (typeof origin !== "string") {
+    return true;
+  }
+
+  if (isSameOrigin(req, origin)) {
+    return true;
+  }
+
+  if (grant === false) {
+    return false;
+  }
+
+  return grant === "*" || grant(origin);
+}
+
+// --------------------------------------------------------------------------
+// Media types
+//
+// Extension to media type, from `mime-db` directly.
+// --------------------------------------------------------------------------
+
+// Extension to media type, straight from `mime-db`.
+//
+// This was `mime-types`, which is `mime-db` plus the table and the scoring
+// below. Two reasons to own them instead:
+//
+//   * `mime-db` is what webpack already depends on, so a webpack project has
+//     it installed either way. Going through `mime-types` added a package to
+//     every install and a second version range over the same data.
+//   * the `mimeTypes` option used to be applied by assigning to the shared
+//     `mime-types` module's own table, which is process-wide: two middleware
+//     instances accumulated into one map rather than keeping their own, and
+//     anything else in the process using `mime-types` inherited whatever a
+//     middleware had registered. A table per instance is what the option
+//     always meant.
+//
+// The scoring is `jshttp/mime-types`' own, so an extension resolves to exactly
+// what it did before — `test/mimeTypes.test.js` holds that to every extension
+// in `mime-db`.
+
+// Described here rather than imported from `@types/mime-db`, so the
+// declarations this package publishes do not ask consumers for a package only
+// its own build needs.
+/** @typedef {{ source?: string, charset?: string, compressible?: boolean, extensions?: readonly string[] }} MimeDbEntry */
+
+// Facets, from RFC 6838 section 3: a vendor or personal subtype is less
+// official than a plain one.
+/** @type {Record<string, number>} */
+const FACET_SCORES = {
+  "prs.": 100,
+  "x-": 200,
+  "x.": 300,
+  "vnd.": 400,
+  default: 900,
+};
+
+/** @type {Record<string, number>} */
+const SOURCE_SCORES = {
+  nginx: 10,
+  apache: 20,
+  iana: 40,
+  // What `mime-db` added itself.
+  default: 30,
+};
+
+/** @type {Record<string, number>} */
+const TYPE_SCORES = {
+  // `application/xml` over `text/xml`, `application/rtf` over `text/rtf`.
+  application: 1,
+  // `font/woff` over `application/font-woff`.
+  font: 2,
+  // `video/mp4` over `audio/mp4` over `application/mp4`, per RFC 4337.
+  audio: 2,
+  video: 3,
+  default: 0,
+};
+
+const EXTRACT_TYPE_REGEXP = /^\s*([^;\s]*)(?:[;\s]|$)/;
+const TEXT_TYPE_REGEXP = /^text\//i;
+
+/**
+ * How official a media type is. The higher the score the more it is preferred
+ * where two types claim the same extension.
+ * @param {string} mimeType the media type
+ * @param {string=} source where `mime-db` got it from
+ * @returns {number} the score
+ */
+function mimeScore(mimeType, source = "default") {
+  if (mimeType === "application/octet-stream") {
+    return 0;
+  }
+
+  const [type, subtype] = mimeType.split("/");
+  const facet = subtype.replace(/([.]|x-).*/, "$1");
+
+  // All else equal, the shorter type wins.
+  return (
+    (FACET_SCORES[facet] || FACET_SCORES.default) +
+    (SOURCE_SCORES[source] || SOURCE_SCORES.default) +
+    (TYPE_SCORES[type] || TYPE_SCORES.default) +
+    (1 - mimeType.length / 100)
+  );
+}
+
+/** @type {{ db: Record<string, MimeDbEntry>, types: Record<string, string> } | undefined} */
+let tables;
+
+/**
+ * The extension table, built once and only when something asks for a type.
+ * `mime-db` is a megabyte of JSON, and a build that never serves a file over
+ * HTTP — `writeToDisk` on its own, a plugin run — should not pay to parse it.
+ * @returns {{ db: Record<string, MimeDbEntry>, types: Record<string, string> }} the database and the extension table
+ */
+function getTables() {
+  if (tables) {
+    return tables;
+  }
+
+  /** @type {Record<string, MimeDbEntry>} */
+  const db = require("mime-db");
+
+  /** @type {Record<string, string>} */
+  const types = Object.create(null);
+
+  for (const type of Object.keys(db)) {
+    const { extensions } = db[type];
+
+    if (!extensions || extensions.length === 0) {
+      continue;
+    }
+
+    for (const extension of extensions) {
+      const current = types[extension];
+
+      types[extension] =
+        (current ? mimeScore(current, db[current].source) : 0) >
+        mimeScore(type, db[type].source)
+          ? current
+          : type;
+    }
+  }
+
+  tables = { db, types };
+
+  return tables;
+}
+
+/**
+ * @typedef {object} MimeTypes
+ * @property {(file: string) => string | false} lookup the media type an extension, a `.extension`, or a path resolves to
+ * @property {(type: string) => string | false} charset the charset a media type is served as
+ * @property {(str: string) => string | false} contentType a `Content-Type` value for a media type or an extension
+ */
+
+/**
+ * The lookup an instance uses, with the `mimeTypes` option over the top of the
+ * known extensions rather than written into them.
+ * @param {Record<string, string>=} extra extension to media type, from the `mimeTypes` option
+ * @returns {MimeTypes} the lookup
+ */
+function createMimeTypes(extra) {
+  // Copied, not held: the option used to be spread into a table once, so the
+  // object a caller passed stopped mattering the moment the middleware was
+  // built, and two instances given the same object could not reach each
+  // other through it. A null prototype so `constructor` and `toString` are
+  // not extensions anything resolves to.
+  const registered = extra
+    ? Object.assign(Object.create(null), extra)
+    : undefined;
+
+  /**
+   * The media type an extension, a `.extension`, or a whole path resolves to.
+   * @param {string} file extension, `.extension`, or path
+   * @returns {string | false} the media type, or false when none is known
+   */
+  const lookup = (file) => {
+    if (!file || typeof file !== "string") {
+      return false;
+    }
+
+    // The `x.` prefix makes one expression cover all three spellings:
+    // `js`, `.js` and `/a/b.js`.
+    const extension = path.extname(`x.${file}`).toLowerCase().slice(1);
+
+    if (!extension) {
+      return false;
+    }
+
+    // The option first: registering an extension is how it is overridden.
+    if (registered && registered[extension] !== undefined) {
+      return registered[extension];
+    }
+
+    return getTables().types[extension] || false;
+  };
+
+  /**
+   * The charset a media type is served as, where one is known.
+   * @param {string} type the media type
+   * @returns {string | false} the charset, or false
+   */
+  const charset = (type) => {
+    if (!type || typeof type !== "string") {
+      return false;
+    }
+
+    const match = EXTRACT_TYPE_REGEXP.exec(type);
+    const entry = match && getTables().db[match[1].toLowerCase()];
+
+    if (entry && entry.charset) {
+      return entry.charset;
+    }
+
+    // Text is UTF-8 unless `mime-db` says otherwise. Spelled the way
+    // `mime-db` spells it, since this is returned to callers and not only
+    // used to build a header.
+    if (match && TEXT_TYPE_REGEXP.test(match[1])) {
+      // eslint-disable-next-line unicorn/text-encoding-identifier-case
+      return "UTF-8";
+    }
+
+    return false;
+  };
+
+  /**
+   * A `Content-Type` value for a media type, an extension, or a path — the
+   * type with its charset where there is one.
+   * @param {string} str media type, extension, `.extension`, or path
+   * @returns {string | false} the header value, or false when no type is known
+   */
+  const contentType = (str) => {
+    if (!str || typeof str !== "string") {
+      return false;
+    }
+
+    const type = str.includes("/") ? str : lookup(str);
+
+    if (!type) {
+      return false;
+    }
+
+    if (type.includes("charset")) {
+      return type;
+    }
+
+    const found = charset(type);
+
+    return found ? `${type}; charset=${found.toLowerCase()}` : type;
+  };
+
+  return { charset, contentType, lookup };
+}
+
+// --------------------------------------------------------------------------
+// Client injection
+//
+// Putting the browser runtime and `HotModuleReplacementPlugin` into the
+// compilation, so `hot` is the whole of what a configuration needs.
+// --------------------------------------------------------------------------
+
+/** @typedef {import("webpack").Compiler} Compiler */
+/** @typedef {import("./hot.js").HotOptions} HotOptions */
+/** @typedef {import("./hot.js").HotClientOptions} HotClientOptions */
+
+/**
+ * The browser runtime, as it is published. Resolved when it is needed rather
+ * than at load, so requiring this module in a checkout that has not been built
+ * does not throw.
+ * @returns {string} absolute path to the client entry
+ */
+function clientEntry() {
+  return path.join(__dirname, "..", "client", "index.js");
+}
+
+/**
+ * Whether a compiler produces something a browser will run, which is the whole
+ * of what decides where the client goes.
+ *
+ * `platform` answers it for every target webpack resolves one from: `web` is
+ * true for `web`, `webworker`, `electron-renderer`, `electron-preload`, `nwjs`,
+ * `deno` and a browserslist query, and false for `node`, `async-node`,
+ * `electron-main` and a `nodeXX` version. A target that names no platform at
+ * all — `target: false`, or a bare `es2020` — leaves nothing to go on and gets
+ * no client; add the entry yourself there.
+ * @param {Compiler} compiler compiler
+ * @returns {boolean} true when the client belongs in this compilation
+ */
+function isWebTarget(compiler) {
+  const { platform } = /** @type {EXPECTED_ANY} */ (compiler);
+
+  // Deno has no `window`, and whether it has the transports is not something
+  // this suite can answer. Matched as itself: a universal target that includes
+  // it reports `null` here and still runs in a browser.
+  // TODO include Deno once it can be tested there.
+  if (platform.deno === true) {
+    return false;
+  }
+
+  // A universal target (`target: ["node", "web"]`) is `null` for both, which
+  // `target: false` also is — hence the guard for it.
+  // TODO drop the third clause once the `webpack` peer range starts at
+  // ^5.108.0, which added `platform.universal`.
+  return Boolean(
+    platform.web ||
+    platform.universal ||
+    (compiler.options.target !== false &&
+      platform.web === null &&
+      platform.node === null),
+  );
+}
+
+// How the hot client is asked for by package name. Exact, because the package
+// exports other things under `client/` — `client/ws`, `client/overlay` — and
+// none of those connects to anything.
+const CLIENT_PACKAGE_REQUEST = "webpack-dev-middleware/client";
+
+// The same file asked for by path: as published, and as it is in this
+// repository, which is how its own tests reach it.
+const CLIENT_FILES = [
+  path.join(__dirname, "..", "client", "index.js"),
+  path.join(__dirname, "..", "client-src", "index.js"),
+];
+
+/**
+ * Whether one entry request is this package's client.
+ * @param {string} request an entry request
+ * @param {string} context the compilation's context, which relative requests are resolved against
+ * @returns {boolean} true when the request is the client
+ */
+function isClientRequest(request, context) {
+  // A query belongs to the client, not to which file it is.
+  const [resource] = request.split("?");
+
+  if (resource === CLIENT_PACKAGE_REQUEST) {
+    return true;
+  }
+
+  // Resolved and compared as a path rather than by how it ends: a project's
+  // own `./src/client/index.js` is a common application entry and has nothing
+  // to do with this package.
+  return CLIENT_FILES.includes(path.resolve(context, resource));
+}
+
+/**
+ * Which of a compilation's entry points do not pull the client in.
+ *
+ * Per entry point, because they are separate pages: a build with `landing` and
+ * `dashboard` where only `landing` has the client still needs one in
+ * `dashboard`, or that page connects to nothing.
+ *
+ * Best effort by design: `entry` can be a function, and a request can reach the
+ * client through an alias or a loader. Missing one of those costs a duplicate
+ * entry, not a broken build, and `hot.inject: false` is the way out.
+ * @param {Compiler} compiler compiler
+ * @returns {string[] | null} the names that need one, or null when they all do
+ */
+function entriesMissingClient(compiler) {
+  const { entry } = compiler.options;
+
+  // Computed per build, so there is nothing to read here.
+  if (typeof entry === "function") {
+    return null;
+  }
+
+  const names = Object.keys(entry || {});
+  const missing = names.filter((name) => {
+    const imported = /** @type {EXPECTED_ANY} */ (entry)[name].import;
+    const requests =
+      typeof imported === "string"
+        ? [imported]
+        : Array.isArray(imported)
+          ? imported
+          : [];
+
+    return !requests.some(
+      (request) =>
+        typeof request === "string" &&
+        isClientRequest(request, compiler.context),
+    );
+  });
+
+  // All of them, so one entry that every entry point gets — the same single
+  // entry this added before it could tell them apart.
+  return missing.length === names.length ? null : missing;
+}
+
+/**
+ * Whether every entry point already pulls the client in.
+ * @param {Compiler} compiler compiler
+ * @returns {boolean} true when nothing needs adding
+ */
+function hasClientEntry(compiler) {
+  const missing = entriesMissingClient(compiler);
+
+  return missing !== null && missing.length === 0;
+}
+
+// Which `client` values the overlay reads as a filter rather than a flag. A
+// function cannot travel as JSON, so it goes as its source and the client
+// rebuilds it — the same encoding webpack-dev-server has always used.
+const OVERLAY_FILTERS = ["errors", "warnings", "runtimeErrors"];
+
+/**
+ * Whether source can stand where the client puts it — after `var callback =`.
+ * Compiled rather than run: nothing in it is executed here.
+ * @param {string} source a function's source
+ * @returns {boolean} true when it is an expression
+ */
+function isExpression(source) {
+  try {
+    // eslint-disable-next-line no-new-func
+    const compiled = new Function(`var callback = ${source}`);
+
+    return typeof compiled === "function";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A filter as source the client can rebuild from.
+ *
+ * An arrow function and a `function` both stringify to something that can be
+ * assigned; a method shorthand — `overlay: { errors(message) {} }` — does not,
+ * and would have gone over as `errors(message) {}` for the client to choke on.
+ * Making it a function expression is the whole of the difference.
+ * @param {string} option which filter it is, for the error
+ * @param {EXPECTED_ANY} filter the function given
+ * @returns {string} source the client can assign
+ */
+function filterSource(option, filter) {
+  const source = filter.toString();
+
+  if (isExpression(source)) {
+    return source;
+  }
+
+  if (isExpression(`function ${source}`)) {
+    return `function ${source}`;
+  }
+
+  // Said here rather than left for the browser: this is a configuration
+  // mistake, and the stack in a page would point at the client instead.
+  throw new Error(
+    `The 'hot.client.overlay.${option}' function could not be serialized for the browser. Write it as a function expression or an arrow function.`,
+  );
+}
+
+/**
+ * The browser options, as the client reads them from its resource query.
+ * @param {EXPECTED_ANY} client the `hot.client` option
+ * @returns {Record<string, string>} query parameters
+ */
+function clientQuery(client) {
+  /** @type {Record<string, string>} */
+  const query = {};
+
+  if (!client) {
+    return query;
+  }
+
+  for (const [key, value] of Object.entries(client)) {
+    if (typeof value === "undefined") {
+      continue;
+    }
+
+    if (key !== "overlay") {
+      query[key] = String(value);
+      continue;
+    }
+
+    if (typeof value !== "object" || value === null) {
+      query.overlay = String(value);
+      continue;
+    }
+
+    /** @type {Record<string, EXPECTED_ANY>} */
+    const overlay = {};
+
+    for (const [option, setting] of Object.entries(value)) {
+      overlay[option] =
+        OVERLAY_FILTERS.includes(option) && typeof setting === "function"
+          ? encodeURIComponent(filterSource(option, setting))
+          : setting;
+    }
+
+    query.overlay = JSON.stringify(overlay);
+  }
+
+  return query;
+}
+
+/**
+ * Put the hot runtime into the compilation, so enabling `hot` is the whole of
+ * what a developer has to do: no entry to add, no `HotModuleReplacementPlugin`
+ * to remember, no configuration to change.
+ *
+ * The client is given the endpoint, the transport and the browser options
+ * through its resource query, so it agrees with the server by construction
+ * rather than by the developer keeping two settings in step.
+ * @param {Compiler[]} compilers compilers to modify
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: HotClientOptions }} options resolved hot options
+ * @param {Logger} logger logger
+ */
+function injectHotClient(compilers, options, logger) {
+  if (options.inject === false) {
+    return;
+  }
+
+  let warned = false;
+
+  // What the developer set in node, which wins over everything below it: these
+  // are the same options the query carries, so either spelling reaches the
+  // runtime and the one written by hand is the one that counts.
+  const client = clientQuery(options.client);
+
+  // A transport of your own carries whatever protocol you wrote it to carry,
+  // and the built-in client speaks two. When yours speaks one of them,
+  // `hot.client.transport` says which and the client is added as usual;
+  // without that there is nothing to point it at, so the client is yours to
+  // add — the plugin below still is not.
+  /** @type {string | undefined} */
+  const transport =
+    typeof options.transport === "function"
+      ? client.transport
+      : options.transport;
+
+  // Overriding the transport is for a client that talks to something else, so
+  // it comes with an endpoint of its own. Without one it is pointed straight
+  // back at this middleware speaking the wrong protocol, which is a page that
+  // silently never connects.
+  if (
+    typeof options.transport === "string" &&
+    client.transport &&
+    client.transport !== options.transport &&
+    !client.path
+  ) {
+    logger.warn(
+      `'hot.client.transport' is '${client.transport}' while the endpoint serves '${options.transport}', so the client will not connect. Set them to the same thing, or give 'hot.client.path' the endpoint that does speak '${client.transport}'.`,
+    );
+  }
+
+  for (const compiler of compilers) {
+    if (!isWebTarget(compiler)) {
+      continue;
+    }
+
+    const { webpack } = compiler;
+
+    const missing = entriesMissingClient(compiler);
+
+    if (missing === null || missing.length > 0) {
+      if (transport === undefined) {
+        if (!warned) {
+          warned = true;
+          logger.warn(
+            "'hot.transport' is a function, so no client was added: the built-in one speaks Server-Sent Events and WebSocket, not a transport of your own. Set 'hot.client.transport' if yours speaks one of them, or add an entry for the client that speaks it — 'HotModuleReplacementPlugin' is still applied for you, and 'hot.inject: false' silences this.",
+          );
+        }
+      } else {
+        // The endpoint and the transport the middleware resolved, and the
+        // compilation's name so each bundle's client reports only its own
+        // builds — without that a page shows an overlay for a build error in
+        // code it does not contain. All three are defaults: `hot.client`
+        // carries the same options and is spread over them.
+        const { name: compilation } = compiler.options;
+        /** @type {Record<string, string>} */
+        const query = { path: options.path, transport };
+
+        if (compilation) {
+          query.name = compilation;
+        }
+
+        const search = new URLSearchParams({ ...query, ...client }).toString();
+        const entry = `${clientEntry()}?${search}`;
+
+        if (missing === null) {
+          // No entry point has one, so a single entry every one of them gets.
+          new webpack.EntryPlugin(compiler.context, entry, {
+            name: undefined,
+          }).apply(compiler);
+        } else {
+          // Some already have it. Adding a global entry would give those a
+          // second copy, so the ones without it are named instead.
+          for (const entryPoint of missing) {
+            new webpack.EntryPlugin(compiler.context, entry, {
+              name: entryPoint,
+            }).apply(compiler);
+          }
+        }
+      }
+    }
+
+    const hmrPluginExists = compiler.options.plugins.some(
+      (plugin) =>
+        plugin && plugin.constructor === webpack.HotModuleReplacementPlugin,
+    );
+
+    if (hmrPluginExists) {
+      logger.warn(
+        "'hot' applies HotModuleReplacementPlugin for you — it does not need to be in the webpack configuration as well.",
+      );
+    } else {
+      new webpack.HotModuleReplacementPlugin().apply(compiler);
+    }
+  }
+}
+
 module.exports = {
+  CORS_LOCAL_ORIGINS,
+  HOT_DEFAULT_CORS_SSE,
+  HOT_DEFAULT_CORS_WS,
+  applyCors,
+  clientQuery,
+  createMimeTypes,
   createReadStreamOrReadFile,
   destroyStream,
   escapeHtml,
   etag,
+  filterSource,
   finish,
   getHeadersSent,
   getOutgoing,
@@ -710,13 +1543,21 @@ module.exports = {
   getResponseHeaders,
   getStatusCode,
   getValueContentRangeHeader,
+  hasClientEntry,
   initState,
+  injectHotClient,
+  isSameOrigin,
+  isUpgradeAllowed,
+  isWebTarget,
+  matchOrigin,
   memorize,
+  mimeScore,
   nodeReadableToWebStream,
   parseHttpDate,
   parseTokenList,
   pipe,
   removeResponseHeader,
+  resolveCors,
   send,
   setResponseHeader,
   setState,

@@ -77,11 +77,89 @@ export type ExpectedServerResponse = {
    */
   setState?: ((name: string, value: EXPECTED_ANY) => void) | undefined;
 };
+/**
+ * The resolved answer to "may this origin read the stream": no origin may, any
+ * origin may, or ask this.
+ */
+export type CorsGrant = false | "*" | ((origin: string) => boolean);
+export type MimeTypes = {
+  /**
+   * the media type an extension, a `.extension`, or a path resolves to
+   */
+  lookup: (file: string) => string | false;
+  /**
+   * the charset a media type is served as
+   */
+  charset: (type: string) => string | false;
+  /**
+   * a `Content-Type` value for a media type or an extension
+   */
+  contentType: (str: string) => string | false;
+};
+export type Compiler = import("webpack").Compiler;
+export type HotOptions = import("./hot.js").HotOptions;
+export type HotClientOptions = import("./hot.js").HotClientOptions;
 export type IncomingMessage = import("./index").IncomingMessage;
 export type ServerResponse = import("./index").ServerResponse;
 export type OutputFileSystem = import("./index").OutputFileSystem;
 export type EXPECTED_ANY = import("./index").EXPECTED_ANY;
+export type Logger = import("./index").Logger;
 export type FunctionReturning<T> = (...args: EXPECTED_ANY) => T;
+export type CorsOption = import("./hot.js").CorsOption;
+export type CorsOrigin = import("./hot.js").CorsOrigin;
+export type MimeDbEntry = {
+  source?: string;
+  charset?: string;
+  compressible?: boolean;
+  extensions?: readonly string[];
+};
+/** @typedef {import("./hot.js").CorsOption} CorsOption */
+/** @typedef {import("./hot.js").CorsOrigin} CorsOrigin */
+export const CORS_LOCAL_ORIGINS: RegExp;
+export const HOT_DEFAULT_CORS_SSE: true;
+export const HOT_DEFAULT_CORS_WS: RegExp;
+/**
+ * Add the cross-origin grant the `cors` option asks for, if any.
+ *
+ * Without a grant the browser will not hand a cross-origin `EventSource`
+ * response to the page, which is what keeps a build's errors — module paths and
+ * the source frames webpack puts in a parse error — from being readable by any
+ * site the developer happens to have open. Nothing is rejected: the request is
+ * answered either way, and the browser decides what to do with it.
+ *
+ * No same-origin case to handle here, unlike an upgrade: a browser sends no
+ * `Origin` at all for a same-origin `EventSource`, and would not consult these
+ * headers if it did.
+ * @param {CorsGrant} grant the resolved grant
+ * @param {IncomingMessage} req the request joining the stream
+ * @param {Record<string, string>} headers the response headers, added to in place
+ */
+export function applyCors(
+  grant: CorsGrant,
+  req: IncomingMessage,
+  headers: Record<string, string>,
+): void;
+/**
+ * The browser options, as the client reads them from its resource query.
+ * @param {EXPECTED_ANY} client the `hot.client` option
+ * @returns {Record<string, string>} query parameters
+ */
+export function clientQuery(client: EXPECTED_ANY): Record<string, string>;
+/**
+ * @typedef {object} MimeTypes
+ * @property {(file: string) => string | false} lookup the media type an extension, a `.extension`, or a path resolves to
+ * @property {(type: string) => string | false} charset the charset a media type is served as
+ * @property {(str: string) => string | false} contentType a `Content-Type` value for a media type or an extension
+ */
+/**
+ * The lookup an instance uses, with the `mimeTypes` option over the top of the
+ * known extensions rather than written into them.
+ * @param {Record<string, string>=} extra extension to media type, from the `mimeTypes` option
+ * @returns {MimeTypes} the lookup
+ */
+export function createMimeTypes(
+  extra?: Record<string, string> | undefined,
+): MimeTypes;
 /**
  * @param {string} filename filename
  * @param {OutputFileSystem} outputFileSystem output file system
@@ -121,6 +199,18 @@ export function etag(entity: Buffer | ReadStream | Stats): Promise<{
   hash: string;
   buffer?: Buffer;
 }>;
+/**
+ * A filter as source the client can rebuild from.
+ *
+ * An arrow function and a `function` both stringify to something that can be
+ * assigned; a method shorthand — `overlay: { errors(message) {} }` — does not,
+ * and would have gone over as `errors(message) {}` for the client to choke on.
+ * Making it a function expression is the whole of the difference.
+ * @param {string} option which filter it is, for the error
+ * @param {EXPECTED_ANY} filter the function given
+ * @returns {string} source the client can assign
+ */
+export function filterSource(option: string, filter: EXPECTED_ANY): string;
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res
@@ -230,12 +320,101 @@ export function getValueContentRangeHeader(
   range?: import("range-parser").Range | undefined,
 ): string;
 /**
+ * Whether every entry point already pulls the client in.
+ * @param {Compiler} compiler compiler
+ * @returns {boolean} true when nothing needs adding
+ */
+export function hasClientEntry(compiler: Compiler): boolean;
+/**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res
  */
 export function initState<
   Response extends ServerResponse & ExpectedServerResponse,
 >(res: Response): void;
+/**
+ * Put the hot runtime into the compilation, so enabling `hot` is the whole of
+ * what a developer has to do: no entry to add, no `HotModuleReplacementPlugin`
+ * to remember, no configuration to change.
+ *
+ * The client is given the endpoint, the transport and the browser options
+ * through its resource query, so it agrees with the server by construction
+ * rather than by the developer keeping two settings in step.
+ * @param {Compiler[]} compilers compilers to modify
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: HotClientOptions }} options resolved hot options
+ * @param {Logger} logger logger
+ */
+export function injectHotClient(
+  compilers: Compiler[],
+  options: {
+    path: string;
+    transport: NonNullable<HotOptions["transport"]>;
+    inject?: boolean;
+    client?: HotClientOptions;
+  },
+  logger: Logger,
+): void;
+/**
+ * Is this request's origin the one it was sent to?
+ *
+ * The middleware never knows the url it is mounted under, so its own origin is
+ * only ever readable from the request: whatever answered is whatever the client
+ * addressed. Both sides carry the port when it is not the scheme's default, so
+ * they are compared as they arrived.
+ * @param {IncomingMessage} req the request
+ * @param {string} origin the `Origin` it carried
+ * @returns {boolean} true when the two are the same origin
+ */
+export function isSameOrigin(req: IncomingMessage, origin: string): boolean;
+/**
+ * May this WebSocket handshake go ahead?
+ *
+ * A handshake is not subject to CORS — a browser sends `Origin` and pays no
+ * attention to what comes back — so the same option can only be honoured here
+ * by refusing the upgrade. Two cases are allowed whatever the option says,
+ * because neither is a page on another origin reading the stream.
+ *
+ * A request with no `Origin` at all is not a browser: browsers always send one
+ * on a handshake, while a Node client, a proxy's health check or a test
+ * harness does not, and refusing those would break them for nothing.
+ *
+ * A request whose `Origin` is the one it was addressed to is the page the
+ * middleware is serving. `EventSource` gets this for free, since the browser
+ * knows a same-origin read needs no grant; an upgrade has to work it out.
+ * @param {CorsGrant} grant the resolved grant
+ * @param {IncomingMessage} req the request being upgraded
+ * @returns {boolean} true when the upgrade may proceed
+ */
+export function isUpgradeAllowed(
+  grant: CorsGrant,
+  req: IncomingMessage,
+): boolean;
+/**
+ * Whether a compiler produces something a browser will run, which is the whole
+ * of what decides where the client goes.
+ *
+ * `platform` answers it for every target webpack resolves one from: `web` is
+ * true for `web`, `webworker`, `electron-renderer`, `electron-preload`, `nwjs`,
+ * `deno` and a browserslist query, and false for `node`, `async-node`,
+ * `electron-main` and a `nodeXX` version. A target that names no platform at
+ * all — `target: false`, or a bare `es2020` — leaves nothing to go on and gets
+ * no client; add the entry yourself there.
+ * @param {Compiler} compiler compiler
+ * @returns {boolean} true when the client belongs in this compilation
+ */
+export function isWebTarget(compiler: Compiler): boolean;
+/**
+ * The resolved answer to "may this origin read the stream": no origin may, any
+ * origin may, or ask this.
+ * @typedef {false | "*" | ((origin: string) => boolean)} CorsGrant
+ */
+/**
+ * Does one origin match what the `cors` option allows?
+ * @param {string} origin the origin the request carried
+ * @param {CorsOrigin} allowed what the option allows
+ * @returns {boolean} true when the origin is allowed
+ */
+export function matchOrigin(origin: string, allowed: CorsOrigin): boolean;
 /**
  * @template T
  * @param {FunctionReturning<T>} fn memorized function
@@ -265,6 +444,17 @@ export function memorize<T>(
     | undefined,
   callback?: ((value: T) => T) | undefined,
 ): FunctionReturning<T>;
+/**
+ * How official a media type is. The higher the score the more it is preferred
+ * where two types claim the same extension.
+ * @param {string} mimeType the media type
+ * @param {string=} source where `mime-db` got it from
+ * @returns {number} the score
+ */
+export function mimeScore(
+  mimeType: string,
+  source?: string | undefined,
+): number;
 /**
  * @param {import("fs").ReadStream} stream node readable stream
  * @returns {ReadableStream<Uint8Array>} web readable stream
@@ -304,6 +494,13 @@ export function pipe<Response extends ServerResponse & ExpectedServerResponse>(
 export function removeResponseHeader<
   Response extends ServerResponse & ExpectedServerResponse,
 >(res: Response, name: string): void;
+/**
+ * Read the `cors` option once, so each request costs a call rather than a walk
+ * back through every form the option can take.
+ * @param {CorsOption} cors the option, as it was given, or the transport's default when it was not
+ * @returns {CorsGrant} the resolved answer
+ */
+export function resolveCors(cors: CorsOption): CorsGrant;
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res

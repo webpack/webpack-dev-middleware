@@ -3,13 +3,14 @@ import path from "node:path";
 
 import webpack from "webpack";
 
-import injectHotClient, {
+import schema from "../src/options.json";
+import {
   clientQuery,
   filterSource,
   hasClientEntry,
+  injectHotClient,
   isWebTarget,
-} from "../src/injectClient";
-import schema from "../src/options.json";
+} from "../src/utils";
 
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_OBJECT */

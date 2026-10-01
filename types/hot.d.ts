@@ -61,7 +61,7 @@ declare namespace createHot {
     EventStream,
   };
 }
-import { HOT_DEFAULT_CORS_SSE } from "./cors.js";
+import { HOT_DEFAULT_CORS_SSE } from "./utils.js";
 declare const HOT_DEFAULT_HEARTBEAT: number;
 declare const HOT_DEFAULT_PATH: "/__webpack_hmr";
 declare const HOT_DEFAULT_TRANSPORT: "sse";

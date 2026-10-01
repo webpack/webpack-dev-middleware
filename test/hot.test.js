@@ -1,13 +1,13 @@
 import http from "node:http";
 
 import { problemLine } from "../client-src/problem";
-import { CORS_LOCAL_ORIGINS } from "../src/cors";
 import createHot, {
   createEventStream,
   formatErrors,
   pathMatch,
   toBundles,
 } from "../src/hot";
+import { CORS_LOCAL_ORIGINS } from "../src/utils";
 
 jest.spyOn(globalThis.console, "log").mockImplementation();
 

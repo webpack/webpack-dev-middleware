@@ -9,10 +9,12 @@ const memfs = require("memfs");
 
 const { createHot } = require("./hot");
 const { HOT_DEFAULT_PATH } = require("./hot");
-const injectHotClient = require("./injectClient");
 const middleware = require("./middleware");
-const createMimeTypes = require("./mimeTypes");
-const { nodeReadableToWebStream } = require("./utils");
+const {
+  createMimeTypes,
+  injectHotClient,
+  nodeReadableToWebStream,
+} = require("./utils");
 
 const noop = () => {};
 
@@ -26,7 +28,7 @@ const noop = () => {};
 /** @typedef {import("./middleware").FilenameWithExtra} FilenameWithExtra */
 /** @typedef {import("./hot").HotOptions} HotOptions */
 /** @typedef {import("./hot").HotInstance} HotInstance */
-/** @typedef {import("./mimeTypes").MimeTypes} MimeTypes */
+/** @typedef {import("./utils").MimeTypes} MimeTypes */
 
 // eslint-disable-next-line jsdoc/reject-any-type
 /** @typedef {any} EXPECTED_ANY */
