@@ -410,14 +410,14 @@ describe("hot client (browser)", () => {
       globalThis.setPublicPath("https://host//rewritten/");
       globalThis.hotClient.setOptionsAndConnect({
         dynamicPublicPath: "true",
-        path: "/__webpack_hmr",
+        url: "/__webpack_hmr",
       });
     });
     await page.evaluate(() => {
       globalThis.setPublicPath("https://localhost:3000/assets/");
       globalThis.hotClient.setOptionsAndConnect({
         dynamicPublicPath: "true",
-        path: "/__webpack_hmr",
+        url: "/__webpack_hmr",
       });
     });
 
@@ -510,7 +510,7 @@ describe("hot client (browser)", () => {
 
   it("warns on malformed frames without breaking the page", async () => {
     app = await createHotApp({
-      query: "?path=/__fake_hmr",
+      query: "?url=/__fake_hmr",
       code: acceptedApp("v1"),
       // A rogue SSE endpoint feeding the real EventSource a non-JSON frame.
       setup: (server) => {
