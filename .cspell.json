@@ -43,7 +43,8 @@
     "expressjs",
     "wildcarded",
     "jshttp",
-    "realpath"
+    "realpath",
+    "Rsbuild"
   ],
   "ignorePaths": [
     "CHANGELOG.md",

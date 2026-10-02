@@ -7,6 +7,7 @@ export = createWebSocketStream;
  * @param {string} options.path the path the endpoint is served at
  * @param {number} options.heartbeat heartbeat interval in milliseconds
  * @param {CorsOption=} options.cors which origins may connect, the local ones by default
+ * @param {(string | false)=} options.token the token the endpoint requires, or false for none
  * @param {Logger} logger logger
  * @returns {ClientStream} client stream
  */
@@ -15,10 +16,12 @@ declare function createWebSocketStream(
     path,
     heartbeat,
     cors,
+    token,
   }: {
     path: string;
     heartbeat: number;
     cors?: CorsOption | undefined;
+    token?: (string | false) | undefined;
   },
   logger: Logger,
 ): ClientStream;

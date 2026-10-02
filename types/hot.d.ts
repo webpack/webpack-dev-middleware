@@ -3,6 +3,7 @@ export = createHot;
  * @typedef {object} HotInstance
  * @property {string} path path the endpoint is served at
  * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)} transport how events reach the clients
+ * @property {string | false} token the secret the endpoint requires, or false when it requires none; the injected client is given it
  * @property {(server: HttpServer) => void} attach answer WebSocket upgrades on this server, a no-op for Server-Sent Events
  * @property {(req: IncomingMessage, socket: Duplex, head: Buffer) => boolean} handleUpgrade answer one WebSocket upgrade, for a caller that owns the server's `upgrade` event and wants to decide each one; returns false when the request is not the endpoint's, or the transport does not answer upgrades
  * @property {(fn: (client: EXPECTED_ANY, req: IncomingMessage) => void) => void} onConnect called with each client once it has joined, and the request it joined with, before anything is published to it
@@ -23,7 +24,6 @@ declare function createHot(
 ): HotInstance;
 declare namespace createHot {
   export {
-    HOT_DEFAULT_CORS_SSE,
     HOT_DEFAULT_HEARTBEAT,
     HOT_DEFAULT_PATH,
     HOT_DEFAULT_TRANSPORT,
@@ -31,7 +31,6 @@ declare namespace createHot {
     createEventStream,
     createHot,
     formatErrors,
-    pathMatch,
     publishBundles,
     toBundles,
     HotInstance,
@@ -61,7 +60,6 @@ declare namespace createHot {
     EventStream,
   };
 }
-import { HOT_DEFAULT_CORS_SSE } from "./utils.js";
 declare const HOT_DEFAULT_HEARTBEAT: number;
 declare const HOT_DEFAULT_PATH: "/__webpack_hmr";
 declare const HOT_DEFAULT_TRANSPORT: "sse";
@@ -72,28 +70,17 @@ declare const HOT_DEFAULT_TRANSPORT: "sse";
 declare function checkClientStream(
   stream: ClientStream<EXPECTED_ANY>,
 ): ClientStream<EXPECTED_ANY>;
-/**
- * @param {number} heartbeat heartbeat interval in milliseconds
- * @param {Logger} logger logger
- * @param {CorsOption=} cors which origins may read the stream, the local ones by default
- * @returns {EventStream} event stream
- */
 declare function createEventStream(
   heartbeat: number,
   logger: Logger,
   cors?: CorsOption | undefined,
+  token?: (string | false) | undefined,
 ): EventStream;
 /**
  * @param {(string | StatsError)[]} errors errors or warnings
  * @returns {string[]} flat strings
  */
 declare function formatErrors(errors: (string | StatsError)[]): string[];
-/**
- * @param {string | undefined} url url
- * @param {string} expected expected pathname
- * @returns {boolean} true when the url pathname matches the expected path
- */
-declare function pathMatch(url: string | undefined, expected: string): boolean;
 /**
  * Publish one event per bundle. Bundles whose hash did not change are
  * published as `sync`, so their clients do not fetch a hot-update manifest
@@ -127,6 +114,10 @@ type HotInstance = {
    * how events reach the clients
    */
   transport: "sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>;
+  /**
+   * the secret the endpoint requires, or false when it requires none; the injected client is given it
+   */
+  token: string | false;
   /**
    * answer WebSocket upgrades on this server, a no-op for Server-Sent Events
    */
@@ -199,6 +190,10 @@ type HotClientOptions = {
    * limit the runtime to one compilation's builds, the compilation's own name by default
    */
   name?: string | undefined;
+  /**
+   * the secret the runtime puts on its connection url, `hot.token` by default
+   */
+  token?: string | undefined;
   /**
    * show build problems and uncaught runtime errors in an overlay
    */
@@ -274,6 +269,10 @@ type HotOptions = {
    * which origins may reach the endpoint from a page on another one; the local ones by default
    */
   cors?: CorsOption | undefined;
+  /**
+   * a secret the injected client carries and the endpoint requires; `true` mints one per run, a string uses that one, `false` requires none. Defaults to `false` on both transports; `true` in the next major release
+   */
+  token?: (boolean | string) | undefined;
   /**
    * add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
    */
@@ -436,6 +435,7 @@ type ClientStreamFactory<TClient extends unknown = StreamClient> = (
     path: string;
     heartbeat: number;
     cors: CorsOption | undefined;
+    token: string | false;
   },
   logger: Logger,
 ) => ClientStream<TClient>;

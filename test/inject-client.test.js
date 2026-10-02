@@ -231,6 +231,39 @@ describe("injectHotClient", () => {
       );
     });
 
+    // The hazard this guards: a required token only reaches the browser on
+    // the entry added here, so asking for one where no entry is added would
+    // refuse every client with an unexplained 403.
+    it("says a token was required that no client was given", () => {
+      injectHotClient(
+        [documentedSetup()],
+        {
+          path: "/__webpack_hmr",
+          transport: "sse",
+          token: "a-token-nobody-gets",
+        },
+        logger,
+      );
+
+      expect(warnings.join("\n")).toContain(
+        "no client entry was added to hand one over",
+      );
+      // Not the token itself: a minted one is stale by the time anyone reads
+      // the warning, and infrastructure warnings travel into CI output.
+      expect(warnings.join("\n")).not.toContain("a-token-nobody-gets");
+      expect(warnings.join("\n")).toContain("token=<the token>");
+    });
+
+    it("says nothing about a token when the client was injected", () => {
+      injectHotClient(
+        [compiler({ entry: "./app.js" })],
+        { path: "/__webpack_hmr", transport: "sse", token: "handed-over" },
+        logger,
+      );
+
+      expect(warnings.join("\n")).not.toContain("no client entry was added");
+    });
+
     it("adds the plugin to a project that only had the client entry", () => {
       // This one was broken before: the client was there, nothing applied the
       // update, and the runtime said so on every build.
@@ -905,5 +938,24 @@ describe("node and the query take the same names", () => {
 
   it("is one set of names, with nothing on one side only", () => {
     expect(readByClient.toSorted()).toStrictEqual(takenInNode.toSorted());
+  });
+
+  // The third place, and the one that is easiest to forget: the typedef the
+  // published declarations are generated from. A name the schema takes that
+  // it omits is accepted at runtime and rejected by TypeScript, which is how
+  // `token` first shipped.
+  it("is in the typedef the declarations come from, as well", () => {
+    const hotSource = fs.readFileSync(
+      path.join(__dirname, "..", "src", "hot.js"),
+      "utf8",
+    );
+    const [typedef] = /** @type {RegExpMatchArray} */ (
+      hotSource.match(/@typedef \{object\} HotClientOptions[\s\S]*?\n \*\//)
+    );
+    const declared = [
+      ...typedef.matchAll(/@property \{[^}]+\} ([A-Za-z]+)/g),
+    ].map((found) => found[1]);
+
+    expect(declared.toSorted()).toStrictEqual(takenInNode.toSorted());
   });
 });

@@ -258,8 +258,8 @@ describe("live reload (browser)", () => {
     await plantReloadMarker(page);
 
     // What a server watching files of its own would publish — nothing here
-    // came from a compilation.
-    app.instance.context.hot.publish({
+    // came from a compilation — through the public method it has for it.
+    app.instance.publish({
       action: "reload",
       file: "static/index.html",
     });

@@ -251,6 +251,19 @@
               "description": "Publish compilation progress events to the clients.",
               "type": "boolean"
             },
+            "token": {
+              "description": "A secret the injected client carries and the endpoint requires, so reaching the stream takes something a page has to have been given rather than a header the browser may not send. `true` mints one per run, a string uses that one — for a client of your own that has to build the url itself — and `false` requires none. Defaults to `false`, because requiring one would refuse a client this middleware did not inject; `true` in the next major release.",
+              "link": "https://github.com/webpack/webpack-dev-middleware#hottoken",
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string",
+                  "minLength": 1
+                }
+              ]
+            },
             "cors": {
               "description": "Which origins may read the Server-Sent Events endpoint from a page on another one. Local origins only by default. `true` grants every origin, which lets any site the developer has open read the build's errors, including the source frames webpack puts in them.",
               "link": "https://github.com/webpack/webpack-dev-middleware#hotcors",
@@ -307,6 +320,10 @@
                 },
                 "name": {
                   "description": "Limit the runtime to one compilation's builds. Defaults to the compilation's own name.",
+                  "type": "string"
+                },
+                "token": {
+                  "description": "The secret the runtime puts on its connection url. The middleware sets this to whatever 'hot.token' resolved to, so it only needs setting for a client pointed at another endpoint that requires a different one.",
                   "type": "string"
                 },
                 "overlay": {

@@ -56,6 +56,7 @@ declare namespace wdm {
     Invalidate,
     Attach,
     HandleUpgrade,
+    Publish,
     OnConnect,
     Close,
     AdditionalMethods,
@@ -356,6 +357,13 @@ type HandleUpgrade = (
   socket: import("node:stream").Duplex,
   head: Buffer,
 ) => boolean;
+type Publish = (
+  payload:
+    | import("./hot").Payload
+    | {
+        action: string;
+      },
+) => any;
 type OnConnect = (
   fn: (client: EXPECTED_ANY, req: IncomingMessage) => void,
 ) => any;
@@ -388,6 +396,14 @@ type AdditionalMethods<
    * called with each client that joins, and the request it joined with
    */
   onConnect: OnConnect;
+  /**
+   * put a payload of your own on the hot stream, for what a server measures itself — a no-op when `hot` is off
+   */
+  publish: Publish;
+  /**
+   * the secret the hot endpoint requires, for a client of your own to put on the url; false when it requires none, undefined when `hot` is off
+   */
+  token?: (string | false | undefined) | undefined;
   /**
    * close
    */

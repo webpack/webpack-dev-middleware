@@ -118,6 +118,10 @@ export type ClientOptions = {
    */
   name: string;
   /**
+   * the secret the endpoint requires, when it requires one, put on the connection url — empty when it requires none
+   */
+  token: string;
+  /**
    * connect immediately when the entry runs
    */
   autoConnect: boolean;

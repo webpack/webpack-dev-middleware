@@ -170,6 +170,11 @@ const noop = () => {};
  */
 
 /**
+ * @callback Publish
+ * @param {import("./hot").Payload | { action: string }} payload the payload to publish to every client
+ */
+
+/**
  * @callback OnConnect
  * @param {(client: EXPECTED_ANY, req: IncomingMessage) => void} fn called with each client once it has joined, and the request it joined with, before anything is published to it
  */
@@ -189,6 +194,8 @@ const noop = () => {};
  * @property {Attach} attach answer WebSocket upgrades on this server
  * @property {HandleUpgrade} handleUpgrade answer one WebSocket upgrade, for a server that owns its own `upgrade` event
  * @property {OnConnect} onConnect called with each client that joins, and the request it joined with
+ * @property {Publish} publish put a payload of your own on the hot stream, for what a server measures itself — a no-op when `hot` is off
+ * @property {(string | false | undefined)=} token the secret the hot endpoint requires, for a client of your own to put on the url; false when it requires none, undefined when `hot` is off
  * @property {Close} close close
  * @property {Context<RequestInternal, ResponseInternal>} context context
  */
@@ -577,6 +584,9 @@ function wdm(compiler, options = {}, isPlugin = false) {
         transport: hotOptions.transport || "sse",
         inject: hotOptions.inject,
         client: hotOptions.client,
+        // The one `createHot` minted just above, so the client it injects and
+        // the endpoint it serves agree.
+        token: context.hot?.token,
       },
       /** @type {Logger} */ (context.logger),
     );
@@ -691,6 +701,28 @@ function wdm(compiler, options = {}, isPlugin = false) {
       filledContext.hot.onConnect(fn);
     }
   };
+
+  // Put a payload of your own on the hot stream.
+  //
+  // The middleware publishes what it knows about — a build starting, finishing,
+  // failing. Anything else a server measures is its own: `ProgressPlugin` is
+  // the example, and it belongs to whoever decided to measure rather than to
+  // the middleware that carries the result. The client already renders
+  // `{ action: "progress" }`, so a server with its own plugin has everywhere to
+  // put it and needed only this.
+  //
+  // A no-op when `hot` is off, so a caller does not have to ask first.
+  instance.publish = (payload) => {
+    if (filledContext.hot) {
+      filledContext.hot.publish(payload);
+    }
+  };
+
+  // The secret the hot endpoint requires, for a client of your own: the
+  // injected one is handed it through its entry query, but anything you wrote
+  // yourself has to put it on the url. `false` when the endpoint requires
+  // none, `undefined` when `hot` is off.
+  instance.token = filledContext.hot ? filledContext.hot.token : undefined;
 
   instance.waitUntilValid = (callback = noop) => {
     middleware.ready(filledContext, callback);

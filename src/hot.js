@@ -29,6 +29,7 @@
  * @property {("sse" | "ws")=} transport which transport the runtime speaks, `hot.transport` by default
  * @property {string=} path where the runtime connects, `hot.path` by default; may be an absolute url for an endpoint on another origin
  * @property {string=} name limit the runtime to one compilation's builds, the compilation's own name by default
+ * @property {string=} token the secret the runtime puts on its connection url, `hot.token` by default
  * @property {(boolean | Record<string, EXPECTED_ANY>)=} overlay show build problems and uncaught runtime errors in an overlay
  * @property {(boolean | "circular" | "linear")=} progress show an indicator while a rebuild is in progress
  * @property {boolean=} hot apply a build through Hot Module Replacement
@@ -51,6 +52,7 @@
  * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
  * @property {boolean=} progress publish compilation progress events to the clients
  * @property {CorsOption=} cors which origins may reach the endpoint from a page on another one; the local ones by default
+ * @property {(boolean | string)=} token a secret the injected client carries and the endpoint requires; `true` mints one per run, a string uses that one, `false` requires none. Defaults to `false` on both transports; `true` in the next major release
  * @property {boolean=} inject add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
  * @property {HotClientOptions=} client options handed to the browser runtime through its entry query
  */
@@ -128,7 +130,7 @@
  * built-in two are made of whatever this returns.
  * @template {EXPECTED_ANY} [TClient=StreamClient]
  * @callback ClientStreamFactory
- * @param {{ path: string, heartbeat: number, cors: CorsOption | undefined }} options the endpoint's path and heartbeat interval, and the origins it is meant to allow
+ * @param {{ path: string, heartbeat: number, cors: CorsOption | undefined, token: string | false }} options the endpoint's path and heartbeat interval, the origins it is meant to allow, and the token it should require
  * @param {Logger} logger logger
  * @returns {ClientStream<TClient>} client stream
  */
@@ -141,7 +143,10 @@
 // module paths and source frames a failed build reports. Both transports
 // honour it now, each the only way it can be honoured on that wire: the event
 // stream withholds the grant, and an upgrade is refused.
-const { HOT_DEFAULT_CORS_SSE, applyCors, resolveCors } = require("./utils.js");
+// The CORS rules, and the default each transport starts from, live with the
+// transport that applies them in `./servers`. What is left here is the mint
+// that hands one token to whichever of them is built.
+const { resolveToken } = require("./utils.js");
 
 const HOT_DEFAULT_PATH = "/__webpack_hmr";
 const HOT_DEFAULT_HEARTBEAT = 10 * 1000;
@@ -149,18 +154,20 @@ const HOT_DEFAULT_TRANSPORT = "sse";
 const PLUGIN_NAME = "DevMiddleware";
 
 /**
- * @param {string | undefined} url url
- * @param {string} expected expected pathname
- * @returns {boolean} true when the url pathname matches the expected path
+ * Load the module for the transport that was chosen, and only that one.
+ *
+ * Neither is reached until a `createHot` call picks it: a project on the
+ * default Server-Sent Events never parses the WebSocket server or `ws`, one on
+ * a WebSocket never parses the event stream, and a transport of its own parses
+ * neither. Spelled out per name rather than built from a variable so the path
+ * stays statically analysable — a bundler has to be able to see both.
+ * @param {"EventSourceServer" | "WebSocketServer"} name which server
+ * @returns {EXPECTED_ANY} its factory
  */
-function pathMatch(url, expected) {
-  if (!url) return false;
-
-  try {
-    return new URL(url, "http://localhost").pathname === expected;
-  } catch {
-    return false;
-  }
+function requireServer(name) {
+  return name === "WebSocketServer"
+    ? require("./servers/WebSocketServer.js")
+    : require("./servers/EventSourceServer.js");
 }
 
 // What a transport has to do for itself. Missing one of these would throw from
@@ -235,171 +242,6 @@ function checkClientStream(stream) {
   }
 
   return stream;
-}
-
-/**
- * @param {number} heartbeat heartbeat interval in milliseconds
- * @param {Logger} logger logger
- * @param {CorsOption=} cors which origins may read the stream, the local ones by default
- * @returns {EventStream} event stream
- */
-function createEventStream(heartbeat, logger, cors) {
-  const corsGrant = resolveCors(cors ?? HOT_DEFAULT_CORS_SSE);
-  let clientId = 0;
-  /** @type {Map<number, ServerResponse>} */
-  let clients = new Map();
-  /** @type {((client: StreamClient, req: IncomingMessage) => void) | undefined} */
-  let onConnectFn;
-
-  /**
-   * Run the callback for every client that can still be written to — a
-   * response ended between two `close` events would throw on write.
-   * @param {(client: ServerResponse) => void} fn each client callback
-   */
-  const everyClient = (fn) => {
-    for (const client of clients.values()) {
-      if (!client.writableEnded) {
-        fn(client);
-      }
-    }
-  };
-
-  // Runs only while clients are connected: started with the first client,
-  // stopped with the last one.
-  /** @type {ReturnType<typeof setInterval> | null} */
-  let interval = null;
-
-  const startHeartbeat = () => {
-    if (interval !== null) {
-      return;
-    }
-
-    interval = setInterval(() => {
-      everyClient((client) => {
-        client.write("data: 💓\n\n");
-      });
-    }, heartbeat);
-
-    // Don't block process exit on the heartbeat timer.
-    if (typeof interval.unref === "function") {
-      interval.unref();
-    }
-  };
-
-  const stopHeartbeat = () => {
-    if (interval !== null) {
-      clearInterval(interval);
-      interval = null;
-    }
-  };
-
-  return {
-    close() {
-      stopHeartbeat();
-      everyClient((client) => {
-        client.end();
-      });
-      clients = new Map();
-    },
-    hasClients() {
-      return clients.size > 0;
-    },
-    onConnect(fn) {
-      onConnectFn = fn;
-    },
-    handler(req, res) {
-      // A response another middleware already started can no longer become an
-      // SSE stream — end it instead of crashing on writeHead.
-      if (res.headersSent) {
-        if (!res.writableEnded) {
-          res.end();
-        }
-        return;
-      }
-
-      /** @type {Record<string, string>} */
-      const headers = {
-        "Content-Type": "text/event-stream;charset=utf-8",
-        "Cache-Control": "no-cache, no-transform",
-        // While behind nginx, the event stream should not be buffered:
-        // http://nginx.org/docs/http/ngx_http_proxy_module.html#proxy_buffering
-        "X-Accel-Buffering": "no",
-      };
-
-      applyCors(corsGrant, req, headers);
-
-      const { httpVersion, socket } = req;
-      const isHttp1 = !(Number.parseInt(httpVersion, 10) >= 2);
-
-      if (isHttp1) {
-        if (socket && typeof socket.setKeepAlive === "function") {
-          socket.setKeepAlive(true);
-        }
-        headers.Connection = "keep-alive";
-      }
-
-      res.writeHead(200, headers);
-      res.write("\n");
-
-      const id = clientId++;
-      clients.set(id, res);
-      startHeartbeat();
-      logger.log(`Client connected (${clients.size} active)`);
-
-      const disconnect = () => {
-        if (!clients.has(id)) {
-          return;
-        }
-
-        if (!res.writableEnded) {
-          res.end();
-        }
-
-        clients.delete(id);
-
-        if (clients.size === 0) {
-          stopHeartbeat();
-        }
-
-        logger.log(`Client disconnected (${clients.size} active)`);
-      };
-
-      req.on("close", disconnect);
-
-      // A request that died before the handshake finished never emits `close`
-      // again, so it would stay in `clients` forever.
-      if (req.destroyed) {
-        disconnect();
-
-        return;
-      }
-
-      if (onConnectFn) {
-        onConnectFn(res, req);
-      }
-    },
-    publish(payload) {
-      // With no clients connected there is nothing to serialize for.
-      if (clients.size === 0) {
-        return;
-      }
-
-      const frame = `data: ${JSON.stringify(payload)}\n\n`;
-
-      everyClient((client) => {
-        client.write(frame);
-      });
-    },
-    publishTo(client, payload) {
-      const res = /** @type {ServerResponse} */ (client);
-
-      if (res.writableEnded) {
-        return;
-      }
-
-      res.write(`data: ${JSON.stringify(payload)}\n\n`);
-    },
-  };
 }
 
 /**
@@ -601,6 +443,7 @@ function publishBundles(bundles, previousBundles, eventStream) {
  * @typedef {object} HotInstance
  * @property {string} path path the endpoint is served at
  * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)} transport how events reach the clients
+ * @property {string | false} token the secret the endpoint requires, or false when it requires none; the injected client is given it
  * @property {(server: HttpServer) => void} attach answer WebSocket upgrades on this server, a no-op for Server-Sent Events
  * @property {(req: IncomingMessage, socket: Duplex, head: Buffer) => boolean} handleUpgrade answer one WebSocket upgrade, for a caller that owns the server's `upgrade` event and wants to decide each one; returns false when the request is not the endpoint's, or the transport does not answer upgrades
  * @property {(fn: (client: EXPECTED_ANY, req: IncomingMessage) => void) => void} onConnect called with each client once it has joined, and the request it joined with, before anything is published to it
@@ -622,6 +465,13 @@ function createHot(compiler, userOptions, statsOption) {
   const transport = options.transport || HOT_DEFAULT_TRANSPORT;
   const { cors } = options;
   const { statsOptions } = options;
+  // `inject: false` turns it off: the token reaches the browser through the
+  // entry this middleware adds, so with nothing injected there is no way to
+  // hand one over, and requiring it would refuse a client the developer wired
+  // correctly. Off by default either way — see `HOT_DEFAULT_TOKEN`.
+  const token = resolveToken(
+    options.inject === false ? (options.token ?? false) : options.token,
+  );
   const logger = compiler.getInfrastructureLogger("webpack-dev-middleware");
 
   // TODO in the next major release remove `statsOptions` and this warning
@@ -638,20 +488,22 @@ function createHot(compiler, userOptions, statsOption) {
 
   if (typeof transport === "function") {
     eventStream = checkClientStream(
-      transport({ heartbeat, path, cors }, logger),
+      transport({ heartbeat, path, cors, token }, logger),
     );
     transportName = "a custom transport";
   } else if (transport === "ws") {
-    // Required here rather than at the top: it pulls in `ws`, and the default
-    // transport is Server-Sent Events, so a project that never asks for a
-    // WebSocket should not pay to load either.
-
-    const createWebSocketStream = require("./servers/WebSocketServer.js");
-
-    eventStream = createWebSocketStream({ heartbeat, path, cors }, logger);
+    eventStream = requireServer("WebSocketServer")(
+      { heartbeat, path, cors, token },
+      logger,
+    );
     transportName = "a WebSocket";
   } else {
-    eventStream = createEventStream(heartbeat, logger, cors);
+    eventStream = requireServer("EventSourceServer")(
+      heartbeat,
+      logger,
+      cors,
+      token,
+    );
     transportName = "Server-Sent Events";
   }
 
@@ -700,7 +552,12 @@ function createHot(compiler, userOptions, statsOption) {
     eventStream.attach(options.server);
   }
 
+  // TODO in the next major release remove `progress` and this warning
   if (options.progress) {
+    logger.warn(
+      "The 'hot.progress' option is deprecated and will be removed in the next major release. Measuring a build is the server's call, not the middleware's: a server that applies 'ProgressPlugin' itself — webpack-dev-server does — ends up with two of them on one compiler. Apply it yourself and hand what it reports to the middleware's 'publish' method, rounding the percent and dropping a tick that repeats one as this option did for you — the example is at https://github.com/webpack/webpack-dev-middleware#publishpayload. Until then this keeps working.",
+    );
+
     const { webpack } =
       "compilers" in compiler ? compiler.compilers[0] : compiler;
 
@@ -778,6 +635,7 @@ function createHot(compiler, userOptions, statsOption) {
   return {
     path,
     transport,
+    token,
     attach(server) {
       if (closed || !eventStream.attach) {
         return;
@@ -817,6 +675,12 @@ function createHot(compiler, userOptions, statsOption) {
     publish(payload) {
       if (closed) return;
 
+      // No `hasClients` means the transport did not offer to answer, so the
+      // payload goes to it and it decides. This is a public entry point —
+      // something outside publishing on every ProgressPlugin tick should not
+      // pay for a stream nobody is reading.
+      if (eventStream.hasClients && !eventStream.hasClients()) return;
+
       eventStream.publish(payload);
     },
     close() {
@@ -834,14 +698,21 @@ function createHot(compiler, userOptions, statsOption) {
 }
 
 module.exports = createHot;
-module.exports.HOT_DEFAULT_CORS_SSE = HOT_DEFAULT_CORS_SSE;
 module.exports.HOT_DEFAULT_HEARTBEAT = HOT_DEFAULT_HEARTBEAT;
 module.exports.HOT_DEFAULT_PATH = HOT_DEFAULT_PATH;
 module.exports.HOT_DEFAULT_TRANSPORT = HOT_DEFAULT_TRANSPORT;
 module.exports.checkClientStream = checkClientStream;
-module.exports.createEventStream = createEventStream;
+/**
+ * Kept as an export, loaded on the first call rather than with this module.
+ * @param {number} heartbeat heartbeat interval in milliseconds
+ * @param {Logger} logger logger
+ * @param {CorsOption=} cors which origins may read the stream
+ * @param {(string | false)=} token the token the endpoint requires, or false for none
+ * @returns {EventStream} event stream
+ */
+module.exports.createEventStream = (heartbeat, logger, cors, token) =>
+  requireServer("EventSourceServer")(heartbeat, logger, cors, token);
 module.exports.createHot = createHot;
 module.exports.formatErrors = formatErrors;
-module.exports.pathMatch = pathMatch;
 module.exports.publishBundles = publishBundles;
 module.exports.toBundles = toBundles;

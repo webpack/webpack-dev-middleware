@@ -69,7 +69,7 @@ See [below](#other-servers) for an example of use with fastify.
 |              **[`index`](#index)**              |         `boolean\|string`         |                 `index.html`                  | If `false` (but not `undefined`), the server will not respond to requests to the root URL.                           |
 |          **[`mimeTypes`](#mimetypes)**          |             `Object`              |                  `undefined`                  | Allows to register custom mime types or extension mappings.                                                          |
 |    **[`mimeTypeDefault`](#mimetypedefault)**    |             `string`              |                  `undefined`                  | Allows to register a default mime type when we can't determine the content type.                                     |
-|               **[`etag`](#tag)**                |   `boolean\| "weak"\| "strong"`   |                  `undefined`                  | Enable or disable etag generation.                                                                                   |
+|               **[`etag`](#etag)**               |   `boolean\| "weak"\| "strong"`   |                  `undefined`                  | Enable or disable etag generation.                                                                                   |
 |       **[`lastModified`](#lastmodified)**       |             `boolean`             |                  `undefined`                  | Enable or disable `Last-Modified` header. Uses the file system's last modified value.                                |
 |       **[`cacheControl`](#cachecontrol)**       | `boolean\|number\|string\|Object` |                  `undefined`                  | Enable or disable setting `Cache-Control` response header.                                                           |
 |     **[`cacheImmutable`](#cacheimmutable)**     |             `boolean`             |                  `undefined`                  | Enable or disable setting `Cache-Control: public, max-age=31536000, immutable` response header for immutable assets. |
@@ -337,6 +337,7 @@ The object form accepts these options:
 |       **[`server`](#hotserver)**       |                            `object`                             |    `undefined`     | HTTP server the `'ws'` transport answers upgrades on.                                   |
 |     **[`progress`](#hotprogress)**     |                            `boolean`                            |      `false`       | Publish compilation progress events to the clients.                                     |
 |         **[`cors`](#hotcors)**         | `boolean \| string \| string[] \| RegExp \| function \| object` |     see below      | Which origins may reach the endpoint from a page on another one, over either transport. |
+|        **[`token`](#hottoken)**        |                       `boolean \| string`                       |     see below      | A secret the injected client carries and the endpoint requires, over either transport.  |
 |       **[`inject`](#hotinject)**       |                            `boolean`                            |       `true`       | Add the client entry and `HotModuleReplacementPlugin`.                                  |
 | **[`statsOptions`](#hotstatsoptions)** |                            `object`                             |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).                                         |
 
@@ -349,7 +350,7 @@ How events reach the clients.
 
 `'sse'` serves them as [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) from the middleware itself, which needs nothing else.
 
-`'ws'` serves them over a WebSocket. It needs the optional [`ws`](https://www.npmjs.com/package/ws) package (`npm install ws`), and an HTTP server to answer upgrades on — a handshake is an upgrade the server answers, which the middleware never sees. Give it [`hot.server`](#hotserver), or hand the server over later with the middleware's [`attach`](#attach) method:
+`'ws'` serves them over a WebSocket. It needs the optional [`ws`](https://www.npmjs.com/package/ws) package (`npm install ws`), and an HTTP server to answer upgrades on — a handshake is an upgrade the server answers, which the middleware never sees. Give it [`hot.server`](#hotserver), or hand the server over later with the middleware's [`attach`](#attachserver) method:
 
 ```js
 const server = http.createServer(instance);
@@ -443,14 +444,20 @@ Heartbeat interval (in milliseconds) used to keep the connection alive when no c
 Type: `Object`
 Default: `undefined`
 
-HTTP server the [`'ws'`](#hottransport) transport answers upgrades on, when it already exists where the middleware is built. Otherwise hand it over later with the middleware's [`attach`](#attach) method. Ignored by `'sse'`, which is answered by the middleware itself.
+HTTP server the [`'ws'`](#hottransport) transport answers upgrades on, when it already exists where the middleware is built. Otherwise hand it over later with the middleware's [`attach`](#attachserver) method. Ignored by `'sse'`, which is answered by the middleware itself.
 
 #### `hot.progress`
 
 Type: `Boolean`
 Default: `false`
 
-Publish compilation progress events (`{ action: "progress", percent, message }`) to the clients using webpack's `ProgressPlugin`. The bundled client shows the percentage in its building badge (see the client `progress` option).
+> [!WARNING]
+>
+> Deprecated, and removed in the next major release. Use [`publish`](#publishpayload) instead — the example is there.
+
+Applies webpack's `ProgressPlugin` and publishes what it reports (`{ action: "progress", percent, message }`). The bundled client shows the percentage in its building badge, which the client `progress` option configures.
+
+Deciding to measure a build is the server's call rather than the middleware's, and a server that applies `ProgressPlugin` already — webpack-dev-server does — ends up with two of them on one compiler. The client still renders the payload; what changes is who sends it.
 
 #### `hot.cors`
 
@@ -536,6 +543,62 @@ A **function** [transport](#hottransport) of your own is handed the option as it
 > The local-origins set trusts every other server on the developer's own machine, because it cannot tell them apart from your dev server. If one of them serves content someone else controls, set `cors` to the origins you actually use.
 >
 > This is about who may reach the endpoint, and nothing else. It does not decide who may reach the **assets** the middleware serves, which is your server's to answer — with a `Cross-Origin-Resource-Policy` response header, or with whatever your framework's own CORS middleware does.
+
+#### `hot.token`
+
+Type: `Boolean | String`
+Default: `false`
+
+A secret the injected client carries and the endpoint requires. Reaching the stream then takes something a page has to have been **given**, rather than a header a browser may or may not send.
+
+[`cors`](#hotcors) is answered by `Origin`, and that is the weakness: a browser omits `Origin` and the whole `Sec-Fetch-*` family when the destination is not [potentially trustworthy](https://w3c.github.io/webappsec-secure-contexts/#is-origin-trustworthy) — plain `http` to anything but `localhost`, which is what `host: '0.0.0.0'` gives you. webpack-dev-server shipped two fixes built on those headers and both were bypassed exactly that way ([CVE-2026-6402](https://github.com/advisories/GHSA-79cf-xcqc-c78w), then [CVE-2026-14620](https://github.com/advisories/GHSA-f5vj-f2hx-8m93)). A token asks the browser to volunteer nothing.
+
+**Off by default, on both transports**, and `true` in the next major release. A token only reaches the browser on the entry this middleware adds, and `inject` being on does not mean an entry was added — it is skipped when every entry point already pulls the client in, when [`hot.transport`](#hottransport) is a function, and for a non-web target. Requiring one by default would turn each of those into a `403` on every client.
+
+Turn it on, which is all the normal setup needs — the client is injected, so it is handed the token and uses it:
+
+```js
+app.use(middleware(compiler, { hot: { token: true } }));
+```
+
+If you turn it on where no client was injected, the middleware says so rather than leaving you with an unexplained `403`:
+
+```
+[webpack-dev-middleware] 'hot.token' requires a token on the endpoint, but no
+client entry was added to hand one over, so every client will be refused.
+```
+
+> [!IMPORTANT]
+>
+> **What a token does not protect.** The client reads it from its entry query, so it is a string in the bundle. Anything that can already read your bundle cross-origin can read the token out of it — and over plain `http` to a non-`localhost` address, nothing stops that unless your server sends `Cross-Origin-Resource-Policy`. The token hardens every case where the bundle is not readable; where it is, your source has already gone and the stream is the smaller loss. Closing that needs the response header and a `Host` allowlist, which are [your server's](#security) to set.
+
+**Wiring the client yourself.** The token travels in the entry this middleware adds, so `hot.inject: false` turns the requirement off — there would be no way to hand one over, and requiring it would refuse a client you wired correctly.
+
+A configuration that already lists the client as an entry is the other half of that: it is built before the middleware exists, so it cannot carry a token minted per run. Give it one of your own instead, which both sides can know in advance:
+
+```js
+const token = "a-secret-of-my-own";
+
+// webpack.config.js
+entry: [`webpack-dev-middleware/client?token=${token}`, "./src/index.js"];
+
+// and the middleware
+app.use(middleware(compiler, { hot: { transport: "ws", token } }));
+```
+
+Or read the minted one off the instance, for a client you serve yourself:
+
+```js
+const instance = middleware(compiler, {
+  hot: { transport: "ws", token: true },
+});
+
+app.get("/my-client-config.json", (_req, res) => {
+  res.json({ token: instance.token });
+});
+```
+
+`false` requires none, which is the default.
 
 #### `hot.inject`
 
@@ -1085,6 +1148,61 @@ Type: `(client: ServerResponse | WebSocket, req: IncomingMessage) => void`
 Required: `Yes`
 
 Called once per client, in the order the subscribers were added.
+
+### `publish(payload)`
+
+Put a payload of your own on the hot stream.
+
+The middleware publishes what it knows about — a build starting, finishing, failing. Anything else a server measures is its own, and `ProgressPlugin` is the example: deciding to instrument a build is the server's call, and the middleware is only what carries the result.
+
+The bundled client already renders `{ action: "progress" }` in its building badge, so a server with its own plugin has somewhere to put it:
+
+```js
+const compiler = webpack(config);
+const instance = middleware(compiler, { hot: true });
+
+// A `ProgressPlugin` callback fires far more often than the whole number
+// changes, so the percent is rounded and a tick that repeats one is dropped —
+// without that, most of these would be a message on the wire saying what the
+// last one said. This is what `hot.progress` did for you.
+let lastPercent = -1;
+
+new webpack.ProgressPlugin((percent, message) => {
+  const rounded = Math.round(percent * 100);
+
+  if (rounded === lastPercent) {
+    return;
+  }
+
+  lastPercent = rounded;
+  instance.publish({ action: "progress", percent: rounded, message });
+}).apply(compiler);
+
+app.use(instance);
+```
+
+That replaces [`hot.progress`](#hotprogress), which applied the plugin for you and is deprecated — a server that applies `ProgressPlugin` already would otherwise have two of them on one compiler. The indicator itself is unaffected: whether a `progress` payload is drawn is [`hot.client.progress`](#client-options), which is the browser's end of this and stays.
+
+Rounding and de-duplicating are the two things `hot.progress` did that become yours, which is why the example above does both.
+
+It is not only for progress. Any action the clients understand can be published, and `{ action: "reload" }` is the other useful one — every page loads itself again, whatever `hot` and `liveReload` are set to:
+
+```js
+chokidar.watch("content/**/*.md").on("change", () => {
+  instance.publish({ action: "reload" });
+});
+```
+
+Nothing is sent when no client is connected, so a caller does not have to ask whether anyone is listening — but that is the only traffic it saves, and with a page open every call is a message. Keeping a chatty source down to what changed, as above, is the caller's. Does nothing when `hot` is disabled.
+
+#### Parameters
+
+##### `payload`
+
+Type: `{ action: String, ...}`
+Required: `Yes`
+
+An `action` the clients understand, and whatever that action carries. The built-in actions are `building`, `progress`, `built`, `sync` and `reload`.
 
 ### `close(callback)`
 
