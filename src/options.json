@@ -33,6 +33,69 @@
   },
   "type": "object",
   "properties": {
+    "cache": {
+      "description": "How responses are cached.",
+      "link": "https://github.com/webpack/webpack-dev-middleware#cache",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "etag": {
+          "description": "Enable or disable etag generation.",
+          "enum": ["weak", "strong"]
+        },
+        "lastModified": {
+          "description": "Enable or disable `Last-Modified` header. Uses the file system's last modified value.",
+          "type": "boolean"
+        },
+        "control": {
+          "description": "Enable or disable setting `Cache-Control` response header.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "object",
+              "properties": {
+                "maxAge": {
+                  "type": "number"
+                },
+                "immutable": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "immutable": {
+          "description": "Enable or disable setting `Cache-Control: public, max-age=31536000, immutable` response header for immutable assets (i.e. asset with a hash in file name like `image.a4c12bde.jpg`).",
+          "type": "boolean"
+        }
+      }
+    },
+    "mime": {
+      "description": "How a file's media type is decided.",
+      "link": "https://github.com/webpack/webpack-dev-middleware#mime",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "types": {
+          "description": "Allows a user to register custom mime types or extension mappings.",
+          "type": "object"
+        },
+        "default": {
+          "description": "Allows a user to register a default mime type when we can't determine the content type.",
+          "type": "string"
+        }
+      }
+    },
     "mimeTypes": {
       "description": "Allows a user to register custom mime types or extension mappings.",
       "link": "https://github.com/webpack/webpack-dev-middleware#mimetypes",

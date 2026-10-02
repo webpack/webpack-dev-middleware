@@ -49,6 +49,9 @@ declare namespace wdm {
     FilledContext,
     NormalizedHeaders,
     Headers,
+    CacheOptions,
+    NormalizedOptions,
+    MimeOptions,
     Options,
     Middleware,
     GetFilenameFromUrl,
@@ -201,9 +204,9 @@ type Context<
    */
   callbacks: Callback[];
   /**
-   * options
+   * options, with `cache` and `mime` filled in
    */
-  options: Options<RequestInternal, ResponseInternal>;
+  options: NormalizedOptions<RequestInternal, ResponseInternal>;
   /**
    * compiler
    */
@@ -250,12 +253,73 @@ type Headers<
       context: Context<RequestInternal, ResponseInternal>,
     ) => void | undefined | NormalizedHeaders)
   | undefined;
+type CacheOptions = {
+  /**
+   * generate an `ETag` header, weak or strong
+   */
+  etag?: ("weak" | "strong") | undefined;
+  /**
+   * generate a `Last-Modified` header from the file system's value
+   */
+  lastModified?: boolean | undefined;
+  /**
+   * set a `Cache-Control` header
+   */
+  control?:
+    | (
+        | boolean
+        | number
+        | string
+        | {
+            maxAge?: number;
+            immutable?: boolean;
+          }
+      )
+    | undefined;
+  /**
+   * send `Cache-Control: public, max-age=31536000, immutable` for an asset with a hash in its name
+   */
+  immutable?: boolean | undefined;
+};
+/**
+ * The options as everything below the entry point sees them: the legacy flat
+ * spellings have been folded in, so `cache` and `mime` are always objects.
+ */
+type NormalizedOptions<
+  RequestInternal extends IncomingMessage = import("node:http").IncomingMessage,
+  ResponseInternal extends ServerResponse = ServerResponse,
+> = Options<RequestInternal, ResponseInternal> & {
+  cache: CacheOptions;
+  mime: MimeOptions;
+};
+type MimeOptions = {
+  /**
+   * register custom media types or extension mappings
+   */
+  types?:
+    | {
+        [key: string]: string;
+      }
+    | undefined;
+  /**
+   * the media type to fall back on when the content type cannot be determined
+   */
+  default?: string | undefined;
+};
 type Options<
   RequestInternal extends IncomingMessage = import("node:http").IncomingMessage,
   ResponseInternal extends ServerResponse = ServerResponse,
 > = {
   /**
-   * mime types
+   * how responses are cached
+   */
+  cache?: CacheOptions | undefined;
+  /**
+   * how a file's media type is decided
+   */
+  mime?: MimeOptions | undefined;
+  /**
+   * deprecated, use `mime.types`
    */
   mimeTypes?:
     | {
@@ -263,7 +327,7 @@ type Options<
       }
     | undefined;
   /**
-   * mime type default
+   * deprecated, use `mime.default`
    */
   mimeTypeDefault?: (string | undefined) | undefined;
   /**
@@ -304,15 +368,15 @@ type Options<
   modifyResponseData?:
     ModifyResponseData<RequestInternal, ResponseInternal> | undefined;
   /**
-   * options to generate etag header
+   * deprecated, use `cache.etag`
    */
   etag?: ("weak" | "strong") | undefined;
   /**
-   * options to generate last modified header
+   * deprecated, use `cache.lastModified`
    */
   lastModified?: boolean | undefined;
   /**
-   * options to generate cache headers
+   * deprecated, use `cache.control`
    */
   cacheControl?:
     | (
@@ -326,7 +390,7 @@ type Options<
       )
     | undefined;
   /**
-   * is cache immutable
+   * deprecated, use `cache.immutable`
    */
   cacheImmutable?: boolean | undefined;
   /**
