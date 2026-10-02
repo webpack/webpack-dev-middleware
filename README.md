@@ -1161,12 +1161,21 @@ The bundled client already renders `{ action: "progress" }` in its building badg
 const compiler = webpack(config);
 const instance = middleware(compiler, { hot: true });
 
+// A `ProgressPlugin` callback fires far more often than the whole number
+// changes, so the percent is rounded and a tick that repeats one is dropped —
+// without that, most of these would be a message on the wire saying what the
+// last one said. This is what `hot.progress` did for you.
+let lastPercent = -1;
+
 new webpack.ProgressPlugin((percent, message) => {
-  instance.publish({
-    action: "progress",
-    percent: Math.round(percent * 100),
-    message,
-  });
+  const rounded = Math.round(percent * 100);
+
+  if (rounded === lastPercent) {
+    return;
+  }
+
+  lastPercent = rounded;
+  instance.publish({ action: "progress", percent: rounded, message });
 }).apply(compiler);
 
 app.use(instance);
@@ -1174,7 +1183,7 @@ app.use(instance);
 
 That replaces [`hot.progress`](#hotprogress), which applied the plugin for you and is deprecated — a server that applies `ProgressPlugin` already would otherwise have two of them on one compiler. The indicator itself is unaffected: whether a `progress` payload is drawn is [`hot.client.progress`](#client-options), which is the browser's end of this and stays.
 
-Two things `hot.progress` did for you become yours. It rounded the percent, and it dropped a tick that rounded to the same whole number as the last one — a `ProgressPlugin` callback fires far more often than the number changes, and every one of those was a message on the wire.
+Rounding and de-duplicating are the two things `hot.progress` did that become yours, which is why the example above does both.
 
 It is not only for progress. Any action the clients understand can be published, and `{ action: "reload" }` is the other useful one — every page loads itself again, whatever `hot` and `liveReload` are set to:
 
@@ -1184,7 +1193,7 @@ chokidar.watch("content/**/*.md").on("change", () => {
 });
 ```
 
-Nothing is sent when no client is connected, so a caller on a hot path — a `ProgressPlugin` tick fires often — does not have to check first. Does nothing when `hot` is disabled.
+Nothing is sent when no client is connected, so a caller does not have to ask whether anyone is listening — but that is the only traffic it saves, and with a page open every call is a message. Keeping a chatty source down to what changed, as above, is the caller's. Does nothing when `hot` is disabled.
 
 #### Parameters
 

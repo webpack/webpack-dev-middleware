@@ -191,6 +191,10 @@ type HotClientOptions = {
    */
   name?: string | undefined;
   /**
+   * the secret the runtime puts on its connection url, `hot.token` by default
+   */
+  token?: string | undefined;
+  /**
    * show build problems and uncaught runtime errors in an overlay
    */
   overlay?: (boolean | Record<string, EXPECTED_ANY>) | undefined;

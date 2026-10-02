@@ -29,6 +29,7 @@
  * @property {("sse" | "ws")=} transport which transport the runtime speaks, `hot.transport` by default
  * @property {string=} path where the runtime connects, `hot.path` by default; may be an absolute url for an endpoint on another origin
  * @property {string=} name limit the runtime to one compilation's builds, the compilation's own name by default
+ * @property {string=} token the secret the runtime puts on its connection url, `hot.token` by default
  * @property {(boolean | Record<string, EXPECTED_ANY>)=} overlay show build problems and uncaught runtime errors in an overlay
  * @property {(boolean | "circular" | "linear")=} progress show an indicator while a rebuild is in progress
  * @property {boolean=} hot apply a build through Hot Module Replacement
@@ -554,7 +555,7 @@ function createHot(compiler, userOptions, statsOption) {
   // TODO in the next major release remove `progress` and this warning
   if (options.progress) {
     logger.warn(
-      "The 'hot.progress' option is deprecated and will be removed in the next major release. Measuring a build is the server's call, not the middleware's: a server that applies 'ProgressPlugin' itself — webpack-dev-server does — ends up with two of them on one compiler. Apply it yourself and publish what it reports: 'new webpack.ProgressPlugin((percent, message) => instance.publish({ action: \"progress\", percent: Math.round(percent * 100), message })).apply(compiler)'. See https://github.com/webpack/webpack-dev-middleware#publishpayload. Until then this keeps working.",
+      "The 'hot.progress' option is deprecated and will be removed in the next major release. Measuring a build is the server's call, not the middleware's: a server that applies 'ProgressPlugin' itself — webpack-dev-server does — ends up with two of them on one compiler. Apply it yourself and hand what it reports to the middleware's 'publish' method, rounding the percent and dropping a tick that repeats one as this option did for you — the example is at https://github.com/webpack/webpack-dev-middleware#publishpayload. Until then this keeps working.",
     );
 
     const { webpack } =

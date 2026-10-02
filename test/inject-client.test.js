@@ -939,4 +939,23 @@ describe("node and the query take the same names", () => {
   it("is one set of names, with nothing on one side only", () => {
     expect(readByClient.toSorted()).toStrictEqual(takenInNode.toSorted());
   });
+
+  // The third place, and the one that is easiest to forget: the typedef the
+  // published declarations are generated from. A name the schema takes that
+  // it omits is accepted at runtime and rejected by TypeScript, which is how
+  // `token` first shipped.
+  it("is in the typedef the declarations come from, as well", () => {
+    const hotSource = fs.readFileSync(
+      path.join(__dirname, "..", "src", "hot.js"),
+      "utf8",
+    );
+    const [typedef] = /** @type {RegExpMatchArray} */ (
+      hotSource.match(/@typedef \{object\} HotClientOptions[\s\S]*?\n \*\//)
+    );
+    const declared = [
+      ...typedef.matchAll(/@property \{[^}]+\} ([A-Za-z]+)/g),
+    ].map((found) => found[1]);
+
+    expect(declared.toSorted()).toStrictEqual(takenInNode.toSorted());
+  });
 });
