@@ -4380,6 +4380,85 @@ describe.each([
       });
     });
 
+    // The tests above set these options by their flat names, which the alias
+    // folds in — so a regression that read the grouped shape wrongly would
+    // still pass every one of them. This drives the grouped spelling through a
+    // real response instead.
+    describe("cache and mime options, grouped", () => {
+      describe("should apply every grouped option to the response", () => {
+        beforeAll(async () => {
+          const outputPath = path.resolve(__dirname, "./outputs/basic");
+          const compiler = getCompiler({
+            ...webpackConfig,
+            output: {
+              filename: "bundle.js",
+              path: outputPath,
+            },
+          });
+
+          [server, req, instance] = await frameworkFactory(
+            name,
+            framework,
+            compiler,
+            {
+              cache: {
+                control: "max-age=123456",
+                etag: "strong",
+                lastModified: true,
+              },
+              mime: { default: "text/plain", types: { mycustom: "text/x-y" } },
+            },
+          );
+
+          instance.context.outputFileSystem.mkdirSync(outputPath, {
+            recursive: true,
+          });
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "file.unknown"),
+            "welcome",
+          );
+          instance.context.outputFileSystem.writeFileSync(
+            path.resolve(outputPath, "file.mycustom"),
+            "welcome",
+          );
+        });
+
+        afterAll(async () => {
+          await close(server, instance);
+        });
+
+        it("sends the headers `cache` asked for", async () => {
+          const response = await req.get("/file.unknown");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["cache-control"]).toBe("max-age=123456");
+          expect(response.headers.etag).toBeDefined();
+          // `strong` rather than the `W/` a weak one carries.
+          expect(response.headers.etag.startsWith("W/")).toBe(false);
+          expect(response.headers["last-modified"]).toBeDefined();
+        });
+
+        it("falls back on the media type `mime.default` names", async () => {
+          const response = await req.get("/file.unknown");
+
+          expect(response.statusCode).toBe(200);
+          expect(
+            response.headers["content-type"].startsWith("text/plain"),
+          ).toBe(true);
+          expect(response.text).toBe("welcome");
+        });
+
+        it("resolves an extension `mime.types` registered", async () => {
+          const response = await req.get("/file.mycustom");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["content-type"].startsWith("text/x-y")).toBe(
+            true,
+          );
+        });
+      });
+    });
+
     describe("mimeTypeDefault option", () => {
       describe('should set the correct value for "Content-Type" header to unknown MIME type', () => {
         beforeAll(async () => {
