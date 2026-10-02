@@ -209,12 +209,17 @@ Generate a `Last-Modified` header from the file system's last modified value.
 
 #### `cache.control`
 
-Set a `Cache-Control` response header. What is generated depends on what you pass:
+Set a `Cache-Control` response header.
 
-- `Boolean` — `Cache-Control: public, max-age=31536000000`
-- `Number` — `Cache-Control: public, max-age=YOUR_NUMBER`
-- `String` — `Cache-Control: YOUR_STRING`
-- `{ maxAge?: number, immutable?: boolean }` — `Cache-Control: public, max-age=YOUR_MAX_AGE_or_31536000000`, with `, immutable` appended when `immutable` is `true`
+**An age is given in milliseconds and sent in seconds**, since `max-age` is defined in seconds — so `control: 60000` sends `max-age=60`. An age above a year is clamped to a year, and a negative one is floored at zero.
+
+| what you pass         | the header                                                                             |
+| :-------------------- | :------------------------------------------------------------------------------------- |
+| `true`                | `Cache-Control: public, max-age=31536000` — a year                                     |
+| `60000`               | `Cache-Control: public, max-age=60`                                                    |
+| `"max-age=123456"`    | `Cache-Control: max-age=123456` — used verbatim, no conversion                         |
+| `{ maxAge: 60000 }`   | `Cache-Control: public, max-age=60`                                                    |
+| `{ immutable: true }` | `Cache-Control: public, max-age=31536000, immutable` — a year when `maxAge` is omitted |
 
 #### `cache.immutable`
 

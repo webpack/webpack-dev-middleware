@@ -16,3 +16,5 @@ Grouped six flat options into `cache` and `mime`:
 Four of the sixteen top-level options were the same topic and two more were another, so the list read as an inbox rather than a design. `cacheControl` and `cacheImmutable` also lose their stutter inside the group.
 
 Both spellings work. A legacy name warns and names its replacement, and will be removed in the next major release; when a name is set both ways the grouped one applies, so a migration that sets the new name and forgets to delete the old is not silently ignored. The legacy keys stay on `instance.context.options` for anything reading them.
+
+`instance.context.options` is now a copy of the object you passed rather than that object itself, so two middlewares built from one options object stay independent — the same reason the `mime.types` table is copied per instance. Mutating the object after building the middleware no longer reaches it.

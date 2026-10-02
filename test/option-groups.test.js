@@ -147,6 +147,27 @@ describe("the cache and mime option groups", () => {
     });
   });
 
+  // Folding happens into a copy rather than into the object it was given. Two
+  // middlewares built from one options object would otherwise reach each other
+  // through it: the first would leave `cache` populated, and the second would
+  // report the legacy name as a conflict with a group the caller never set.
+  it("does not fold into the object it was given", () => {
+    const shared = { etag: "weak" };
+
+    const first = build(shared);
+
+    expect(shared.cache).toBeUndefined();
+    expect(first.context.options.cache.etag).toBe("weak");
+
+    warnings = [];
+
+    const second = build(shared);
+
+    expect(second.context.options.cache.etag).toBe("weak");
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("The 'etag' option is deprecated");
+  });
+
   it("leaves both groups as objects when neither was given", () => {
     // Everything below the entry point reads `options.cache.x` directly, so an
     // absent group would be a crash rather than a default.
