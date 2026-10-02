@@ -224,11 +224,11 @@ type HotClientOptions = {
   logging?:
     ("none" | "error" | "warn" | "info" | "log" | "verbose") | undefined;
   /**
-   * how many times to reconnect before giving up
+   * how many times to reconnect before giving up; Server-Sent Events keep trying for as long as the page is open unless this is set
    */
   reconnect?: number | undefined;
   /**
-   * how long the runtime tolerates silence before reconnecting, in milliseconds
+   * how long the runtime tolerates silence before reconnecting, in milliseconds — Server-Sent Events only, since a WebSocket's heartbeat is a protocol ping JavaScript cannot see
    */
   timeout?: number | undefined;
   /**

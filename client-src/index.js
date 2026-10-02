@@ -13,6 +13,7 @@ import applyUpdate from "./process-update.js";
 import { log, setLogLevel } from "./utils/log.js";
 import reloadPage from "./utils/reload.js";
 import sendMessage from "./utils/send-message.js";
+import socketOptions from "./utils/socket-options.js";
 import stripAnsi from "./utils/strip-ansi.js";
 import withToken from "./utils/with-token.js";
 
@@ -279,20 +280,11 @@ function getClient() {
  * @returns {ReturnType<typeof createSocket>} a socket on the current options
  */
 function createClientSocket() {
-  const isEventSource = options.transport !== "ws";
-
   return createSocket(
     getClient(),
     withToken(/** @type {string} */ (options.path), options.token),
     {
-      clientOptions: { timeout: options.timeout },
-      // Server-Sent Events are retried for as long as the page is open, at the
-      // steady interval its watchdog already uses: a dev server is expected to
-      // come back, and a tab left open over a restart has to find it again.
-      retries: isEventSource ? Infinity : options.reconnect,
-      retryDelay: isEventSource
-        ? () => /** @type {number} */ (options.timeout)
-        : undefined,
+      ...socketOptions(options),
       onDisconnect: () => {
         sendMessage("Close");
       },
