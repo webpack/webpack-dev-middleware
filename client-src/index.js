@@ -170,7 +170,10 @@ function turnedOffByUrl(setting) {
  */
 function setOverrides(overrides) {
   if (overrides.autoConnect) {
-    options.autoConnect = overrides.autoConnect === "true";
+    // `!== "false"` like every other boolean here, not `=== "true"`: the
+    // default is already on, so the only thing anyone writes this for is
+    // turning it off, and `?autoConnect=1` used to do that by accident.
+    options.autoConnect = overrides.autoConnect !== "false";
   }
   if (overrides.transport === "sse" || overrides.transport === "ws") {
     options.transport = overrides.transport;

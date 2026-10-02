@@ -100,6 +100,46 @@ describe("hot client (browser)", () => {
     expect(await readReloadMarker(page)).toBeUndefined();
   });
 
+  // Every boolean on the query turns off on `false` and is left alone by
+  // anything else. `autoConnect` read `=== "true"` instead, so a value it did
+  // not recognise turned it off — and since the default is on, turning it off
+  // is the only thing anyone writes it for.
+  it("stays connected for an autoConnect value that is not `false`", async () => {
+    app = await createHotApp({
+      query: "?autoConnect=1",
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    // Connected, so a build reaches the page.
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    expect(
+      await page.evaluate(() => document.getElementById("app").textContent),
+    ).toBe("v2");
+    expect(console_.messages.join("\n")).toContain("connected");
+  });
+
+  it("does not connect when autoConnect is `false`", async () => {
+    app = await createHotApp({
+      query: "?autoConnect=false",
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+
+    expect(console_.messages.join("\n")).not.toContain("connected");
+  });
+
   it("warns instead of reloading when reload=false", async () => {
     app = await createHotApp({
       query: "?reload=false",
