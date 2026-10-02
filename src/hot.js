@@ -32,10 +32,9 @@
  * @property {string=} token the secret the runtime puts on its connection url, `hot.token` by default
  * @property {(boolean | Record<string, EXPECTED_ANY>)=} overlay show build problems and uncaught runtime errors in an overlay
  * @property {(boolean | "circular" | "linear")=} progress show an indicator while a rebuild is in progress
- * @property {boolean=} hot apply a build through Hot Module Replacement
- * @property {boolean=} liveReload reload the page on a build that changed something, when `hot` is off
- * @property {boolean=} reload reload the page when an update cannot be applied
- * @property {string=} urlPrefix name of the page-url parameters that turn `hot` and `liveReload` off for a single page
+ * @property {("hmr" | "hmr-only" | "reload" | "nothing")=} apply what a build does to the page — apply the update and reload if it cannot be applied, apply it and stop with a message if it cannot, load the page again on any build that changed something, or leave the page alone
+ * @property {(boolean | { retries?: number, timeout?: number })=} connect whether to connect when the entry runs, and how the connection is held open
+ * @property {string=} urlPrefix prefix of the page-url parameter that overrides `apply` for a single page
  * @property {("none" | "error" | "warn" | "info" | "log" | "verbose")=} logging how much the runtime logs to the browser console
  * @property {number=} reconnect how many times to reconnect before giving up; unset, Server-Sent Events keep trying for as long as the page is open while a WebSocket gives up after 10
  * @property {number=} timeout how long the runtime tolerates silence before reconnecting, in milliseconds — Server-Sent Events only, since a WebSocket's heartbeat is a protocol ping JavaScript cannot see

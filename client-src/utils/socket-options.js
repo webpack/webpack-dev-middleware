@@ -1,5 +1,5 @@
-// What the two transports make of `reconnect` and `timeout` is not the same,
-// because what they can observe is not the same.
+// What the two transports make of `connect`'s `retries` and `timeout` is not
+// the same, because what they can observe is not the same.
 //
 // Server-Sent Events carry the heartbeat as data — `data: 💓` — so the client
 // can tell a silent connection from a working one, and `timeout` is how long
@@ -16,17 +16,27 @@
 // rather than a rule — asking for a bounded number of attempts is honoured.
 const DEFAULT_SSE_RETRIES = Infinity;
 
+// How long silence is tolerated before reconnecting, when `connect` does not
+// say. `EventSourceClient` has the same figure for when it is given nothing.
+const DEFAULT_TIMEOUT = 20_000;
+
 /**
  * How `createSocket` should hold the connection open, for the transport in use.
- * @param {{ transport?: string, reconnect?: number, timeout?: number }} options the client options
- * @returns {{ retries: (number | undefined), retryDelay: (() => number) | undefined, clientOptions: { timeout?: number } | undefined }} what `createSocket` takes
+ * @param {{ transport?: string, connect?: boolean | { retries?: number, timeout?: number } }} options the client options
+ * @returns {{ retries: (number | undefined), retryDelay: (() => number) | undefined, clientOptions: { timeout: number } | undefined }} what `createSocket` takes
  */
 export default function socketOptions(options) {
   const isEventSource = options.transport !== "ws";
+  const connect =
+    typeof options.connect === "object" && options.connect !== null
+      ? options.connect
+      : {};
+  const timeout =
+    connect.timeout === undefined ? DEFAULT_TIMEOUT : connect.timeout;
 
   if (!isEventSource) {
     return {
-      retries: options.reconnect,
+      retries: connect.retries,
       // Left to `createSocket`, which backs off: a WebSocket that dropped
       // because the server is restarting should not be asked again on a fixed
       // interval.
@@ -39,8 +49,8 @@ export default function socketOptions(options) {
 
   return {
     retries:
-      options.reconnect === undefined ? DEFAULT_SSE_RETRIES : options.reconnect,
-    retryDelay: () => /** @type {number} */ (options.timeout),
-    clientOptions: { timeout: options.timeout },
+      connect.retries === undefined ? DEFAULT_SSE_RETRIES : connect.retries,
+    retryDelay: () => timeout,
+    clientOptions: { timeout },
   };
 }

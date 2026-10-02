@@ -411,20 +411,36 @@
                     }
                   ]
                 },
-                "hot": {
-                  "description": "Apply a build through Hot Module Replacement.",
-                  "type": "boolean"
+                "apply": {
+                  "description": "What a build does to the page: `hmr` applies the update and reloads if it cannot be applied, `hmr-only` applies it and stops with a message if it cannot, `reload` loads the page again on a build that changed something, and `nothing` leaves the page alone until you reload it.",
+                  "enum": ["hmr", "hmr-only", "reload", "nothing"]
                 },
-                "liveReload": {
-                  "description": "Reload the page on a build that changed something, when `hot` is off.",
-                  "type": "boolean"
-                },
-                "reload": {
-                  "description": "Reload the page when an update cannot be applied.",
-                  "type": "boolean"
+                "connect": {
+                  "description": "Whether to connect when the entry runs, and how the connection is held open. `false` does not connect; an object sets `retries` and `timeout`.",
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "retries": {
+                          "description": "How many times to reconnect before giving up. Server-Sent Events keep trying for as long as the page is open unless this is set, since a dev server is expected to come back.",
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "timeout": {
+                          "description": "How long silence is tolerated before reconnecting, in milliseconds. Server-Sent Events only: their heartbeat arrives as data the client can see, whereas a WebSocket's is a protocol ping the browser answers without telling JavaScript.",
+                          "type": "number",
+                          "minimum": 1
+                        }
+                      }
+                    }
+                  ]
                 },
                 "urlPrefix": {
-                  "description": "Names the page-url parameters that turn `hot` and `liveReload` off for a single page.",
+                  "description": "Prefix of the page-url parameter that overrides `apply` for a single page.",
                   "type": "string",
                   "minLength": 1
                 },

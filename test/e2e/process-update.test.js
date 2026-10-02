@@ -97,9 +97,9 @@ describe("update processing (browser)", () => {
     expect(await page.evaluate(() => globalThis.__notReloaded)).toBeUndefined();
   });
 
-  it("stays on the broken state when reload=false and an accept handler throws", async () => {
+  it("stays on the broken state when apply is hmr-only and an accept handler throws", async () => {
     app = await createHotApp({
-      query: "?reload=false",
+      query: "?apply=hmr-only",
       code: throwingAcceptApp(),
       files: { "dep.js": "module.exports = 1;" },
     });

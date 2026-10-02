@@ -1025,22 +1025,25 @@ Three layers, from build to presentation:
 
 ### Opting one page out
 
-A page can turn `hot` or `liveReload` off for itself with a url parameter,
+A page can choose its own [`apply`](#client-options) mode with a url parameter,
 without changing anything the project is configured with — useful when you are
 working _in_ a page that keeps reloading under you:
 
 ```
-http://localhost:3000/?webpack-dev-middleware-liveReload=false
-http://localhost:3000/?webpack-dev-middleware-hot=false
+http://localhost:3000/?webpack-dev-middleware-apply=nothing
+http://localhost:3000/?webpack-dev-middleware-apply=reload
+http://localhost:3000/?webpack-dev-middleware-apply=false
 ```
 
-The `webpack-dev-middleware` part is the client's [`urlPrefix`](#client-options), so a server built on this middleware can set `hot.client.urlPrefix` and name these parameters after itself. What follows it is the option, spelled the one way the option is spelled. The name is matched whole and case-insensitively, and only the value `false` turns anything off — a parameter that merely contains those words, or a value such as `falsehood`, is left alone.
+`false` is taken as `nothing`, which is what this parameter meant before `apply` replaced the three booleans it covers.
+
+The `webpack-dev-middleware` part is the client's [`urlPrefix`](#client-options), so a server built on this middleware can set `hot.client.urlPrefix` and name the parameter after itself. What follows it is the option, spelled the one way the option is spelled. The name is matched whole and case-insensitively, and a value that is not one of the modes is left alone — a parameter that merely contains the words, or a value such as `nothingness`, changes nothing.
 
 ### Reloading the page from the server
 
 Some changes belong to no compilation — a file served straight from disk, for
 instance — so nothing tells the page it is stale. Publish a `reload` and it
-loads itself again, whatever `hot` and `liveReload` are set to:
+loads itself again, whatever `apply` is set to:
 
 ```js
 const instance = middleware(compiler, { hot: true });
@@ -1217,7 +1220,7 @@ That replaces [`hot.progress`](#hotprogress), which applied the plugin for you a
 
 Rounding and de-duplicating are the two things `hot.progress` did that become yours, which is why the example above does both.
 
-It is not only for progress. Any action the clients understand can be published, and `{ action: "reload" }` is the other useful one — every page loads itself again, whatever `hot` and `liveReload` are set to:
+It is not only for progress. Any action the clients understand can be published, and `{ action: "reload" }` is the other useful one — every page loads itself again, whatever `apply` is set to:
 
 ```js
 chokidar.watch("content/**/*.md").on("change", () => {

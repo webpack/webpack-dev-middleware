@@ -953,7 +953,9 @@ describe("node and the query take the same names", () => {
       hotSource.match(/@typedef \{object\} HotClientOptions[\s\S]*?\n \*\//)
     );
     const declared = [
-      ...typedef.matchAll(/@property \{[^}]+\} ([A-Za-z]+)/g),
+      // One level of nesting, since a type can be an object literal —
+      // `{ retries?: number }` — and `[^}]+` would stop inside it.
+      ...typedef.matchAll(/@property \{(?:[^{}]|\{[^{}]*\})+\} ([A-Za-z]+)/g),
     ].map((found) => found[1]);
 
     expect(declared.toSorted()).toStrictEqual(takenInNode.toSorted());
