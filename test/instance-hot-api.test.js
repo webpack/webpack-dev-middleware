@@ -74,6 +74,18 @@ describe("the hot API on the middleware instance", () => {
 
       expect(instance.handleUpgrade({}, {}, Buffer.alloc(0))).toBe(false);
     });
+
+    // What a server measures itself goes on the stream through here —
+    // `ProgressPlugin` being the one the middleware used to apply for you.
+    it("passes a payload of your own through to the endpoint", () => {
+      const instance = build({ hot: true });
+      const publish = jest.spyOn(instance.context.hot, "publish");
+      const payload = { action: "progress", percent: 42, message: "building" };
+
+      instance.publish(payload);
+
+      expect(publish).toHaveBeenCalledWith(payload);
+    });
   });
 
   describe("with hot disabled", () => {
@@ -87,6 +99,12 @@ describe("the hot API on the middleware instance", () => {
       const instance = build();
 
       expect(() => instance.onConnect(() => {})).not.toThrow();
+    });
+
+    it("takes a payload and drops it, rather than making the caller ask", () => {
+      const instance = build();
+
+      expect(() => instance.publish({ action: "progress" })).not.toThrow();
     });
   });
 });

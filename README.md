@@ -69,7 +69,7 @@ See [below](#other-servers) for an example of use with fastify.
 |              **[`index`](#index)**              |         `boolean\|string`         |                 `index.html`                  | If `false` (but not `undefined`), the server will not respond to requests to the root URL.                           |
 |          **[`mimeTypes`](#mimetypes)**          |             `Object`              |                  `undefined`                  | Allows to register custom mime types or extension mappings.                                                          |
 |    **[`mimeTypeDefault`](#mimetypedefault)**    |             `string`              |                  `undefined`                  | Allows to register a default mime type when we can't determine the content type.                                     |
-|               **[`etag`](#tag)**                |   `boolean\| "weak"\| "strong"`   |                  `undefined`                  | Enable or disable etag generation.                                                                                   |
+|               **[`etag`](#etag)**               |   `boolean\| "weak"\| "strong"`   |                  `undefined`                  | Enable or disable etag generation.                                                                                   |
 |       **[`lastModified`](#lastmodified)**       |             `boolean`             |                  `undefined`                  | Enable or disable `Last-Modified` header. Uses the file system's last modified value.                                |
 |       **[`cacheControl`](#cachecontrol)**       | `boolean\|number\|string\|Object` |                  `undefined`                  | Enable or disable setting `Cache-Control` response header.                                                           |
 |     **[`cacheImmutable`](#cacheimmutable)**     |             `boolean`             |                  `undefined`                  | Enable or disable setting `Cache-Control: public, max-age=31536000, immutable` response header for immutable assets. |
@@ -350,7 +350,7 @@ How events reach the clients.
 
 `'sse'` serves them as [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) from the middleware itself, which needs nothing else.
 
-`'ws'` serves them over a WebSocket. It needs the optional [`ws`](https://www.npmjs.com/package/ws) package (`npm install ws`), and an HTTP server to answer upgrades on — a handshake is an upgrade the server answers, which the middleware never sees. Give it [`hot.server`](#hotserver), or hand the server over later with the middleware's [`attach`](#attach) method:
+`'ws'` serves them over a WebSocket. It needs the optional [`ws`](https://www.npmjs.com/package/ws) package (`npm install ws`), and an HTTP server to answer upgrades on — a handshake is an upgrade the server answers, which the middleware never sees. Give it [`hot.server`](#hotserver), or hand the server over later with the middleware's [`attach`](#attachserver) method:
 
 ```js
 const server = http.createServer(instance);
@@ -444,14 +444,20 @@ Heartbeat interval (in milliseconds) used to keep the connection alive when no c
 Type: `Object`
 Default: `undefined`
 
-HTTP server the [`'ws'`](#hottransport) transport answers upgrades on, when it already exists where the middleware is built. Otherwise hand it over later with the middleware's [`attach`](#attach) method. Ignored by `'sse'`, which is answered by the middleware itself.
+HTTP server the [`'ws'`](#hottransport) transport answers upgrades on, when it already exists where the middleware is built. Otherwise hand it over later with the middleware's [`attach`](#attachserver) method. Ignored by `'sse'`, which is answered by the middleware itself.
 
 #### `hot.progress`
 
 Type: `Boolean`
 Default: `false`
 
-Publish compilation progress events (`{ action: "progress", percent, message }`) to the clients using webpack's `ProgressPlugin`. The bundled client shows the percentage in its building badge (see the client `progress` option).
+> [!WARNING]
+>
+> Deprecated, and removed in the next major release. Use [`publish`](#publishpayload) instead — the example is there.
+
+Applies webpack's `ProgressPlugin` and publishes what it reports (`{ action: "progress", percent, message }`). The bundled client shows the percentage in its building badge, which the client `progress` option configures.
+
+Deciding to measure a build is the server's call rather than the middleware's, and a server that applies `ProgressPlugin` already — webpack-dev-server does — ends up with two of them on one compiler. The client still renders the payload; what changes is who sends it.
 
 #### `hot.cors`
 
@@ -1140,6 +1146,52 @@ Type: `(client: ServerResponse | WebSocket, req: IncomingMessage) => void`
 Required: `Yes`
 
 Called once per client, in the order the subscribers were added.
+
+### `publish(payload)`
+
+Put a payload of your own on the hot stream.
+
+The middleware publishes what it knows about — a build starting, finishing, failing. Anything else a server measures is its own, and `ProgressPlugin` is the example: deciding to instrument a build is the server's call, and the middleware is only what carries the result.
+
+The bundled client already renders `{ action: "progress" }` in its building badge, so a server with its own plugin has somewhere to put it:
+
+```js
+const compiler = webpack(config);
+const instance = middleware(compiler, { hot: true });
+
+new webpack.ProgressPlugin((percent, message) => {
+  instance.publish({
+    action: "progress",
+    percent: Math.round(percent * 100),
+    message,
+  });
+}).apply(compiler);
+
+app.use(instance);
+```
+
+That replaces [`hot.progress`](#hotprogress), which applied the plugin for you and is deprecated — a server that applies `ProgressPlugin` already would otherwise have two of them on one compiler. The indicator itself is unaffected: whether a `progress` payload is drawn is [`hot.client.progress`](#client-options), which is the browser's end of this and stays.
+
+Two things `hot.progress` did for you become yours. It rounded the percent, and it dropped a tick that rounded to the same whole number as the last one — a `ProgressPlugin` callback fires far more often than the number changes, and every one of those was a message on the wire.
+
+It is not only for progress. Any action the clients understand can be published, and `{ action: "reload" }` is the other useful one — every page loads itself again, whatever `hot` and `liveReload` are set to:
+
+```js
+chokidar.watch("content/**/*.md").on("change", () => {
+  instance.publish({ action: "reload" });
+});
+```
+
+Nothing is sent when no client is connected, so a caller on a hot path — a `ProgressPlugin` tick fires often — does not have to check first. Does nothing when `hot` is disabled.
+
+#### Parameters
+
+##### `payload`
+
+Type: `{ action: String, ...}`
+Required: `Yes`
+
+An `action` the clients understand, and whatever that action carries. The built-in actions are `building`, `progress`, `built`, `sync` and `reload`.
 
 ### `close(callback)`
 

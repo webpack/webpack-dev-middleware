@@ -1266,6 +1266,27 @@ describe("createHot", () => {
     hot.close();
   });
 
+  it("warns that progress is deprecated", () => {
+    const warnings = [];
+    const compiler = makeFakeCompiler({
+      log() {},
+      warn: (m) => warnings.push(m),
+    });
+
+    compiler.webpack = {
+      ProgressPlugin: class {
+        apply() {}
+      },
+    };
+
+    const hot = createHot(compiler, { progress: true });
+
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("'hot.progress' option is deprecated");
+
+    hot.close();
+  });
+
   it("forwards custom statsOptions to stats.toJson", () => {
     const compiler = makeFakeCompiler();
     const hot = createHot(compiler, {

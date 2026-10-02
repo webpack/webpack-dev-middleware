@@ -551,7 +551,12 @@ function createHot(compiler, userOptions, statsOption) {
     eventStream.attach(options.server);
   }
 
+  // TODO in the next major release remove `progress` and this warning
   if (options.progress) {
+    logger.warn(
+      "The 'hot.progress' option is deprecated and will be removed in the next major release. Measuring a build is the server's call, not the middleware's: a server that applies 'ProgressPlugin' itself — webpack-dev-server does — ends up with two of them on one compiler. Apply it yourself and publish what it reports: 'new webpack.ProgressPlugin((percent, message) => instance.publish({ action: \"progress\", percent: Math.round(percent * 100), message })).apply(compiler)'. See https://github.com/webpack/webpack-dev-middleware#publishpayload. Until then this keeps working.",
+    );
+
     const { webpack } =
       "compilers" in compiler ? compiler.compilers[0] : compiler;
 
@@ -668,6 +673,12 @@ function createHot(compiler, userOptions, statsOption) {
     },
     publish(payload) {
       if (closed) return;
+
+      // No `hasClients` means the transport did not offer to answer, so the
+      // payload goes to it and it decides. This is a public entry point —
+      // something outside publishing on every ProgressPlugin tick should not
+      // pay for a stream nobody is reading.
+      if (eventStream.hasClients && !eventStream.hasClients()) return;
 
       eventStream.publish(payload);
     },
