@@ -204,7 +204,7 @@ describe("hot with nothing but the middleware (browser)", () => {
     });
     ({ page, browser } = await runBrowser());
 
-    await page.goto(`${hotApp.url}?my-server-apply=nothing`);
+    await page.goto(`${hotApp.url}?my-server-apply=reload`);
     await waitForAppText(page, "v1");
     await page.evaluate(() => {
       globalThis.notReloaded = true;
