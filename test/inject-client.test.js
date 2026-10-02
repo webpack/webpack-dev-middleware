@@ -248,7 +248,10 @@ describe("injectHotClient", () => {
       expect(warnings.join("\n")).toContain(
         "no client entry was added to hand one over",
       );
-      expect(warnings.join("\n")).toContain("token=a-token-nobody-gets");
+      // Not the token itself: a minted one is stale by the time anyone reads
+      // the warning, and infrastructure warnings travel into CI output.
+      expect(warnings.join("\n")).not.toContain("a-token-nobody-gets");
+      expect(warnings.join("\n")).toContain("token=<the token>");
     });
 
     it("says nothing about a token when the client was injected", () => {

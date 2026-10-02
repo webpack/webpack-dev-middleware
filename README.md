@@ -589,14 +589,16 @@ app.use(middleware(compiler, { hot: { transport: "ws", token } }));
 Or read the minted one off the instance, for a client you serve yourself:
 
 ```js
-const instance = middleware(compiler, { hot: { transport: "ws" } });
+const instance = middleware(compiler, {
+  hot: { transport: "ws", token: true },
+});
 
 app.get("/my-client-config.json", (_req, res) => {
   res.json({ token: instance.token });
 });
 ```
 
-`false` requires none, which is what `'sse'` does today.
+`false` requires none, which is the default.
 
 #### `hot.inject`
 

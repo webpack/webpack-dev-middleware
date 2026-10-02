@@ -1632,9 +1632,14 @@ function injectHotClient(compilers, options, logger) {
   // pulls the client in, `hot.transport` is a function, the target is not the
   // web — and the endpoint still requires whatever token it was given. Said
   // here rather than left as a `403` with no explanation.
+  //
+  // Without the token itself in it. A minted one is different every run, so
+  // printing it would invite exactly the wrong fix — pasting a value that is
+  // already stale — and infrastructure warnings travel into CI output, where
+  // a secret has no business being.
   if (options.token && !injected) {
     logger.warn(
-      `'hot.token' requires a token on the endpoint, but no client entry was added to hand one over, so every client will be refused. Put 'token=${options.token}' on the query of the client you added yourself, read it from the middleware's 'token' property, or set 'hot.token: false'.`,
+      "'hot.token' requires a token on the endpoint, but no client entry was added to hand one over, so every client will be refused. Put 'token=<the token>' on the query of the client you added yourself, reading it from the middleware's 'token' property, or set a fixed 'hot.token' both sides know — or 'hot.token: false' to require none.",
     );
   }
 }

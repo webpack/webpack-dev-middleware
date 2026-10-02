@@ -14,6 +14,7 @@ import { log, setLogLevel } from "./utils/log.js";
 import reloadPage from "./utils/reload.js";
 import sendMessage from "./utils/send-message.js";
 import stripAnsi from "./utils/strip-ansi.js";
+import withToken from "./utils/with-token.js";
 
 /** @typedef {import("./utils/log.js").LogLevel} LogLevel */
 
@@ -275,41 +276,28 @@ function getClient() {
 }
 
 /**
- * The endpoint url, carrying the token when the endpoint requires one.
- *
- * On the url because neither `EventSource` nor `WebSocket` lets a page set a
- * request header, so there is nowhere else to put it.
- * @returns {string} the url to connect to
- */
-function endpoint() {
-  const path = /** @type {string} */ (options.path);
-
-  if (!options.token) {
-    return path;
-  }
-
-  return `${path}${path.includes("?") ? "&" : "?"}token=${encodeURIComponent(options.token)}`;
-}
-
-/**
  * @returns {ReturnType<typeof createSocket>} a socket on the current options
  */
 function createClientSocket() {
   const isEventSource = options.transport !== "ws";
 
-  return createSocket(getClient(), endpoint(), {
-    clientOptions: { timeout: options.timeout },
-    // Server-Sent Events are retried for as long as the page is open, at the
-    // steady interval its watchdog already uses: a dev server is expected to
-    // come back, and a tab left open over a restart has to find it again.
-    retries: isEventSource ? Infinity : options.reconnect,
-    retryDelay: isEventSource
-      ? () => /** @type {number} */ (options.timeout)
-      : undefined,
-    onDisconnect: () => {
-      sendMessage("Close");
+  return createSocket(
+    getClient(),
+    withToken(/** @type {string} */ (options.path), options.token),
+    {
+      clientOptions: { timeout: options.timeout },
+      // Server-Sent Events are retried for as long as the page is open, at the
+      // steady interval its watchdog already uses: a dev server is expected to
+      // come back, and a tab left open over a restart has to find it again.
+      retries: isEventSource ? Infinity : options.reconnect,
+      retryDelay: isEventSource
+        ? () => /** @type {number} */ (options.timeout)
+        : undefined,
+      onDisconnect: () => {
+        sendMessage("Close");
+      },
     },
-  });
+  );
 }
 
 const WRAPPER_KEY = "__wdmEventSourceWrapper";

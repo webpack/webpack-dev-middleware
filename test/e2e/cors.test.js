@@ -147,9 +147,10 @@ describe("reading the event stream from another origin (browser)", () => {
 
       await page.goto(`http://${host}:${port}/`);
 
-      // The fixture asks for a token, and this test builds its own url rather
-      // than using the injected client's — so it carries the one the
-      // middleware resolved.
+      // The fixture asks for a token, and this socket is built here rather
+      // than taken from the injected client — so it carries the one the
+      // middleware resolved. Without it the endpoint refuses before it ever
+      // looks at the origin, which is what this test is about.
       const token = encodeURIComponent(hotApp.instance.token);
 
       return connectFromPage(
