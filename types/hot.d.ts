@@ -224,7 +224,7 @@ type HotClientOptions = {
   logging?:
     ("none" | "error" | "warn" | "info" | "log" | "verbose") | undefined;
   /**
-   * how many times to reconnect before giving up; Server-Sent Events keep trying for as long as the page is open unless this is set
+   * how many times to reconnect before giving up; unset, Server-Sent Events keep trying for as long as the page is open while a WebSocket gives up after 10
    */
   reconnect?: number | undefined;
   /**

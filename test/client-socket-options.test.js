@@ -1,4 +1,25 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import socketOptions from "../client-src/utils/socket-options";
+
+/**
+ * `createSocket`'s own default, read from its source: the WebSocket half of
+ * `retries` is "whatever `createSocket` does with nothing", so the number in
+ * the docs depends on it.
+ * @returns {number} the default it falls back to
+ */
+function createSocketDefaultRetries() {
+  const source = fs.readFileSync(
+    path.join(__dirname, "..", "client-src", "clients", "createSocket.js"),
+    "utf8",
+  );
+  const [, value] = /** @type {RegExpMatchArray} */ (
+    source.match(/options\.retries === undefined \? (\d+)/)
+  );
+
+  return Number(value);
+}
 
 // `reconnect` and `timeout` mean different things to the two transports, and
 // before this each was silently inert on one of them: `reconnect` was ignored
@@ -32,6 +53,17 @@ describe("what each transport makes of reconnect and timeout", () => {
         timeout: 5000,
       });
     });
+  });
+
+  // The two defaults the README quotes. `Infinity` is this module's; `10` is
+  // `createSocket`'s, reached by handing it nothing — so the figure in the
+  // docs is only right as long as both stay where they are.
+  it("leaves each transport on the default the docs quote", () => {
+    expect(socketOptions({ timeout: 20_000 }).retries).toBe(Infinity);
+    expect(
+      socketOptions({ transport: "ws", timeout: 20_000 }).retries,
+    ).toBeUndefined();
+    expect(createSocketDefaultRetries()).toBe(10);
   });
 
   describe("a WebSocket", () => {

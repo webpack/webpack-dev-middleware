@@ -433,7 +433,7 @@
                   "enum": ["none", "error", "warn", "info", "log", "verbose"]
                 },
                 "reconnect": {
-                  "description": "How many times to reconnect before giving up. Server-Sent Events keep trying for as long as the page is open unless this is set, since a dev server is expected to come back.",
+                  "description": "How many times to reconnect before giving up. Unset, Server-Sent Events keep trying for as long as the page is open \u2014 a dev server is expected to come back \u2014 while a WebSocket gives up after 10. Setting it applies to both.",
                   "type": "number",
                   "minimum": 0
                 },
