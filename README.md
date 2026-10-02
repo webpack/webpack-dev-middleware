@@ -62,25 +62,21 @@ See [below](#other-servers) for an example of use with fastify.
 
 ## Options
 
-|                      Name                       |               Type                |                    Default                    | Description                                                                                                          |
-| :---------------------------------------------: | :-------------------------------: | :-------------------------------------------: | :------------------------------------------------------------------------------------------------------------------- |
-|            **[`methods`](#methods)**            |              `Array`              |              `[ 'GET', 'HEAD' ]`              | Allows to pass the list of HTTP request methods accepted by the middleware                                           |
-|            **[`headers`](#headers)**            |     `Array\|Object\|Function`     |                  `undefined`                  | Allows to pass custom HTTP headers on each request.                                                                  |
-|              **[`index`](#index)**              |         `boolean\|string`         |                 `index.html`                  | If `false` (but not `undefined`), the server will not respond to requests to the root URL.                           |
-|          **[`mimeTypes`](#mimetypes)**          |             `Object`              |                  `undefined`                  | Allows to register custom mime types or extension mappings.                                                          |
-|    **[`mimeTypeDefault`](#mimetypedefault)**    |             `string`              |                  `undefined`                  | Allows to register a default mime type when we can't determine the content type.                                     |
-|               **[`etag`](#etag)**               |   `boolean\| "weak"\| "strong"`   |                  `undefined`                  | Enable or disable etag generation.                                                                                   |
-|       **[`lastModified`](#lastmodified)**       |             `boolean`             |                  `undefined`                  | Enable or disable `Last-Modified` header. Uses the file system's last modified value.                                |
-|       **[`cacheControl`](#cachecontrol)**       | `boolean\|number\|string\|Object` |                  `undefined`                  | Enable or disable setting `Cache-Control` response header.                                                           |
-|     **[`cacheImmutable`](#cacheimmutable)**     |             `boolean`             |                  `undefined`                  | Enable or disable setting `Cache-Control: public, max-age=31536000, immutable` response header for immutable assets. |
-|         **[`publicPath`](#publicpath)**         |             `string`              |                  `undefined`                  | The public path that the middleware is bound to.                                                                     |
-|              **[`stats`](#stats)**              |     `boolean\|string\|Object`     |        `stats` (from a configuration)         | Stats options object or preset name.                                                                                 |
-|   **[`serverSideRender`](#serversiderender)**   |             `boolean`             |                  `undefined`                  | Instructs the module to enable or disable the server-side rendering mode.                                            |
-|        **[`writeToDisk`](#writetodisk)**        |        `boolean\|Function`        |                    `false`                    | Instructs the module to write files to the configured location on disk as specified in your `webpack` configuration. |
-|   **[`outputFileSystem`](#outputfilesystem)**   |             `Object`              | [`memfs`](https://github.com/streamich/memfs) | Set the default file system which will be used by webpack as primary destination of generated files.                 |
-| **[`modifyResponseData`](#modifyresponsedata)** |            `Function`             |                  `undefined`                  | Allows to set up a callback to change the response data.                                                             |
-|                **[`hot`](#hot)**                |         `boolean\|Object`         |                    `false`                    | Enables a Server-Sent Events endpoint that drives the browser HMR client.                                            |
-|       **[`forwardError`](#forwarderror)**       |             `boolean`             |                    `false`                    | Enable or disable forwarding errors to the next middleware.                                                          |
+|                      Name                       |           Type            |                    Default                    | Description                                                                                                          |
+| :---------------------------------------------: | :-----------------------: | :-------------------------------------------: | :------------------------------------------------------------------------------------------------------------------- |
+|            **[`methods`](#methods)**            |          `Array`          |              `[ 'GET', 'HEAD' ]`              | Allows to pass the list of HTTP request methods accepted by the middleware                                           |
+|            **[`headers`](#headers)**            | `Array\|Object\|Function` |                  `undefined`                  | Allows to pass custom HTTP headers on each request.                                                                  |
+|              **[`index`](#index)**              |     `boolean\|string`     |                 `index.html`                  | If `false` (but not `undefined`), the server will not respond to requests to the root URL.                           |
+|              **[`cache`](#cache)**              |         `Object`          |                  `undefined`                  | How responses are cached: `etag`, `lastModified`, `control`, `immutable`.                                            |
+|               **[`mime`](#mime)**               |         `Object`          |                  `undefined`                  | How a file's media type is decided: `types`, `default`.                                                              |
+|         **[`publicPath`](#publicpath)**         |         `string`          |                  `undefined`                  | The public path that the middleware is bound to.                                                                     |
+|              **[`stats`](#stats)**              | `boolean\|string\|Object` |        `stats` (from a configuration)         | Stats options object or preset name.                                                                                 |
+|   **[`serverSideRender`](#serversiderender)**   |         `boolean`         |                  `undefined`                  | Instructs the module to enable or disable the server-side rendering mode.                                            |
+|        **[`writeToDisk`](#writetodisk)**        |    `boolean\|Function`    |                    `false`                    | Instructs the module to write files to the configured location on disk as specified in your `webpack` configuration. |
+|   **[`outputFileSystem`](#outputfilesystem)**   |         `Object`          | [`memfs`](https://github.com/streamich/memfs) | Set the default file system which will be used by webpack as primary destination of generated files.                 |
+| **[`modifyResponseData`](#modifyresponsedata)** |        `Function`         |                  `undefined`                  | Allows to set up a callback to change the response data.                                                             |
+|                **[`hot`](#hot)**                |     `boolean\|Object`     |                    `false`                    | Enables a Server-Sent Events endpoint that drives the browser HMR client.                                            |
+|       **[`forwardError`](#forwarderror)**       |         `boolean`         |                    `false`                    | Enable or disable forwarding errors to the next middleware.                                                          |
 
 The middleware accepts an `options` Object. The following is a property reference for the Object.
 
@@ -160,59 +156,95 @@ Default: `index.html`
 
 If `false` (but not `undefined`), the server will not respond to requests to the root URL.
 
-### mimeTypes
+### mime
 
-Type: `Object`  
+Type: `{ types?: Object, default?: String }`
 Default: `undefined`
 
-This property allows a user to register custom mime types or extension mappings.
-eg. `mimeTypes: { phtml: 'text/html' }`.
+How a file's media type is decided.
 
-Please see the documentation for [`mime-types`](https://github.com/jshttp/mime-types) for more information.
+```js
+app.use(
+  middleware(compiler, {
+    mime: {
+      types: { phtml: "text/html" },
+      default: "application/octet-stream",
+    },
+  }),
+);
+```
 
-### mimeTypeDefault
+#### `mime.types`
 
-Type: `String`  
+Register custom media types or extension mappings, as `{ extension: 'media/type' }`. See [`mime-db`](https://github.com/jshttp/mime-db) for what is known already.
+
+Registered per instance rather than written into the shared table, so two middlewares in one process cannot reach each other through it.
+
+#### `mime.default`
+
+The media type to fall back on when the content type cannot be determined. Without it such a response carries no `Content-Type` at all.
+
+### cache
+
+Type: `{ etag?: "weak" | "strong", lastModified?: Boolean, control?: Boolean | Number | String | { maxAge?: number, immutable?: boolean }, immutable?: Boolean }`
 Default: `undefined`
 
-This property allows a user to register a default mime type when we can't determine the content type.
+How responses are cached.
 
-### etag
+```js
+app.use(
+  middleware(compiler, {
+    cache: { etag: "strong", lastModified: true, immutable: true },
+  }),
+);
+```
 
-Type: `"weak" | "strong"`  
-Default: `undefined`
+#### `cache.etag`
 
-Enable or disable etag generation. Boolean value use
+Generate an `ETag` header, `"weak"` or `"strong"`.
 
-### lastModified
+#### `cache.lastModified`
 
-Type: `Boolean`
-Default: `undefined`
+Generate a `Last-Modified` header from the file system's last modified value.
 
-Enable or disable `Last-Modified` header. Uses the file system's last modified value.
+#### `cache.control`
 
-### cacheControl
+Set a `Cache-Control` response header.
 
-Type: `Boolean | Number | String | { maxAge?: number, immutable?: boolean }`
-Default: `undefined`
+**An age is given in milliseconds and sent in seconds**, since `max-age` is defined in seconds — so `control: 60000` sends `max-age=60`. An age above a year is clamped to a year, and a negative one is floored at zero.
 
-Depending on the setting, the following headers will be generated:
+| what you pass         | the header                                                                             |
+| :-------------------- | :------------------------------------------------------------------------------------- |
+| `true`                | `Cache-Control: public, max-age=31536000` — a year                                     |
+| `60000`               | `Cache-Control: public, max-age=60`                                                    |
+| `"max-age=123456"`    | `Cache-Control: max-age=123456` — used verbatim, no conversion                         |
+| `{ maxAge: 60000 }`   | `Cache-Control: public, max-age=60`                                                    |
+| `{ immutable: true }` | `Cache-Control: public, max-age=31536000, immutable` — a year when `maxAge` is omitted |
 
-- `Boolean` - `Cache-Control: public, max-age=31536000000`
-- `Number` - `Cache-Control: public, max-age=YOUR_NUMBER`
-- `String` - `Cache-Control: YOUR_STRING`
-- `{ maxAge?: number, immutable?: boolean }` - `Cache-Control: public, max-age=YOUR_MAX_AGE_or_31536000000`, also `, immutable` can be added if you set the `immutable` option to `true`
+#### `cache.immutable`
 
-Enable or disable setting `Cache-Control` response header.
+Send `Cache-Control: public, max-age=31536000, immutable` for immutable assets — ones with a hash in the file name, such as `image.a4c12bde.jpg`, which can be cached forever because changing their contents changes their name.
 
-### cacheImmutable
+Takes preference over [`cache.control`](#cachecontrol) for an asset the build marked immutable.
 
-Type: `Boolean`
-Default: `undefined`
+### `etag`, `lastModified`, `cacheControl`, `cacheImmutable`, `mimeTypes`, `mimeTypeDefault`
 
-Enable or disable setting `Cache-Control: public, max-age=31536000, immutable` response header for immutable assets (i.e. asset with a hash like `image.a4c12bde.jpg`).
-Immutable assets are assets that have their hash in the file name therefore they can be cached, because if you change their contents the file name will be changed.
-Take preference over the `cacheControl` option if the asset was defined as immutable.
+> [!WARNING]
+>
+> Deprecated, and removed in the next major release.
+
+Six options that were the same two topics, now grouped:
+
+| before            | now                  |
+| :---------------- | :------------------- |
+| `etag`            | `cache.etag`         |
+| `lastModified`    | `cache.lastModified` |
+| `cacheControl`    | `cache.control`      |
+| `cacheImmutable`  | `cache.immutable`    |
+| `mimeTypes`       | `mime.types`         |
+| `mimeTypeDefault` | `mime.default`       |
+
+Each still applies and warns, naming its replacement. Setting a name both ways applies the grouped one, so a migration that sets the new name and leaves the old in place is not silently ignored.
 
 ### publicPath
 

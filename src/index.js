@@ -84,7 +84,7 @@ const noop = () => {};
  * @property {boolean} state state
  * @property {Stats | MultiStats | undefined} stats stats
  * @property {Callback[]} callbacks callbacks
- * @property {Options<RequestInternal, ResponseInternal>} options options
+ * @property {NormalizedOptions<RequestInternal, ResponseInternal>} options options, with `cache` and `mime` filled in
  * @property {Compiler | MultiCompiler} compiler compiler
  * @property {Watching | MultiWatching} watching watching
  * @property {Logger} logger logger
@@ -108,11 +108,35 @@ const noop = () => {};
  */
 
 /**
+ * @typedef {object} CacheOptions
+ * @property {("weak" | "strong")=} etag generate an `ETag` header, weak or strong
+ * @property {boolean=} lastModified generate a `Last-Modified` header from the file system's value
+ * @property {(boolean | number | string | { maxAge?: number, immutable?: boolean })=} control set a `Cache-Control` header
+ * @property {boolean=} immutable send `Cache-Control: public, max-age=31536000, immutable` for an asset with a hash in its name
+ */
+
+/**
+ * The options as everything below the entry point sees them: the legacy flat
+ * spellings have been folded in, so `cache` and `mime` are always objects.
+ * @template {IncomingMessage} [RequestInternal = IncomingMessage]
+ * @template {ServerResponse} [ResponseInternal = ServerResponse]
+ * @typedef {Options<RequestInternal, ResponseInternal> & { cache: CacheOptions, mime: MimeOptions }} NormalizedOptions
+ */
+
+/**
+ * @typedef {object} MimeOptions
+ * @property {{ [key: string]: string }=} types register custom media types or extension mappings
+ * @property {string=} default the media type to fall back on when the content type cannot be determined
+ */
+
+/**
  * @template {IncomingMessage} [RequestInternal = IncomingMessage]
  * @template {ServerResponse} [ResponseInternal = ServerResponse]
  * @typedef {object} Options
- * @property {{ [key: string]: string }=} mimeTypes mime types
- * @property {(string | undefined)=} mimeTypeDefault mime type default
+ * @property {CacheOptions=} cache how responses are cached
+ * @property {MimeOptions=} mime how a file's media type is decided
+ * @property {{ [key: string]: string }=} mimeTypes deprecated, use `mime.types`
+ * @property {(string | undefined)=} mimeTypeDefault deprecated, use `mime.default`
  * @property {(boolean | ((targetPath: string) => boolean))=} writeToDisk write to disk
  * @property {string[]=} methods methods
  * @property {Headers<RequestInternal, ResponseInternal>=} headers headers
@@ -122,10 +146,10 @@ const noop = () => {};
  * @property {OutputFileSystem=} outputFileSystem output file system
  * @property {(boolean | string)=} index index
  * @property {ModifyResponseData<RequestInternal, ResponseInternal>=} modifyResponseData modify response data
- * @property {"weak" | "strong"=} etag options to generate etag header
- * @property {boolean=} lastModified options to generate last modified header
- * @property {(boolean | number | string | { maxAge?: number, immutable?: boolean })=} cacheControl options to generate cache headers
- * @property {boolean=} cacheImmutable is cache immutable
+ * @property {("weak" | "strong")=} etag deprecated, use `cache.etag`
+ * @property {boolean=} lastModified deprecated, use `cache.lastModified`
+ * @property {(boolean | number | string | { maxAge?: number, immutable?: boolean })=} cacheControl deprecated, use `cache.control`
+ * @property {boolean=} cacheImmutable deprecated, use `cache.immutable`
  * @property {boolean=} forwardError forward error to next middleware
  * @property {(boolean | HotOptions)=} hot enable hot module replacement
  */
@@ -278,6 +302,61 @@ const internalValidate = (compiler, options) => {
     baseDataPath: "options",
   });
 };
+
+// Where the six flat options that became `cache` and `mime` are translated, so
+// everything below reads one shape. The legacy keys are left on the object
+// rather than deleted: `instance.context.options` is reachable, and something
+// may still be reading them.
+//
+// TODO in the next major release remove this, the legacy properties and the
+// warnings, and take `cache` and `mime` as the only spellings.
+const LEGACY_GROUPED = [
+  ["etag", "cache", "etag"],
+  ["lastModified", "cache", "lastModified"],
+  ["cacheControl", "cache", "control"],
+  ["cacheImmutable", "cache", "immutable"],
+  ["mimeTypes", "mime", "types"],
+  ["mimeTypeDefault", "mime", "default"],
+];
+
+/**
+ * @template {IncomingMessage} RequestInternal
+ * @template {ServerResponse} ResponseInternal
+ * @param {Options<RequestInternal, ResponseInternal>} options the options as they were given
+ * @param {Logger} logger logger
+ * @returns {NormalizedOptions<RequestInternal, ResponseInternal>} the same options with `cache` and `mime` filled in
+ */
+function normalizeOptions(options, logger) {
+  /** @type {EXPECTED_ANY} */
+  const cache = { ...options.cache };
+  /** @type {EXPECTED_ANY} */
+  const mime = { ...options.mime };
+  /** @type {EXPECTED_ANY} */
+  const groups = { cache, mime };
+
+  for (const [legacy, group, key] of LEGACY_GROUPED) {
+    if (!Object.hasOwn(options, legacy)) {
+      continue;
+    }
+
+    // The grouped spelling wins. A migration that sets the new one and forgets
+    // to delete the old would otherwise silently not apply.
+    if (Object.hasOwn(groups[group], key)) {
+      logger.warn(
+        `The '${legacy}' option is deprecated and '${group}.${key}' is set as well, so '${group}.${key}' is what applies. Remove '${legacy}'.`,
+      );
+      continue;
+    }
+
+    logger.warn(
+      `The '${legacy}' option is deprecated and will be removed in the next major release. Use '${group}.${key}' instead.`,
+    );
+
+    groups[group][key] = options[/** @type {keyof typeof options} */ (legacy)];
+  }
+
+  return { ...options, cache, mime };
+}
 
 /** @typedef {Configuration["stats"]} StatsOptions */
 /** @typedef {{ children: Configuration["stats"][] }} MultiStatsOptions */
@@ -496,6 +575,11 @@ function hookForWriteToDisk(compiler, context) {
 function wdm(compiler, options = {}, isPlugin = false) {
   internalValidate(compiler, options);
 
+  const logger = compiler.getInfrastructureLogger("webpack-dev-middleware");
+  // Before anything reads them, so only one shape reaches the rest of the
+  // module even when the legacy flat names were used.
+  const normalizedOptions = normalizeOptions(options, logger);
+
   /**
    * @type {WithOptional<Context<RequestInternal, ResponseInternal>, "watching" | "outputFileSystem">}
    */
@@ -503,13 +587,13 @@ function wdm(compiler, options = {}, isPlugin = false) {
     state: false,
     stats: undefined,
     callbacks: [],
-    options,
+    options: normalizedOptions,
     compiler,
-    logger: compiler.getInfrastructureLogger("webpack-dev-middleware"),
-    // Per instance, with the `mimeTypes` option over the known extensions
-    // rather than written into them: the table `mime-types` exports is one
-    // object shared by everything in the process that requires it.
-    mimeTypes: createMimeTypes(options.mimeTypes),
+    logger,
+    // Per instance, with the `mime.types` option over the known extensions
+    // rather than written into them: the table `mime-db` exports is one object
+    // shared by everything in the process that requires it.
+    mimeTypes: createMimeTypes(normalizedOptions.mime.types),
   };
 
   // Adding hooks

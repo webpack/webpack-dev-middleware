@@ -868,7 +868,8 @@ function wrapper(context) {
       }
 
       if (!getResponseHeader(res, "Cache-Control")) {
-        const { cacheControl, cacheImmutable } = context.options;
+        const { control: cacheControl, immutable: cacheImmutable } =
+          context.options.cache;
 
         let cacheControlValue;
 
@@ -903,7 +904,7 @@ function wrapper(context) {
       }
 
       if (
-        context.options.lastModified &&
+        context.options.cache.lastModified &&
         !getResponseHeader(res, "Last-Modified")
       ) {
         const modified = extra.stats.mtime.toUTCString();
@@ -923,8 +924,8 @@ function wrapper(context) {
 
       const rangeHeader = getRangeHeader();
 
-      if (context.options.etag && !getResponseHeader(res, "ETag")) {
-        const isStrongETag = context.options.etag === "strong";
+      if (context.options.cache.etag && !getResponseHeader(res, "ETag")) {
+        const isStrongETag = context.options.cache.etag === "strong";
 
         // TODO cache strong etag generation?
         if (isStrongETag) {
@@ -987,12 +988,8 @@ function wrapper(context) {
         // https://tools.ietf.org/html/rfc7231#section-3.1.1.5
         if (contentType) {
           setResponseHeader(res, "Content-Type", contentType);
-        } else if (context.options.mimeTypeDefault) {
-          setResponseHeader(
-            res,
-            "Content-Type",
-            context.options.mimeTypeDefault,
-          );
+        } else if (context.options.mime.default) {
+          setResponseHeader(res, "Content-Type", context.options.mime.default);
         }
       }
 
