@@ -128,63 +128,67 @@ exports[`validation should throw an error on the "hot" option with "{"statsOptio
 exports[`validation should throw an error on the "hot" option with "{"transport":"websocket"}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot should be one of these:
-   boolean | object { transport?, path?, heartbeat?, server?, progress?, token?, cors?, statsOptions?, inject?, client? }
+   boolean | object { transport?, path?, heartbeat?, server?, progress?, token?, cors?, statsOptions?, inject?, url?, name?, overlay?, indicator?, hmr?, liveReload?, reloadOnFailedUpdate?, urlParamPrefix?, logging?, reconnect?, timeout?, autoConnect?, dynamicPublicPath? }
    -> Enable hot module replacement over a Server-Sent Events or WebSocket endpoint.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
    Details:
     * options.hot.transport should be one of these:
-      "sse" | "ws" | function
-      -> How events reach the clients: \`sse\`, \`ws\` (needs the optional \`ws\` dependency and an HTTP server to answer upgrades on, given as \`server\` or through the middleware's \`attach\` method), or a function building a transport of your own.
+      "sse" | "ws" | function | object { server, client }
+      -> How events reach the clients: \`sse\`, \`ws\` (needs the optional \`ws\` dependency and an HTTP server to answer upgrades on, given as \`server\` or through the middleware's \`attach\` method), a function building a transport of your own, or \`{ server, client }\` when yours speaks one of the two built-in protocols so the bundled client can still be injected.
       Details:
        * options.hot.transport should be one of these:
          "sse" | "ws"
-       * options.hot.transport should be an instance of function."
+       * options.hot.transport should be an instance of function.
+       * options.hot.transport should be an object:
+         object { server, client }"
 `;
 
 exports[`validation should throw an error on the "hot" option with "{"transport":true}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot should be one of these:
-   boolean | object { transport?, path?, heartbeat?, server?, progress?, token?, cors?, statsOptions?, inject?, client? }
+   boolean | object { transport?, path?, heartbeat?, server?, progress?, token?, cors?, statsOptions?, inject?, url?, name?, overlay?, indicator?, hmr?, liveReload?, reloadOnFailedUpdate?, urlParamPrefix?, logging?, reconnect?, timeout?, autoConnect?, dynamicPublicPath? }
    -> Enable hot module replacement over a Server-Sent Events or WebSocket endpoint.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
    Details:
     * options.hot.transport should be one of these:
-      "sse" | "ws" | function
-      -> How events reach the clients: \`sse\`, \`ws\` (needs the optional \`ws\` dependency and an HTTP server to answer upgrades on, given as \`server\` or through the middleware's \`attach\` method), or a function building a transport of your own.
+      "sse" | "ws" | function | object { server, client }
+      -> How events reach the clients: \`sse\`, \`ws\` (needs the optional \`ws\` dependency and an HTTP server to answer upgrades on, given as \`server\` or through the middleware's \`attach\` method), a function building a transport of your own, or \`{ server, client }\` when yours speaks one of the two built-in protocols so the bundled client can still be injected.
       Details:
        * options.hot.transport should be one of these:
          "sse" | "ws"
-       * options.hot.transport should be an instance of function."
+       * options.hot.transport should be an instance of function.
+       * options.hot.transport should be an object:
+         object { server, client }"
 `;
 
 exports[`validation should throw an error on the "hot" option with "{"unknown":true}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot has an unknown property 'unknown'. These properties are valid:
-   object { transport?, path?, heartbeat?, server?, progress?, token?, cors?, statsOptions?, inject?, client? }"
+   object { transport?, path?, heartbeat?, server?, progress?, token?, cors?, statsOptions?, inject?, url?, name?, overlay?, indicator?, hmr?, liveReload?, reloadOnFailedUpdate?, urlParamPrefix?, logging?, reconnect?, timeout?, autoConnect?, dynamicPublicPath? }"
 `;
 
 exports[`validation should throw an error on the "hot" option with "0" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot should be one of these:
-   boolean | object { transport?, path?, heartbeat?, server?, progress?, token?, cors?, statsOptions?, inject?, client? }
+   boolean | object { transport?, path?, heartbeat?, server?, progress?, token?, cors?, statsOptions?, inject?, url?, name?, overlay?, indicator?, hmr?, liveReload?, reloadOnFailedUpdate?, urlParamPrefix?, logging?, reconnect?, timeout?, autoConnect?, dynamicPublicPath? }
    -> Enable hot module replacement over a Server-Sent Events or WebSocket endpoint.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
    Details:
     * options.hot should be a boolean.
     * options.hot should be an object:
-      object { transport?, path?, heartbeat?, server?, progress?, token?, cors?, statsOptions?, inject?, client? }"
+      object { transport?, path?, heartbeat?, server?, progress?, token?, cors?, statsOptions?, inject?, url?, name?, overlay?, indicator?, hmr?, liveReload?, reloadOnFailedUpdate?, urlParamPrefix?, logging?, reconnect?, timeout?, autoConnect?, dynamicPublicPath? }"
 `;
 
 exports[`validation should throw an error on the "hot" option with "foo" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot should be one of these:
-   boolean | object { transport?, path?, heartbeat?, server?, progress?, token?, cors?, statsOptions?, inject?, client? }
+   boolean | object { transport?, path?, heartbeat?, server?, progress?, token?, cors?, statsOptions?, inject?, url?, name?, overlay?, indicator?, hmr?, liveReload?, reloadOnFailedUpdate?, urlParamPrefix?, logging?, reconnect?, timeout?, autoConnect?, dynamicPublicPath? }
    -> Enable hot module replacement over a Server-Sent Events or WebSocket endpoint.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
    Details:
     * options.hot should be a boolean.
     * options.hot should be an object:
-      object { transport?, path?, heartbeat?, server?, progress?, token?, cors?, statsOptions?, inject?, client? }"
+      object { transport?, path?, heartbeat?, server?, progress?, token?, cors?, statsOptions?, inject?, url?, name?, overlay?, indicator?, hmr?, liveReload?, reloadOnFailedUpdate?, urlParamPrefix?, logging?, reconnect?, timeout?, autoConnect?, dynamicPublicPath? }"
 `;
 
 exports[`validation should throw an error on the "index" option with "{}" value 1`] = `

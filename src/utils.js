@@ -1271,7 +1271,7 @@ function createMimeTypes(extra) {
 
 /** @typedef {import("webpack").Compiler} Compiler */
 /** @typedef {import("./hot.js").HotOptions} HotOptions */
-/** @typedef {import("./hot.js").HotClientOptions} HotClientOptions */
+/** @typedef {import("./hot.js").ClientStreamFactory<EXPECTED_ANY>} ClientStreamFactory */
 
 /**
  * The browser runtime, as it is published. Resolved when it is needed rather
@@ -1453,25 +1453,68 @@ function filterSource(option, filter) {
   // Said here rather than left for the browser: this is a configuration
   // mistake, and the stack in a page would point at the client instead.
   throw new Error(
-    `The 'hot.client.overlay.${option}' function could not be serialized for the browser. Write it as a function expression or an arrow function.`,
+    `The 'hot.overlay.${option}' function could not be serialized for the browser. Write it as a function expression or an arrow function.`,
   );
 }
 
 /**
- * The browser options, as the client reads them from its resource query.
- * @param {EXPECTED_ANY} client the `hot.client` option
+ * The two halves of the `transport` option: what this middleware serves the
+ * stream with, and which built-in protocol the bundled client should speak to
+ * it. The client half is `undefined` for a transport of your own, since there
+ * is then nothing to point the bundled client at — `{ server, client }` is how
+ * you say yours speaks one of the two.
+ * @param {HotOptions["transport"]} transport the `hot.transport` option
+ * @returns {{ server: ("sse" | "ws" | ClientStreamFactory), client: ("sse" | "ws" | undefined) }} the server half and the client half
+ */
+function resolveTransport(transport) {
+  if (typeof transport === "function") {
+    return { server: transport, client: undefined };
+  }
+
+  if (typeof transport === "object" && transport !== null) {
+    return { server: transport.server, client: transport.client };
+  }
+
+  const name = transport || "sse";
+
+  return { server: name, client: name };
+}
+
+// Which of `hot`'s options the browser runtime reads. The rest are the
+// middleware's own, and the entry query carries only these.
+const CLIENT_OPTIONS = [
+  "url",
+  "name",
+  "overlay",
+  "indicator",
+  "hmr",
+  "liveReload",
+  "reloadOnFailedUpdate",
+  "urlParamPrefix",
+  "logging",
+  "reconnect",
+  "timeout",
+  "autoConnect",
+  "dynamicPublicPath",
+];
+
+/**
+ * The browser options, as the client reads them from its resource query. Picked
+ * out of `hot` rather than taken from a sub-object: which side of the wire
+ * applies a setting is this module's problem, not the developer's.
+ * @param {EXPECTED_ANY} hot the `hot` options
  * @returns {Record<string, string>} query parameters
  */
-function clientQuery(client) {
+function clientQuery(hot) {
   /** @type {Record<string, string>} */
   const query = {};
 
-  if (!client) {
+  if (!hot) {
     return query;
   }
 
-  for (const [key, value] of Object.entries(client)) {
-    if (typeof value === "undefined") {
+  for (const [key, value] of Object.entries(hot)) {
+    if (typeof value === "undefined" || !CLIENT_OPTIONS.includes(key)) {
       continue;
     }
 
@@ -1513,7 +1556,7 @@ function clientQuery(client) {
 
 /**
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: HotClientOptions, token?: string | false }} options resolved hot options
+ * @param {{ path: string, inject?: boolean, token?: string | false, hot: HotOptions }} options the path this middleware resolved, the token it minted, and the `hot` options as given
  * @param {Logger} logger logger
  */
 function injectHotClient(compilers, options, logger) {
@@ -1529,31 +1572,26 @@ function injectHotClient(compilers, options, logger) {
   // What the developer set in node, which wins over everything below it: these
   // are the same options the query carries, so either spelling reaches the
   // runtime and the one written by hand is the one that counts.
-  const client = clientQuery(options.client);
+  const client = clientQuery(options.hot);
 
-  // A transport of your own carries whatever protocol you wrote it to carry,
-  // and the built-in client speaks two. When yours speaks one of them,
-  // `hot.client.transport` says which and the client is added as usual;
-  // without that there is nothing to point it at, so the client is yours to
-  // add — the plugin below still is not.
-  /** @type {string | undefined} */
-  const transport =
-    typeof options.transport === "function"
-      ? client.transport
-      : options.transport;
+  // Which protocol the client should speak, or nothing to point it at. A
+  // transport of your own carries whatever protocol you wrote it to carry, and
+  // the built-in client speaks two — so `transport: { server, client }` is how
+  // you say yours is one of them.
+  const { server, client: transport } = resolveTransport(options.hot.transport);
 
-  // Overriding the transport is for a client that talks to something else, so
-  // it comes with an endpoint of its own. Without one it is pointed straight
-  // back at this middleware speaking the wrong protocol, which is a page that
-  // silently never connects.
+  // Halves that differ are for a client talking to something else, so it comes
+  // with an endpoint of its own. Without one it is pointed straight back at
+  // this middleware speaking the wrong protocol, which is a page that silently
+  // never connects.
   if (
-    typeof options.transport === "string" &&
-    client.transport &&
-    client.transport !== options.transport &&
-    !client.path
+    typeof server === "string" &&
+    transport &&
+    transport !== server &&
+    !options.hot.url
   ) {
     logger.warn(
-      `'hot.client.transport' is '${client.transport}' while the endpoint serves '${options.transport}', so the client will not connect. Set them to the same thing, or give 'hot.client.path' the endpoint that does speak '${client.transport}'.`,
+      `'hot.transport' serves '${server}' while its 'client' half speaks '${transport}', so the client will not connect. Set them to the same thing, or give 'hot.url' the endpoint that does speak '${transport}'.`,
     );
   }
 
@@ -1571,20 +1609,23 @@ function injectHotClient(compilers, options, logger) {
         if (!warned) {
           warned = true;
           logger.warn(
-            "'hot.transport' is a function, so no client was added: the built-in one speaks Server-Sent Events and WebSocket, not a transport of your own. Set 'hot.client.transport' if yours speaks one of them, or add an entry for the client that speaks it — 'HotModuleReplacementPlugin' is still applied for you, and 'hot.inject: false' silences this.",
+            "'hot.transport' is a function, so no client was added: the built-in one speaks Server-Sent Events and WebSocket, not a transport of your own. Write it as 'transport: { server, client }' if yours speaks one of them, or add an entry for the client that speaks it — 'HotModuleReplacementPlugin' is still applied for you, and 'hot.inject: false' silences this.",
           );
         }
       } else {
         // The endpoint and the transport the middleware resolved, and the
         // compilation's name so each bundle's client reports only its own
         // builds — without that a page shows an overlay for a build error in
-        // code it does not contain. All three are defaults: `hot.client`
-        // carries the same options and is spread over them.
+        // code it does not contain. All three are defaults: whatever the
+        // developer set is spread over them.
         const { name: compilation } = compiler.options;
         /** @type {Record<string, string>} */
-        const query = { path: options.path, transport };
+        /** @type {Record<string, string>} */
+        const query = { url: options.path, transport };
 
-        if (options.token) {
+        // Not when `url` carries one already: that names another endpoint, and
+        // its token is not this one's to overwrite.
+        if (options.token && !/[?&]token=/.test(client.url || "")) {
           query.token = options.token;
         }
 
@@ -1645,6 +1686,7 @@ function injectHotClient(compilers, options, logger) {
 }
 
 module.exports = {
+  CLIENT_OPTIONS,
   CORS_LOCAL_ORIGINS,
   HOT_DEFAULT_TOKEN,
   applyCors,
@@ -1683,6 +1725,7 @@ module.exports = {
   removeResponseHeader,
   resolveCors,
   resolveToken,
+  resolveTransport,
   send,
   setResponseHeader,
   setState,

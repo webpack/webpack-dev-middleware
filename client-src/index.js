@@ -37,31 +37,31 @@ import withToken from "./utils/with-token.js";
 /**
  * @typedef {object} ClientOptions
  * @property {("sse" | "ws")} transport how the events are carried, matching the server's `hot.transport`
- * @property {string} path endpoint path
+ * @property {string} url where the page connects — the endpoint path, or an absolute url when it is on another origin
  * @property {number} timeout reconnection timeout in milliseconds
  * @property {boolean | OverlayOptions} overlay enable the in-page error overlay (same value shape as webpack-dev-server's `client.overlay`)
- * @property {boolean} hot apply a build through Hot Module Replacement
+ * @property {boolean} hmr apply a build through Hot Module Replacement
  * @property {boolean} liveReload reload the page on a build that changed something, when `hot` is off
- * @property {boolean} reload reload the page when HMR cannot apply the update
- * @property {string} urlPrefix prefix of the page-url parameters that turn `hot` and `liveReload` off for one page
+ * @property {boolean} reloadOnFailedUpdate reload the page when HMR cannot apply the update
+ * @property {string} urlParamPrefix prefix of the page-url parameters that turn `hmr` and `liveReload` off for one page
  * @property {LogLevel} logging logger level
  * @property {string} name limit updates to this compilation name
  * @property {string} token the secret the endpoint requires, when it requires one, put on the connection url — empty when it requires none
  * @property {boolean} autoConnect connect immediately when the entry runs
  * @property {number=} reconnect how many times to reconnect before giving up, unset to use the transport's default
- * @property {boolean | "circular" | "linear"} progress show an indicator while a rebuild is in progress — `true` and `"circular"` a small badge, `"linear"` a thin bar across the top of the viewport
+ * @property {boolean | "circular" | "linear"} indicator show an indicator while a rebuild is in progress — `true` and `"circular"` a small badge, `"linear"` a thin bar across the top of the viewport
  */
 
 /** @type {ClientOptions} */
 const options = {
   transport: "sse",
-  path: "/__webpack_hmr",
+  url: "/__webpack_hmr",
   timeout: 20 * 1000,
   overlay: true,
-  hot: true,
+  hmr: true,
   liveReload: true,
-  reload: true,
-  urlPrefix: "webpack-dev-middleware",
+  reloadOnFailedUpdate: true,
+  urlParamPrefix: "webpack-dev-middleware",
   logging: "info",
   name: "",
   // The secret the endpoint requires, when it requires one. Put on the url
@@ -69,7 +69,7 @@ const options = {
   // page set one.
   token: "",
   autoConnect: true,
-  progress: true,
+  indicator: true,
 };
 
 /**
@@ -136,19 +136,19 @@ setLogLevel(options.logging);
  * Whether one of the page's own url parameters turns a setting off, which is
  * how a single tab opts out of what the rest of the project is configured for
  * — `?webpack-dev-middleware-liveReload=false` to stop a page reloading under
- * you while you work in it, for instance. `urlPrefix` names them, so a server
+ * you while you work in it, for instance. `urlParamPrefix` names them, so a server
  * built on this middleware can name them after itself.
  *
  * The parameter is the option, spelled the one way the option is spelled.
- * @param {("hot" | "liveReload")} setting which option the page may have turned off
+ * @param {("hmr" | "liveReload")} setting which option the page may have turned off
  * @returns {boolean} whether the page turned it off
  */
 function turnedOffByUrl(setting) {
-  // Parsed rather than searched for as text: `?note=…-hot=false` carries the
-  // words without being the parameter, and `…-hot=falsehood` is not `false`.
-  // The name is compared case-insensitively on both sides, so a `urlPrefix`
+  // Parsed rather than searched for as text: `?note=…-hmr=false` carries the
+  // words without being the parameter, and `…-hmr=falsehood` is not `false`.
+  // The name is compared case-insensitively on both sides, so a `urlParamPrefix`
   // with capitals in it works as written.
-  const wanted = `${options.urlPrefix}-${setting}`.toLowerCase();
+  const wanted = `${options.urlParamPrefix}-${setting}`.toLowerCase();
   // Nowhere this runs is without a url, but nothing here needs one either: an
   // empty query turns nothing off.
   const search =
@@ -177,7 +177,7 @@ function setOverrides(overrides) {
   }
   // Where the page connects, which may be an absolute url rather than a path
   // when the endpoint is on another origin.
-  if (overrides.path) options.path = overrides.path;
+  if (overrides.url) options.url = overrides.url;
   if (overrides.token) options.token = overrides.token;
   if (overrides.timeout) {
     const timeout = Number(overrides.timeout);
@@ -217,15 +217,19 @@ function setOverrides(overrides) {
       options.reconnect = reconnect;
     }
   }
-  if (overrides.hot) options.hot = overrides.hot !== "false";
-  // Two different things: `liveReload` is what happens on a build when `hot`
-  // is off, `reload` is what happens when an update was tried and could not be
-  // applied.
+  if (overrides.hmr) options.hmr = overrides.hmr !== "false";
+  // Two different things: `liveReload` is what happens on a build when `hmr`
+  // is off, `reloadOnFailedUpdate` is what happens when an update was tried
+  // and could not be applied.
   if (overrides.liveReload) {
     options.liveReload = overrides.liveReload !== "false";
   }
-  if (overrides.reload) options.reload = overrides.reload !== "false";
-  if (overrides.urlPrefix) options.urlPrefix = overrides.urlPrefix;
+  if (overrides.reloadOnFailedUpdate) {
+    options.reloadOnFailedUpdate = overrides.reloadOnFailedUpdate !== "false";
+  }
+  if (overrides.urlParamPrefix) {
+    options.urlParamPrefix = overrides.urlParamPrefix;
+  }
   if (overrides.logging) {
     options.logging = /** @type {LogLevel} */ (overrides.logging);
   }
@@ -233,19 +237,19 @@ function setOverrides(overrides) {
     options.name = overrides.name;
   }
 
-  if (overrides.progress) {
+  if (overrides.indicator) {
     // Same values as webpack-dev-server's `client.progress`, so the shape it
     // puts in this query needs no translating.
-    options.progress =
-      overrides.progress === "linear" || overrides.progress === "circular"
-        ? overrides.progress
-        : overrides.progress !== "false";
+    options.indicator =
+      overrides.indicator === "linear" || overrides.indicator === "circular"
+        ? overrides.indicator
+        : overrides.indicator !== "false";
   }
 
   if (overrides.dynamicPublicPath && overrides.dynamicPublicPath !== "false") {
-    // `path` is appended like a filename (no leading slash); the public path
+    // `url` is appended like a filename (no leading slash); the public path
     // itself is not normalized.
-    options.path = __webpack_public_path__ + options.path.replace(/^\//, "");
+    options.url = __webpack_public_path__ + options.url.replace(/^\//, "");
   }
 
   setLogLevel(options.logging);
@@ -283,7 +287,7 @@ function createClientSocket() {
 
   return createSocket(
     getClient(),
-    withToken(/** @type {string} */ (options.path), options.token),
+    withToken(/** @type {string} */ (options.url), options.token),
     {
       clientOptions: { timeout: options.timeout },
       // Server-Sent Events are retried for as long as the page is open, at the
@@ -306,7 +310,7 @@ const WRAPPER_KEY = "__wdmEventSourceWrapper";
  * @returns {ReturnType<typeof createClientSocket>} cached socket for this path
  */
 function getEventSourceWrapper() {
-  const path = /** @type {string} */ (options.path);
+  const path = /** @type {string} */ (options.url);
   // `self`, not `window`: the same object in a page, and the only one in a
   // worker, where this client also runs.
   if (!self[WRAPPER_KEY]) {
@@ -314,7 +318,7 @@ function getEventSourceWrapper() {
   }
   if (!self[WRAPPER_KEY][path]) {
     // Cache the socket so multiple entries on the same page sharing the same
-    // `options.path` reuse a single connection.
+    // `options.url` reuse a single connection.
     self[WRAPPER_KEY][path] = createClientSocket();
   }
   return self[WRAPPER_KEY][path];
@@ -519,7 +523,7 @@ function processMessage(obj) {
       if (reporter) {
         reporter.clearRuntimeProblems();
       }
-      if (options.progress && typeof document !== "undefined") {
+      if (options.indicator && typeof document !== "undefined") {
         // Named, so the badge stays until every compilation that started has
         // reported back — a sibling finishing is not this one finishing.
         indicator.show(
@@ -548,7 +552,7 @@ function processMessage(obj) {
       // Reported rather than shown: a progress payload carries no name, so it
       // cannot say whose build it is, and in a multi-compiler build one
       // compilation's progress arrives while a sibling has already finished.
-      if (options.progress && typeof document !== "undefined") {
+      if (options.indicator && typeof document !== "undefined") {
         indicator.update(
           `Rebuilding… ${obj.percent}%${obj.message ? ` (${obj.message})` : ""}`,
           obj.percent,
@@ -559,7 +563,7 @@ function processMessage(obj) {
     }
     case "built":
     case "sync": {
-      if (options.progress && typeof document !== "undefined") {
+      if (options.indicator && typeof document !== "undefined") {
         indicator.hide(obj.name || "");
       }
       if (obj.action === "built") {
@@ -596,7 +600,7 @@ function processMessage(obj) {
         sendMessage(obj.action === "built" ? "Ok" : "StillOk");
       }
       if (shouldApply) {
-        if (options.hot && !turnedOffByUrl("hot")) {
+        if (options.hmr && !turnedOffByUrl("hmr")) {
           // Posted before the update is applied, in the shape
           // webpack-dev-server has always used for this one — a bare string
           // rather than the `{ type, data }` the others carry.
@@ -639,11 +643,11 @@ let subscribedPath;
  * Subscribe the message handler to the shared event source wrapper.
  */
 function connect() {
-  if (subscribedPath === options.path) {
+  if (subscribedPath === options.url) {
     return;
   }
 
-  subscribedPath = /** @type {string} */ (options.path);
+  subscribedPath = /** @type {string} */ (options.url);
 
   getEventSourceWrapper().addMessageListener((event) => {
     if (event.data === "💓") {
@@ -670,7 +674,7 @@ export function setOptionsAndConnect(overrides) {
  * later `setOptionsAndConnect` call opens a fresh connection.
  */
 export function disconnect() {
-  const path = /** @type {string} */ (options.path);
+  const path = /** @type {string} */ (options.url);
   const wrappers = self[WRAPPER_KEY];
 
   if (wrappers && wrappers[path]) {
@@ -698,7 +702,7 @@ if (typeof self !== "undefined") {
     reporter = self[REPORTER_KEY];
 
     // `true` keeps the badge this package has always shown.
-    indicator.configure(options.progress === "linear" ? "linear" : "circular");
+    indicator.configure(options.indicator === "linear" ? "linear" : "circular");
   }
 
   // Only what the transport in use needs has to exist: asking for a WebSocket

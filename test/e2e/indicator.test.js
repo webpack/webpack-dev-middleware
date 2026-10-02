@@ -124,7 +124,7 @@ describe("building indicator (browser)", () => {
 
   it("never appears when progress=false", async () => {
     hotApp = await createHotApp({
-      query: "?progress=false",
+      query: "?indicator=false",
       code: acceptedApp("v1"),
     });
     ({ page, browser } = await runBrowser());
@@ -141,7 +141,7 @@ describe("building indicator (browser)", () => {
 
   it("renders a bar across the top for progress=linear", async () => {
     hotApp = await createHotApp({
-      query: "?progress=linear",
+      query: "?indicator=linear",
       code: acceptedApp("v1"),
       hot: { progress: true },
     });
@@ -204,7 +204,7 @@ describe("building indicator (browser)", () => {
 
   it("does not sweep the bar when motion is declined", async () => {
     hotApp = await createHotApp({
-      query: "?progress=linear",
+      query: "?indicator=linear",
       code: acceptedApp("v1"),
     });
     ({ page, browser } = await runBrowser());
@@ -269,7 +269,7 @@ describe("indicator shared state across bundled copies (browser)", () => {
 
   const start = async () => {
     hotApp = await createHotApp({
-      query: "?progress=false",
+      query: "?indicator=false",
       apps: [
         { name: "a", code: exposeIndicator("indicatorA") },
         { name: "b", code: exposeIndicator("indicatorB") },

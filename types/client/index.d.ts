@@ -82,9 +82,9 @@ export type ClientOptions = {
    */
   transport: "sse" | "ws";
   /**
-   * endpoint path
+   * where the page connects — the endpoint path, or an absolute url when it is on another origin
    */
-  path: string;
+  url: string;
   /**
    * reconnection timeout in milliseconds
    */
@@ -96,7 +96,7 @@ export type ClientOptions = {
   /**
    * apply a build through Hot Module Replacement
    */
-  hot: boolean;
+  hmr: boolean;
   /**
    * reload the page on a build that changed something, when `hot` is off
    */
@@ -104,11 +104,11 @@ export type ClientOptions = {
   /**
    * reload the page when HMR cannot apply the update
    */
-  reload: boolean;
+  reloadOnFailedUpdate: boolean;
   /**
-   * prefix of the page-url parameters that turn `hot` and `liveReload` off for one page
+   * prefix of the page-url parameters that turn `hmr` and `liveReload` off for one page
    */
-  urlPrefix: string;
+  urlParamPrefix: string;
   /**
    * logger level
    */
@@ -132,5 +132,5 @@ export type ClientOptions = {
   /**
    * show an indicator while a rebuild is in progress — `true` and `"circular"` a small badge, `"linear"` a thin bar across the top of the viewport
    */
-  progress: boolean | "circular" | "linear";
+  indicator: boolean | "circular" | "linear";
 };

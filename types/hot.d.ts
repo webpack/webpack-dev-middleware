@@ -47,7 +47,7 @@ declare namespace createHot {
     Duplex,
     StatsOptions,
     MiddlewareStatsOption,
-    HotClientOptions,
+    SplitTransport,
     HotOptions,
     CorsOrigin,
     CorsOption,
@@ -167,57 +167,91 @@ type Duplex = import("node:stream").Duplex;
 type StatsOptions = import("webpack").StatsOptions;
 type MiddlewareStatsOption = import("webpack").Configuration["stats"];
 /**
- * Everything the browser runtime reads, as it is set in node. One for one with
- * what the entry query carries, so every option has both spellings: set it
- * here and the injected entry carries it, or write it on the query of a client
- * entry of your own.
- *
- * `transport`, `path` and `name` are the exception only in having a default
- * the middleware knows — the resolved `hot.transport`, the resolved `hot.path`
- * and the compilation's name. Setting one here replaces that, which is what a
- * page reaching the endpoint through a proxy or another origin needs.
+ * A transport whose two halves differ: a server of your own, and which of the
+ * built-in protocols it speaks so the bundled client can still be injected.
  */
-type HotClientOptions = {
+type SplitTransport = {
   /**
-   * which transport the runtime speaks, `hot.transport` by default
+   * the stream this middleware serves with
    */
-  transport?: ("sse" | "ws") | undefined;
+  server: ClientStreamFactory<EXPECTED_ANY>;
   /**
-   * where the runtime connects, `hot.path` by default; may be an absolute url for an endpoint on another origin
+   * which of the two the bundled client should speak to it
+   */
+  client: "sse" | "ws";
+};
+/**
+ * Everything `hot` takes. The options the browser runtime reads are here too
+ * rather than in a sub-object: which side of the wire applies a setting is not
+ * something anyone configuring this should have to know.
+ *
+ * `url` and `name` have a default the middleware knows — the resolved `path`
+ * and the compilation's name. Setting one replaces that, which is what a page
+ * reaching the endpoint through a proxy or another origin needs.
+ */
+type HotOptions = {
+  /**
+   * how events reach the clients, Server-Sent Events by default
+   */
+  transport?:
+    | ("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY> | SplitTransport)
+    | undefined;
+  /**
+   * the path the endpoint is served at
    */
   path?: string | undefined;
+  /**
+   * heartbeat interval in milliseconds
+   */
+  heartbeat?: number | undefined;
+  /**
+   * HTTP server the `"ws"` transport answers upgrades on, when it is already built
+   */
+  server?: HttpServer | undefined;
+  /**
+   * which origins may reach the endpoint from a page on another one; the local ones by default
+   */
+  cors?: CorsOption | undefined;
+  /**
+   * a secret the injected client carries and the endpoint requires; `true` mints one per run, a string uses that one, `false` requires none. Defaults to `false` on both transports; `true` in the next major release
+   */
+  token?: (boolean | string) | undefined;
+  /**
+   * add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
+   */
+  inject?: boolean | undefined;
+  /**
+   * where the browser connects, the endpoint's own path by default; may be an absolute url for an endpoint on another origin, and carries its own `token` when that endpoint requires a different one
+   */
+  url?: string | undefined;
   /**
    * limit the runtime to one compilation's builds, the compilation's own name by default
    */
   name?: string | undefined;
   /**
-   * the secret the runtime puts on its connection url, `hot.token` by default
-   */
-  token?: string | undefined;
-  /**
    * show build problems and uncaught runtime errors in an overlay
    */
   overlay?: (boolean | Record<string, EXPECTED_ANY>) | undefined;
   /**
-   * show an indicator while a rebuild is in progress
+   * show an indicator while a rebuild is in progress — `true` and `"circular"` a badge, `"linear"` a bar across the top of the viewport
    */
-  progress?: (boolean | "circular" | "linear") | undefined;
+  indicator?: (boolean | "circular" | "linear") | undefined;
   /**
    * apply a build through Hot Module Replacement
    */
-  hot?: boolean | undefined;
+  hmr?: boolean | undefined;
   /**
-   * reload the page on a build that changed something, when `hot` is off
+   * reload the page on a build that changed something, when `hmr` is off
    */
   liveReload?: boolean | undefined;
   /**
    * reload the page when an update cannot be applied
    */
-  reload?: boolean | undefined;
+  reloadOnFailedUpdate?: boolean | undefined;
   /**
-   * name of the page-url parameters that turn `hot` and `liveReload` off for a single page
+   * prefix of the page-url parameters that turn `hmr` and `liveReload` off for a single page
    */
-  urlPrefix?: string | undefined;
+  urlParamPrefix?: string | undefined;
   /**
    * how much the runtime logs to the browser console
    */
@@ -236,51 +270,17 @@ type HotClientOptions = {
    */
   autoConnect?: boolean | undefined;
   /**
-   * prefix the path with the bundle's public path at runtime
+   * prefix the endpoint path with the bundle's public path at runtime
    */
   dynamicPublicPath?: boolean | undefined;
-};
-type HotOptions = {
   /**
-   * how events reach the clients, Server-Sent Events by default
+   * deprecated, removed in the next major release — publish compilation progress events to the clients; apply `ProgressPlugin` yourself and use `publish` instead
    */
-  transport?: ("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>) | undefined;
-  /**
-   * the path the endpoint is served at
-   */
-  path?: string | undefined;
-  /**
-   * heartbeat interval in milliseconds
-   */
-  heartbeat?: number | undefined;
-  /**
-   * HTTP server the `"ws"` transport answers upgrades on, when it is already built
-   */
-  server?: HttpServer | undefined;
+  progress?: boolean | undefined;
   /**
    * deprecated, removed in the next major release — webpack stats options used when serializing compilation results
    */
   statsOptions?: StatsOptions | undefined;
-  /**
-   * publish compilation progress events to the clients
-   */
-  progress?: boolean | undefined;
-  /**
-   * which origins may reach the endpoint from a page on another one; the local ones by default
-   */
-  cors?: CorsOption | undefined;
-  /**
-   * a secret the injected client carries and the endpoint requires; `true` mints one per run, a string uses that one, `false` requires none. Defaults to `false` on both transports; `true` in the next major release
-   */
-  token?: (boolean | string) | undefined;
-  /**
-   * add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
-   */
-  inject?: boolean | undefined;
-  /**
-   * options handed to the browser runtime through its entry query
-   */
-  client?: HotClientOptions | undefined;
 };
 /**
  * What an origin is matched against: one origin, several, a pattern, or a

@@ -102,7 +102,7 @@ describe("hot client (browser)", () => {
 
   it("warns instead of reloading when reload=false", async () => {
     app = await createHotApp({
-      query: "?reload=false",
+      query: "?reloadOnFailedUpdate=false",
       code: unacceptedApp("v1"),
     });
     ({ page, browser } = await runBrowser());

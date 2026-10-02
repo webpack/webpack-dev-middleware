@@ -99,7 +99,7 @@ describe("update processing (browser)", () => {
 
   it("stays on the broken state when reload=false and an accept handler throws", async () => {
     app = await createHotApp({
-      query: "?reload=false",
+      query: "?reloadOnFailedUpdate=false",
       code: throwingAcceptApp(),
       files: { "dep.js": "module.exports = 1;" },
     });

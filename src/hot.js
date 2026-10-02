@@ -16,45 +16,46 @@
 /** @typedef {import("webpack").Configuration["stats"]} MiddlewareStatsOption */
 
 /**
- * Everything the browser runtime reads, as it is set in node. One for one with
- * what the entry query carries, so every option has both spellings: set it
- * here and the injected entry carries it, or write it on the query of a client
- * entry of your own.
+ * A transport whose two halves differ: what this middleware serves the stream
+ * with, and which built-in protocol the bundled client should speak to it — a
+ * server of your own that speaks one of the two, or an endpoint elsewhere that
+ * speaks the other one.
+ * @typedef {object} SplitTransport
+ * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)} server the stream this middleware serves with
+ * @property {("sse" | "ws")} client which of the two the bundled client should speak to it
+ */
+
+/**
+ * Everything `hot` takes. The options the browser runtime reads are here too
+ * rather than in a sub-object: which side of the wire applies a setting is not
+ * something anyone configuring this should have to know.
  *
- * `transport`, `path` and `name` are the exception only in having a default
- * the middleware knows — the resolved `hot.transport`, the resolved `hot.path`
- * and the compilation's name. Setting one here replaces that, which is what a
- * page reaching the endpoint through a proxy or another origin needs.
- * @typedef {object} HotClientOptions
- * @property {("sse" | "ws")=} transport which transport the runtime speaks, `hot.transport` by default
- * @property {string=} path where the runtime connects, `hot.path` by default; may be an absolute url for an endpoint on another origin
+ * `url` and `name` have a default the middleware knows — the resolved `path`
+ * and the compilation's name. Setting one replaces that, which is what a page
+ * reaching the endpoint through a proxy or another origin needs.
+ * @typedef {object} HotOptions
+ * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY> | SplitTransport)=} transport how events reach the clients, Server-Sent Events by default
+ * @property {string=} path the path the endpoint is served at
+ * @property {number=} heartbeat heartbeat interval in milliseconds
+ * @property {HttpServer=} server HTTP server the `"ws"` transport answers upgrades on, when it is already built
+ * @property {CorsOption=} cors which origins may reach the endpoint from a page on another one; the local ones by default
+ * @property {(boolean | string)=} token a secret the injected client carries and the endpoint requires; `true` mints one per run, a string uses that one, `false` requires none. Defaults to `false` on both transports; `true` in the next major release
+ * @property {boolean=} inject add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
+ * @property {string=} url where the browser connects, the endpoint's own path by default; may be an absolute url for an endpoint on another origin, and carries its own `token` when that endpoint requires a different one
  * @property {string=} name limit the runtime to one compilation's builds, the compilation's own name by default
- * @property {string=} token the secret the runtime puts on its connection url, `hot.token` by default
  * @property {(boolean | Record<string, EXPECTED_ANY>)=} overlay show build problems and uncaught runtime errors in an overlay
- * @property {(boolean | "circular" | "linear")=} progress show an indicator while a rebuild is in progress
- * @property {boolean=} hot apply a build through Hot Module Replacement
- * @property {boolean=} liveReload reload the page on a build that changed something, when `hot` is off
- * @property {boolean=} reload reload the page when an update cannot be applied
- * @property {string=} urlPrefix name of the page-url parameters that turn `hot` and `liveReload` off for a single page
+ * @property {(boolean | "circular" | "linear")=} indicator show an indicator while a rebuild is in progress — `true` and `"circular"` a badge, `"linear"` a bar across the top of the viewport
+ * @property {boolean=} hmr apply a build through Hot Module Replacement
+ * @property {boolean=} liveReload reload the page on a build that changed something, when `hmr` is off
+ * @property {boolean=} reloadOnFailedUpdate reload the page when an update cannot be applied
+ * @property {string=} urlParamPrefix prefix of the page-url parameters that turn `hmr` and `liveReload` off for a single page
  * @property {("none" | "error" | "warn" | "info" | "log" | "verbose")=} logging how much the runtime logs to the browser console
  * @property {number=} reconnect how many times to reconnect before giving up
  * @property {number=} timeout how long the runtime tolerates silence before reconnecting, in milliseconds
  * @property {boolean=} autoConnect connect as soon as the entry runs
- * @property {boolean=} dynamicPublicPath prefix the path with the bundle's public path at runtime
- */
-
-/**
- * @typedef {object} HotOptions
- * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)=} transport how events reach the clients, Server-Sent Events by default
- * @property {string=} path the path the endpoint is served at
- * @property {number=} heartbeat heartbeat interval in milliseconds
- * @property {HttpServer=} server HTTP server the `"ws"` transport answers upgrades on, when it is already built
+ * @property {boolean=} dynamicPublicPath prefix the endpoint path with the bundle's public path at runtime
+ * @property {boolean=} progress deprecated, removed in the next major release — publish compilation progress events to the clients; apply `ProgressPlugin` yourself and use `publish` instead
  * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
- * @property {boolean=} progress publish compilation progress events to the clients
- * @property {CorsOption=} cors which origins may reach the endpoint from a page on another one; the local ones by default
- * @property {(boolean | string)=} token a secret the injected client carries and the endpoint requires; `true` mints one per run, a string uses that one, `false` requires none. Defaults to `false` on both transports; `true` in the next major release
- * @property {boolean=} inject add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
- * @property {HotClientOptions=} client options handed to the browser runtime through its entry query
  */
 
 /**
@@ -146,7 +147,7 @@
 // The CORS rules, and the default each transport starts from, live with the
 // transport that applies them in `./servers`. What is left here is the mint
 // that hands one token to whichever of them is built.
-const { resolveToken } = require("./utils.js");
+const { resolveToken, resolveTransport } = require("./utils.js");
 
 const HOT_DEFAULT_PATH = "/__webpack_hmr";
 const HOT_DEFAULT_HEARTBEAT = 10 * 1000;
@@ -462,7 +463,7 @@ function createHot(compiler, userOptions, statsOption) {
   const options = userOptions === true ? {} : userOptions;
   const path = options.path || HOT_DEFAULT_PATH;
   const heartbeat = options.heartbeat ?? HOT_DEFAULT_HEARTBEAT;
-  const transport = options.transport || HOT_DEFAULT_TRANSPORT;
+  const { server: transport } = resolveTransport(options.transport);
   const { cors } = options;
   const { statsOptions } = options;
   // `inject: false` turns it off: the token reaches the browser through the

@@ -285,13 +285,35 @@
           "additionalProperties": false,
           "properties": {
             "transport": {
-              "description": "How events reach the clients: `sse`, `ws` (needs the optional `ws` dependency and an HTTP server to answer upgrades on, given as `server` or through the middleware's `attach` method), or a function building a transport of your own.",
+              "description": "How events reach the clients: `sse`, `ws` (needs the optional `ws` dependency and an HTTP server to answer upgrades on, given as `server` or through the middleware's `attach` method), a function building a transport of your own, or `{ server, client }` when yours speaks one of the two built-in protocols so the bundled client can still be injected.",
               "anyOf": [
                 {
                   "enum": ["sse", "ws"]
                 },
                 {
                   "instanceof": "Function"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "server": {
+                      "description": "The transport this middleware serves the stream with.",
+                      "anyOf": [
+                        {
+                          "enum": ["sse", "ws"]
+                        },
+                        {
+                          "instanceof": "Function"
+                        }
+                      ]
+                    },
+                    "client": {
+                      "description": "Which of the built-in protocols your transport speaks, so the bundled client can still be injected.",
+                      "enum": ["sse", "ws"]
+                    }
+                  },
+                  "required": ["server", "client"]
                 }
               ]
             },
@@ -315,7 +337,7 @@
               "type": "boolean"
             },
             "token": {
-              "description": "A secret the injected client carries and the endpoint requires, so reaching the stream takes something a page has to have been given rather than a header the browser may not send. `true` mints one per run, a string uses that one — for a client of your own that has to build the url itself — and `false` requires none. Defaults to `false`, because requiring one would refuse a client this middleware did not inject; `true` in the next major release.",
+              "description": "A secret the injected client carries and the endpoint requires, so reaching the stream takes something a page has to have been given rather than a header the browser may not send. `true` mints one per run, a string uses that one \u2014 for a client of your own that has to build the url itself \u2014 and `false` requires none. Defaults to `false`, because requiring one would refuse a client this middleware did not inject; `true` in the next major release.",
               "link": "https://github.com/webpack/webpack-dev-middleware#hottoken",
               "anyOf": [
                 {
@@ -366,91 +388,75 @@
               "link": "https://github.com/webpack/webpack-dev-middleware#hot",
               "type": "boolean"
             },
-            "client": {
-              "description": "Options handed to the browser runtime through its entry query.",
-              "link": "https://github.com/webpack/webpack-dev-middleware#hot",
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "transport": {
-                  "description": "Which transport the runtime speaks: `sse` or `ws`. Defaults to the resolved `hot.transport`.",
-                  "enum": ["sse", "ws"]
-                },
-                "path": {
-                  "description": "Where the runtime connects. Defaults to the resolved `hot.path`; may be an absolute url for an endpoint reached on another origin or through a proxy.",
-                  "type": "string",
-                  "minLength": 1
-                },
-                "name": {
-                  "description": "Limit the runtime to one compilation's builds. Defaults to the compilation's own name.",
-                  "type": "string"
-                },
-                "token": {
-                  "description": "The secret the runtime puts on its connection url. The middleware sets this to whatever 'hot.token' resolved to, so it only needs setting for a client pointed at another endpoint that requires a different one.",
-                  "type": "string"
-                },
-                "overlay": {
-                  "description": "Show build problems and uncaught runtime errors in an overlay.",
-                  "anyOf": [
-                    {
-                      "type": "boolean"
-                    },
-                    {
-                      "type": "object"
-                    }
-                  ]
-                },
-                "progress": {
-                  "description": "Show an indicator while a rebuild is in progress.",
-                  "anyOf": [
-                    {
-                      "type": "boolean"
-                    },
-                    {
-                      "enum": ["circular", "linear"]
-                    }
-                  ]
-                },
-                "hot": {
-                  "description": "Apply a build through Hot Module Replacement.",
+            "url": {
+              "description": "Where the browser connects. Defaults to the endpoint's own `path`; may be an absolute url for an endpoint reached on another origin or through a proxy, and carries its own `token` in that url when that endpoint requires a different one.",
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "description": "Limit the runtime to one compilation's builds. Defaults to the compilation's own name.",
+              "type": "string"
+            },
+            "overlay": {
+              "description": "Show build problems and uncaught runtime errors in an overlay.",
+              "anyOf": [
+                {
                   "type": "boolean"
                 },
-                "liveReload": {
-                  "description": "Reload the page on a build that changed something, when `hot` is off.",
-                  "type": "boolean"
-                },
-                "reload": {
-                  "description": "Reload the page when an update cannot be applied.",
-                  "type": "boolean"
-                },
-                "urlPrefix": {
-                  "description": "Names the page-url parameters that turn `hot` and `liveReload` off for a single page.",
-                  "type": "string",
-                  "minLength": 1
-                },
-                "logging": {
-                  "description": "How much the runtime logs to the browser console.",
-                  "enum": ["none", "error", "warn", "info", "log", "verbose"]
-                },
-                "reconnect": {
-                  "description": "How many times to reconnect before giving up.",
-                  "type": "number",
-                  "minimum": 0
-                },
-                "timeout": {
-                  "description": "How long the runtime tolerates silence before reconnecting, in milliseconds.",
-                  "type": "number",
-                  "exclusiveMinimum": 0
-                },
-                "autoConnect": {
-                  "description": "Connect as soon as the entry runs.",
-                  "type": "boolean"
-                },
-                "dynamicPublicPath": {
-                  "description": "Prefix the endpoint path with the bundle's public path at runtime.",
-                  "type": "boolean"
+                {
+                  "type": "object"
                 }
-              }
+              ]
+            },
+            "indicator": {
+              "description": "Show an indicator while a rebuild is in progress: `true` and `circular` a badge, `linear` a bar across the top of the viewport.",
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "enum": ["circular", "linear"]
+                }
+              ]
+            },
+            "hmr": {
+              "description": "Apply a build through Hot Module Replacement.",
+              "type": "boolean"
+            },
+            "liveReload": {
+              "description": "Reload the page on a build that changed something, when `hmr` is off.",
+              "type": "boolean"
+            },
+            "reloadOnFailedUpdate": {
+              "description": "Reload the page when an update cannot be applied.",
+              "type": "boolean"
+            },
+            "urlParamPrefix": {
+              "description": "Prefix of the page-url parameters that turn `hmr` and `liveReload` off for a single page.",
+              "type": "string",
+              "minLength": 1
+            },
+            "logging": {
+              "description": "How much the runtime logs to the browser console.",
+              "enum": ["none", "error", "warn", "info", "log", "verbose"]
+            },
+            "reconnect": {
+              "description": "How many times to reconnect before giving up.",
+              "type": "number",
+              "minimum": 0
+            },
+            "timeout": {
+              "description": "How long the runtime tolerates silence before reconnecting, in milliseconds.",
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "autoConnect": {
+              "description": "Connect as soon as the entry runs.",
+              "type": "boolean"
+            },
+            "dynamicPublicPath": {
+              "description": "Prefix the endpoint path with the bundle's public path at runtime.",
+              "type": "boolean"
             }
           }
         }

@@ -89,7 +89,7 @@ describe("hot with nothing but the middleware (browser)", () => {
       code: acceptedApp("v1"),
       // Set on the middleware, in node — the developer never touches the
       // webpack configuration or the client's query.
-      hot: { client: { progress: "linear", logging: "none" } },
+      hot: { indicator: "linear", logging: "none" },
     });
     ({ page, browser } = await runBrowser());
     const console_ = collectConsole(page);
@@ -169,7 +169,7 @@ describe("hot with nothing but the middleware (browser)", () => {
       code: acceptedApp("v1"),
       // Neither of these could be set in node before: `hot` and `liveReload`
       // were readable from the entry query only.
-      hot: { client: { hot: false, liveReload: false } },
+      hot: { hmr: false, liveReload: false },
     });
     ({ page, browser } = await runBrowser());
 
@@ -200,11 +200,11 @@ describe("hot with nothing but the middleware (browser)", () => {
       code: acceptedApp("v1"),
       // What a server built on this middleware sets so the parameters its own
       // users know keep working.
-      hot: { client: { urlPrefix: "my-server" } },
+      hot: { urlParamPrefix: "my-server" },
     });
     ({ page, browser } = await runBrowser());
 
-    await page.goto(`${hotApp.url}?my-server-hot=false`);
+    await page.goto(`${hotApp.url}?my-server-hmr=false`);
     await waitForAppText(page, "v1");
     await page.evaluate(() => {
       globalThis.notReloaded = true;

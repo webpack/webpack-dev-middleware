@@ -14,7 +14,7 @@ let lastHash;
 let ownName;
 /** @type {Record<string, number>} */
 const failureStatuses = { abort: 1, fail: 1 };
-// Set per applyUpdate() call from the client's `reload` option.
+// Set per applyUpdate() call from the client's `reloadOnFailedUpdate` option.
 let reloadOnErrored = false;
 let loggedRuntimeMissing = false;
 
@@ -58,7 +58,7 @@ function upToDate(hash) {
 
 /**
  * @param {string} hash latest hash from the SSE payload
- * @param {{ reload?: boolean }} options client options
+ * @param {{ reloadOnFailedUpdate?: boolean }} options client options
  * @param {string=} name compilation name the payload belongs to
  */
 export default function applyUpdate(hash, options, name) {
@@ -89,7 +89,7 @@ export default function applyUpdate(hash, options, name) {
     return;
   }
 
-  const { reload } = options;
+  const { reloadOnFailedUpdate: reload } = options;
 
   reloadOnErrored = Boolean(reload);
 

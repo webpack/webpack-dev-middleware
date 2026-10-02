@@ -59,7 +59,7 @@ describe("live reload (browser)", () => {
 
   it("reloads the page on a build when hot is off", async () => {
     app = await createHotApp({
-      query: "?hot=false",
+      query: "?hmr=false",
       hmrPlugin: false,
       code: acceptedApp("v1"),
     });
@@ -79,7 +79,7 @@ describe("live reload (browser)", () => {
 
   it("leaves the page alone when live reload is off as well", async () => {
     app = await createHotApp({
-      query: "?hot=false&liveReload=false",
+      query: "?hmr=false&liveReload=false",
       hmrPlugin: false,
       code: acceptedApp("v1"),
     });
@@ -101,7 +101,7 @@ describe("live reload (browser)", () => {
     // it reaches nothing and the page reloads as it would with no query at
     // all — the failure a typo gets, which is what any other name gets too.
     app = await createHotApp({
-      query: "?hot=false&live-reload=false",
+      query: "?hmr=false&live-reload=false",
       hmrPlugin: false,
       code: acceptedApp("v1"),
     });
@@ -119,7 +119,7 @@ describe("live reload (browser)", () => {
 
   it("does not reload for a build that changed nothing", async () => {
     app = await createHotApp({
-      query: "?hot=false",
+      query: "?hmr=false",
       hmrPlugin: false,
       code: acceptedApp("v1"),
     });
@@ -141,7 +141,7 @@ describe("live reload (browser)", () => {
 
   it("lets one page opt out through its own url", async () => {
     app = await createHotApp({
-      query: "?hot=false",
+      query: "?hmr=false",
       hmrPlugin: false,
       code: acceptedApp("v1"),
     });
@@ -166,7 +166,7 @@ describe("live reload (browser)", () => {
 
   it("reads the parameter, not the text of the url", async () => {
     app = await createHotApp({
-      query: "?hot=false",
+      query: "?hmr=false",
       hmrPlugin: false,
       code: acceptedApp("v1"),
     });
@@ -190,7 +190,7 @@ describe("live reload (browser)", () => {
 
   it("matches a prefix with capitals in it", async () => {
     app = await createHotApp({
-      query: "?hot=false&urlPrefix=MyServer",
+      query: "?hmr=false&urlParamPrefix=MyServer",
       hmrPlugin: false,
       code: acceptedApp("v1"),
     });
@@ -213,7 +213,7 @@ describe("live reload (browser)", () => {
     app = await createHotApp({ code: acceptedApp("v1") });
     ({ page, browser } = await runBrowser());
 
-    await page.goto(`${app.url}?webpack-dev-middleware-hot=false`);
+    await page.goto(`${app.url}?webpack-dev-middleware-hmr=false`);
     await waitForAppText(page, "v1");
     await plantReloadMarker(page);
 
@@ -225,7 +225,7 @@ describe("live reload (browser)", () => {
 
   it("names those url parameters after whoever is serving", async () => {
     app = await createHotApp({
-      query: "?hot=false&urlPrefix=my-server",
+      query: "?hmr=false&urlParamPrefix=my-server",
       hmrPlugin: false,
       code: acceptedApp("v1"),
     });
@@ -245,7 +245,7 @@ describe("live reload (browser)", () => {
   it("reloads when the server asks, whatever the build settings say", async () => {
     app = await createHotApp({
       // Neither mechanism would reload this page on a build.
-      query: "?hot=false&liveReload=false",
+      query: "?hmr=false&liveReload=false",
       hmrPlugin: false,
       code: acceptedApp("v1"),
     });

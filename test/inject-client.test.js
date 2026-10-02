@@ -5,6 +5,7 @@ import webpack from "webpack";
 
 import schema from "../src/options.json";
 import {
+  CLIENT_OPTIONS,
   clientQuery,
   filterSource,
   hasClientEntry,
@@ -162,7 +163,7 @@ describe("injectHotClient", () => {
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse" },
+      { path: "/__webpack_hmr", hot: { transport: "sse" } },
       logger,
     );
 
@@ -178,7 +179,7 @@ describe("injectHotClient", () => {
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse" },
+      { path: "/__webpack_hmr", hot: { transport: "sse" } },
       logger,
     );
 
@@ -207,7 +208,7 @@ describe("injectHotClient", () => {
 
       injectHotClient(
         [instance],
-        { path: "/__webpack_hmr", transport: "sse" },
+        { path: "/__webpack_hmr", hot: { transport: "sse" } },
         logger,
       );
 
@@ -222,7 +223,7 @@ describe("injectHotClient", () => {
     it("says the plugin is now redundant", () => {
       injectHotClient(
         [documentedSetup()],
-        { path: "/__webpack_hmr", transport: "sse" },
+        { path: "/__webpack_hmr", hot: { transport: "sse" } },
         logger,
       );
 
@@ -239,7 +240,7 @@ describe("injectHotClient", () => {
         [documentedSetup()],
         {
           path: "/__webpack_hmr",
-          transport: "sse",
+          hot: { transport: "sse" },
           token: "a-token-nobody-gets",
         },
         logger,
@@ -257,7 +258,11 @@ describe("injectHotClient", () => {
     it("says nothing about a token when the client was injected", () => {
       injectHotClient(
         [compiler({ entry: "./app.js" })],
-        { path: "/__webpack_hmr", transport: "sse", token: "handed-over" },
+        {
+          path: "/__webpack_hmr",
+          hot: { transport: "sse" },
+          token: "handed-over",
+        },
         logger,
       );
 
@@ -273,7 +278,7 @@ describe("injectHotClient", () => {
 
       injectHotClient(
         [instance],
-        { path: "/__webpack_hmr", transport: "sse" },
+        { path: "/__webpack_hmr", hot: { transport: "sse" } },
         logger,
       );
 
@@ -292,7 +297,7 @@ describe("injectHotClient", () => {
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse" },
+      { path: "/__webpack_hmr", hot: { transport: "sse" } },
       logger,
     );
 
@@ -307,7 +312,7 @@ describe("injectHotClient", () => {
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse" },
+      { path: "/__webpack_hmr", hot: { transport: "sse" } },
       logger,
     );
 
@@ -323,7 +328,7 @@ describe("injectHotClient", () => {
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse" },
+      { path: "/__webpack_hmr", hot: { transport: "sse" } },
       logger,
     );
 
@@ -338,7 +343,7 @@ describe("injectHotClient", () => {
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse" },
+      { path: "/__webpack_hmr", hot: { transport: "sse" } },
       logger,
     );
 
@@ -359,7 +364,7 @@ describe("injectHotClient", () => {
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse" },
+      { path: "/__webpack_hmr", hot: { transport: "sse" } },
       logger,
     );
 
@@ -376,7 +381,7 @@ describe("injectHotClient", () => {
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse" },
+      { path: "/__webpack_hmr", hot: { transport: "sse" } },
       logger,
     );
 
@@ -397,7 +402,7 @@ describe("injectHotClient", () => {
 
       injectHotClient(
         [instance],
-        { path: "/__webpack_hmr", transport },
+        { path: "/__webpack_hmr", hot: { transport } },
         logger,
       );
 
@@ -412,7 +417,7 @@ describe("injectHotClient", () => {
 
       injectHotClient(
         [instance],
-        { path: "/__webpack_hmr", transport },
+        { path: "/__webpack_hmr", hot: { transport } },
         logger,
       );
 
@@ -427,7 +432,7 @@ describe("injectHotClient", () => {
 
       injectHotClient(
         [first, second],
-        { path: "/__webpack_hmr", transport },
+        { path: "/__webpack_hmr", hot: { transport } },
         logger,
       );
 
@@ -445,7 +450,7 @@ describe("injectHotClient", () => {
 
       injectHotClient(
         [instance],
-        { path: "/__webpack_hmr", transport },
+        { path: "/__webpack_hmr", hot: { transport } },
         logger,
       );
 
@@ -523,12 +528,12 @@ describe("serializing an overlay filter", () => {
     const unusable = { toString: () => "!!! not a function !!!" };
 
     expect(() => filterSource("runtimeErrors", unusable)).toThrow(
-      /'hot.client.overlay.runtimeErrors'/,
+      /'hot.overlay.runtimeErrors'/,
     );
   });
 });
 
-// What `hot.client` becomes in the entry's query. The shapes differ enough
+// What the browser's options become in the entry's query. The shapes differ enough
 // that each is worth stating: a plain value, `overlay` as a boolean, and
 // `overlay` as an object whose filters travel as source.
 describe("the browser options as a query", () => {
@@ -540,9 +545,9 @@ describe("the browser options as a query", () => {
   });
 
   it("leaves out what was not set", () => {
-    expect(clientQuery({ logging: undefined, reload: false })).toStrictEqual({
-      reload: "false",
-    });
+    expect(
+      clientQuery({ logging: undefined, reloadOnFailedUpdate: false }),
+    ).toStrictEqual({ reloadOnFailedUpdate: "false" });
   });
 
   it("takes no options at all", () => {
@@ -627,7 +632,7 @@ describe("what injectHotClient leaves alone", () => {
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse" },
+      { path: "/__webpack_hmr", hot: { transport: "sse" } },
       logger,
     );
 
@@ -645,7 +650,7 @@ describe("what injectHotClient leaves alone", () => {
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse" },
+      { path: "/__webpack_hmr", hot: { transport: "sse" } },
       logger,
     );
 
@@ -661,7 +666,7 @@ describe("what injectHotClient leaves alone", () => {
   });
 });
 
-// Every browser option has two spellings — `hot.client` in node, and the
+// Every browser option has two spellings — on `hot` in node, and the
 // injected entry's query — and they end in the same place. `transport`, `path`
 // and `name` are the ones the middleware knows a value for, so what matters
 // there is which of the two wins.
@@ -727,51 +732,54 @@ describe("the entry query the client is given", () => {
   }
 
   it("carries the endpoint and the transport the middleware resolved", () => {
-    expect(queries({ path: "/__hmr", transport: "ws" })).toStrictEqual([
-      { path: "/__hmr", transport: "ws" },
-    ]);
+    expect(queries({ path: "/__hmr", hot: { transport: "ws" } })).toStrictEqual(
+      [{ url: "/__hmr", transport: "ws" }],
+    );
   });
 
   it("names the compilation, so a client ignores its siblings", () => {
     expect(
-      queries({ path: "/__webpack_hmr", transport: "sse" }, { name: "admin" }),
+      queries(
+        { path: "/__webpack_hmr", hot: { transport: "sse" } },
+        { name: "admin" },
+      ),
     ).toStrictEqual([
-      { path: "/__webpack_hmr", transport: "sse", name: "admin" },
+      { url: "/__webpack_hmr", transport: "sse", name: "admin" },
     ]);
   });
 
   it("carries every browser option set in node", () => {
     const [query] = queries({
       path: "/__webpack_hmr",
-      transport: "sse",
-      client: {
-        hot: false,
+      hot: {
+        transport: "sse",
+        hmr: false,
         liveReload: false,
-        urlPrefix: "my-server",
-        reload: false,
+        urlParamPrefix: "my-server",
+        reloadOnFailedUpdate: false,
         logging: "warn",
         reconnect: 3,
         timeout: 5000,
         autoConnect: false,
         dynamicPublicPath: true,
-        progress: "linear",
+        indicator: "linear",
         overlay: false,
       },
     });
 
     expect(query).toStrictEqual({
-      path: "/__webpack_hmr",
+      url: "/__webpack_hmr",
       transport: "sse",
-      hot: "false",
+      hmr: "false",
       liveReload: "false",
-      urlPrefix: "my-server",
-      reload: "false",
+      urlParamPrefix: "my-server",
+      reloadOnFailedUpdate: "false",
       logging: "warn",
       reconnect: "3",
       timeout: "5000",
       autoConnect: "false",
       dynamicPublicPath: "true",
-      progress: "linear",
+      indicator: "linear",
       overlay: "false",
     });
   });
@@ -781,19 +789,18 @@ describe("the entry query the client is given", () => {
     // client is no longer one this middleware can address. Written in node, so
     // it is the same option object as everything else.
     const [query] = queries(
-      { path: "/__webpack_hmr", transport: "sse" },
+      { path: "/__webpack_hmr", hot: { transport: "sse" } },
       { name: "admin" },
     );
 
-    expect(query).toMatchObject({ path: "/__webpack_hmr", name: "admin" });
+    expect(query).toMatchObject({ url: "/__webpack_hmr", name: "admin" });
 
     const [overridden] = queries(
       {
         path: "/__webpack_hmr",
-        transport: "sse",
-        client: {
-          path: "wss://dev.example.com/__hmr",
-          transport: "ws",
+        hot: {
+          transport: { server: "sse", client: "ws" },
+          url: "wss://dev.example.com/__hmr",
           name: "",
         },
       },
@@ -801,7 +808,7 @@ describe("the entry query the client is given", () => {
     );
 
     expect(overridden).toStrictEqual({
-      path: "wss://dev.example.com/__hmr",
+      url: "wss://dev.example.com/__hmr",
       transport: "ws",
       name: "",
     });
@@ -820,10 +827,9 @@ describe("the entry query the client is given", () => {
     expect(
       queries({
         path: "/__webpack_hmr",
-        transport,
-        client: { transport: "sse" },
+        hot: { transport: { server: transport, client: "sse" } },
       }),
-    ).toStrictEqual([{ path: "/__webpack_hmr", transport: "sse" }]);
+    ).toStrictEqual([{ url: "/__webpack_hmr", transport: "sse" }]);
     expect(warnings).toStrictEqual([]);
   });
 
@@ -835,15 +841,17 @@ describe("the entry query the client is given", () => {
       publishTo: () => {},
     });
 
-    expect(queries({ path: "/__webpack_hmr", transport })).toStrictEqual([]);
-    expect(warnings.join("\n")).toContain("hot.client.transport");
+    expect(
+      queries({ path: "/__webpack_hmr", hot: { transport } }),
+    ).toStrictEqual([]);
+    expect(warnings.join("\n")).toContain("transport: { server, client }");
   });
 });
 
 // Overriding the transport points the client at a different server. Left
 // pointing at this one it would ask for a protocol the endpoint does not
 // serve, and a page that never connects says nothing about why.
-describe("a client transport that disagrees with the endpoint", () => {
+describe("a transport whose halves disagree", () => {
   /** @type {EXPECTED_OBJECT[]} */
   let compilers = [];
   /** @type {string[]} */
@@ -864,53 +872,61 @@ describe("a client transport that disagrees with the endpoint", () => {
   });
 
   /**
-   * @param {EXPECTED_OBJECT} client the `hot.client` option
-   * @param {string=} transport the endpoint's transport
+   * @param {EXPECTED_OBJECT} hot the `hot` options
    * @returns {string[]} what was warned about
    */
-  function inject(client, transport = "sse") {
+  function inject(hot) {
     const instance = makeCompiler();
 
     compilers.push(instance);
 
-    injectHotClient(
-      [instance],
-      { path: "/__webpack_hmr", transport, client },
-      logger,
-    );
+    injectHotClient([instance], { path: "/__webpack_hmr", hot }, logger);
 
     return warnings;
   }
 
   it("says so when there is no other endpoint to reach", () => {
-    expect(inject({ transport: "ws" }).join("\n")).toContain(
-      "will not connect",
-    );
+    // Served as Server-Sent Events, with the client told to speak WebSocket to
+    // it — and no `url`, so that is this endpoint.
+    expect(
+      inject({ transport: { server: "sse", client: "ws" } }).join("\n"),
+    ).toContain("will not connect");
   });
 
   it("says nothing when the client has an endpoint of its own", () => {
     expect(
-      inject({ transport: "ws", path: "wss://dev.example.com/__hmr" }),
+      inject({
+        transport: { server: "sse", client: "ws" },
+        url: "wss://dev.example.com/__hmr",
+      }),
     ).toStrictEqual([]);
   });
 
   it("says nothing when the two agree", () => {
-    expect(inject({ transport: "sse" })).toStrictEqual([]);
+    expect(
+      inject({ transport: { server: "sse", client: "sse" } }),
+    ).toStrictEqual([]);
   });
 
-  it("says nothing when the client leaves the transport alone", () => {
-    expect(inject({ overlay: false })).toStrictEqual([]);
+  it("says nothing for a transport written the plain way", () => {
+    expect(inject({ transport: "sse", overlay: false })).toStrictEqual([]);
   });
 });
 
-// The two ways of setting a browser option have to stay one set of names. A
-// name the client acts on that the schema refuses is an option with no node
-// spelling; one the schema takes that the client ignores silently does
-// nothing; two names for one setting is an alias. Both sides are read from
-// their own source, or this would just be a third place to forget.
+// The browser's options now live on `hot` beside the middleware's own, so one
+// list says which are which: `CLIENT_OPTIONS`. Three places have to agree with
+// it. A name the client acts on that the schema refuses is an option with no
+// node spelling; one the schema takes that the client ignores silently does
+// nothing; one the typedef omits is accepted at runtime and rejected by
+// TypeScript. Each side is read from its own source, or this would just be
+// another place to forget.
 describe("node and the query take the same names", () => {
   const clientSource = fs.readFileSync(
     path.join(__dirname, "..", "client-src", "index.js"),
+    "utf8",
+  );
+  const hotSource = fs.readFileSync(
+    path.join(__dirname, "..", "src", "hot.js"),
     "utf8",
   );
 
@@ -925,10 +941,13 @@ describe("node and the query take the same names", () => {
     ),
   ];
 
-  /** @type {string[]} every name `hot.client` accepts */
-  const takenInNode = Object.keys(
-    schema.properties.hot.anyOf[1].properties.client.properties,
-  );
+  // The middleware puts these two on the query itself, from the transport it
+  // resolved and the token it minted, so they are not options anyone sets on
+  // the browser side.
+  const INJECTED_ONLY = ["transport", "token"];
+
+  /** @type {string[]} every name `hot` accepts */
+  const takenInNode = Object.keys(schema.properties.hot.anyOf[1].properties);
 
   it("reads something from the query at all", () => {
     // The extraction above is regex over source; if it ever stops matching it
@@ -937,20 +956,22 @@ describe("node and the query take the same names", () => {
   });
 
   it("is one set of names, with nothing on one side only", () => {
-    expect(readByClient.toSorted()).toStrictEqual(takenInNode.toSorted());
+    expect(readByClient.toSorted()).toStrictEqual(
+      [...CLIENT_OPTIONS, ...INJECTED_ONLY].toSorted(),
+    );
   });
 
-  // The third place, and the one that is easiest to forget: the typedef the
-  // published declarations are generated from. A name the schema takes that
-  // it omits is accepted at runtime and rejected by TypeScript, which is how
-  // `token` first shipped.
+  it("is a subset of what `hot` accepts, now that they share a namespace", () => {
+    // A browser option the schema does not take could not be set in node at
+    // all, which is the whole point of folding them together.
+    expect(
+      CLIENT_OPTIONS.filter((name) => !takenInNode.includes(name)),
+    ).toStrictEqual([]);
+  });
+
   it("is in the typedef the declarations come from, as well", () => {
-    const hotSource = fs.readFileSync(
-      path.join(__dirname, "..", "src", "hot.js"),
-      "utf8",
-    );
     const [typedef] = /** @type {RegExpMatchArray} */ (
-      hotSource.match(/@typedef \{object\} HotClientOptions[\s\S]*?\n \*\//)
+      hotSource.match(/@typedef \{object\} HotOptions[\s\S]*?\n \*\//)
     );
     const declared = [
       ...typedef.matchAll(/@property \{[^}]+\} ([A-Za-z]+)/g),

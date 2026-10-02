@@ -98,7 +98,8 @@ export type MimeTypes = {
 };
 export type Compiler = import("webpack").Compiler;
 export type HotOptions = import("./hot.js").HotOptions;
-export type HotClientOptions = import("./hot.js").HotClientOptions;
+export type ClientStreamFactory =
+  import("./hot.js").ClientStreamFactory<EXPECTED_ANY>;
 export type IncomingMessage = import("./index").IncomingMessage;
 export type ServerResponse = import("./index").ServerResponse;
 export type OutputFileSystem = import("./index").OutputFileSystem;
@@ -113,6 +114,7 @@ export type MimeDbEntry = {
   compressible?: boolean;
   extensions?: readonly string[];
 };
+export const CLIENT_OPTIONS: string[];
 /** @typedef {import("./hot.js").CorsOption} CorsOption */
 /** @typedef {import("./hot.js").CorsOrigin} CorsOrigin */
 export const CORS_LOCAL_ORIGINS: RegExp;
@@ -139,11 +141,13 @@ export function applyCors(
   headers: Record<string, string>,
 ): void;
 /**
- * The browser options, as the client reads them from its resource query.
- * @param {EXPECTED_ANY} client the `hot.client` option
+ * The browser options, as the client reads them from its resource query. Picked
+ * out of `hot` rather than taken from a sub-object: which side of the wire
+ * applies a setting is this module's problem, not the developer's.
+ * @param {EXPECTED_ANY} hot the `hot` options
  * @returns {Record<string, string>} query parameters
  */
-export function clientQuery(client: EXPECTED_ANY): Record<string, string>;
+export function clientQuery(hot: EXPECTED_ANY): Record<string, string>;
 /**
  * @typedef {object} MimeTypes
  * @property {(file: string) => string | false} lookup the media type an extension, a `.extension`, or a path resolves to
@@ -342,17 +346,17 @@ export function initState<
  */
 /**
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: HotClientOptions, token?: string | false }} options resolved hot options
+ * @param {{ path: string, transport: ("sse" | "ws" | undefined), inject?: boolean, token?: string | false, hot: HotOptions }} options the path and transport this middleware resolved, the token it minted, and the `hot` options as given
  * @param {Logger} logger logger
  */
 export function injectHotClient(
   compilers: Compiler[],
   options: {
     path: string;
-    transport: NonNullable<HotOptions["transport"]>;
+    transport: "sse" | "ws" | undefined;
     inject?: boolean;
-    client?: HotClientOptions;
     token?: string | false;
+    hot: HotOptions;
   },
   logger: Logger,
 ): void;
@@ -536,6 +540,19 @@ export function resolveCors(cors: CorsOption): CorsGrant;
 export function resolveToken(
   option: boolean | string | undefined,
 ): string | false;
+/**
+ * The two halves of the `transport` option: what this middleware serves the
+ * stream with, and which built-in protocol the bundled client should speak to
+ * it. The client half is `undefined` for a transport of your own, since there
+ * is then nothing to point the bundled client at — `{ server, client }` is how
+ * you say yours speaks one of the two.
+ * @param {HotOptions["transport"]} transport the `hot.transport` option
+ * @returns {{ server: ("sse" | "ws" | ClientStreamFactory), client: ("sse" | "ws" | undefined) }} the server half and the client half
+ */
+export function resolveTransport(transport: HotOptions["transport"]): {
+  server: "sse" | "ws" | ClientStreamFactory;
+  client: "sse" | "ws" | undefined;
+};
 /**
  * @template {ServerResponse & ExpectedServerResponse} Response
  * @param {Response} res res

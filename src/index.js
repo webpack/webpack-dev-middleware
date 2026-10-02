@@ -665,9 +665,10 @@ function wdm(compiler, options = {}, isPlugin = false) {
       compilersToModify,
       {
         path: hotOptions.path || HOT_DEFAULT_PATH,
-        transport: hotOptions.transport || "sse",
         inject: hotOptions.inject,
-        client: hotOptions.client,
+        // The browser's options are picked out of these, so a developer sets
+        // them in one place rather than knowing which side applies which.
+        hot: hotOptions,
         // The one `createHot` minted just above, so the client it injects and
         // the endpoint it serves agree.
         token: context.hot?.token,
