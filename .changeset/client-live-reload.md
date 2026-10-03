@@ -14,8 +14,8 @@ Added a `reload` action, for a change no compilation knows about: publish
 used to have you write by hand.
 
 Added `urlPrefix` (default `"webpack-dev-middleware"`), which names the page-url
-parameters that turn `hot` and `liveReload` off for a single page —
-`?webpack-dev-middleware-liveReload=false`.
+parameter that overrides what a build does to a single page —
+`?webpack-dev-middleware-apply=nothing`.
 
 `live-reload` used to be accepted as another spelling of `reload`. The two are
 different — `reload` is the fallback for an update that was tried and could not
