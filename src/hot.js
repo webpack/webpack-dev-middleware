@@ -37,8 +37,8 @@
  * @property {boolean=} reload reload the page when an update cannot be applied
  * @property {string=} urlPrefix name of the page-url parameters that turn `hot` and `liveReload` off for a single page
  * @property {("none" | "error" | "warn" | "info" | "log" | "verbose")=} logging how much the runtime logs to the browser console
- * @property {number=} reconnect how many times to reconnect before giving up
- * @property {number=} timeout how long the runtime tolerates silence before reconnecting, in milliseconds
+ * @property {number=} reconnect how many times to reconnect before giving up; unset, Server-Sent Events keep trying for as long as the page is open while a WebSocket gives up after 10
+ * @property {number=} timeout how long the runtime tolerates silence before reconnecting, in milliseconds — Server-Sent Events only, since a WebSocket's heartbeat is a protocol ping JavaScript cannot see
  * @property {boolean=} autoConnect connect as soon as the entry runs
  * @property {boolean=} dynamicPublicPath prefix the path with the bundle's public path at runtime
  */

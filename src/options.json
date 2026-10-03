@@ -315,7 +315,7 @@
               "type": "boolean"
             },
             "token": {
-              "description": "A secret the injected client carries and the endpoint requires, so reaching the stream takes something a page has to have been given rather than a header the browser may not send. `true` mints one per run, a string uses that one — for a client of your own that has to build the url itself — and `false` requires none. Defaults to `false`, because requiring one would refuse a client this middleware did not inject; `true` in the next major release.",
+              "description": "A secret the injected client carries and the endpoint requires, so reaching the stream takes something a page has to have been given rather than a header the browser may not send. `true` mints one per run, a string uses that one \u2014 for a client of your own that has to build the url itself \u2014 and `false` requires none. Defaults to `false`, because requiring one would refuse a client this middleware did not inject; `true` in the next major release.",
               "link": "https://github.com/webpack/webpack-dev-middleware#hottoken",
               "anyOf": [
                 {
@@ -433,12 +433,12 @@
                   "enum": ["none", "error", "warn", "info", "log", "verbose"]
                 },
                 "reconnect": {
-                  "description": "How many times to reconnect before giving up.",
+                  "description": "How many times to reconnect before giving up. Unset, Server-Sent Events keep trying for as long as the page is open \u2014 a dev server is expected to come back \u2014 while a WebSocket gives up after 10. Setting it applies to both.",
                   "type": "number",
                   "minimum": 0
                 },
                 "timeout": {
-                  "description": "How long the runtime tolerates silence before reconnecting, in milliseconds.",
+                  "description": "How long the runtime tolerates silence before reconnecting, in milliseconds. Server-Sent Events only: their heartbeat arrives as data the client can see, whereas a WebSocket's is a protocol ping the browser answers without telling JavaScript \u2014 a half-open socket there is terminated by the server instead.",
                   "type": "number",
                   "exclusiveMinimum": 0
                 },
