@@ -142,7 +142,7 @@ describe("hot client (browser)", () => {
 
   it("warns instead of reloading when reload=false", async () => {
     app = await createHotApp({
-      query: "?reload=false",
+      query: "?apply=hmr-only",
       code: unacceptedApp("v1"),
     });
     ({ page, browser } = await runBrowser());
@@ -164,7 +164,7 @@ describe("hot client (browser)", () => {
 
   it("reconnects after a server restart and syncs up on missed builds", async () => {
     app = await createHotApp({
-      query: "?timeout=1000",
+      query: "?connect=%7B%22timeout%22%3A1000%7D",
       code: acceptedApp("v1"),
       // Heartbeats faster than the shortened timeout, so the inactivity
       // watchdog does not churn disconnect/reconnect cycles mid-test.
@@ -197,7 +197,7 @@ describe("hot client (browser)", () => {
 
   it("watchdog-reconnects a silent connection and stays armed afterwards", async () => {
     app = await createHotApp({
-      query: "?timeout=1000",
+      query: "?connect=%7B%22timeout%22%3A1000%7D",
       code: acceptedApp("v1"),
       // A heartbeat far beyond the client timeout leaves the connection open
       // but silent, so only the inactivity watchdog can trigger reconnects.
@@ -221,6 +221,36 @@ describe("hot client (browser)", () => {
     expect(normalizeConsole(console_.messages).slice(0, 3)).toMatchSnapshot();
 
     // The reconnected connection still delivers updates.
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    expect(
+      await page.evaluate(() => document.getElementById("app").textContent),
+    ).toBe("v2");
+  });
+
+  // The same watchdog, with the object set on the middleware instead of
+  // written into the query by hand. Everything between the two is new ground:
+  // an object option is serialized for the entry query, and `String(value)`
+  // there would hand the client `"[object Object]"` — which fails to parse,
+  // is read as the boolean `true`, and so connects with the default timeout
+  // rather than this one. The watchdog never firing is how that looks.
+  it("takes a connect object set on the middleware", async () => {
+    app = await createHotApp({
+      bare: true,
+      hot: { heartbeat: 3600000, client: { connect: { timeout: 1000 } } },
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+
+    // Three connects inside the test's own timeout only happens on a 1000ms
+    // watchdog; on the 20000ms default this waits until the suite gives up.
+    await console_.waitForCount("connected", 3);
+
     app.edit(acceptedApp("v2"));
     await waitForAppText(page, "v2");
 
@@ -379,7 +409,7 @@ describe("hot client (browser)", () => {
 
   it("keeps the page alive after instance.close()", async () => {
     app = await createHotApp({
-      query: "?timeout=1000",
+      query: "?connect=%7B%22timeout%22%3A1000%7D",
       code: acceptedApp("v1"),
     });
     ({ page, browser } = await runBrowser());
@@ -424,7 +454,7 @@ describe("hot client (browser)", () => {
 
   it("builds the SSE url from the runtime public path, slashes intact", async () => {
     app = await createHotApp({
-      query: "?autoConnect=false",
+      query: "?connect=false",
       code: `
         globalThis.hotClient = require(${JSON.stringify(CLIENT_ENTRY)});
         globalThis.setPublicPath = (value) => {
@@ -620,7 +650,7 @@ describe("hot client (browser)", () => {
 
   it("disconnect() during the reconnect window cancels the pending reconnect", async () => {
     app = await createHotApp({
-      query: "?timeout=1000",
+      query: "?connect=%7B%22timeout%22%3A1000%7D",
       hot: { heartbeat: 300 },
       code: `
         globalThis.hotClient = require(${JSON.stringify(CLIENT_ENTRY)});

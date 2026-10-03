@@ -203,19 +203,35 @@ type HotClientOptions = {
    */
   progress?: (boolean | "circular" | "linear") | undefined;
   /**
-   * apply a build through Hot Module Replacement
+   * deprecated, removed in the next major release — use `apply`
    */
   hot?: boolean | undefined;
   /**
-   * reload the page on a build that changed something, when `hot` is off
+   * deprecated, removed in the next major release — use `apply`
    */
   liveReload?: boolean | undefined;
   /**
-   * reload the page when an update cannot be applied
+   * deprecated, removed in the next major release — use `apply`
    */
   reload?: boolean | undefined;
   /**
-   * name of the page-url parameters that turn `hot` and `liveReload` off for a single page
+   * what a build does to the page — apply the update and reload if it cannot be applied, apply it and stop with a message if it cannot, load the page again on any build that changed something, or leave the page alone
+   */
+  apply?: ("hmr" | "hmr-only" | "reload" | "nothing") | undefined;
+  /**
+   * whether to connect when the entry runs, and how the connection is held open
+   */
+  connect?:
+    | (
+        | boolean
+        | {
+            retries?: number;
+            timeout?: number;
+          }
+      )
+    | undefined;
+  /**
+   * prefix of the page-url parameter that overrides `apply` for a single page
    */
   urlPrefix?: string | undefined;
   /**

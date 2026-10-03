@@ -411,20 +411,36 @@
                     }
                   ]
                 },
-                "hot": {
-                  "description": "Apply a build through Hot Module Replacement.",
-                  "type": "boolean"
+                "apply": {
+                  "description": "What a build does to the page: `hmr` applies the update and reloads if it cannot be applied, `hmr-only` applies it and stops with a message if it cannot, `reload` loads the page again on a build that changed something, and `nothing` leaves the page alone until you reload it.",
+                  "enum": ["hmr", "hmr-only", "reload", "nothing"]
                 },
-                "liveReload": {
-                  "description": "Reload the page on a build that changed something, when `hot` is off.",
-                  "type": "boolean"
-                },
-                "reload": {
-                  "description": "Reload the page when an update cannot be applied.",
-                  "type": "boolean"
+                "connect": {
+                  "description": "Whether to connect when the entry runs, and how the connection is held open. `false` does not connect; an object sets `retries` and `timeout`.",
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "retries": {
+                          "description": "How many times to reconnect before giving up. Server-Sent Events keep trying for as long as the page is open unless this is set, since a dev server is expected to come back.",
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "timeout": {
+                          "description": "How long silence is tolerated before reconnecting, in milliseconds. Server-Sent Events only: their heartbeat arrives as data the client can see, whereas a WebSocket's is a protocol ping the browser answers without telling JavaScript.",
+                          "type": "number",
+                          "minimum": 1
+                        }
+                      }
+                    }
+                  ]
                 },
                 "urlPrefix": {
-                  "description": "Names the page-url parameters that turn `hot` and `liveReload` off for a single page.",
+                  "description": "Prefix of the page-url parameter that overrides `apply` for a single page.",
                   "type": "string",
                   "minLength": 1
                 },
@@ -432,23 +448,35 @@
                   "description": "How much the runtime logs to the browser console.",
                   "enum": ["none", "error", "warn", "info", "log", "verbose"]
                 },
+                "dynamicPublicPath": {
+                  "description": "Prefix the endpoint path with the bundle's public path at runtime.",
+                  "type": "boolean"
+                },
+                "hot": {
+                  "description": "Apply a build through Hot Module Replacement. Deprecated, and removed in the next major release: use `apply`.",
+                  "type": "boolean"
+                },
+                "liveReload": {
+                  "description": "Reload the page on a build that changed something, when `hot` is off. Deprecated, and removed in the next major release: use `apply`.",
+                  "type": "boolean"
+                },
+                "reload": {
+                  "description": "Reload the page when an update cannot be applied. Deprecated, and removed in the next major release: use `apply`.",
+                  "type": "boolean"
+                },
+                "autoConnect": {
+                  "description": "Connect as soon as the entry runs. Deprecated, and removed in the next major release: use `connect`.",
+                  "type": "boolean"
+                },
                 "reconnect": {
-                  "description": "How many times to reconnect before giving up. Unset, Server-Sent Events keep trying for as long as the page is open \u2014 a dev server is expected to come back \u2014 while a WebSocket gives up after 10. Setting it applies to both.",
+                  "description": "How many times to reconnect before giving up. Unset, Server-Sent Events keep trying for as long as the page is open \u2014 a dev server is expected to come back \u2014 while a WebSocket gives up after 10. Setting it applies to both. Deprecated, and removed in the next major release: use `connect`.",
                   "type": "number",
                   "minimum": 0
                 },
                 "timeout": {
-                  "description": "How long the runtime tolerates silence before reconnecting, in milliseconds. Server-Sent Events only: their heartbeat arrives as data the client can see, whereas a WebSocket's is a protocol ping the browser answers without telling JavaScript \u2014 a half-open socket there is terminated by the server instead.",
+                  "description": "How long the runtime tolerates silence before reconnecting, in milliseconds. Server-Sent Events only: their heartbeat arrives as data the client can see, whereas a WebSocket's is a protocol ping the browser answers without telling JavaScript \u2014 a half-open socket there is terminated by the server instead. Deprecated, and removed in the next major release: use `connect`.",
                   "type": "number",
                   "exclusiveMinimum": 0
-                },
-                "autoConnect": {
-                  "description": "Connect as soon as the entry runs.",
-                  "type": "boolean"
-                },
-                "dynamicPublicPath": {
-                  "description": "Prefix the endpoint path with the bundle's public path at runtime.",
-                  "type": "boolean"
                 }
               }
             }

@@ -76,6 +76,28 @@ export type OverlayOptions = {
    */
   id?: string | undefined;
 };
+/**
+ * What a build does to the page. One option rather than three booleans,
+ * because only four of their eight combinations differed: `liveReload` was
+ * read only when Hot Module Replacement was off, and `reload` only when it
+ * was on.
+ *
+ * - `"hmr"` — apply the update; reload if it cannot be applied
+ * - `"hmr-only"` — apply the update; say so and stop if it cannot be applied
+ * - `"reload"` — no Hot Module Replacement, reload on a build that changed something
+ * - `"nothing"` — leave the page alone until it is reloaded by hand
+ */
+export type ApplyMode = "hmr" | "hmr-only" | "reload" | "nothing";
+export type ConnectOptions = {
+  /**
+   * how many times to reconnect before giving up
+   */
+  retries?: number | undefined;
+  /**
+   * how long silence is tolerated before reconnecting, in milliseconds — Server-Sent Events only
+   */
+  timeout?: number | undefined;
+};
 export type ClientOptions = {
   /**
    * how the events are carried, matching the server's `hot.transport`
@@ -86,27 +108,19 @@ export type ClientOptions = {
    */
   path: string;
   /**
-   * reconnection timeout in milliseconds
+   * what a build does to the page
    */
-  timeout: number;
+  apply: ApplyMode;
+  /**
+   * whether to connect when the entry runs, and how the connection is held open
+   */
+  connect: boolean | ConnectOptions;
   /**
    * enable the in-page error overlay (same value shape as webpack-dev-server's `client.overlay`)
    */
   overlay: boolean | OverlayOptions;
   /**
-   * apply a build through Hot Module Replacement
-   */
-  hot: boolean;
-  /**
-   * reload the page on a build that changed something, when `hot` is off
-   */
-  liveReload: boolean;
-  /**
-   * reload the page when HMR cannot apply the update
-   */
-  reload: boolean;
-  /**
-   * prefix of the page-url parameters that turn `hot` and `liveReload` off for one page
+   * prefix of the page-url parameters that override `apply` for one page
    */
   urlPrefix: string;
   /**
@@ -121,14 +135,6 @@ export type ClientOptions = {
    * the secret the endpoint requires, when it requires one, put on the connection url — empty when it requires none
    */
   token: string;
-  /**
-   * connect immediately when the entry runs
-   */
-  autoConnect: boolean;
-  /**
-   * how many times to reconnect before giving up, unset to use the transport's default
-   */
-  reconnect?: number | undefined;
   /**
    * show an indicator while a rebuild is in progress — `true` and `"circular"` a small badge, `"linear"` a thin bar across the top of the viewport
    */

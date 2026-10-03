@@ -579,6 +579,32 @@ describe("the browser options as a query", () => {
     expect(rebuilt({ text: "boom" })).toBe(true);
     expect(rebuilt({ text: "" })).toBe(false);
   });
+
+  // `connect` is the second option that may be an object, and its contents
+  // only reach the client if they travel as json: `String(value)` would make
+  // it `"[object Object]"`, which the client fails to parse and then reads as
+  // the boolean `true`, dropping `retries` and `timeout` without a word.
+  it("sends a connect object as json", () => {
+    expect(
+      clientQuery({ connect: { retries: 3, timeout: 5000 } }),
+    ).toStrictEqual({ connect: '{"retries":3,"timeout":5000}' });
+  });
+
+  it("keeps a boolean connect a boolean", () => {
+    expect(clientQuery({ connect: false })).toStrictEqual({ connect: "false" });
+  });
+
+  // The rule is the value's shape rather than the option's name, so an option
+  // that grows an object form later travels without a change here.
+  it("sends any object-valued option as json", () => {
+    const query = clientQuery({ connect: { retries: 1 }, logging: "warn" });
+
+    for (const [key, value] of Object.entries(query)) {
+      expect(value).not.toContain("[object Object]");
+      expect(typeof value).toBe("string");
+      expect(key).toBeTruthy();
+    }
+  });
 });
 
 describe("what injectHotClient leaves alone", () => {
@@ -914,15 +940,25 @@ describe("node and the query take the same names", () => {
     "utf8",
   );
 
+  // The deprecated spellings are read by name from a list rather than written
+  // out one by one, so they have to be collected from the list.
+  const [, legacyList] = /** @type {RegExpMatchArray} */ (
+    clientSource.match(/const LEGACY_OPTIONS = \[([\s\S]*?)\];/)
+  );
+  const legacy = [...legacyList.matchAll(/"([A-Za-z]+)"/g)].map(
+    (found) => found[1],
+  );
+
   /** @type {string[]} every name the client acts on from its query */
   const readByClient = [
-    ...new Set(
-      [
+    ...new Set([
+      ...[
         .../** @type {RegExpMatchArray} */ (
           clientSource.match(/function setOverrides\([\s\S]*?\n\}/)
         )[0].matchAll(/overrides(?:\.([A-Za-z]+)|\["([^"]+)"\])/g),
       ].map((found) => found[1] || found[2]),
-    ),
+      ...legacy,
+    ]),
   ];
 
   /** @type {string[]} every name `hot.client` accepts */
@@ -934,6 +970,9 @@ describe("node and the query take the same names", () => {
     // The extraction above is regex over source; if it ever stops matching it
     // would compare two empty lists and pass while saying nothing.
     expect(readByClient.length).toBeGreaterThan(10);
+    // If the list extraction ever stops matching, the deprecated names would
+    // silently drop out of the comparison.
+    expect(legacy).toHaveLength(6);
   });
 
   it("is one set of names, with nothing on one side only", () => {
@@ -953,7 +992,9 @@ describe("node and the query take the same names", () => {
       hotSource.match(/@typedef \{object\} HotClientOptions[\s\S]*?\n \*\//)
     );
     const declared = [
-      ...typedef.matchAll(/@property \{[^}]+\} ([A-Za-z]+)/g),
+      // One level of nesting, since a type can be an object literal —
+      // `{ retries?: number }` — and `[^}]+` would stop inside it.
+      ...typedef.matchAll(/@property \{(?:[^{}]|\{[^{}]*\})+\} ([A-Za-z]+)/g),
     ].map((found) => found[1]);
 
     expect(declared.toSorted()).toStrictEqual(takenInNode.toSorted());
