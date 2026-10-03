@@ -229,6 +229,36 @@ describe("hot client (browser)", () => {
     ).toBe("v2");
   });
 
+  // The same watchdog, with the object set on the middleware instead of
+  // written into the query by hand. Everything between the two is new ground:
+  // an object option is serialized for the entry query, and `String(value)`
+  // there would hand the client `"[object Object]"` — which fails to parse,
+  // is read as the boolean `true`, and so connects with the default timeout
+  // rather than this one. The watchdog never firing is how that looks.
+  it("takes a connect object set on the middleware", async () => {
+    app = await createHotApp({
+      bare: true,
+      hot: { heartbeat: 3600000, client: { connect: { timeout: 1000 } } },
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+
+    // Three connects inside the test's own timeout only happens on a 1000ms
+    // watchdog; on the 20000ms default this waits until the suite gives up.
+    await console_.waitForCount("connected", 3);
+
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    expect(
+      await page.evaluate(() => document.getElementById("app").textContent),
+    ).toBe("v2");
+  });
+
   it("reconnects manually with setOptionsAndConnect() after disconnect()", async () => {
     app = await createHotApp({
       code: `

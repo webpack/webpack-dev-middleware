@@ -1486,27 +1486,28 @@ function clientQuery(client) {
       continue;
     }
 
-    if (key !== "overlay") {
-      query[key] = String(value);
+    const isObject = typeof value === "object" && value !== null;
+
+    if (key === "overlay" && isObject) {
+      /** @type {Record<string, EXPECTED_ANY>} */
+      const overlay = {};
+
+      for (const [option, setting] of Object.entries(value)) {
+        overlay[option] =
+          OVERLAY_FILTERS.includes(option) && typeof setting === "function"
+            ? encodeURIComponent(filterSource(option, setting))
+            : setting;
+      }
+
+      query.overlay = JSON.stringify(overlay);
       continue;
     }
 
-    if (typeof value !== "object" || value === null) {
-      query.overlay = String(value);
-      continue;
-    }
-
-    /** @type {Record<string, EXPECTED_ANY>} */
-    const overlay = {};
-
-    for (const [option, setting] of Object.entries(value)) {
-      overlay[option] =
-        OVERLAY_FILTERS.includes(option) && typeof setting === "function"
-          ? encodeURIComponent(filterSource(option, setting))
-          : setting;
-    }
-
-    query.overlay = JSON.stringify(overlay);
+    // An option that may be an object goes over as JSON, which is the shape
+    // the client parses it back out of. `String(value)` would hand it
+    // `"[object Object]"`, which parses as nothing and is then read as a
+    // boolean, so the object's contents would be dropped in silence.
+    query[key] = isObject ? JSON.stringify(value) : String(value);
   }
 
   return query;

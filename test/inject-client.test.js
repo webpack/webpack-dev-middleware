@@ -579,6 +579,32 @@ describe("the browser options as a query", () => {
     expect(rebuilt({ text: "boom" })).toBe(true);
     expect(rebuilt({ text: "" })).toBe(false);
   });
+
+  // `connect` is the second option that may be an object, and its contents
+  // only reach the client if they travel as json: `String(value)` would make
+  // it `"[object Object]"`, which the client fails to parse and then reads as
+  // the boolean `true`, dropping `retries` and `timeout` without a word.
+  it("sends a connect object as json", () => {
+    expect(
+      clientQuery({ connect: { retries: 3, timeout: 5000 } }),
+    ).toStrictEqual({ connect: '{"retries":3,"timeout":5000}' });
+  });
+
+  it("keeps a boolean connect a boolean", () => {
+    expect(clientQuery({ connect: false })).toStrictEqual({ connect: "false" });
+  });
+
+  // The rule is the value's shape rather than the option's name, so an option
+  // that grows an object form later travels without a change here.
+  it("sends any object-valued option as json", () => {
+    const query = clientQuery({ connect: { retries: 1 }, logging: "warn" });
+
+    for (const [key, value] of Object.entries(query)) {
+      expect(value).not.toContain("[object Object]");
+      expect(typeof value).toBe("string");
+      expect(key).toBeTruthy();
+    }
+  });
 });
 
 describe("what injectHotClient leaves alone", () => {
