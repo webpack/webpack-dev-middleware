@@ -74,6 +74,31 @@ describe("what each transport makes of reconnect and timeout", () => {
     expect(createSocketDefaultRetries()).toBe(10);
   });
 
+  describe("the shapes `connect` takes", () => {
+    it("uses the defaults when it is `true`", () => {
+      expect(socketOptions({ connect: true })).toStrictEqual({
+        retries: Infinity,
+        retryDelay: expect.any(Function),
+        clientOptions: { timeout: 20_000 },
+      });
+    });
+
+    it("uses them when it is `false` as well", () => {
+      // `false` says not to connect on load, which the entry decides; if
+      // something connects later it should still hold the line the same way.
+      expect(socketOptions({ connect: false }).retries).toBe(Infinity);
+    });
+
+    it("fills in the half that was left out", () => {
+      const { retryDelay, retries } = socketOptions({
+        connect: { retries: 2 },
+      });
+
+      expect(retries).toBe(2);
+      expect(/** @type {() => number} */ (retryDelay)()).toBe(20_000);
+    });
+  });
+
   describe("a WebSocket", () => {
     it("takes the number of attempts as given", () => {
       expect(
