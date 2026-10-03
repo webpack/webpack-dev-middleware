@@ -1,5 +1,325 @@
 # Changelog
 
+## 8.4.0
+
+### Minor Changes
+
+- The hot client now runs in a web worker. It connected only where there was a (by [@alexander-akait](https://github.com/alexander-akait) in [#2430](https://github.com/webpack/webpack-dev-middleware/pull/2430))
+  `window`, which a worker has none of — but it has `EventSource`, `WebSocket`
+  and webpack's runtime, which is all an update needs, so the client reads `self`
+  instead. In a page that is the same object, so nothing changes there.
+  
+  The overlay and the building indicator stay with the page, since a worker has
+  no document. A reload cannot happen from inside one either — there is no
+  `location.reload` in a worker — so when an update cannot be applied the client
+  says so once and leaves the page that started the worker to reload it.
+  
+  `target: "webworker"` compilations get a client from `hot` like any other
+  browser target, so a worker is hot without a line of configuration.
+
+- The client can now keep a page up to date without Hot Module Replacement. `hot` (by [@alexander-akait](https://github.com/alexander-akait) in [#2433](https://github.com/webpack/webpack-dev-middleware/pull/2433))
+  (default `true`) says whether a build is applied as an update, and `liveReload`
+  (default `true`) reloads the page on a build that changed something when it is
+  not — so a project with no `HotModuleReplacementPlugin` still sees its changes.
+  A build that changed nothing is left alone either way.
+  
+  Added a `reload` action, for a change no compilation knows about: publish
+  `{ action: "reload" }` and every page loads itself again, whatever `hot` and
+  `liveReload` are set to. It does what the `subscribe()` example in the README
+  used to have you write by hand.
+  
+  Added `urlPrefix` (default `"webpack-dev-middleware"`), which names the page-url
+  parameters that turn `hot` and `liveReload` off for a single page —
+  `?webpack-dev-middleware-liveReload=false`.
+  
+  `live-reload` used to be accepted as another spelling of `reload`. The two are
+  different — `reload` is the fallback for an update that was tried and could not
+  be applied — so the one that reloads on a build is its own option, `liveReload`.
+  `live-reload` is not accepted under either meaning. It was never released.
+
+- every browser option can be set on the middleware as well as on the query (by [@alexander-akait](https://github.com/alexander-akait) in [#2436](https://github.com/webpack/webpack-dev-middleware/pull/2436))
+  
+  `hot.client` and the injected entry's query are now one option set rather than
+  two overlapping ones. `hot`, `liveReload` and `urlPrefix` were readable from the
+  query alone and can now be set in node:
+  
+  ```js
+  app.use(
+    middleware(compiler, {
+      hot: { client: { hot: false, liveReload: true, urlPrefix: "my-server" } },
+    }),
+  );
+  ```
+  
+  `transport`, `path` and `name` go the other way: they were the middleware's to
+  set, and can now be overridden, which is what a page reaching the endpoint
+  through a proxy or on another origin needs.
+  
+  ```js
+  app.use(
+    middleware(compiler, {
+      hot: { client: { path: "wss://dev.example.com/__webpack_hmr" } },
+    }),
+  );
+  ```
+  
+  The middleware's own values — the resolved `hot.transport`, the resolved
+  `hot.path` and the compilation's name — remain the defaults, so nothing changes
+  for anyone not setting them.
+  
+  A `hot.transport` of your own now gets a client too, when `hot.client.transport`
+  says which of the two built-in protocols yours carries. Without it the client is
+  still yours to add, as before.
+  
+  Every option has one name and no aliases, in `hot.client`, in the entry query
+  and in the page-url parameters alike. The two second spellings the query had
+  picked up from webpack-dev-server — `webSocketURL` for `path` and `live-reload`
+  for `liveReload` — are gone, and so is the `-live-reload` page parameter, which
+  is now `-liveReload`. Neither alias was ever released.
+
+- Post build events to the page the way webpack-dev-server's client does — `webpackInvalid`, `webpackProgress`, `webpackOk`, `webpackStillOk`, `webpackWarnings`, `webpackErrors`, `webpackClose` and `webpackHotUpdate<hash>` — so a plugin or a framework's dev tooling can follow a build without reaching into the client (by [@alexander-akait](https://github.com/alexander-akait) in [#2425](https://github.com/webpack/webpack-dev-middleware/pull/2425))
+
+- Carry the browser runtime's events over a WebSocket with the client `transport=ws` option, or over a transport of your own, and reuse the built-in two from `webpack-dev-middleware/client/sse` and `webpack-dev-middleware/client/ws` (by [@alexander-akait](https://github.com/alexander-akait) in [#2421](https://github.com/webpack/webpack-dev-middleware/pull/2421))
+
+- The overlay now takes one of webpack's errors or warnings as it comes, not (by [@alexander-akait](https://github.com/alexander-akait) in [#2438](https://github.com/webpack/webpack-dev-middleware/pull/2438))
+  only a formatted string:
+  
+  ```js
+  import { showProblems } from "webpack-dev-middleware/client/overlay";
+  
+  showProblems("errors", stats.errors, "build");
+  ```
+  
+  The middleware formats its own payloads on the server, so its client never
+  needed this. A server that sends webpack's error objects to the browser and
+  formats them there — which is what webpack-dev-server does — had to write that
+  formatting itself. It is `webpack-dev-middleware/client/problem` now, and
+  `formatProblem` is there for a console as well as an overlay:
+  
+  ```js
+  import { formatProblem } from "webpack-dev-middleware/client/problem";
+  
+  const { header, body } = formatProblem("error", error);
+  // "ERROR in ./src/app.js 3:0", "Module parse failed: ..."
+  ```
+  
+  The server's own formatting reads the same way as a result, which fixes two
+  things it got wrong. An error webpack names no module for sent a first line
+  holding a single space — and the overlay reads the first line as the heading,
+  so it drew a heading with nothing in it; it now sends the message alone. And a
+  module built by loaders reports its whole request (`babel-loader!./app.js`),
+  which read as noise where the file is what matters; the file comes first now,
+  with the request after it, and `file` is used when webpack sets one.
+
+- Grouped six flat options into `cache` and `mime`: (by [@alexander-akait](https://github.com/alexander-akait) in [#2455](https://github.com/webpack/webpack-dev-middleware/pull/2455))
+  
+  | before            | now                  |
+  | ----------------- | -------------------- |
+  | `etag`            | `cache.etag`         |
+  | `lastModified`    | `cache.lastModified` |
+  | `cacheControl`    | `cache.control`      |
+  | `cacheImmutable`  | `cache.immutable`    |
+  | `mimeTypes`       | `mime.types`         |
+  | `mimeTypeDefault` | `mime.default`       |
+  
+  Four of the sixteen top-level options were the same topic and two more were another, so the list read as an inbox rather than a design. `cacheControl` and `cacheImmutable` also lose their stutter inside the group.
+  
+  Both spellings work. A legacy name warns and names its replacement, and will be removed in the next major release; when a name is set both ways the grouped one applies, so a migration that sets the new name and forgets to delete the old is not silently ignored. The legacy keys stay on `instance.context.options` for anything reading them.
+  
+  `instance.context.options` is now a copy of the object you passed rather than that object itself, so two middlewares built from one options object stay independent — the same reason the `mime.types` table is copied per instance. Adding or replacing a key on your object after building the middleware no longer reaches it. An object nested inside it is still shared, as it has always been — `cache.control` in its object form, and `headers`, behave the same way here as before.
+
+- Added `hot.client`, so the browser runtime's options are set on the middleware (by [@alexander-akait](https://github.com/alexander-akait) in [#2432](https://github.com/webpack/webpack-dev-middleware/pull/2432))
+  along with the rest of the hot configuration instead of in a query string on an
+  entry. It is read when the client is injected; `overlay`, `progress`, `reload`,
+  `logging`, `reconnect`, `timeout`, `autoConnect` and `dynamicPublicPath` are
+  accepted, and `overlay` takes the same object (filter functions included) as the
+  query does. `transport`, `path` and `name` are not accepted: the middleware
+  knows those and sets them itself, so the runtime cannot be pointed somewhere the
+  server is not listening.
+
+- Added `handleUpgrade(req, socket, head)` and `onConnect(fn)`, so a server can (by [@alexander-akait](https://github.com/alexander-akait) in [#2431](https://github.com/webpack/webpack-dev-middleware/pull/2431))
+  decide for itself who may listen to the hot endpoint. `handleUpgrade` answers
+  one WebSocket upgrade for a server that keeps its own `upgrade` listener,
+  instead of handing the whole server over with `attach`, and says whether the
+  request was the endpoint's. `onConnect` is called with each client and the
+  request it joined with, before anything is published to it, so a client closed
+  there is sent nothing at all.
+  
+  `onConnect` is now given the request in both transports; it used to be dropped,
+  which left nothing to judge a client by.
+
+- Added `hot.cors`, which says which origins may reach the hot endpoint from a page on another one, over either transport. (by [@alexander-akait](https://github.com/alexander-akait) in [#2444](https://github.com/webpack/webpack-dev-middleware/pull/2444))
+  
+  The Server-Sent Events endpoint answers every request with `Access-Control-Allow-Origin: *`, inherited from `webpack-hot-middleware`, and nothing could turn it off. A payload carries a build's module paths and the source frames webpack puts in a failed build's errors, so that grant lets any site loaded in the same browser read part of the developer's source. `hot.cors` is how to narrow it: an origin, a list of origins and patterns, a regular expression, a predicate, `{ origin }` as Vite and `expressjs/cors` are configured, `false` for nothing but the endpoint's own origin, or `true` for every one of them. An allowed origin is echoed back with `Vary: Origin` rather than wildcarded.
+  
+  **The two transports default differently, and deliberately.** Server-Sent Events keeps granting every origin, because narrowing it would stop a page served from another origin reading its own build — a breaking change, which waits for a major release. The WebSocket transport is new here, so it starts where the other one is going: local origins only (`localhost` and anything under it, `127.0.0.1`, `[::1]`, any port, either scheme), the same set and the same reasoning as Vite's `server.cors` default. Set `cors` to narrow the event stream today; the next major release will do it for you.
+  
+  Each transport enforces it where its wire allows. The event stream carries the grant or withholds it, and refuses nothing. A WebSocket handshake is not subject to CORS — a browser sends `Origin` and pays no attention to what comes back — so there the upgrade is refused with `403` before the handshake completes, through both `attach(server)` and `handleUpgrade(req, socket, head)`. A request carrying no `Origin` at all, and one whose `Origin` is the one it was addressed to, are allowed either way.
+  
+  A server that already decides for itself who may connect should set `cors: true`, so its own rule is the only one.
+
+- Added `hot.token`: a secret the injected client carries and the hot endpoint (by [@alexander-akait](https://github.com/alexander-akait) in [#2451](https://github.com/webpack/webpack-dev-middleware/pull/2451))
+  requires, so reaching the stream takes something a page has to have been given
+  rather than a header the browser may or may not send.
+  
+  `hot.cors` is answered by `Origin`, and that is its weakness. A browser omits
+  `Origin` and the whole `Sec-Fetch-*` family when the destination is not
+  potentially trustworthy — plain `http` to anything but `localhost`, which
+  `host: "0.0.0.0"` gives you. webpack-dev-server shipped two fixes built on
+  those headers and both were bypassed exactly that way, CVE-2026-6402 and then
+  CVE-2026-14620. A token asks the browser to volunteer nothing.
+  
+  Off by default on both transports, and `true` in the next major release. A
+  token only reaches the browser on the entry the middleware adds, and `inject`
+  being on does not mean an entry was added: it is skipped when every entry point
+  already pulls the client in, when `hot.transport` is a function, and for a
+  non-web target. Requiring one by default would turn each of those into a `403`
+  on every client. Set `token: true` to turn it on, and if you do so where no
+  client was injected the middleware warns rather than leaving you with an
+  unexplained refusal.
+  
+  With the client injected, that is all it takes: it is handed the token and puts
+  it on its connection url. `hot.inject: false` turns the requirement off — the
+  token travels in the entry the middleware adds, so with nothing injected there
+  is no way to hand one over. A configuration that lists the client entry itself
+  is built before the middleware exists and cannot carry a minted token, so give
+  it a fixed one both sides know, or read the minted one from `instance.token`.
+  
+  What it does not protect: the client reads the token from its entry query, so
+  it is a string in the bundle. Anything that can already read the bundle
+  cross-origin reads the token with it, and over plain `http` to a non-localhost
+  address nothing stops that unless your server sends
+  `Cross-Origin-Resource-Policy`. This hardens every case where the bundle is not
+  readable, and is defence in depth in the case where it is.
+
+- Choose how hot module replacement events reach the clients with `hot.transport`: Server-Sent Events (the default), a WebSocket, or a transport of your own (by [@alexander-akait](https://github.com/alexander-akait) in [#2420](https://github.com/webpack/webpack-dev-middleware/pull/2420))
+
+- `hot` now puts the client runtime and `HotModuleReplacementPlugin` into the compilation itself, so enabling it is the whole of what a webpack configuration needs — no entry to add, no plugin to apply. The client is told the endpoint and the transport the middleware resolved, so the two cannot drift apart. A configuration that already has the client as an entry is left alone, nothing is injected into a compilation that does not target the browser, and `hot.inject: false` turns it off for anyone who would rather wire it themselves (by [@alexander-akait](https://github.com/alexander-akait) in [#2430](https://github.com/webpack/webpack-dev-middleware/pull/2430))
+
+- Added `publish(payload)` to the instance, which puts a payload of your own on the hot stream. The middleware publishes what it knows about — a build starting, finishing, failing — and anything else a server measures is its own; `ProgressPlugin` is the example. The bundled client already renders `{ action: "progress" }`, so a server that applies the plugin itself now has somewhere to put what it reports. Nothing is sent when no client is connected, and it does nothing when `hot` is off. (by [@alexander-akait](https://github.com/alexander-akait) in [#2451](https://github.com/webpack/webpack-dev-middleware/pull/2451))
+
+- Extensions resolve through `mime-db` directly, rather than through (by [@alexander-akait](https://github.com/alexander-akait) in [#2449](https://github.com/webpack/webpack-dev-middleware/pull/2449))
+  `mime-types`. `mime-db` is the data, and webpack itself already depends on it
+  and scores it the same way, so a webpack project now installs one package here
+  instead of two over the same table. Every extension in `mime-db` resolves to
+  the byte-identical media type, `Content-Type` and charset it did before.
+  
+  The table is also built per middleware instance now. The `mimeTypes` option
+  used to be applied by writing into the table `mime-types` exports, which is
+  one object shared by everything in the process that requires it: two
+  middlewares accumulated into a single map rather than each keeping its own,
+  and anything else using `mime-types` inherited whatever a middleware had
+  registered. The option is read ahead of the known extensions instead, so it
+  belongs to the instance it was given to and the database is left alone.
+
+- `overlay.id` sets the id of the overlay element, so a package embedding this overlay can keep the id its own users already query instead of making them all chase a rename. The card follows as `<id>-card`, and the default is unchanged (by [@alexander-akait](https://github.com/alexander-akait) in [#2429](https://github.com/webpack/webpack-dev-middleware/pull/2429))
+
+- `progress` now takes `"circular"` and `"linear"` as well as a boolean, the same values as webpack-dev-server's `client.progress`. `"circular"` is the badge this package has always shown, and what `true` still selects; `"linear"` renders a thin bar across the top of the viewport (by [@alexander-akait](https://github.com/alexander-akait) in [#2426](https://github.com/webpack/webpack-dev-middleware/pull/2426))
+
+- A custom `hot.transport` now needs only four methods — `onConnect`, `publish`, `publishTo` and `close`. `handler` and `hasClients` became optional: without a `handler` a request on the endpoint's path is answered `426 Upgrade Required`, and without `hasClients` a payload is built and the transport decides for itself in `publish`. A transport that implements all six keeps working unchanged (by [@alexander-akait](https://github.com/alexander-akait) in [#2427](https://github.com/webpack/webpack-dev-middleware/pull/2427))
+
+### Patch Changes
+
+- Fixed `autoConnect` on the client's query being read differently from every other boolean there. It tested `=== "true"` while the rest test `!== "false"`, so a value it did not recognise — `?autoConnect=1` — turned the client off rather than leaving it on, and since the default is already on, turning it off is the only thing anyone writes it for. (by [@alexander-akait](https://github.com/alexander-akait) in [#2456](https://github.com/webpack/webpack-dev-middleware/pull/2456))
+
+- Bound the internal url and `Range` header caches, which grew for the life of the process and were never released, even by `close()`. (by [@alexander-akait](https://github.com/alexander-akait) in [#2405](https://github.com/webpack/webpack-dev-middleware/pull/2405))
+
+- Ship type declarations for the `./client`, `./client/sse`, `./client/ws`, `./client/indicator` and `./client/overlay` exports, and mark the client as the ES modules it has always been. A TypeScript consumer importing one of them got `any` — or, under `node16`/`nodenext` resolution, the module namespace instead of the default export, because the files are ES modules inside a CommonJS package with nothing saying so (by [@alexander-akait](https://github.com/alexander-akait) in [#2428](https://github.com/webpack/webpack-dev-middleware/pull/2428))
+
+- Say `connected` whichever transport the client used, rather than only Server-Sent Events (by [@alexander-akait](https://github.com/alexander-akait) in [#2423](https://github.com/webpack/webpack-dev-middleware/pull/2423))
+
+- Deprecated the `hot.progress` option; it will be removed in the next major release and keeps working until then. It applied `ProgressPlugin` to your compiler, which leaves a server that applies one itself — webpack-dev-server does — with two of them on one compiler. Apply it yourself and hand the result to [`publish`](https://github.com/webpack/webpack-dev-middleware#publishpayload), rounding the percent and dropping a tick that repeats one as the option did for you. The browser end of this, `hot.client.progress`, is unaffected and stays. (by [@alexander-akait](https://github.com/alexander-akait) in [#2451](https://github.com/webpack/webpack-dev-middleware/pull/2451))
+
+- Fixed an empty overlay that covered the page and could only be dismissed by (by [@alexander-akait](https://github.com/alexander-akait) in [#2437](https://github.com/webpack/webpack-dev-middleware/pull/2437))
+  hand. A source reporting an empty list of problems — which is how a source
+  says it has nothing — was kept as a slot, so the union of every source's
+  problems was non-empty and the card mounted with nothing in it. Worse when
+  another source then cleared: the overlay stayed, showing only its dismiss
+  hint, on page `-1`. An empty list is now the source having nothing, and the
+  overlay closes when no source has anything left.
+  
+  Fixed the building indicator staying on the page for good after a
+  multi-compiler build. A progress payload carries no compilation name, so the
+  client attributed it to whichever compilation most recently started building —
+  and a payload from a still-running compilation could re-mark a sibling that
+  had already finished, and would never report again, as building. Progress now
+  reports on the build that is running instead of starting one, so the badge
+  goes away once every compilation that started has reported back.
+
+- The overlay recognizes a file reference in every shape a stack frame carries (by [@alexander-akait](https://github.com/alexander-akait) in [#2439](https://github.com/webpack/webpack-dev-middleware/pull/2439))
+  it, not just webpack's own relative paths. An absolute path
+  (`/home/me/src/app.js:3:1`), a Windows one (`C:\src\app.js:4:2`) and a
+  `file://` url are all clickable now; before, only `./` and `../` were, so a
+  runtime error's stack offered nothing to open.
+  
+  A frame in webpack's generated runtime is left alone. It has no file behind it,
+  and now that an absolute path is recognized it would otherwise be offered for
+  opening and the endpoint asked for something it cannot do.
+  
+  A file reference inside a url is left to the url. `https://example.test/app.js`
+  is a link, and its path is not somewhere an editor can go.
+  
+  An editor that does not open says so, rather than nothing happening: the
+  reference gets a title explaining it, and the console gets the reason and which
+  endpoint was asked.
+
+- Move focus into the error overlay when it opens, keep it on the navigation while paging through problems, and give it back to whatever the page had focused — a control inside an open shadow root included — when it closes, and give its frame an accessible name (by [@alexander-akait](https://github.com/alexander-akait) in [#2423](https://github.com/webpack/webpack-dev-middleware/pull/2423))
+
+- Validate options with a precompiled schema to cut ~155ms from startup. (by [@alexander-akait](https://github.com/alexander-akait) in [#2413](https://github.com/webpack/webpack-dev-middleware/pull/2413))
+
+- Fixed two broken links in the README: the `etag` row of the options table and the two references to the `attach` method pointed at headings that do not exist. (by [@alexander-akait](https://github.com/alexander-akait) in [#2451](https://github.com/webpack/webpack-dev-middleware/pull/2451))
+
+- `hot.client.reconnect` now applies to Server-Sent Events as well. It was overridden to `Infinity` there, so asking for a bounded number of attempts over the default transport did nothing. Unset still means "keep trying for as long as the page is open", since a dev server is expected to come back and a tab left open across a restart has to find it again. (by [@alexander-akait](https://github.com/alexander-akait) in [#2457](https://github.com/webpack/webpack-dev-middleware/pull/2457))
+  
+  `hot.client.timeout` is documented as Server-Sent Events only, which is what it always was: that transport sends its heartbeat as data the client can see, while a WebSocket sends a protocol ping the browser answers without telling JavaScript — a silence watchdog there would fire on a healthy idle connection, and the half-open case it would catch is handled by the server, which terminates a socket that stops answering. It is no longer handed to a WebSocket client whose constructor takes no options.
+  
+  Both decisions now live in one place, `client-src/utils/socket-options.js`, with tests for each transport. The documented default for `reconnect` was wrong for the default transport while it was being ignored there: unset, Server-Sent Events keep trying for as long as the page is open and a WebSocket gives up after 10.
+
+- Dropped the `ansi-html-community` dependency. The overlay's ANSI-to-HTML (by [@alexander-akait](https://github.com/alexander-akait) in [#2442](https://github.com/webpack/webpack-dev-middleware/pull/2442))
+  conversion is `client-src/utils/ansi-html.js` now, which is the third of that
+  package this project used — the rest was surface it never touched, and it
+  shipped into every consumer's browser bundle. Four production dependencies
+  instead of five, and one fewer unmaintained package in the supply chain (its
+  last release was 0.0.8 in April 2022, itself a fork of the abandoned
+  `ansi-html`).
+  
+  Output is byte-identical for the sequences a build actually produces. Four
+  things it got wrong are fixed:
+  
+  - A palette entry of `"transparent"`, which is how the overlay says to leave
+    the page's own colour alone, became `color:#transparent`. That is not a
+    colour, so the reset worked only because browsers drop an invalid
+    declaration, and the inverse sequence did nothing at all.
+  - A sequence carrying more than one parameter (`\u001b[1;31m`) matched nothing,
+    so the escape stayed in the output as text for the reader to see.
+  - `\u001b[m`, which is `\u001b[0m` written short, was left in the output the
+    same way.
+  - A closing sequence with nothing open emitted an unmatched `</span>`. The
+    highlighters wrap their own spans around this output, so a stray close could
+    end one of theirs early.
+  - Every closing tag was a `</span>`, whatever was open. `\u001b[3m` opens an
+    `<i>`, so an unclosed italic came out as `<i>x</span>`, and an interleaved
+    sequence crossed its tags: `<i><span>x</i></span>`. Each open element now
+    carries its own closing tag, so the markup nests whatever the sequences do.
+  
+  The conversion had no test of its own while it was a dependency. It has 25 now,
+  one of which walks every three-sequence combination and checks the result
+  nests.
+
+- Do not reload a page that is already navigating away, and reload the nearest ancestor that has a url of its own when the app runs in an `about:blank` iframe (by [@alexander-akait](https://github.com/alexander-akait) in [#2425](https://github.com/webpack/webpack-dev-middleware/pull/2425))
+
+- Give an `overlay.runtimeErrors` filter the rejected value through `error.cause`, so a rejection carrying a plain object rather than an `Error` can still be judged on what it carries (by [@alexander-akait](https://github.com/alexander-akait) in [#2425](https://github.com/webpack/webpack-dev-middleware/pull/2425))
+
+- Keep an uncaught runtime error in the overlay when a build succeeds — a successful compilation says nothing about an error the page threw on its own, and it used to dismiss one raised moments earlier by an entry that threw while it was still evaluating. A rebuild still clears it, since that replaces the code the error came from (by [@alexander-akait](https://github.com/alexander-akait) in [#2424](https://github.com/webpack/webpack-dev-middleware/pull/2424))
+
+- Make the two client transports behave alike: neither logs a raw connection error, and neither reports anything after being closed (by [@alexander-akait](https://github.com/alexander-akait) in [#2423](https://github.com/webpack/webpack-dev-middleware/pull/2423))
+
+- Hardened the path-traversal guards in `getFilenameFromUrl`. The remainder left after the `publicPath` prefix is stripped is now checked for `..` on its own, before it is joined onto the output root. (by [@alexander-akait](https://github.com/alexander-akait) in [#2445](https://github.com/webpack/webpack-dev-middleware/pull/2445))
+  
+  The existing `..` guard tests the whole request path _normalized_, which catches far less than it appears to: `/public/../secret` normalizes to `secret` with no `..` segment left to match, and `/assets../secret` never had a `..` segment to begin with — it is a sibling sharing the prefix, which a `publicPath` with no trailing slash makes possible. Both of those were left to the containment check on the final resolved path, so a single check stood between two classes of traversal and the output root. There are now two independent guards: one on the shape of the request, one on where it resolved.
+  
+  A `..` that walks out of the output root and back into it — `/assets../dist/file.js`, which resolves to a file that is inside — is now refused rather than served. It was only ever a second spelling of a path reachable directly, and one whose shape cannot be told apart from an escape.
+
 ## 8.3.0
 
 ### Minor Changes
