@@ -32,6 +32,9 @@
  * @property {string=} token the secret the runtime puts on its connection url, `hot.token` by default
  * @property {(boolean | Record<string, EXPECTED_ANY>)=} overlay show build problems and uncaught runtime errors in an overlay
  * @property {(boolean | "circular" | "linear")=} progress show an indicator while a rebuild is in progress
+ * @property {boolean=} hot deprecated, removed in the next major release — use `apply`
+ * @property {boolean=} liveReload deprecated, removed in the next major release — use `apply`
+ * @property {boolean=} reload deprecated, removed in the next major release — use `apply`
  * @property {("hmr" | "hmr-only" | "reload" | "nothing")=} apply what a build does to the page — apply the update and reload if it cannot be applied, apply it and stop with a message if it cannot, load the page again on any build that changed something, or leave the page alone
  * @property {(boolean | { retries?: number, timeout?: number })=} connect whether to connect when the entry runs, and how the connection is held open
  * @property {string=} urlPrefix prefix of the page-url parameter that overrides `apply` for a single page

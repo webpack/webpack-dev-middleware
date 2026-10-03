@@ -273,3 +273,108 @@ describe("live reload (browser)", () => {
     );
   });
 });
+
+// The six names `apply` and `connect` replaced still work, and are folded into
+// them, until the next major release. Driven through the real client in a
+// browser, since the folding happens where the query is read.
+describe("the deprecated browser options (browser)", () => {
+  let app;
+  let browser;
+  let page;
+
+  afterEach(async () => {
+    ({ browser, app } = await closeE2e(browser, app));
+  });
+
+  it("takes `hot=false` as asking for a reload", async () => {
+    // `hot: false` left `liveReload` on, so a build reached the page by
+    // loading it again — `apply: "reload"` by another name.
+    app = await createHotApp({ query: "?hot=false", code: acceptedApp("v1") });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    // Gone, so the page was loaded again rather than updated in place.
+    expect(await readReloadMarker(page)).toBeUndefined();
+    expect(console_.messages.join("\n")).toContain("deprecated");
+  });
+
+  it("takes `hot=false&liveReload=false` as asking for nothing", async () => {
+    app = await createHotApp({
+      query: "?hot=false&liveReload=false",
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await settle();
+
+    // Neither applied nor reloaded.
+    expect(await appText(page)).toBe("v1");
+    expect(await readReloadMarker(page)).toBe(true);
+  });
+
+  it("lets `apply` win when both spellings are given", async () => {
+    // The other way round, a migration that sets the new name and leaves the
+    // old one behind would silently not apply.
+    app = await createHotApp({
+      query: "?hot=false&apply=hmr",
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    // `apply: "hmr"` updated in place, so the marker survived.
+    expect(await readReloadMarker(page)).toBe(true);
+  });
+
+  it("takes `autoConnect=false` as not connecting", async () => {
+    app = await createHotApp({
+      query: "?autoConnect=false",
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+
+    expect(console_.messages.join("\n")).not.toContain("connected");
+    expect(console_.messages.join("\n")).toContain("deprecated");
+  });
+
+  it("says which deprecated names it found", async () => {
+    app = await createHotApp({
+      query: "?reconnect=3&timeout=5000",
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("deprecated");
+
+    const said = console_.messages.join("\n");
+
+    expect(said).toContain("reconnect");
+    expect(said).toContain("timeout");
+    expect(said).toContain("'apply' and 'connect'");
+  });
+});

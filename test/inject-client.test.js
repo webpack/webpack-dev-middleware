@@ -914,15 +914,25 @@ describe("node and the query take the same names", () => {
     "utf8",
   );
 
+  // The deprecated spellings are read by name from a list rather than written
+  // out one by one, so they have to be collected from the list.
+  const [, legacyList] = /** @type {RegExpMatchArray} */ (
+    clientSource.match(/const LEGACY_OPTIONS = \[([\s\S]*?)\];/)
+  );
+  const legacy = [...legacyList.matchAll(/"([A-Za-z]+)"/g)].map(
+    (found) => found[1],
+  );
+
   /** @type {string[]} every name the client acts on from its query */
   const readByClient = [
-    ...new Set(
-      [
+    ...new Set([
+      ...[
         .../** @type {RegExpMatchArray} */ (
           clientSource.match(/function setOverrides\([\s\S]*?\n\}/)
         )[0].matchAll(/overrides(?:\.([A-Za-z]+)|\["([^"]+)"\])/g),
       ].map((found) => found[1] || found[2]),
-    ),
+      ...legacy,
+    ]),
   ];
 
   /** @type {string[]} every name `hot.client` accepts */
@@ -934,6 +944,9 @@ describe("node and the query take the same names", () => {
     // The extraction above is regex over source; if it ever stops matching it
     // would compare two empty lists and pass while saying nothing.
     expect(readByClient.length).toBeGreaterThan(10);
+    // If the list extraction ever stops matching, the deprecated names would
+    // silently drop out of the comparison.
+    expect(legacy).toHaveLength(6);
   });
 
   it("is one set of names, with nothing on one side only", () => {

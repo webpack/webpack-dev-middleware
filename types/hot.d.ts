@@ -203,6 +203,18 @@ type HotClientOptions = {
    */
   progress?: (boolean | "circular" | "linear") | undefined;
   /**
+   * deprecated, removed in the next major release — use `apply`
+   */
+  hot?: boolean | undefined;
+  /**
+   * deprecated, removed in the next major release — use `apply`
+   */
+  liveReload?: boolean | undefined;
+  /**
+   * deprecated, removed in the next major release — use `apply`
+   */
+  reload?: boolean | undefined;
+  /**
    * what a build does to the page — apply the update and reload if it cannot be applied, apply it and stop with a message if it cannot, load the page again on any build that changed something, or leave the page alone
    */
   apply?: ("hmr" | "hmr-only" | "reload" | "nothing") | undefined;

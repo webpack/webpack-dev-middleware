@@ -23,4 +23,4 @@ middleware(compiler, {
 });
 ```
 
-Both options shipped after 8.3.0, so there is nothing released to keep working and no aliases are needed.
+All six old names keep working. Each warns, in node when it is set on `hot.client` and in the browser when it arrives on the query — a hand-written entry has only the second channel — and the option that replaced it wins when both are given, so a migration that sets the new name and leaves the old one behind is not silently ignored. They are removed in the next major release.

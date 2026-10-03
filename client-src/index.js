@@ -145,6 +145,81 @@ function decodeOverlayOptions(overlayOptions) {
 
 setLogLevel(options.logging);
 
+// The six names `apply` and `connect` replaced. Still read, still folded into
+// the two that replaced them, and gone in the next major release.
+//
+// TODO in the next major release remove this and `LEGACY_OPTIONS`.
+const LEGACY_OPTIONS = [
+  "hot",
+  "liveReload",
+  "reload",
+  "autoConnect",
+  "reconnect",
+  "timeout",
+];
+
+/**
+ * Was it set at all, and if so is it anything but `"false"`? The reading every
+ * boolean on this query has always had.
+ * @param {string | undefined} value the raw value
+ * @param {boolean} fallback what it means when it was not set
+ * @returns {boolean} what it says
+ */
+function legacyBoolean(value, fallback) {
+  return value === undefined ? fallback : value !== "false";
+}
+
+/**
+ * Read the deprecated spellings and fold them into the options that replaced
+ * them. The new spelling wins when both are given, so a migration that sets it
+ * and leaves the old one behind is not silently ignored.
+ * @param {Record<string, string>} overrides parsed query-string overrides
+ * @returns {void}
+ */
+function foldLegacyOptions(overrides) {
+  const used = LEGACY_OPTIONS.filter((name) => overrides[name] !== undefined);
+
+  if (used.length === 0) {
+    return;
+  }
+
+  log.warn(
+    `${used.join(", ")} ${used.length === 1 ? "is" : "are"} deprecated and will be removed in the next major release. Use 'apply' and 'connect' instead.`,
+  );
+
+  if (overrides.apply === undefined) {
+    // `hot` decided whether an update was applied in place; `reload` what
+    // happened when it could not be; `liveReload` what happened instead when
+    // `hot` was off. Four of their eight combinations differed, which is what
+    // the four modes are.
+    const hot = legacyBoolean(overrides.hot, true);
+
+    options.apply = hot
+      ? legacyBoolean(overrides.reload, true)
+        ? "hmr"
+        : "hmr-only"
+      : legacyBoolean(overrides.liveReload, true)
+        ? "reload"
+        : "nothing";
+  }
+
+  if (overrides.connect === undefined) {
+    if (!legacyBoolean(overrides.autoConnect, true)) {
+      options.connect = false;
+    } else {
+      const retries = Number(overrides.reconnect);
+      const timeout = Number(overrides.timeout);
+
+      options.connect = {
+        ...(overrides.reconnect !== undefined && retries >= 0
+          ? { retries }
+          : {}),
+        ...(overrides.timeout !== undefined && timeout > 0 ? { timeout } : {}),
+      };
+    }
+  }
+}
+
 /** @type {ApplyMode[]} */
 const APPLY_MODES = ["hmr", "hmr-only", "reload", "nothing"];
 
@@ -216,12 +291,8 @@ function applyMode() {
  * @param {Record<string, string>} overrides parsed query-string overrides
  */
 function setOverrides(overrides) {
-  if (overrides.autoConnect) {
-    // `!== "false"` like every other boolean here, not `=== "true"`: the
-    // default is already on, so the only thing anyone writes this for is
-    // turning it off, and `?autoConnect=1` used to do that by accident.
-    options.autoConnect = overrides.autoConnect !== "false";
-  }
+  // TODO in the next major release remove this, and the six names it reads.
+  foldLegacyOptions(overrides);
   if (overrides.transport === "sse" || overrides.transport === "ws") {
     options.transport = overrides.transport;
   }
