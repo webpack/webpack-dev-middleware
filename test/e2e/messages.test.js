@@ -170,6 +170,24 @@ describe("messages posted to the page (browser)", () => {
     expect(said).not.toContain("[webpack-dev-middleware]");
   });
 
+  // Whitespace before the json, which a query can carry and a check on the
+  // first character would miss — the object would be read as the level, and
+  // the name silently lost.
+  it("reads the name whatever the json is padded with", async () => {
+    hotApp = await createHotApp({
+      query: `?logging=${encodeURIComponent(' {"level":"info","name":"padded-server"} ')}`,
+      code: recordingApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    expect(console_.messages.join("\n")).toContain("[padded-server]");
+  });
+
   it("says when the connection went away, once per outage", async () => {
     hotApp = await createHotApp({
       query: "?timeout=1000",

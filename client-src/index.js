@@ -356,18 +356,23 @@ function setOverrides(overrides) {
     // A level, or a json object carrying the level and the name to label
     // messages with — the same two shapes the other options take.
     let logging = overrides.logging;
+    let parsed;
 
-    if (logging.charAt(0) === "{") {
-      try {
-        const parsed = JSON.parse(logging);
+    try {
+      parsed = JSON.parse(logging);
+    } catch {
+      // Not json, so it is the level it looks like.
+    }
 
-        logging = parsed.level;
+    // Only an object is the second shape. `JSON.parse` also accepts a bare
+    // number, boolean or quoted string, and a level is none of those — asking
+    // what came back rather than what the text started with also means
+    // leading whitespace does not hide it.
+    if (parsed && typeof parsed === "object") {
+      logging = parsed.level;
 
-        if (parsed.name) {
-          options.loggerName = parsed.name;
-        }
-      } catch {
-        // Not an object after all; taken as the level it looks like.
+      if (parsed.name) {
+        options.loggerName = parsed.name;
       }
     }
 
