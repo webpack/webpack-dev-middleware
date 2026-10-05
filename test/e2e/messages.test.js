@@ -148,6 +148,28 @@ describe("messages posted to the page (browser)", () => {
     );
   });
 
+  // A package embedding this runtime is the one the developer installed and
+  // the one they would report a problem to, so it labels the console with its
+  // own name — the same reason the overlay's element id is settable.
+  it("labels the console with the name it was given", async () => {
+    hotApp = await createHotApp({
+      bare: true,
+      hot: { client: { logging: { level: "info", name: "my-dev-server" } } },
+      code: recordingApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    const said = console_.messages.join("\n");
+
+    expect(said).toContain("[my-dev-server]");
+    expect(said).not.toContain("[webpack-dev-middleware]");
+  });
+
   it("says when the connection went away, once per outage", async () => {
     hotApp = await createHotApp({
       query: "?timeout=1000",

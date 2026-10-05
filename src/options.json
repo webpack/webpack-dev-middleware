@@ -445,8 +445,40 @@
                   "minLength": 1
                 },
                 "logging": {
-                  "description": "How much the runtime logs to the browser console.",
-                  "enum": ["none", "error", "warn", "info", "log", "verbose"]
+                  "description": "Logger level in the browser, or an object carrying the level and the name every message is labelled with in the console \u2014 a package embedding this runtime is the one a developer would report a problem to, so it can say its own name.",
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "none",
+                        "error",
+                        "warn",
+                        "info",
+                        "log",
+                        "verbose"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "level": {
+                          "enum": [
+                            "none",
+                            "error",
+                            "warn",
+                            "info",
+                            "log",
+                            "verbose"
+                          ]
+                        },
+                        "name": {
+                          "description": "What every message is labelled with in the console. Defaults to this package's name.",
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  ]
                 },
                 "dynamicPublicPath": {
                   "description": "Prefix the endpoint path with the bundle's public path at runtime.",

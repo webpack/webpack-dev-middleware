@@ -128,6 +128,10 @@ export type ClientOptions = {
    */
   logging: LogLevel;
   /**
+   * what to label messages with in the console
+   */
+  loggerName?: string | undefined;
+  /**
    * limit updates to this compilation name
    */
   name: string;

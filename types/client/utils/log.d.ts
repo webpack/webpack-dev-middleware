@@ -3,6 +3,10 @@
  * @param {LogLevel} level log level (or `false` for off, `true` for default)
  */
 export function setLogLevel(level: LogLevel): void;
+/**
+ * @param {string} name what to label messages with
+ */
+export function setLogName(name: string): void;
 export namespace log {
   let error: (...args: unknown[]) => void;
   let warn: (...args: unknown[]) => void;
