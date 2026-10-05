@@ -422,11 +422,7 @@ type HandleUpgrade = (
   head: Buffer,
 ) => boolean;
 type Publish = (
-  payload:
-    | import("./hot").Payload
-    | {
-        action: string;
-      },
+  payload: import("./hot").Payload | import("./hot").CustomPayload,
 ) => any;
 type OnConnect = (
   fn: (client: EXPECTED_ANY, req: IncomingMessage) => void,

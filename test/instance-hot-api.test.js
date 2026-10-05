@@ -86,6 +86,27 @@ describe("the hot API on the middleware instance", () => {
 
       expect(publish).toHaveBeenCalledWith(payload);
     });
+
+    // A payload of someone else's carries whatever they measured, not a
+    // subset this middleware approved. webpack-dev-server's progress plugin
+    // reports which plugin a tick came from, and a `subscribe` handler is
+    // what reads it — so the keys travel untouched rather than being typed
+    // or filtered down to the ones the bundled client happens to render.
+    it("does not pick over the keys of a payload of your own", () => {
+      const instance = build({ hot: true });
+      const publish = jest.spyOn(instance.context.hot, "publish");
+      const payload = {
+        action: "progress",
+        percent: 42,
+        message: "building",
+        pluginName: "ProgressPlugin",
+        anything: { nested: true },
+      };
+
+      instance.publish(payload);
+
+      expect(publish).toHaveBeenCalledWith(payload);
+    });
   });
 
   describe("with hot disabled", () => {

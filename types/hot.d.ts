@@ -8,7 +8,7 @@ export = createHot;
  * @property {(req: IncomingMessage, socket: Duplex, head: Buffer) => boolean} handleUpgrade answer one WebSocket upgrade, for a caller that owns the server's `upgrade` event and wants to decide each one; returns false when the request is not the endpoint's, or the transport does not answer upgrades
  * @property {(fn: (client: EXPECTED_ANY, req: IncomingMessage) => void) => void} onConnect called with each client once it has joined, and the request it joined with, before anything is published to it
  * @property {(req: IncomingMessage, res: ServerResponse) => void} handle answer a request on the endpoint's path
- * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
+ * @property {(payload: Payload | CustomPayload) => void} publish publish a payload to every client
  * @property {() => void} close end every client and detach the heartbeat
  */
 /**
@@ -52,6 +52,7 @@ declare namespace createHot {
     CorsOrigin,
     CorsOption,
     Payload,
+    CustomPayload,
     EXPECTED_ANY,
     WebSocketLikeClient,
     StreamClient,
@@ -141,13 +142,7 @@ type HotInstance = {
   /**
    * publish a payload to every client
    */
-  publish: (
-    payload:
-      | Payload
-      | {
-          action: string;
-        },
-  ) => void;
+  publish: (payload: Payload | CustomPayload) => void;
   /**
    * end every client and detach the heartbeat
    */
@@ -319,6 +314,10 @@ type CorsOption =
   | {
       origin?: CorsOrigin | boolean;
     };
+/**
+ * What this middleware publishes. `action` is the only part the bundled client
+ * reads for dispatch; the rest is what each action carries.
+ */
 type Payload = {
   /**
    * action
@@ -357,6 +356,19 @@ type Payload = {
    */
   errors?: string[] | undefined;
 };
+/**
+ * A payload of someone else's, which `publish` exists to carry.
+ *
+ * Only `action` is required, since that is all a client needs to tell one
+ * apart. Everything beyond it belongs to whoever is publishing — a server with
+ * its own `ProgressPlugin` has more to say about a tick than `percent` and
+ * `message`, and a `subscribe` handler of theirs is what reads it. Typing it
+ * shut would make the published-payload shape this middleware's to approve,
+ * which is the opposite of what this is for.
+ */
+type CustomPayload = {
+  action: string;
+} & Record<string, EXPECTED_ANY>;
 type EXPECTED_ANY = any;
 /**
  * The WebSocket members a client is published to through. Structural rather than
@@ -405,24 +417,11 @@ type ClientStream<TClient extends unknown = StreamClient> = {
   /**
    * publish a payload to every client
    */
-  publish: (
-    payload:
-      | Payload
-      | {
-          action: string;
-        },
-  ) => void;
+  publish: (payload: Payload | CustomPayload) => void;
   /**
    * publish a payload to a single client
    */
-  publishTo: (
-    client: TClient,
-    payload:
-      | Payload
-      | {
-          action: string;
-        },
-  ) => void;
+  publishTo: (client: TClient, payload: Payload | CustomPayload) => void;
   /**
    * end every client and stop the heartbeat
    */
