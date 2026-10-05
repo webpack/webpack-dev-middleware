@@ -60,6 +60,7 @@ declare namespace wdm {
     Attach,
     HandleUpgrade,
     Publish,
+    PublishTo,
     OnConnect,
     Close,
     AdditionalMethods,
@@ -424,6 +425,14 @@ type HandleUpgrade = (
 type Publish = (
   payload: import("./hot").Payload | import("./hot").CustomPayload,
 ) => any;
+type PublishTo = (
+  client: EXPECTED_ANY,
+  payload:
+    | import("./hot").Payload
+    | {
+        action: string;
+      },
+) => any;
 type OnConnect = (
   fn: (client: EXPECTED_ANY, req: IncomingMessage) => void,
 ) => any;
@@ -460,6 +469,10 @@ type AdditionalMethods<
    * put a payload of your own on the hot stream, for what a server measures itself — a no-op when `hot` is off
    */
   publish: Publish;
+  /**
+   * put a payload on the hot stream for one client, for answering a single connection — whichever transport is carrying it, and a no-op when `hot` is off
+   */
+  publishTo: PublishTo;
   /**
    * the secret the hot endpoint requires, for a client of your own to put on the url; false when it requires none, undefined when `hot` is off
    */
