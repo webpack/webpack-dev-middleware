@@ -4,9 +4,9 @@
  */
 export function setLogLevel(level: LogLevel): void;
 /**
- * @param {string} name what to label messages with
+ * @param {string=} name what to label messages with
  */
-export function setLogName(name: string): void;
+export function setLogName(name?: string | undefined): void;
 export namespace log {
   let error: (...args: unknown[]) => void;
   let warn: (...args: unknown[]) => void;

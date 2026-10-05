@@ -48,6 +48,7 @@ declare namespace createHot {
     Duplex,
     StatsOptions,
     MiddlewareStatsOption,
+    LogLevel,
     HotClientOptions,
     HotOptions,
     CorsOrigin,
@@ -166,6 +167,7 @@ type HttpServer = import("node:http").Server;
 type Duplex = import("node:stream").Duplex;
 type StatsOptions = import("webpack").StatsOptions;
 type MiddlewareStatsOption = import("webpack").Configuration["stats"];
+type LogLevel = "none" | "error" | "warn" | "info" | "log" | "verbose";
 /**
  * Everything the browser runtime reads, as it is set in node. One for one with
  * what the entry query carries, so every option has both spellings: set it
@@ -235,10 +237,17 @@ type HotClientOptions = {
    */
   urlPrefix?: string | undefined;
   /**
-   * how much the runtime logs to the browser console
+   * how much the runtime logs to the browser console, and the name every message is labelled with
    */
   logging?:
-    ("none" | "error" | "warn" | "info" | "log" | "verbose") | undefined;
+    | (
+        | LogLevel
+        | {
+            level?: LogLevel;
+            name?: string;
+          }
+      )
+    | undefined;
   /**
    * how many times to reconnect before giving up; unset, Server-Sent Events keep trying for as long as the page is open while a WebSocket gives up after 10
    */

@@ -188,6 +188,33 @@ describe("messages posted to the page (browser)", () => {
     expect(console_.messages.join("\n")).toContain("[padded-server]");
   });
 
+  // Both cases above use `"info"`, the default — so neither would notice the
+  // object's `name` being applied while its `level` was dropped. `"warn"`
+  // silences `connected`, which is logged at info, and leaves a warning
+  // through: the level has to be read from inside the object for this to hold.
+  it("applies the level from inside the object too", async () => {
+    hotApp = await createHotApp({
+      bare: true,
+      hot: { client: { logging: { level: "warn", name: "quiet-server" } } },
+      code: recordingApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    // Logged at the error level, which `"warn"` lets through.
+    hotApp.instance.publish({ action: "error", message: "a warning level" });
+    await console_.waitFor("a warning level");
+
+    const said = console_.messages.join("\n");
+
+    expect(said).toContain("[quiet-server]");
+    // Logged at info, so `"warn"` has to have come from inside the object.
+    expect(said).not.toContain("connected");
+  });
+
   it("says when the connection went away, once per outage", async () => {
     hotApp = await createHotApp({
       query: "?timeout=1000",
