@@ -9,6 +9,7 @@ export = createHot;
  * @property {(fn: (client: EXPECTED_ANY, req: IncomingMessage) => void) => void} onConnect called with each client once it has joined, and the request it joined with, before anything is published to it
  * @property {(req: IncomingMessage, res: ServerResponse) => void} handle answer a request on the endpoint's path
  * @property {(payload: Payload | CustomPayload) => void} publish publish a payload to every client
+ * @property {(client: EXPECTED_ANY, payload: Payload | CustomPayload) => void} publishTo publish a payload to one client, for answering a single connection
  * @property {() => void} close end every client and detach the heartbeat
  */
 /**
@@ -143,6 +144,10 @@ type HotInstance = {
    * publish a payload to every client
    */
   publish: (payload: Payload | CustomPayload) => void;
+  /**
+   * publish a payload to one client, for answering a single connection
+   */
+  publishTo: (client: EXPECTED_ANY, payload: Payload | CustomPayload) => void;
   /**
    * end every client and detach the heartbeat
    */

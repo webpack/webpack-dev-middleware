@@ -1235,6 +1235,39 @@ chokidar.watch("content/**/*.md").on("change", () => {
 });
 ```
 
+`{ action: "error", message }` is for something a server decided about one
+client rather than about a build — refused for where it connected from, say,
+by a policy the server applies and this middleware does not. The runtime logs
+the message as given and posts it to the page as `webpackError`. The server
+has the only explanation; without somewhere to put it, the connection closes
+with the reason nowhere the developer is looking:
+
+```js
+instance.onConnect((client, req) => {
+  if (!allowed(req.headers.origin)) {
+    instance.publishTo(client, {
+      action: "error",
+      message: `Origin "${req.headers.origin}" is not allowed.`,
+    });
+
+    // The two transports hand over different kinds of client: a WebSocket,
+    // which closes, and the event stream's `ServerResponse`, which ends.
+    // `publishTo` above does not need telling apart; dropping the connection
+    // does.
+    if (typeof client.close === "function") {
+      client.close();
+    } else {
+      client.end();
+    }
+  }
+});
+```
+
+[`publishTo`](#publishtoclient-payload) is how the message reaches that one
+client whichever transport is carrying it — writing to the client directly
+means knowing which kind it is, and a message written to the wrong one simply
+never arrives.
+
 Nothing is sent when no client is connected, so a caller does not have to ask whether anyone is listening — but that is the only traffic it saves, and with a page open every call is a message. Keeping a chatty source down to what changed, as above, is the caller's. Does nothing when `hot` is disabled.
 
 #### Parameters
@@ -1244,7 +1277,50 @@ Nothing is sent when no client is connected, so a caller does not have to ask wh
 Type: `{ action: String, ...}`
 Required: `Yes`
 
-An `action` the clients understand, and whatever that action carries. The built-in actions are `building`, `progress`, `built`, `sync` and `reload`.
+An `action` the clients understand, and whatever that action carries. The built-in actions are `building`, `progress`, `built`, `sync`, `reload` and `error`.
+
+### `publishTo(client, payload)`
+
+The same, to one client rather than every one: what a server answering a
+single connection needs — refusing it, most of all, which is the only thing
+that connection is owed an explanation for.
+
+```js
+instance.onConnect((client, req) => {
+  if (!allowed(req.headers.origin)) {
+    instance.publishTo(client, {
+      action: "error",
+      message: `Origin "${req.headers.origin}" is not allowed.`,
+    });
+  }
+});
+```
+
+The client is one [`onConnect`](#onconnectfn) handed over. Writing to it
+directly instead means knowing which transport is carrying it — a WebSocket
+client and the event stream's `ServerResponse` are not the same kind of
+object, and neither one's write method exists on the other — so a message sent
+the wrong way silently never arrives. This takes a client of either and puts
+the payload on the wire that client is actually on.
+
+Declines to write to a client that is no longer open, and does nothing when
+`hot` is disabled.
+
+#### Parameters
+
+##### `client`
+
+Type: `Object`
+Required: `Yes`
+
+A client [`onConnect`](#onconnectfn) was called with.
+
+##### `payload`
+
+Type: `{ action: String, ...}`
+Required: `Yes`
+
+As [`publish`](#publishpayload).
 
 ### `close(callback)`
 

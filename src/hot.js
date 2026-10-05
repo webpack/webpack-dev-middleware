@@ -465,6 +465,7 @@ function publishBundles(bundles, previousBundles, eventStream) {
  * @property {(fn: (client: EXPECTED_ANY, req: IncomingMessage) => void) => void} onConnect called with each client once it has joined, and the request it joined with, before anything is published to it
  * @property {(req: IncomingMessage, res: ServerResponse) => void} handle answer a request on the endpoint's path
  * @property {(payload: Payload | CustomPayload) => void} publish publish a payload to every client
+ * @property {(client: EXPECTED_ANY, payload: Payload | CustomPayload) => void} publishTo publish a payload to one client, for answering a single connection
  * @property {() => void} close end every client and detach the heartbeat
  */
 
@@ -698,6 +699,17 @@ function createHot(compiler, userOptions, statsOption) {
       if (eventStream.hasClients && !eventStream.hasClients()) return;
 
       eventStream.publish(payload);
+    },
+    publishTo(client, payload) {
+      if (closed) return;
+
+      // No `hasClients` guard: the caller named the client, so it knows
+      // someone is listening. This is for answering one connection, which a
+      // server refusing it has to be able to do without knowing which
+      // transport is carrying it — a WebSocket client and an event-stream
+      // client are not the same kind of object. A transport declines to write
+      // to a client that is no longer open.
+      eventStream.publishTo(client, payload);
     },
     close() {
       if (closed) return;

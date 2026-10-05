@@ -199,6 +199,12 @@ const noop = () => {};
  */
 
 /**
+ * @callback PublishTo
+ * @param {EXPECTED_ANY} client a client `onConnect` handed over
+ * @param {import("./hot").Payload | import("./hot").CustomPayload} payload the payload to publish to it
+ */
+
+/**
  * @callback OnConnect
  * @param {(client: EXPECTED_ANY, req: IncomingMessage) => void} fn called with each client once it has joined, and the request it joined with, before anything is published to it
  */
@@ -219,6 +225,7 @@ const noop = () => {};
  * @property {HandleUpgrade} handleUpgrade answer one WebSocket upgrade, for a server that owns its own `upgrade` event
  * @property {OnConnect} onConnect called with each client that joins, and the request it joined with
  * @property {Publish} publish put a payload of your own on the hot stream, for what a server measures itself — a no-op when `hot` is off
+ * @property {PublishTo} publishTo put a payload on the hot stream for one client, for answering a single connection — whichever transport is carrying it, and a no-op when `hot` is off
  * @property {(string | false | undefined)=} token the secret the hot endpoint requires, for a client of your own to put on the url; false when it requires none, undefined when `hot` is off
  * @property {Close} close close
  * @property {Context<RequestInternal, ResponseInternal>} context context
@@ -799,6 +806,18 @@ function wdm(compiler, options = {}, isPlugin = false) {
   instance.publish = (payload) => {
     if (filledContext.hot) {
       filledContext.hot.publish(payload);
+    }
+  };
+
+  // The same, to one client: what a server refusing a connection needs to say
+  // why, without having to know which transport is carrying it. A WebSocket
+  // client and an event-stream client are not the same kind of object, and
+  // writing to the wrong one is a message that silently never arrives.
+  //
+  // A no-op when `hot` is off, like `publish`.
+  instance.publishTo = (client, payload) => {
+    if (filledContext.hot) {
+      filledContext.hot.publishTo(client, payload);
     }
   };
 

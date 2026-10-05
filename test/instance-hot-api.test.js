@@ -107,6 +107,26 @@ describe("the hot API on the middleware instance", () => {
 
       expect(publish).toHaveBeenCalledWith(payload);
     });
+
+    // Answering one connection: a server refusing a client has to be able to
+    // say why, and it cannot do that by writing to the client itself — a
+    // WebSocket client and an event-stream client are not the same kind of
+    // object, and a `ServerResponse` has no `send`, so the message would
+    // silently never arrive.
+    it("publishes to a single client", () => {
+      const instance = build({ hot: true });
+      // Mocked rather than spied through: the real one writes to the client,
+      // and this one is a stand-in rather than a connection.
+      const publishTo = jest
+        .spyOn(instance.context.hot, "publishTo")
+        .mockImplementation(() => {});
+      const client = { marker: "one client" };
+      const payload = { action: "error", message: "not allowed" };
+
+      instance.publishTo(client, payload);
+
+      expect(publishTo).toHaveBeenCalledWith(client, payload);
+    });
   });
 
   describe("with hot disabled", () => {
@@ -120,6 +140,14 @@ describe("the hot API on the middleware instance", () => {
       const instance = build();
 
       expect(() => instance.onConnect(() => {})).not.toThrow();
+    });
+
+    it("takes a payload for one client and drops that too", () => {
+      const instance = build();
+
+      expect(() =>
+        instance.publishTo({}, { action: "error", message: "x" }),
+      ).not.toThrow();
     });
 
     it("takes a payload and drops it, rather than making the caller ask", () => {
