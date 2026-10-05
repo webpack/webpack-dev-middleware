@@ -201,7 +201,7 @@ const noop = () => {};
 /**
  * @callback PublishTo
  * @param {EXPECTED_ANY} client a client `onConnect` handed over
- * @param {import("./hot").Payload | { action: string }} payload the payload to publish to it
+ * @param {import("./hot").Payload | import("./hot").CustomPayload} payload the payload to publish to it
  */
 
 /**

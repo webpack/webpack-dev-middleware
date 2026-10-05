@@ -427,11 +427,7 @@ type Publish = (
 ) => any;
 type PublishTo = (
   client: EXPECTED_ANY,
-  payload:
-    | import("./hot").Payload
-    | {
-        action: string;
-      },
+  payload: import("./hot").Payload | import("./hot").CustomPayload,
 ) => any;
 type OnConnect = (
   fn: (client: EXPECTED_ANY, req: IncomingMessage) => void,
