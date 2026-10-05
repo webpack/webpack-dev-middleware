@@ -28,7 +28,7 @@ function here() {
  * Assemble a url from its parts. `new URL()` cannot be used for this: it has
  * no way to say "host unknown, resolve it later", and it re-encodes
  * credentials that are already encoded.
- * @param {{ protocol?: string, auth?: string, hostname?: string, port?: string, pathname?: string }} parts url parts
+ * @param {{ protocol?: string, username?: string, password?: string, hostname?: string, port?: string, pathname?: string }} parts url parts
  * @returns {string} the url
  */
 export function formatUrl(parts) {
@@ -38,13 +38,21 @@ export function formatUrl(parts) {
     protocol += ":";
   }
 
-  let auth = parts.auth || "";
+  let auth = "";
 
-  if (auth) {
-    auth = encodeURIComponent(auth);
-    // The separator between a username and a password is not part of either,
-    // so it survives the encoding above.
-    auth = auth.replace(/%3A/i, ":");
+  // Encoded one at a time, because the separator between them is not part of
+  // either. Encoding the pair and putting one colon back would find the
+  // username's own colon first, when it has one — `a:b` as a username and
+  // `pw` as a password would arrive as `a` and `b:pw`.
+  if (parts.username) {
+    auth = encodeURIComponent(parts.username);
+
+    // HTTP basic authentication has no empty username, so a password without
+    // one is dropped rather than sent as `:password`.
+    if (parts.password) {
+      auth += `:${encodeURIComponent(parts.password)}`;
+    }
+
     auth += "@";
   }
 
@@ -82,21 +90,6 @@ export function formatUrl(parts) {
   );
 
   return `${protocol}//${host}${pathname}`;
-}
-
-/**
- * The credentials, as one `user:password` string. HTTP basic authentication
- * has no empty username, so a password without one is dropped rather than
- * sent as `:password`.
- * @param {PathSpec} spec what the page was told
- * @returns {string} the credentials, or an empty string
- */
-function auth(spec) {
-  if (!spec.username) {
-    return "";
-  }
-
-  return spec.password ? `${spec.username}:${spec.password}` : spec.username;
 }
 
 // What each transport connects over. The two do not share a scheme, so the
@@ -137,9 +130,12 @@ export default function resolveSocketUrl(spec, fallbackPathname, transport) {
 
   let given = spec.protocol || location.protocol;
 
-  // `"auto"` is "whatever the page is", and a page served over TLS cannot
-  // reach a plaintext endpoint at all — a browser refuses it — so a secure
-  // page gets a secure connection whether or not it asked for one.
+  // `"auto"` is "whatever the page is", which is also what an unset protocol
+  // means — and a page served over TLS then gets a secure connection, since a
+  // browser refuses a plaintext one from it. A protocol said explicitly is
+  // kept, except alongside a host naming every interface: that resolves to
+  // the page's host, so it takes the page's scheme with it rather than
+  // pointing a secure page at a plaintext endpoint it cannot reach.
   if (
     given === "auto:" ||
     given === "auto" ||
@@ -165,7 +161,8 @@ export default function resolveSocketUrl(spec, fallbackPathname, transport) {
 
   return formatUrl({
     protocol,
-    auth: auth(spec),
+    username: spec.username,
+    password: spec.password,
     hostname: (hostname || location.hostname || "localhost").replace(
       /^\[(.*)\]$/,
       "$1",

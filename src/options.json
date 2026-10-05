@@ -388,7 +388,7 @@
                       "additionalProperties": false,
                       "properties": {
                         "protocol": {
-                          "description": "The scheme the runtime connects over. `auto` is whatever the page was served over, which is also what an unset protocol resolves to; a page served over TLS always gets a secure socket, since a browser refuses a plaintext one.",
+                          "description": "The scheme the runtime connects over. Unset, or `auto`, follows the page \u2014 and a page served over TLS then gets a secure connection, because a browser refuses a plaintext one from it. Set explicitly, it is honoured as given; the one exception is a `hostname` naming every interface, which is resolved to the page's host and takes the page's scheme with it. Only whether the scheme is the secure one carries over, since the two transports do not share one.",
                           "anyOf": [
                             {
                               "enum": ["auto"]

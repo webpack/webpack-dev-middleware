@@ -2,12 +2,13 @@
  * Assemble a url from its parts. `new URL()` cannot be used for this: it has
  * no way to say "host unknown, resolve it later", and it re-encodes
  * credentials that are already encoded.
- * @param {{ protocol?: string, auth?: string, hostname?: string, port?: string, pathname?: string }} parts url parts
+ * @param {{ protocol?: string, username?: string, password?: string, hostname?: string, port?: string, pathname?: string }} parts url parts
  * @returns {string} the url
  */
 export function formatUrl(parts: {
   protocol?: string;
-  auth?: string;
+  username?: string;
+  password?: string;
   hostname?: string;
   port?: string;
   pathname?: string;

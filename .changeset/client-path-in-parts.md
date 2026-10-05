@@ -14,6 +14,6 @@ An absolute url says everything, which is more than is usually known where the o
 
 `protocol`, `hostname`, `port`, `pathname`, `username` and `password` are each optional. Unset, each comes from the page — and so do the values that only a server could have meant: `0.0.0.0` and `::` are what listening on every interface reports and are not addresses a page can connect to, and a port of `0` is one the server picked. `"auto"` asks for the page's protocol explicitly.
 
-Only whether the protocol is the secure one carries over, since the two transports do not share a scheme: `"sse"` connects over `http`/`https` and `"ws"` over `ws`/`wss`, and an `EventSource` pointed at `ws://` never connects. A page served over TLS always gets a secure connection, because a browser refuses a plaintext one from it.
+Only whether the protocol is the secure one carries over, since the two transports do not share a scheme: `"sse"` connects over `http`/`https` and `"ws"` over `ws`/`wss`, and an `EventSource` pointed at `ws://` never connects. An unset protocol, or `"auto"`, follows the page, so a page served over TLS gets a secure connection — a browser refuses a plaintext one from it. A protocol set explicitly is honoured as given.
 
 This is the url resolution webpack-dev-server has done in its own client, ported with its test cases, so a server built on this middleware no longer needs a client of its own to do it.

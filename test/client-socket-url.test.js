@@ -135,6 +135,28 @@ describe("resolving where the runtime connects", () => {
     ).toContain("/__webpack_hmr");
   });
 
+  // The separator between a username and a password is not part of either, so
+  // they are encoded one at a time. Encoding the pair and restoring one colon
+  // finds the username's own colon first when it has one, and the credentials
+  // then split in the wrong place — `a:b` / `pw` arriving as `a` / `b:pw`.
+  it("keeps a colon inside a username out of the separator", () => {
+    expect(
+      at(
+        { hostname: "h.test", username: "a:b", password: "pw" },
+        "http://p.test",
+      ),
+    ).toBe("ws://a%3Ab:pw@h.test/ws");
+  });
+
+  it("encodes a colon inside a password too", () => {
+    expect(
+      at(
+        { hostname: "h.test", username: "u", password: "p:q" },
+        "http://p.test",
+      ),
+    ).toBe("ws://u:p%3Aq@h.test/ws");
+  });
+
   // A password with no username is not something basic authentication can
   // carry, and sending `:secret@` would put the password in the url with
   // nothing to authenticate as.
