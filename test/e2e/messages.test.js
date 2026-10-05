@@ -1,3 +1,4 @@
+import collectConsole from "../helpers/console-collector";
 import {
   acceptedApp,
   boomApp,
@@ -111,6 +112,40 @@ describe("messages posted to the page (browser)", () => {
 
     expect(Array.isArray(errors)).toBe(true);
     expect(errors.join("\n")).toContain("Module parse failed");
+  });
+
+  // A server applying a policy of its own — webpack-dev-server's
+  // `allowedHosts` is the one this exists for — refuses a client and has the
+  // only explanation for it. Without somewhere to put that, the connection
+  // closes with the reason nowhere the developer is looking.
+  it("logs what the server said when it refused a client", async () => {
+    hotApp = await createHotApp({ code: recordingApp("v1") });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    hotApp.instance.publish({
+      action: "error",
+      message: "Invalid Host/Origin header",
+    });
+
+    await console_.waitFor("Invalid Host/Origin header");
+
+    expect(console_.messages.join("\n")).toContain(
+      "Invalid Host/Origin header",
+    );
+
+    // Posted to the page as well, so tooling watching the stream sees it too.
+    await page.waitForFunction(
+      () =>
+        (globalThis.posted || []).some(
+          (message) => message && message.type === "webpackError",
+        ),
+      { timeout: 30000 },
+    );
   });
 
   it("says when the connection went away, once per outage", async () => {

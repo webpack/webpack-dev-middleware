@@ -1235,6 +1235,25 @@ chokidar.watch("content/**/*.md").on("change", () => {
 });
 ```
 
+`{ action: "error", message }` is for something a server decided about one
+client rather than about a build — refused for where it connected from, say,
+by a policy the server applies and this middleware does not. The runtime logs
+the message as given and posts it to the page as `webpackError`. The server
+has the only explanation; without somewhere to put it, the connection closes
+with the reason nowhere the developer is looking:
+
+```js
+instance.onConnect((client, req) => {
+  if (!allowed(req.headers.origin)) {
+    instance.publishTo?.(client, {
+      action: "error",
+      message: `Origin "${req.headers.origin}" is not allowed.`,
+    });
+    client.close();
+  }
+});
+```
+
 Nothing is sent when no client is connected, so a caller does not have to ask whether anyone is listening — but that is the only traffic it saves, and with a page open every call is a message. Keeping a chatty source down to what changed, as above, is the caller's. Does nothing when `hot` is disabled.
 
 #### Parameters

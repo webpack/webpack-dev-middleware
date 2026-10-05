@@ -646,6 +646,17 @@ function processMessage(obj) {
       sendMessage("Invalid");
       break;
     }
+    case "error": {
+      // Something the server decided about this client, rather than about a
+      // build: refused for where it connected from, turned away by a policy
+      // the server applies and this middleware does not. The server knows why
+      // and the page does not, so what it says is logged as it was given —
+      // the alternative is a connection that closes with no explanation
+      // anywhere the developer is looking.
+      log.error(obj.message || "The server refused the connection.");
+      sendMessage("Error", obj.message);
+      break;
+    }
     case "reload": {
       // The server asking for the page outright, for a change no compilation
       // knows about — a file served from disk, say. Not a build, so `hot` and
