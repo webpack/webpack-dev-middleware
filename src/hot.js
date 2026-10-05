@@ -77,6 +77,8 @@
  */
 
 /**
+ * What this middleware publishes. `action` is the only part the bundled client
+ * reads for dispatch; the rest is what each action carries.
  * @typedef {object} Payload
  * @property {string} action action
  * @property {string=} file file that invalidated the compilation
@@ -87,6 +89,18 @@
  * @property {string=} message progress message
  * @property {string[]=} warnings warnings
  * @property {string[]=} errors errors
+ */
+
+/**
+ * A payload of someone else's, which `publish` exists to carry.
+ *
+ * Only `action` is required, since that is all a client needs to tell one
+ * apart. Everything beyond it belongs to whoever is publishing — a server with
+ * its own `ProgressPlugin` has more to say about a tick than `percent` and
+ * `message`, and a `subscribe` handler of theirs is what reads it. Typing it
+ * shut would make the published-payload shape this middleware's to approve,
+ * which is the opposite of what this is for.
+ * @typedef {{ action: string } & Record<string, EXPECTED_ANY>} CustomPayload
  */
 
 // eslint-disable-next-line jsdoc/reject-any-type
@@ -119,8 +133,8 @@
  * @property {((req: IncomingMessage, res: ServerResponse) => void)=} handler answer a request on the endpoint's path; without one a request there is answered `426 Upgrade Required`
  * @property {(() => boolean)=} hasClients true when at least one client is connected; without one a payload is built even if nobody is listening
  * @property {(fn: (client: TClient, req: IncomingMessage) => void) => void} onConnect called with each client once it has joined, and the request it joined with
- * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
- * @property {(client: TClient, payload: Payload | { action: string }) => void} publishTo publish a payload to a single client
+ * @property {(payload: Payload | CustomPayload) => void} publish publish a payload to every client
+ * @property {(client: TClient, payload: Payload | CustomPayload) => void} publishTo publish a payload to a single client
  * @property {() => void} close end every client and stop the heartbeat
  * @property {((server: HttpServer) => void)=} attach answer upgrades on this server
  * @property {(() => void)=} detach stop answering upgrades
@@ -450,7 +464,7 @@ function publishBundles(bundles, previousBundles, eventStream) {
  * @property {(req: IncomingMessage, socket: Duplex, head: Buffer) => boolean} handleUpgrade answer one WebSocket upgrade, for a caller that owns the server's `upgrade` event and wants to decide each one; returns false when the request is not the endpoint's, or the transport does not answer upgrades
  * @property {(fn: (client: EXPECTED_ANY, req: IncomingMessage) => void) => void} onConnect called with each client once it has joined, and the request it joined with, before anything is published to it
  * @property {(req: IncomingMessage, res: ServerResponse) => void} handle answer a request on the endpoint's path
- * @property {(payload: Payload | { action: string }) => void} publish publish a payload to every client
+ * @property {(payload: Payload | CustomPayload) => void} publish publish a payload to every client
  * @property {() => void} close end every client and detach the heartbeat
  */
 

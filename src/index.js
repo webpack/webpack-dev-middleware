@@ -195,7 +195,7 @@ const noop = () => {};
 
 /**
  * @callback Publish
- * @param {import("./hot").Payload | { action: string }} payload the payload to publish to every client
+ * @param {import("./hot").Payload | import("./hot").CustomPayload} payload the payload to publish to every client
  */
 
 /**
