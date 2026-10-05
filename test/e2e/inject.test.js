@@ -169,7 +169,7 @@ describe("hot with nothing but the middleware (browser)", () => {
       code: acceptedApp("v1"),
       // Neither of these could be set in node before: `hot` and `liveReload`
       // were readable from the entry query only.
-      hot: { client: { hot: false, liveReload: false } },
+      hot: { client: { apply: "nothing" } },
     });
     ({ page, browser } = await runBrowser());
 
@@ -204,7 +204,7 @@ describe("hot with nothing but the middleware (browser)", () => {
     });
     ({ page, browser } = await runBrowser());
 
-    await page.goto(`${hotApp.url}?my-server-hot=false`);
+    await page.goto(`${hotApp.url}?my-server-apply=reload`);
     await waitForAppText(page, "v1");
     await page.evaluate(() => {
       globalThis.notReloaded = true;

@@ -23,7 +23,7 @@ exports[`update processing (browser) logs the disabled HMR runtime once and neve
 ]
 `;
 
-exports[`update processing (browser) stays on the broken state when reload=false and an accept handler throws 1`] = `
+exports[`update processing (browser) stays on the broken state when apply is hmr-only and an accept handler throws 1`] = `
 [
   "[webpack-dev-middleware] connected",
   "[webpack-dev-middleware] bundle rebuilding (<fixture> changed)",

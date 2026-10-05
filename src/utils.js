@@ -1457,6 +1457,17 @@ function filterSource(option, filter) {
   );
 }
 
+// The six browser options `apply` and `connect` replaced. Accepted and folded
+// in by the client until the next major release.
+const LEGACY_CLIENT_OPTIONS = [
+  "hot",
+  "liveReload",
+  "reload",
+  "autoConnect",
+  "reconnect",
+  "timeout",
+];
+
 /**
  * The browser options, as the client reads them from its resource query.
  * @param {EXPECTED_ANY} client the `hot.client` option
@@ -1475,27 +1486,28 @@ function clientQuery(client) {
       continue;
     }
 
-    if (key !== "overlay") {
-      query[key] = String(value);
+    const isObject = typeof value === "object" && value !== null;
+
+    if (key === "overlay" && isObject) {
+      /** @type {Record<string, EXPECTED_ANY>} */
+      const overlay = {};
+
+      for (const [option, setting] of Object.entries(value)) {
+        overlay[option] =
+          OVERLAY_FILTERS.includes(option) && typeof setting === "function"
+            ? encodeURIComponent(filterSource(option, setting))
+            : setting;
+      }
+
+      query.overlay = JSON.stringify(overlay);
       continue;
     }
 
-    if (typeof value !== "object" || value === null) {
-      query.overlay = String(value);
-      continue;
-    }
-
-    /** @type {Record<string, EXPECTED_ANY>} */
-    const overlay = {};
-
-    for (const [option, setting] of Object.entries(value)) {
-      overlay[option] =
-        OVERLAY_FILTERS.includes(option) && typeof setting === "function"
-          ? encodeURIComponent(filterSource(option, setting))
-          : setting;
-    }
-
-    query.overlay = JSON.stringify(overlay);
+    // An option that may be an object goes over as JSON, which is the shape
+    // the client parses it back out of. `String(value)` would hand it
+    // `"[object Object]"`, which parses as nothing and is then read as a
+    // boolean, so the object's contents would be dropped in silence.
+    query[key] = isObject ? JSON.stringify(value) : String(value);
   }
 
   return query;
@@ -1519,6 +1531,17 @@ function clientQuery(client) {
 function injectHotClient(compilers, options, logger) {
   if (options.inject === false) {
     return;
+  }
+
+  // TODO in the next major release remove this warning and `LEGACY_CLIENT_OPTIONS`
+  const deprecated = LEGACY_CLIENT_OPTIONS.filter((name) =>
+    Object.hasOwn(options.client || {}, name),
+  );
+
+  if (deprecated.length > 0) {
+    logger.warn(
+      `${deprecated.map((name) => `'hot.client.${name}'`).join(", ")} ${deprecated.length === 1 ? "is" : "are"} deprecated and will be removed in the next major release. 'hot.client.apply' replaces 'hot', 'liveReload' and 'reload'; 'hot.client.connect' replaces 'autoConnect', 'reconnect' and 'timeout'. Until then these still apply, and the option that replaced them wins when both are set.`,
+    );
   }
 
   let warned = false;

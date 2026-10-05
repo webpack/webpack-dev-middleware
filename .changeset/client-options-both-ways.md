@@ -36,8 +36,10 @@ A `hot.transport` of your own now gets a client too, when `hot.client.transport`
 says which of the two built-in protocols yours carries. Without it the client is
 still yours to add, as before.
 
-Every option has one name and no aliases, in `hot.client`, in the entry query
-and in the page-url parameters alike. The two second spellings the query had
+Every option is spelled one way in `hot.client` and in the entry query alike,
+apart from the six names kept working for a release after `apply` and `connect`
+replaced them. One option, `apply`, can also be set for a single page through a
+url parameter (`?webpack-dev-middleware-apply=nothing`); the rest are the
+middleware's and the entry's to set. The two second spellings the query had
 picked up from webpack-dev-server — `webSocketURL` for `path` and `live-reload`
-for `liveReload` — are gone, and so is the `-live-reload` page parameter, which
-is now `-liveReload`. Neither alias was ever released.
+for `liveReload` — are gone. Neither alias was ever released.

@@ -36,20 +36,35 @@ import withToken from "./utils/with-token.js";
  */
 
 /**
+ * What a build does to the page. One option rather than three booleans,
+ * because only four of their eight combinations differed: `liveReload` was
+ * read only when Hot Module Replacement was off, and `reload` only when it
+ * was on.
+ *
+ * - `"hmr"` — apply the update; reload if it cannot be applied
+ * - `"hmr-only"` — apply the update; say so and stop if it cannot be applied
+ * - `"reload"` — no Hot Module Replacement, reload on a build that changed something
+ * - `"nothing"` — leave the page alone until it is reloaded by hand
+ * @typedef {("hmr" | "hmr-only" | "reload" | "nothing")} ApplyMode
+ */
+
+/**
+ * @typedef {object} ConnectOptions
+ * @property {number=} retries how many times to reconnect before giving up
+ * @property {number=} timeout how long silence is tolerated before reconnecting, in milliseconds — Server-Sent Events only
+ */
+
+/**
  * @typedef {object} ClientOptions
  * @property {("sse" | "ws")} transport how the events are carried, matching the server's `hot.transport`
  * @property {string} path endpoint path
- * @property {number} timeout reconnection timeout in milliseconds
+ * @property {ApplyMode} apply what a build does to the page
+ * @property {boolean | ConnectOptions} connect whether to connect when the entry runs, and how the connection is held open
  * @property {boolean | OverlayOptions} overlay enable the in-page error overlay (same value shape as webpack-dev-server's `client.overlay`)
- * @property {boolean} hot apply a build through Hot Module Replacement
- * @property {boolean} liveReload reload the page on a build that changed something, when `hot` is off
- * @property {boolean} reload reload the page when HMR cannot apply the update
- * @property {string} urlPrefix prefix of the page-url parameters that turn `hot` and `liveReload` off for one page
+ * @property {string} urlPrefix prefix of the page-url parameters that override `apply` for one page
  * @property {LogLevel} logging logger level
  * @property {string} name limit updates to this compilation name
  * @property {string} token the secret the endpoint requires, when it requires one, put on the connection url — empty when it requires none
- * @property {boolean} autoConnect connect immediately when the entry runs
- * @property {number=} reconnect how many times to reconnect before giving up, unset to use the transport's default
  * @property {boolean | "circular" | "linear"} progress show an indicator while a rebuild is in progress — `true` and `"circular"` a small badge, `"linear"` a thin bar across the top of the viewport
  */
 
@@ -57,11 +72,9 @@ import withToken from "./utils/with-token.js";
 const options = {
   transport: "sse",
   path: "/__webpack_hmr",
-  timeout: 20 * 1000,
+  apply: "hmr",
+  connect: true,
   overlay: true,
-  hot: true,
-  liveReload: true,
-  reload: true,
   urlPrefix: "webpack-dev-middleware",
   logging: "info",
   name: "",
@@ -69,7 +82,6 @@ const options = {
   // rather than sent as a header: neither `EventSource` nor `WebSocket` lets a
   // page set one.
   token: "",
-  autoConnect: true,
   progress: true,
 };
 
@@ -133,25 +145,123 @@ function decodeOverlayOptions(overlayOptions) {
 
 setLogLevel(options.logging);
 
+// The six names `apply` and `connect` replaced. Still read, still folded into
+// the two that replaced them, and gone in the next major release.
+//
+// TODO in the next major release remove this and `LEGACY_OPTIONS`.
+const LEGACY_OPTIONS = [
+  "hot",
+  "liveReload",
+  "reload",
+  "autoConnect",
+  "reconnect",
+  "timeout",
+];
+
 /**
- * Whether one of the page's own url parameters turns a setting off, which is
- * how a single tab opts out of what the rest of the project is configured for
- * — `?webpack-dev-middleware-liveReload=false` to stop a page reloading under
- * you while you work in it, for instance. `urlPrefix` names them, so a server
- * built on this middleware can name them after itself.
+ * Was it set at all, and if so is it anything but `"false"`? The reading every
+ * boolean on this query has always had.
+ * @param {string | undefined} value the raw value
+ * @param {boolean} fallback what it means when it was not set
+ * @returns {boolean} what it says
+ */
+function legacyBoolean(value, fallback) {
+  return value === undefined ? fallback : value !== "false";
+}
+
+/**
+ * Read the deprecated spellings and fold them into the options that replaced
+ * them. The new spelling wins when both are given, so a migration that sets it
+ * and leaves the old one behind is not silently ignored.
+ * @param {Record<string, string>} overrides parsed query-string overrides
+ * @returns {void}
+ */
+function foldLegacyOptions(overrides) {
+  const used = LEGACY_OPTIONS.filter((name) => overrides[name] !== undefined);
+
+  if (used.length === 0) {
+    return;
+  }
+
+  log.warn(
+    `${used.join(", ")} ${used.length === 1 ? "is" : "are"} deprecated and will be removed in the next major release. Use 'apply' and 'connect' instead.`,
+  );
+
+  if (overrides.apply === undefined) {
+    // `hot` decided whether an update was applied in place; `reload` what
+    // happened when it could not be; `liveReload` what happened instead when
+    // `hot` was off. Four of their eight combinations differed, which is what
+    // the four modes are.
+    const hot = legacyBoolean(overrides.hot, true);
+
+    options.apply = hot
+      ? legacyBoolean(overrides.reload, true)
+        ? "hmr"
+        : "hmr-only"
+      : legacyBoolean(overrides.liveReload, true)
+        ? "reload"
+        : "nothing";
+  }
+
+  if (overrides.connect === undefined) {
+    if (!legacyBoolean(overrides.autoConnect, true)) {
+      options.connect = false;
+    } else {
+      const retries = Number(overrides.reconnect);
+      const timeout = Number(overrides.timeout);
+
+      options.connect = {
+        ...(overrides.reconnect !== undefined && retries >= 0
+          ? { retries }
+          : {}),
+        ...(overrides.timeout !== undefined && timeout > 0 ? { timeout } : {}),
+      };
+    }
+  }
+}
+
+/** @type {ApplyMode[]} */
+const APPLY_MODES = ["hmr", "hmr-only", "reload", "nothing"];
+
+/**
+ * One of the four modes, or nothing when the value is not one of them.
+ * `"false"` is taken as `"nothing"`, which is what the three booleans this
+ * replaced meant when they were all turned off.
+ * @param {string} value a value from the entry query or the page's url
+ * @returns {ApplyMode | undefined} the mode, when it is one
+ */
+function readApplyMode(value) {
+  if (value === "false") {
+    return "nothing";
+  }
+
+  // `indexOf` rather than `includes`: this file is compiled to ES5 and sticks
+  // to ES5 runtime APIs.
+  return APPLY_MODES.indexOf(/** @type {ApplyMode} */ (value)) === -1
+    ? undefined
+    : /** @type {ApplyMode} */ (value);
+}
+
+/**
+ * What one of the page's own url parameters asks for, which is how a single
+ * tab opts out of what the rest of the project is configured for —
+ * `?webpack-dev-middleware-apply=nothing` to stop a page reloading under you
+ * while you work in it, for instance, or `=false` for the same thing.
+ * `urlPrefix` names them, so a server built on this middleware can name them
+ * after itself.
  *
  * The parameter is the option, spelled the one way the option is spelled.
- * @param {("hot" | "liveReload")} setting which option the page may have turned off
- * @returns {boolean} whether the page turned it off
+ * @param {string} setting which option the page may have something to say about
+ * @returns {string | undefined} the value the page gave it, when it gave one
  */
-function turnedOffByUrl(setting) {
-  // Parsed rather than searched for as text: `?note=…-hot=false` carries the
-  // words without being the parameter, and `…-hot=falsehood` is not `false`.
-  // The name is compared case-insensitively on both sides, so a `urlPrefix`
-  // with capitals in it works as written.
+function urlOverride(setting) {
+  // Parsed rather than searched for as text: `?note=…-apply=false` carries
+  // the words without being the parameter. The name is compared
+  // case-insensitively on both sides, so a `urlPrefix` with capitals in it
+  // works as written.
   const wanted = `${options.urlPrefix}-${setting}`.toLowerCase();
   // Nowhere this runs is without a url, but nothing here needs one either: an
-  // empty query turns nothing off.
+  // empty query asks for nothing.
   const search =
     typeof self === "undefined" || !self.location ? "" : self.location.search;
   const parameters = parseQuery(search);
@@ -159,23 +269,30 @@ function turnedOffByUrl(setting) {
 
   for (let index = 0; index < names.length; index++) {
     if (names[index].toLowerCase() === wanted) {
-      return parameters[names[index]].toLowerCase() === "false";
+      return parameters[names[index]].toLowerCase();
     }
   }
 
-  return false;
+  return undefined;
+}
+
+/**
+ * What a build should do to this page: what `apply` was set to, unless the
+ * page's own url asks for something else.
+ * @returns {ApplyMode} the mode in force for this page
+ */
+function applyMode() {
+  const override = urlOverride("apply");
+
+  return (override && readApplyMode(override)) || options.apply;
 }
 
 /**
  * @param {Record<string, string>} overrides parsed query-string overrides
  */
 function setOverrides(overrides) {
-  if (overrides.autoConnect) {
-    // `!== "false"` like every other boolean here, not `=== "true"`: the
-    // default is already on, so the only thing anyone writes this for is
-    // turning it off, and `?autoConnect=1` used to do that by accident.
-    options.autoConnect = overrides.autoConnect !== "false";
-  }
+  // TODO in the next major release remove this, and the six names it reads.
+  foldLegacyOptions(overrides);
   if (overrides.transport === "sse" || overrides.transport === "ws") {
     options.transport = overrides.transport;
   }
@@ -183,13 +300,24 @@ function setOverrides(overrides) {
   // when the endpoint is on another origin.
   if (overrides.path) options.path = overrides.path;
   if (overrides.token) options.token = overrides.token;
-  if (overrides.timeout) {
-    const timeout = Number(overrides.timeout);
+  if (overrides.connect) {
+    // A boolean or a JSON object, the same two shapes `overlay` takes.
+    try {
+      options.connect = JSON.parse(overrides.connect);
+    } catch {
+      options.connect = overrides.connect !== "false";
+    }
 
-    // A non-numeric value would make the watchdog fire in a loop (`NaN` never
-    // compares greater), so it is ignored rather than applied.
-    if (timeout > 0) {
-      options.timeout = timeout;
+    if (typeof options.connect === "object" && options.connect !== null) {
+      const { retries, timeout } = options.connect;
+
+      // A non-numeric timeout would make the watchdog fire in a loop (`NaN`
+      // never compares greater), and a negative retry count is not a count;
+      // either one is dropped rather than applied.
+      options.connect = {
+        ...(typeof retries === "number" && retries >= 0 ? { retries } : {}),
+        ...(typeof timeout === "number" && timeout > 0 ? { timeout } : {}),
+      };
     }
   }
   if (overrides.overlay) {
@@ -214,21 +342,13 @@ function setOverrides(overrides) {
       decodeOverlayOptions(options.overlay);
     }
   }
-  if (overrides.reconnect) {
-    const reconnect = Number(overrides.reconnect);
+  if (overrides.apply) {
+    const mode = readApplyMode(overrides.apply);
 
-    if (reconnect >= 0) {
-      options.reconnect = reconnect;
+    if (mode) {
+      options.apply = mode;
     }
   }
-  if (overrides.hot) options.hot = overrides.hot !== "false";
-  // Two different things: `liveReload` is what happens on a build when `hot`
-  // is off, `reload` is what happens when an update was tried and could not be
-  // applied.
-  if (overrides.liveReload) {
-    options.liveReload = overrides.liveReload !== "false";
-  }
-  if (overrides.reload) options.reload = overrides.reload !== "false";
   if (overrides.urlPrefix) options.urlPrefix = overrides.urlPrefix;
   if (overrides.logging) {
     options.logging = /** @type {LogLevel} */ (overrides.logging);
@@ -591,19 +711,22 @@ function processMessage(obj) {
         sendMessage(obj.action === "built" ? "Ok" : "StillOk");
       }
       if (shouldApply) {
-        if (options.hot && !turnedOffByUrl("hot")) {
+        const mode = applyMode();
+
+        if (mode === "hmr" || mode === "hmr-only") {
           // Posted before the update is applied, in the shape
           // webpack-dev-server has always used for this one — a bare string
           // rather than the `{ type, data }` the others carry.
           sendMessage.raw(`webpackHotUpdate${obj.hash}`);
-          applyUpdate(obj.hash, options, obj.name);
+          // `"hmr"` falls back to loading the page when an update cannot be
+          // applied; `"hmr-only"` says so and stops.
+          applyUpdate(obj.hash, { reload: mode === "hmr" }, obj.name);
         } else if (
           // Without Hot Module Replacement the new code can only reach the
           // page by loading it again. `sync` is left alone: it reports what
           // the page is already running.
           obj.action === "built" &&
-          options.liveReload &&
-          !turnedOffByUrl("liveReload")
+          mode === "reload"
         ) {
           log.info("App updated. Reloading...");
           reloadPage();
@@ -716,7 +839,7 @@ if (typeof self !== "undefined") {
         "Include a polyfill if you want to support this browser: " +
         "https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events#Tools",
     );
-  } else if (options.autoConnect) {
+  } else if (options.connect !== false) {
     connect();
   }
 }

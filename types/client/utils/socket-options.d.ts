@@ -1,18 +1,22 @@
 /**
  * How `createSocket` should hold the connection open, for the transport in use.
- * @param {{ transport?: string, reconnect?: number, timeout?: number }} options the client options
- * @returns {{ retries: (number | undefined), retryDelay: (() => number) | undefined, clientOptions: { timeout?: number } | undefined }} what `createSocket` takes
+ * @param {{ transport?: string, connect?: boolean | { retries?: number, timeout?: number } }} options the client options
+ * @returns {{ retries: (number | undefined), retryDelay: (() => number) | undefined, clientOptions: { timeout: number } | undefined }} what `createSocket` takes
  */
 export default function socketOptions(options: {
   transport?: string;
-  reconnect?: number;
-  timeout?: number;
+  connect?:
+    | boolean
+    | {
+        retries?: number;
+        timeout?: number;
+      };
 }): {
   retries: number | undefined;
   retryDelay: (() => number) | undefined;
   clientOptions:
     | {
-        timeout?: number;
+        timeout: number;
       }
     | undefined;
 };
