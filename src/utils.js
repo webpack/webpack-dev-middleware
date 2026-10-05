@@ -1492,7 +1492,10 @@ function clientQuery(client, resolvedPath) {
       resolvedPath &&
       typeof value === "object" &&
       value !== null &&
-      value.pathname === undefined
+      // Empty counts as not said: the client resolves it from its own default
+      // rather than from this server's path, which is the same silent
+      // mismatch an absent one would cause.
+      (value.pathname === undefined || value.pathname === "")
     ) {
       value = { ...value, pathname: resolvedPath };
     }

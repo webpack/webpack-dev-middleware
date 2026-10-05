@@ -18,6 +18,18 @@
 /** @typedef {("none" | "error" | "warn" | "info" | "log" | "verbose")} LogLevel */
 
 /**
+ * Where the runtime connects, said as the parts that differ. Each is
+ * resolved in the page when it is not given.
+ * @typedef {object} PathSpec
+ * @property {string=} protocol the scheme, or `auto` for the page's
+ * @property {string=} hostname the host; every-interface addresses resolve to the page's
+ * @property {(string | number)=} port the port; `0` resolves to the page's
+ * @property {string=} pathname the path, the resolved `hot.path` by default
+ * @property {string=} username the username to authenticate with
+ * @property {string=} password the password, sent only alongside a username
+ */
+
+/**
  * Everything the browser runtime reads, as it is set in node. One for one with
  * what the entry query carries, so every option has both spellings: set it
  * here and the injected entry carries it, or write it on the query of a client
@@ -29,7 +41,7 @@
  * page reaching the endpoint through a proxy or another origin needs.
  * @typedef {object} HotClientOptions
  * @property {("sse" | "ws")=} transport which transport the runtime speaks, `hot.transport` by default
- * @property {string=} path where the runtime connects, `hot.path` by default; may be an absolute url for an endpoint on another origin
+ * @property {(string | PathSpec)=} path where the runtime connects, `hot.path` by default; may be an absolute url for an endpoint on another origin, or the parts that differ with the rest resolved in the page
  * @property {string=} name limit the runtime to one compilation's builds, the compilation's own name by default
  * @property {string=} token the secret the runtime puts on its connection url, `hot.token` by default
  * @property {(boolean | Record<string, EXPECTED_ANY>)=} overlay show build problems and uncaught runtime errors in an overlay

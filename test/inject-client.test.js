@@ -670,6 +670,15 @@ describe("the browser options as a query", () => {
     });
   });
 
+  // Empty is not a path, so it means the same as not saying one. Left as it
+  // was, the client would resolve it from its own default rather than from
+  // this server's — the same silent mismatch an absent one would cause.
+  it("carries the resolved path into a spec whose pathname is empty", () => {
+    expect(
+      clientQuery({ path: { port: 8080, pathname: "" } }, "/custom-hmr"),
+    ).toStrictEqual({ path: '{"port":8080,"pathname":"/custom-hmr"}' });
+  });
+
   it("leaves a pathname the spec named alone", () => {
     expect(
       clientQuery({ path: { port: 8080, pathname: "/mine" } }, "/custom-hmr"),
