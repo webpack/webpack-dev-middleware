@@ -377,9 +377,60 @@
                   "enum": ["sse", "ws"]
                 },
                 "path": {
-                  "description": "Where the runtime connects. Defaults to the resolved `hot.path`; may be an absolute url for an endpoint reached on another origin or through a proxy.",
-                  "type": "string",
-                  "minLength": 1
+                  "description": "Where the runtime connects. Defaults to the resolved `hot.path`; a string may be an absolute url for an endpoint reached on another origin or through a proxy, and an object says only the parts that differ and leaves the rest to be resolved in the page, which is the only place the rest is known.",
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "protocol": {
+                          "description": "The scheme the runtime connects over. `auto` is whatever the page was served over, which is also what an unset protocol resolves to; a page served over TLS always gets a secure socket, since a browser refuses a plaintext one.",
+                          "anyOf": [
+                            {
+                              "enum": ["auto"]
+                            },
+                            {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          ]
+                        },
+                        "hostname": {
+                          "description": "The host the runtime connects to. An address a server listens on to mean every interface (`0.0.0.0`, `::`) is not somewhere a page can connect, so it resolves to the page's own host.",
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "port": {
+                          "description": "The port the runtime connects to. `0` means a port the server picked, which resolves to the page's own.",
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          ]
+                        },
+                        "pathname": {
+                          "description": "The path the runtime connects to. Defaults to the resolved `hot.path`.",
+                          "type": "string"
+                        },
+                        "username": {
+                          "description": "The username the runtime authenticates with.",
+                          "type": "string"
+                        },
+                        "password": {
+                          "description": "The password the runtime authenticates with. Sent only alongside a username, since basic authentication has no empty one.",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  ]
                 },
                 "name": {
                   "description": "Limit the runtime to one compilation's builds. Defaults to the compilation's own name.",

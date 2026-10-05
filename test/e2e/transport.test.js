@@ -125,6 +125,39 @@ for (const transport of ["sse", "ws"]) {
       ).toContain("v2");
     });
 
+    // `path` as parts rather than a finished url: the page resolves what it
+    // was not told, which is the only place the rest is known. Worth running
+    // over both transports because they do not share a scheme — an
+    // `EventSource` pointed at `ws://` never connects, and neither does a
+    // `WebSocket` pointed at `http://` — so a connection at all proves the
+    // parts were resolved onto the right one. `0.0.0.0` is the part that
+    // matters: it is what a server listening on every interface reports, and
+    // it is not an address a page can connect to, so the page's own host has
+    // to stand in.
+    it("resolves a path given as parts against the page", async () => {
+      hotApp = await createHotApp({
+        transport,
+        bare: true,
+        hot: { client: { path: { hostname: "0.0.0.0" } } },
+        code: acceptedApp("v1"),
+      });
+      ({ page, browser } = await runBrowser());
+      const console_ = collectConsole(page);
+
+      await page.goto(hotApp.url);
+      await waitForAppText(page, "v1");
+      await console_.waitFor("connected");
+
+      // Connected, and the connection carries a build, so it resolved to
+      // somewhere this server is actually listening.
+      hotApp.edit(acceptedApp("v2"));
+      await waitForAppText(page, "v2");
+
+      expect(
+        await page.evaluate(() => document.getElementById("app").textContent),
+      ).toBe("v2");
+    });
+
     it("catches a client up on what it missed while it was away", async () => {
       hotApp = await createHotApp({ transport, code: acceptedApp("v1") });
       ({ page, browser } = await runBrowser());
