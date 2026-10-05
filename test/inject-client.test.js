@@ -676,6 +676,19 @@ describe("the browser options as a query", () => {
     ).toStrictEqual({ path: '{"port":8080,"pathname":"/mine"}' });
   });
 
+  // The client decides which shape it was handed by what the json parses to,
+  // not by the first character — so padding cannot hide the object, and a
+  // bare number or boolean is not mistaken for one. Serialization is what
+  // this file covers; the browser end is in `test/e2e/transport.test.js`.
+  it("serializes a spec as json a parser can find", () => {
+    const query = clientQuery({ path: { port: 8080 } }, "/hmr");
+
+    expect(JSON.parse(query.path)).toStrictEqual({
+      port: 8080,
+      pathname: "/hmr",
+    });
+  });
+
   it("does not reach into a path given as a string", () => {
     expect(clientQuery({ path: "/plain" }, "/custom-hmr")).toStrictEqual({
       path: "/plain",

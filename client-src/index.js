@@ -345,15 +345,19 @@ function setOverrides(overrides) {
   // only place the rest is known — behind a proxy, on another host, or on a
   // socket listening on a port of its own.
   if (overrides.path) {
-    let spec;
+    let parsed;
 
-    if (overrides.path.charAt(0) === "{") {
-      try {
-        spec = JSON.parse(overrides.path);
-      } catch {
-        // Not an object after all; taken as the path it looks like.
-      }
+    try {
+      parsed = JSON.parse(overrides.path);
+    } catch {
+      // Not json, so it is the path it looks like.
     }
+
+    // Only an object is the parts form. `JSON.parse` also accepts a bare
+    // number, boolean or quoted string, none of which is a path — asking what
+    // came back rather than what the text started with also means leading
+    // whitespace does not hide it.
+    const spec = parsed && typeof parsed === "object" ? parsed : undefined;
 
     // The transport is read before this, so the url is resolved onto the
     // scheme the transport it is for actually connects over.
