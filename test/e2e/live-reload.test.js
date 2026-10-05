@@ -163,6 +163,31 @@ describe("live reload (browser)", () => {
     expect(await readReloadMarker(page)).toBe(true);
   });
 
+  // `apply` is the only option a page's own url can set, which the README says
+  // and this holds it to: a parameter naming any other one is not read, so a
+  // page cannot turn off the connection, point the client somewhere else or
+  // change the overlay for itself. Asserted on `connect`, where being wrong
+  // would be a page that quietly stops receiving builds.
+  it("reads no option but `apply` off the page's url", async () => {
+    app = await createHotApp({
+      query: "?apply=reload",
+      hmrPlugin: false,
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(`${app.url}?webpack-dev-middleware-connect=false`);
+    await waitForAppText(page, "v1");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    // Connected regardless of what the url asked for, so the build arrived —
+    // and as a reload, which is what `apply` is set to.
+    expect(await readReloadMarker(page)).toBeUndefined();
+  });
+
   it("reads the parameter, not the text of the url", async () => {
     app = await createHotApp({
       query: "?apply=reload",

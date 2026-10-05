@@ -807,12 +807,15 @@ as well.
 ### Client options
 
 Each of these is set either on the middleware as `hot.client.<name>` or on the
-entry's query as `<name>=<value>`, with the same effect, in both places and in
-the page-url parameters below. The last six are the names `apply` and `connect`
-replaced; they still work, folded into those two, and go away in the next major
-release. `transport`, `path`
-and `name` default to what the middleware resolved rather than to the value in
-the table, which is what they are when nothing else is serving them.
+entry's query as `<name>=<value>`, with the same effect and the same spelling in
+both. The last six are the names `apply` and `connect` replaced; they still
+work, folded into those two, and go away in the next major release.
+`transport`, `path` and `name` default to what the middleware resolved rather
+than to the value in the table, which is what they are when nothing else is
+serving them.
+
+One of them, `apply`, can also be set per page through a url parameter, which
+the rest cannot — see [opting one page out](#opting-one-page-out).
 
 |        Name         |                   Type                   |          Default           | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | :-----------------: | :--------------------------------------: | :------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
