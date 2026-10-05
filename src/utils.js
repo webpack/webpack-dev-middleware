@@ -1471,9 +1471,10 @@ const LEGACY_CLIENT_OPTIONS = [
 /**
  * The browser options, as the client reads them from its resource query.
  * @param {EXPECTED_ANY} client the `hot.client` option
+ * @param {string=} resolvedPath the path the endpoint is served at
  * @returns {Record<string, string>} query parameters
  */
-function clientQuery(client) {
+function clientQuery(client, resolvedPath) {
   /** @type {Record<string, string>} */
   const query = {};
 
@@ -1481,7 +1482,21 @@ function clientQuery(client) {
     return query;
   }
 
-  for (const [key, value] of Object.entries(client)) {
+  for (let [key, value] of Object.entries(client)) {
+    // A path given in parts replaces the resolved path in the query outright,
+    // so the part it leaves out has to be carried over rather than left to the
+    // client's own default — which is the same path only until someone sets
+    // `hot.path`, and then quietly is not.
+    if (
+      key === "path" &&
+      resolvedPath &&
+      typeof value === "object" &&
+      value !== null &&
+      value.pathname === undefined
+    ) {
+      value = { ...value, pathname: resolvedPath };
+    }
+
     if (typeof value === "undefined") {
       continue;
     }
@@ -1561,7 +1576,7 @@ function injectHotClient(compilers, options, logger) {
   // What the developer set in node, which wins over everything below it: these
   // are the same options the query carries, so either spelling reaches the
   // runtime and the one written by hand is the one that counts.
-  const client = clientQuery(options.client);
+  const client = clientQuery(options.client, options.path);
 
   // A transport of your own carries whatever protocol you wrote it to carry,
   // and the built-in client speaks two. When yours speaks one of them,

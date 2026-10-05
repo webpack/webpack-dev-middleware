@@ -138,7 +138,12 @@ for (const transport of ["sse", "ws"]) {
       hotApp = await createHotApp({
         transport,
         bare: true,
-        hot: { client: { path: { hostname: "0.0.0.0" } } },
+        // A path of the server's own as well, so the part the spec leaves out
+        // is one the client's default would get wrong.
+        hot: {
+          path: "/custom-hmr",
+          client: { path: { hostname: "0.0.0.0" } },
+        },
         code: acceptedApp("v1"),
       });
       ({ page, browser } = await runBrowser());

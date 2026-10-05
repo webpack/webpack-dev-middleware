@@ -661,6 +661,27 @@ describe("the browser options as a query", () => {
     ).toStrictEqual({ connect: '{"retries":3,"timeout":5000}' });
   });
 
+  // A spec replaces the resolved path in the query outright, so the part it
+  // leaves out has to be carried over. The client's own fallback is the same
+  // path only until someone sets `hot.path`, and then quietly is not.
+  it("carries the resolved path into a spec that names no pathname", () => {
+    expect(clientQuery({ path: { port: 8080 } }, "/custom-hmr")).toStrictEqual({
+      path: '{"port":8080,"pathname":"/custom-hmr"}',
+    });
+  });
+
+  it("leaves a pathname the spec named alone", () => {
+    expect(
+      clientQuery({ path: { port: 8080, pathname: "/mine" } }, "/custom-hmr"),
+    ).toStrictEqual({ path: '{"port":8080,"pathname":"/mine"}' });
+  });
+
+  it("does not reach into a path given as a string", () => {
+    expect(clientQuery({ path: "/plain" }, "/custom-hmr")).toStrictEqual({
+      path: "/plain",
+    });
+  });
+
   it("keeps a boolean connect a boolean", () => {
     expect(clientQuery({ connect: false })).toStrictEqual({ connect: "false" });
   });
