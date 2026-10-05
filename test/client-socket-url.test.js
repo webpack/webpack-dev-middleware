@@ -157,6 +157,31 @@ describe("resolving where the runtime connects", () => {
     ).toBe("ws://u:p%3Aq@h.test/ws");
   });
 
+  // A scheme is written both with and without its colon, and the option takes
+  // either — `formatUrl` puts a missing one back. Requiring it when deciding
+  // whether TLS is in play read `"https"` as insecure, which pointed a secure
+  // page at an endpoint its browser will not open.
+  describe("a scheme said with or without its colon", () => {
+    const cases = [
+      [{ hostname: "h.test", protocol: "https" }, "ws", "wss://h.test/ws"],
+      [{ hostname: "h.test", protocol: "https:" }, "ws", "wss://h.test/ws"],
+      [{ hostname: "h.test", protocol: "wss" }, "sse", "https://h.test/ws"],
+      [{ hostname: "h.test", protocol: "wss:" }, "sse", "https://h.test/ws"],
+      // Case is not part of a scheme either.
+      [{ hostname: "h.test", protocol: "HTTPS" }, "ws", "wss://h.test/ws"],
+      [{ hostname: "h.test", protocol: "http" }, "ws", "ws://h.test/ws"],
+      // `auto` reads the page, whichever way it is written.
+      [{ hostname: "h.test", protocol: "auto" }, "ws", "wss://h.test/ws"],
+      [{ hostname: "h.test", protocol: "auto:" }, "ws", "wss://h.test/ws"],
+    ];
+
+    for (const [spec, transport, expected] of cases) {
+      it(`${spec.protocol} over ${transport} connects to ${expected}`, () => {
+        expect(at(spec, "https://page.test", transport)).toBe(expected);
+      });
+    }
+  });
+
   // A password with no username is not something basic authentication can
   // carry, and sending `:secret@` would put the password in the url with
   // nothing to authenticate as.

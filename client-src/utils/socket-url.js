@@ -137,8 +137,7 @@ export default function resolveSocketUrl(spec, fallbackPathname, transport) {
   // the page's host, so it takes the page's scheme with it rather than
   // pointing a secure page at a plaintext endpoint it cannot reach.
   if (
-    given === "auto:" ||
-    given === "auto" ||
+    given.replace(/:$/, "").toLowerCase() === "auto" ||
     (hostname && isEveryInterface && location.protocol === "https:")
   ) {
     given = location.protocol;
@@ -148,7 +147,13 @@ export default function resolveSocketUrl(spec, fallbackPathname, transport) {
   // one. The scheme itself is the transport's to choose, since the two do not
   // share one — and a protocol that is neither (`file:`, an extension) is not
   // secure, which leaves it on the plain scheme the way it was before.
-  const isSecure = given === "https:" || given === "wss:";
+  //
+  // Compared without its colon, since a scheme is written both ways and the
+  // option takes either: `formatUrl` puts a missing colon back, so requiring
+  // one here would read `"https"` as insecure and point a secure page at an
+  // endpoint its browser will not open.
+  const scheme = given.replace(/:$/, "").toLowerCase();
+  const isSecure = scheme === "https" || scheme === "wss";
   const protocol = SCHEMES[isSecure ? "secure" : "plain"];
 
   let port = spec.port === undefined ? "" : String(spec.port);

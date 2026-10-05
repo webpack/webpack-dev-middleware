@@ -457,7 +457,15 @@ function setOverrides(overrides) {
         : overrides.progress !== "false";
   }
 
-  if (overrides.dynamicPublicPath && overrides.dynamicPublicPath !== "false") {
+  if (
+    overrides.dynamicPublicPath &&
+    overrides.dynamicPublicPath !== "false" &&
+    // Only a path can be prefixed. An endpoint said in full — as a url, or as
+    // parts resolved into one just above — already says where it is, and
+    // putting the bundle's public path in front of it would name somewhere
+    // that does not exist.
+    !/^[a-z][\w+.-]*:/i.test(options.path)
+  ) {
     // `path` is appended like a filename (no leading slash); the public path
     // itself is not normalized.
     options.path = __webpack_public_path__ + options.path.replace(/^\//, "");
