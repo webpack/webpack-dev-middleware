@@ -55,5 +55,7 @@ exports[`hot client (browser) watchdog-reconnects a silent connection and stays 
   "[webpack-dev-middleware] connected",
   "[webpack-dev-middleware] Disconnected!",
   "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] Disconnected!",
+  "[webpack-dev-middleware] connected",
 ]
 `;

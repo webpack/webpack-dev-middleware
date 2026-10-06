@@ -310,7 +310,11 @@ describe("hot client (browser)", () => {
     // proves the watchdog fires on pure silence (no error event involved),
     // the third that it re-arms after a reconnect instead of dying with the
     // first clearInterval.
-    await console_.waitForCount("connected", 3);
+    //
+    // Matched with the bracket in front: "Disconnected!" contains "connected",
+    // so a bare substring would count the first drop as a connection and stop
+    // after two.
+    await console_.waitForCount("] connected", 3);
 
     // Each silent cycle is an outage, so it reads connected → Disconnected! →
     // connected, and nothing else: no error event, no retry noise. Three
