@@ -824,7 +824,9 @@ than to the value in the table, which is what they are when nothing else is
 serving them.
 
 One of them, `apply`, can also be set per page through a url parameter, which
-the rest cannot — see [opting one page out](#opting-one-page-out).
+the rest cannot — see [opting one page out](#opting-one-page-out). The two
+booleans it replaced, `hot` and `live-reload`, still work there for now and
+narrow the mode in force.
 
 |        Name         |                   Type                   |          Default           | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | :-----------------: | :--------------------------------------: | :------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
