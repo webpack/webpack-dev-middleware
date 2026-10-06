@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import collectConsole from "../helpers/console-collector";
 import {
   acceptedApp,
@@ -190,6 +192,50 @@ describe("messages posted to the page (browser)", () => {
     expect(closes).toHaveLength(1);
 
     await hotApp.startHttp();
+  });
+});
+
+// `webpack-dev-server/client/index.js` is a module of its own that re-exports
+// this package's client, so a developer who wrote it into `entry` with a query
+// has written the query on the stand-in. The client has to find it there.
+describe("a module standing in for the client (browser)", () => {
+  let hotApp;
+  let browser;
+  let page;
+
+  afterEach(async () => {
+    ({ browser, app: hotApp } = await closeE2e(browser, hotApp));
+  });
+
+  it("reads the query that was written on the stand-in", async () => {
+    const client = JSON.stringify(
+      path.resolve(__dirname, "../../client-src/index.js"),
+    );
+
+    hotApp = await createHotApp({
+      bare: true,
+      hot: { inject: false, path: "/stand-in-hmr" },
+      files: {
+        "stand-in.js": `
+          globalThis.__webpack_dev_middleware_client_query__ = "?path=/stand-in-hmr";
+          module.exports = require(${client});
+        `,
+      },
+      code: `
+        require("./stand-in.js");
+        ${acceptedApp("v1")}
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    // The default endpoint is somewhere else, so this connects only if the
+    // path written on the stand-in was the one used.
+    await console_.waitFor("connected");
+
+    expect(console_.messages.join("\n")).toContain("connected");
   });
 });
 

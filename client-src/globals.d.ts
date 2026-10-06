@@ -47,6 +47,7 @@ interface OverlayTrustedTypesPolicy {
 interface Window {
   __wdmEventSourceWrapper?: Record<string, EventSourceWrapper>;
   __webpack_dev_middleware_hot_reporter__?: ClientReporter;
+  __webpack_dev_middleware_client_query__?: string;
   trustedTypes?: {
     createPolicy(
       name: string,

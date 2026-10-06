@@ -810,9 +810,32 @@ export function disconnect() {
   subscribedPath = undefined;
 }
 
+// A module that stands in for this one, re-exporting it, has a query of its
+// own and this module has none: whatever was written after the stand-in's
+// name is on a different module. It leaves that query here, before it
+// requires this one, because by the time its own code runs this module has
+// already read its options and connected.
+const EMBEDDED_QUERY_KEY = "__webpack_dev_middleware_client_query__";
+
+/**
+ * @returns {string} the query this runtime was configured with, from its own request or from the module embedding it
+ */
+function bootstrapQuery() {
+  if (typeof __resourceQuery === "string" && __resourceQuery.length > 0) {
+    return __resourceQuery;
+  }
+
+  const embedded =
+    typeof self === "undefined" ? undefined : self[EMBEDDED_QUERY_KEY];
+
+  return typeof embedded === "string" ? embedded : "";
+}
+
 // Bootstrap: parse query string overrides, then connect (if enabled).
-if (typeof __resourceQuery === "string" && __resourceQuery.length > 0) {
-  setOverrides(parseQuery(__resourceQuery));
+const query = bootstrapQuery();
+
+if (query.length > 0) {
+  setOverrides(parseQuery(query));
 }
 
 // `self` is the window in a page and the global scope in a worker, which has

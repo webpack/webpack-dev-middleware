@@ -720,6 +720,14 @@ Two things do change, and `hot.inject: false` turns both off:
 - **A client the middleware does not recognize** — anything other than `webpack-dev-middleware/client`, such as another package's hot client — is not detected, so a second client is added and both connect.
 - **A project with no `HotModuleReplacementPlugin` on purpose** now gets one, which puts the HMR runtime in the bundle and changes its output. If you only wanted the endpoint to listen to through [`subscribe`](#custom-events), set `hot.inject: false`.
 
+A package of your own can stand in for the client by re-exporting it. A query written on that module belongs to it rather than to the client, so leave it where the client looks, before requiring the client:
+
+```js
+// my-client.js
+globalThis.__webpack_dev_middleware_client_query__ = "?path=/custom-hmr";
+module.exports = require("webpack-dev-middleware/client");
+```
+
 One caveat: if the compiler was already watching before the middleware was created, the runtime appears from the next build onwards rather than the first one. Create the middleware before starting the watch to avoid it.
 
 No client is added when [`hot.transport`](#hottransport) is a function either — the built-in one speaks Server-Sent Events and WebSocket, and a transport of your own carries whatever protocol you wrote it to carry, so the client that speaks it is yours to add unless [`hot.client.transport`](#client-options) says which of the two yours speaks. `HotModuleReplacementPlugin` is still applied for you. `hot.inject: false` silences the reminder, and turns that off as well — apply the plugin yourself if you use it.
