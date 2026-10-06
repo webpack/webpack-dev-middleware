@@ -1646,16 +1646,26 @@ function injectHotClient(compilers, options, logger) {
       }
     }
 
+    // Applying a build to the page by reloading it, or not at all, has no use
+    // for the HMR runtime, which would only add to the bundle. It is left out
+    // when `hot.client.apply` says so; a plugin written into the configuration
+    // is the developer's and stays.
+    const needsHmr =
+      !options.client ||
+      (options.client.apply !== "reload" && options.client.apply !== "nothing");
+
     const hmrPluginExists = compiler.options.plugins.some(
       (plugin) =>
         plugin && plugin.constructor === webpack.HotModuleReplacementPlugin,
     );
 
     if (hmrPluginExists) {
-      logger.warn(
-        "'hot' applies HotModuleReplacementPlugin for you — it does not need to be in the webpack configuration as well.",
-      );
-    } else {
+      if (needsHmr) {
+        logger.warn(
+          "'hot' applies HotModuleReplacementPlugin for you — it does not need to be in the webpack configuration as well.",
+        );
+      }
+    } else if (needsHmr) {
       new webpack.HotModuleReplacementPlugin().apply(compiler);
     }
   }

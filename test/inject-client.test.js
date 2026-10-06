@@ -203,6 +203,59 @@ describe("injectHotClient", () => {
     });
   });
 
+  // Applying a build by reloading the page, or not at all, has no use for the
+  // HMR runtime, so it is not added to a bundle that will never run it.
+  describe("the plugin for the modes that do not use it", () => {
+    const cases = [
+      ["hmr", true],
+      ["hmr-only", true],
+      ["reload", false],
+      ["nothing", false],
+      [undefined, true],
+    ];
+
+    for (const [apply, expected] of cases) {
+      it(`${apply === undefined ? "no apply" : `apply: ${apply}`} ${expected ? "applies" : "does not apply"} HotModuleReplacementPlugin`, () => {
+        const instance = makeCompiler();
+
+        injectHotClient(
+          [instance],
+          {
+            path: "/__webpack_hmr",
+            transport: "sse",
+            client: apply ? { apply } : undefined,
+          },
+          logger,
+        );
+
+        expect(hasHmrPlugin(instance)).toBe(expected);
+        // The client is added either way: reloading is something it does.
+        expect(entryCount(instance)).toBeGreaterThan(0);
+      });
+    }
+
+    it("keeps a plugin the configuration already has, without calling it redundant", () => {
+      const instance = makeCompiler({
+        plugins: [new webpack.HotModuleReplacementPlugin()],
+      });
+
+      injectHotClient(
+        [instance],
+        {
+          path: "/__webpack_hmr",
+          transport: "sse",
+          client: { apply: "reload" },
+        },
+        logger,
+      );
+
+      expect(hasHmrPlugin(instance)).toBe(true);
+      expect(warnings.join("\n")).not.toContain(
+        "applies HotModuleReplacementPlugin",
+      );
+    });
+  });
+
   // What happens to a project written against the README as it was before
   // anything was injected for it. Nothing here should have to change.
   describe("upgrading a project that wired hot itself", () => {
