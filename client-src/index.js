@@ -754,6 +754,20 @@ function processMessage(obj) {
       // Not a `return`: a sibling bundle's event is still delivered to a
       // `subscribeAll` handler, which is documented to see every message.
       if (obj.name && options.name && obj.name !== options.name) {
+        // A sibling's update cannot be applied here, its hash is not this
+        // bundle's. Loading the page can: it is the only way a build reaches a
+        // page that depends on one it does not own — a server bundle whose
+        // output the page is rendered from — and it needs nothing from the
+        // payload but that the build produced something.
+        if (
+          obj.action === "built" &&
+          obj.errors.length === 0 &&
+          applyMode() === "reload"
+        ) {
+          log.info("App updated. Reloading...");
+          reloadPage();
+        }
+
         break;
       }
 

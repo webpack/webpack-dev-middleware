@@ -64,6 +64,62 @@ describe("multi-compiler (browser)", () => {
     expect(await page.evaluate(() => globalThis.__notReloaded)).toBe(true);
   });
 
+  // A page is served one bundle at a time, so a sibling's build is one it has no
+  // client for. Applying it in place is not possible, but loading the page is
+  // the one way a build reaches a page that is rendered from another bundle's
+  // output, and `reload` is the mode that says to do that for any build.
+  it("reloads a page when a sibling builds, in reload mode", async () => {
+    app = await createHotApp({
+      query: "?apply=reload",
+      apps: [
+        { name: "app", code: bundleApp("app", "app-v1") },
+        { name: "widget", code: bundleApp("widget", "widget-v1") },
+      ],
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(new URL("/page/app", app.url).href);
+    await waitForText(page, "out-app", "app-v1");
+    await page.evaluate(() => {
+      globalThis.__notReloaded = true;
+    });
+
+    app.edit("widget", bundleApp("widget", "widget-v2"));
+
+    await page.waitForFunction(() => globalThis.__notReloaded === undefined, {
+      timeout: 30000,
+    });
+
+    // Loaded again, and showing what the bundle it was asked for says.
+    await waitForText(page, "out-app", "app-v1");
+
+    expect(await page.evaluate(() => globalThis.__notReloaded)).toBeUndefined();
+  });
+
+  it("leaves a page alone when a sibling's build failed, in reload mode", async () => {
+    app = await createHotApp({
+      query: "?apply=reload",
+      apps: [
+        { name: "app", code: bundleApp("app", "app-v1") },
+        { name: "widget", code: bundleApp("widget", "widget-v1") },
+      ],
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(new URL("/page/app", app.url).href);
+    await waitForText(page, "out-app", "app-v1");
+    await page.evaluate(() => {
+      globalThis.__notReloaded = true;
+    });
+
+    app.edit("widget", "this is not valid javascript {{{");
+    await new Promise((resolve) => {
+      setTimeout(resolve, 3000);
+    });
+
+    expect(await page.evaluate(() => globalThis.__notReloaded)).toBe(true);
+  });
+
   it("logs per-bundle lifecycles and deduplicates warning re-logs on sibling builds", async () => {
     // Warnings do not block applies or force reloads; the fixed-position
     // `require(<expression>)` keeps the warning text identical across edits.
