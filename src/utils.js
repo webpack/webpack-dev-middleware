@@ -1507,7 +1507,16 @@ function clientQuery(client) {
     // the client parses it back out of. `String(value)` would hand it
     // `"[object Object]"`, which parses as nothing and is then read as a
     // boolean, so the object's contents would be dropped in silence.
-    query[key] = isObject ? JSON.stringify(value) : String(value);
+    //
+    // `Infinity` is how "keep trying" is said in node, and JSON has no way to
+    // say it: `JSON.stringify` writes `null`, which the client drops, so a
+    // server asking for endless retries would get the default number instead.
+    // The largest integer a number holds exactly is as endless as a page lasts.
+    query[key] = isObject
+      ? JSON.stringify(value, (_name, setting) =>
+          setting === Infinity ? Number.MAX_SAFE_INTEGER : setting,
+        )
+      : String(value);
   }
 
   return query;
