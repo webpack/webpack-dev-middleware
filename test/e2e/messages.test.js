@@ -236,6 +236,13 @@ describe("a module standing in for the client (browser)", () => {
     await console_.waitFor("connected");
 
     expect(console_.messages.join("\n")).toContain("connected");
+    // Left for one load only: a client loaded after it must not be configured
+    // by a stand-in that was never meant for it.
+    expect(
+      await page.evaluate(
+        () => globalThis.__webpack_dev_middleware_client_query__,
+      ),
+    ).toBeUndefined();
   });
 });
 

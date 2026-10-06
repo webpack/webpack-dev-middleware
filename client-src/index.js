@@ -821,14 +821,21 @@ const EMBEDDED_QUERY_KEY = "__webpack_dev_middleware_client_query__";
  * @returns {string} the query this runtime was configured with, from its own request or from the module embedding it
  */
 function bootstrapQuery() {
-  if (typeof __resourceQuery === "string" && __resourceQuery.length > 0) {
-    return __resourceQuery;
-  }
-
+  const own =
+    typeof __resourceQuery === "string" && __resourceQuery.length > 0
+      ? __resourceQuery
+      : "";
   const embedded =
     typeof self === "undefined" ? undefined : self[EMBEDDED_QUERY_KEY];
 
-  return typeof embedded === "string" ? embedded : "";
+  // Taken, not read: it was left for this one load, and a later client in the
+  // same page, with no query of its own, would otherwise be configured by a
+  // stand-in that was never meant for it.
+  if (typeof self !== "undefined") {
+    delete self[EMBEDDED_QUERY_KEY];
+  }
+
+  return own || (typeof embedded === "string" ? embedded : "");
 }
 
 // Bootstrap: parse query string overrides, then connect (if enabled).
