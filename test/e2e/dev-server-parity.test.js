@@ -170,6 +170,29 @@ describe("what webpack-dev-server's client did (browser)", () => {
     expect(console_.messages.join("\n")).not.toContain("Invalid HMR message");
   });
 
+  it("reads webpack-dev-server's live-reload alone as live reload", async () => {
+    // That client read `hot` as off unless the query said otherwise.
+    hotApp = await createHotApp({
+      query: "?live-reload=true",
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+    await page.evaluate(() => {
+      globalThis.notReloaded = true;
+    });
+
+    hotApp.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    // Loaded again rather than updated in place, though the module accepts.
+    expect(await page.evaluate(() => globalThis.notReloaded)).toBeUndefined();
+  });
+
   it("dismisses the overlay with Escape as an older browser names it", async () => {
     hotApp = await createHotApp({ code: acceptedApp("v1") });
     ({ page, browser } = await runBrowser());

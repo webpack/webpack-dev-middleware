@@ -204,10 +204,11 @@ function legacyBoolean(value, fallback) {
 function foldLegacyOptions(overrides) {
   // webpack-dev-server's query spelled it this way, and an entry written by
   // hand for that server still does.
-  if (
+  const devServerSpelling =
     overrides["live-reload"] !== undefined &&
-    overrides.liveReload === undefined
-  ) {
+    overrides.liveReload === undefined;
+
+  if (devServerSpelling) {
     overrides.liveReload = overrides["live-reload"];
   }
 
@@ -226,7 +227,11 @@ function foldLegacyOptions(overrides) {
     // happened when it could not be; `liveReload` what happened instead when
     // `hot` was off. Four of their eight combinations differed, which is what
     // the four modes are.
-    const hot = legacyBoolean(overrides.hot, true);
+    //
+    // webpack-dev-server's client read `hot` as off unless the query said
+    // otherwise, so its spelling is read its way: `?live-reload=true` alone
+    // is live reload.
+    const hot = legacyBoolean(overrides.hot, !devServerSpelling);
 
     // `hot=only` is webpack-dev-server's own: apply in place, never reload.
     options.apply = hot
@@ -356,6 +361,38 @@ function legacyUrlMode(mode) {
  * @param {Record<string, string>} overrides parsed query-string overrides
  */
 function setOverrides(overrides) {
+  if (overrides.logging) {
+    // A level, or a json object carrying the level and the name to label
+    // messages with — the same two shapes the other options take.
+    let logging = overrides.logging;
+    let parsed;
+
+    try {
+      parsed = JSON.parse(logging);
+    } catch {
+      // Not json, so it is the level it looks like.
+    }
+
+    // Only an object is the second shape. `JSON.parse` also accepts a bare
+    // number, boolean or quoted string, and a level is none of those — asking
+    // what came back rather than what the text started with also means
+    // leading whitespace does not hide it.
+    if (parsed && typeof parsed === "object") {
+      logging = parsed.level;
+
+      if (parsed.name) {
+        options.loggerName = parsed.name;
+      }
+    }
+
+    if (logging) {
+      options.logging = /** @type {LogLevel} */ (logging);
+    }
+  }
+  // Before anything else is read, so whatever reading the rest has to say —
+  // a deprecated name, say — is labelled and leveled as the entry asked.
+  setLogName(options.loggerName);
+  setLogLevel(options.logging);
   // TODO in the next major release remove this, and the six names it reads.
   foldLegacyOptions(overrides);
   if (overrides.transport === "sse" || overrides.transport === "ws") {
@@ -464,34 +501,6 @@ function setOverrides(overrides) {
     }
   }
   if (overrides.urlPrefix) options.urlPrefix = overrides.urlPrefix;
-  if (overrides.logging) {
-    // A level, or a json object carrying the level and the name to label
-    // messages with — the same two shapes the other options take.
-    let logging = overrides.logging;
-    let parsed;
-
-    try {
-      parsed = JSON.parse(logging);
-    } catch {
-      // Not json, so it is the level it looks like.
-    }
-
-    // Only an object is the second shape. `JSON.parse` also accepts a bare
-    // number, boolean or quoted string, and a level is none of those — asking
-    // what came back rather than what the text started with also means
-    // leading whitespace does not hide it.
-    if (parsed && typeof parsed === "object") {
-      logging = parsed.level;
-
-      if (parsed.name) {
-        options.loggerName = parsed.name;
-      }
-    }
-
-    if (logging) {
-      options.logging = /** @type {LogLevel} */ (logging);
-    }
-  }
   if (overrides.name) {
     options.name = overrides.name;
   }
