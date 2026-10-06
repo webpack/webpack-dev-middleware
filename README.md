@@ -718,7 +718,7 @@ Nothing has to change, and both pieces are recognized rather than duplicated:
 Two things do change, and `hot.inject: false` turns both off:
 
 - **A client the middleware does not recognize** — anything other than `webpack-dev-middleware/client`, such as another package's hot client — is not detected, so a second client is added and both connect.
-- **A project with no `HotModuleReplacementPlugin` on purpose** now gets one, which puts the HMR runtime in the bundle and changes its output. If you only wanted the endpoint to listen to through [`subscribe`](#custom-events), set `hot.inject: false`.
+- **A project with no `HotModuleReplacementPlugin` on purpose** now gets one, which puts the HMR runtime in the bundle and changes its output. If you only wanted the endpoint to listen to through [`subscribe`](#custom-events), set `hot.inject: false`. A project that sets [`hot.client.apply`](#client-options) to `reload` or `nothing` does not: those modes never use the HMR runtime, so it is left out, and a plugin you wrote into the configuration yourself stays.
 
 A package of your own can stand in for the client by re-exporting it. A query written on that module belongs to it rather than to the client, so leave it where the client looks, before requiring the client:
 
