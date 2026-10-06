@@ -86,6 +86,15 @@ export default function applyUpdate(hash, options, name) {
           "Add HotModuleReplacementPlugin to the webpack configuration.",
       );
     }
+
+    // `"hmr"` falls back to loading the page when an update cannot be applied,
+    // and a bundle without the runtime cannot apply any: a page whose url
+    // asked for it, where the project's own mode left the runtime out, would
+    // otherwise stay on code the build has replaced.
+    if (options.reload && !upToDate(hash)) {
+      reloadPage();
+    }
+
     return;
   }
 

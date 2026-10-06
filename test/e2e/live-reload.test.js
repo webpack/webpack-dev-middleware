@@ -163,6 +163,27 @@ describe("live reload (browser)", () => {
     expect(await readReloadMarker(page)).toBe(true);
   });
 
+  // A page can ask for `hmr` where the project's own mode was one that leaves
+  // the runtime out of the bundle. Nothing can be applied in place there, and
+  // `hmr` is the mode that loads the page when that is so.
+  it("reloads a page that asked for hmr where the bundle has no runtime", async () => {
+    app = await createHotApp({
+      bare: true,
+      hot: { client: { apply: "reload" } },
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(`${app.url}?webpack-dev-middleware-apply=hmr`);
+    await waitForAppText(page, "v1");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    expect(await readReloadMarker(page)).toBeUndefined();
+  });
+
   // `apply` is the only option a page's own url can set, which the README says
   // and this holds it to: a parameter naming any other one is not read, so a
   // page cannot turn off the connection, point the client somewhere else or
