@@ -16,6 +16,7 @@ exports[`hot client (browser) rebuilds on instance.invalidate() and syncs connec
 exports[`hot client (browser) reconnects after a server restart and syncs up on missed builds 1`] = `
 [
   "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] Disconnected!",
   "[webpack-dev-middleware] connected",
   "[webpack-dev-middleware] Checking for updates on the server...",
   "[webpack-dev-middleware] Hot updated 1 modules.",
@@ -52,7 +53,9 @@ exports[`hot client (browser) warns on malformed frames without breaking the pag
 exports[`hot client (browser) watchdog-reconnects a silent connection and stays armed afterwards 1`] = `
 [
   "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] Disconnected!",
   "[webpack-dev-middleware] connected",
+  "[webpack-dev-middleware] Disconnected!",
   "[webpack-dev-middleware] connected",
 ]
 `;

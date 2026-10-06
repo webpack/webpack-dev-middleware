@@ -69,6 +69,12 @@ import withToken from "./utils/with-token.js";
  * @property {boolean | "circular" | "linear"} progress show an indicator while a rebuild is in progress — `true` and `"circular"` a small badge, `"linear"` a thin bar across the top of the viewport
  */
 
+// The reporter is a singleton on the page (see `REPORTER_KEY` below). Declared
+// here, with the options, because the connection's own hooks reach for it and
+// are defined well before it is assigned.
+/** @type {ReturnType<typeof createReporter> | undefined} */
+let reporter;
+
 /** @type {ClientOptions} */
 const options = {
   transport: "sse",
@@ -467,6 +473,16 @@ function createClientSocket() {
     {
       ...socketOptions(options),
       onDisconnect: () => {
+        // Said once per outage, at the moment the connection is lost — the
+        // symmetry of `connected`, and what webpack-dev-server's client has
+        // always printed here. Without it a stopped server leaves a page that
+        // looks live and a console that never says otherwise.
+        log.info("Disconnected!");
+
+        if (reporter) {
+          reporter.clearBuildProblems();
+        }
+
         sendMessage("Close");
       },
     },
@@ -501,6 +517,7 @@ function getEventSourceWrapper() {
 /**
  * @returns {{
  * cleanProblemsCache: (name: string) => void,
+ * clearBuildProblems: () => void,
  * clearRuntimeProblems: () => void,
  * problems: (type: "errors" | "warnings", obj: HMRPayload) => boolean,
  * success: (obj?: HMRPayload) => void,
@@ -649,6 +666,24 @@ function createReporter() {
       delete problemsByName[(obj && obj.name) || ""];
       renderOverlay();
     },
+    clearBuildProblems() {
+      // The server is gone, so what it last said about the build is stale: an
+      // overlay left up would keep showing errors nothing can fix from here.
+      // Forgotten rather than just hidden, so the catch-up a reconnection is
+      // sent starts from nothing — it re-reports whatever is still wrong, in
+      // the console as well as the overlay.
+      for (const name of Object.keys(problemsByName)) {
+        delete problemsByName[name];
+      }
+
+      for (const key of Object.keys(previousProblems)) {
+        delete previousProblems[key];
+      }
+
+      // Build problems only. A runtime error is the page's own, and a lost
+      // connection says nothing about whether it is still true.
+      renderOverlay();
+    },
     clearRuntimeProblems() {
       // No overlay configured, or a custom one that does not take sources.
       if (!overlay || !overlay.clear) {
@@ -666,9 +701,6 @@ function createReporter() {
 // The reporter is a singleton on the page so that, when multiple bundles
 // include the client, errors are reported once but all clients receive them.
 const REPORTER_KEY = "__webpack_dev_middleware_hot_reporter__";
-/** @type {ReturnType<typeof createReporter> | undefined} */
-let reporter;
-
 /** @type {((obj: HMRPayload) => void) | undefined} */
 let customHandler;
 /** @type {((obj: HMRPayload) => void) | undefined} */
