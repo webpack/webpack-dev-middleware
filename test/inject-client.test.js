@@ -185,6 +185,24 @@ describe("injectHotClient", () => {
     expect(entryCount(instance)).toBe(before);
   });
 
+  // `Infinity` is "keep trying" in node, and JSON writes it as `null`, which the
+  // client drops — leaving a server that asked for endless retries with the
+  // default number.
+  describe("an option that has no spelling in JSON", () => {
+    it("sends endless retries as a number the client keeps", () => {
+      const query = clientQuery({ connect: { retries: Infinity } });
+      const { retries } = JSON.parse(query.connect);
+
+      expect(retries).toBe(Number.MAX_SAFE_INTEGER);
+    });
+
+    it("leaves a finite count as it was", () => {
+      const query = clientQuery({ connect: { retries: 3, timeout: 1000 } });
+
+      expect(JSON.parse(query.connect)).toEqual({ retries: 3, timeout: 1000 });
+    });
+  });
+
   // What happens to a project written against the README as it was before
   // anything was injected for it. Nothing here should have to change.
   describe("upgrading a project that wired hot itself", () => {
