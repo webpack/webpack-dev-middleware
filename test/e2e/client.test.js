@@ -8,6 +8,7 @@ import {
   waitForAppText,
   waitForNoOverlay,
   waitForOverlay,
+  waitForOverlayText,
   waitForRuntimeListeners,
   warningApp,
 } from "../helpers/e2e";
@@ -256,9 +257,13 @@ describe("hot client (browser)", () => {
 
     await app.startHttp();
 
-    // Still broken, so it is reported again rather than staying forgotten.
-    await waitForOverlay(page);
+    // Still broken, so it is reported again rather than staying forgotten —
+    // and it is that build's error that comes back, not just any overlay.
+    const text = await waitForOverlayText(page, {
+      includes: ["Module parse failed"],
+    });
 
+    expect(text).toContain("Module parse failed");
     expect(await page.$(`#${OVERLAY_ID}`)).not.toBeNull();
   });
 
