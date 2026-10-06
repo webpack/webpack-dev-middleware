@@ -725,6 +725,7 @@ A package of your own can stand in for the client by re-exporting it. A query wr
 ```js
 // my-client.js
 globalThis.__webpack_dev_middleware_client_query__ = "?path=/custom-hmr";
+
 module.exports = require("webpack-dev-middleware/client");
 ```
 
