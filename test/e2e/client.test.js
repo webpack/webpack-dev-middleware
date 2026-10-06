@@ -2,9 +2,13 @@ import collectConsole, { normalizeConsole } from "../helpers/console-collector";
 import {
   OVERLAY_ID,
   acceptedApp,
+  boomApp,
   closeE2e,
   unacceptedApp,
   waitForAppText,
+  waitForNoOverlay,
+  waitForOverlay,
+  waitForRuntimeListeners,
   warningApp,
 } from "../helpers/e2e";
 import createHotApp from "../helpers/hot-app";
@@ -195,6 +199,99 @@ describe("hot client (browser)", () => {
     expect(normalizeConsole(console_.messages)).toMatchSnapshot();
   });
 
+  // The counterpart of `connected`, and what webpack-dev-server's client has
+  // always printed. Said once per outage rather than once per failed attempt:
+  // Server-Sent Events keep retrying for as long as the page is open, and a
+  // line per retry would bury everything else.
+  it("says when the connection goes away, once per outage", async () => {
+    app = await createHotApp({
+      query: "?connect=%7B%22timeout%22%3A500%7D",
+      code: acceptedApp("v1"),
+      hot: { heartbeat: 200 },
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    await app.stopHttp();
+    await console_.waitFor("Disconnected!");
+
+    // Several failed retries' worth of time, so a line per attempt would show.
+    await new Promise((resolve) => {
+      setTimeout(resolve, 2500);
+    });
+
+    expect(
+      console_.messages.filter((message) => message.includes("Disconnected!")),
+    ).toHaveLength(1);
+
+    await app.startHttp();
+  });
+
+  // What the server last said about the build is stale once the server is
+  // gone: an overlay left up keeps showing errors nothing can fix from here.
+  // It comes back by itself when the connection does, because a reconnection
+  // is caught up on whatever is still wrong.
+  it("takes a build error out of the overlay while disconnected, and restores it", async () => {
+    app = await createHotApp({
+      query: "?connect=%7B%22timeout%22%3A500%7D",
+      code: acceptedApp("v1"),
+      hot: { heartbeat: 200 },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+
+    app.edit("broken before the server goes away {{{");
+    await waitForOverlay(page);
+
+    await app.stopHttp();
+    await waitForNoOverlay(page);
+
+    expect(await page.$(`#${OVERLAY_ID}`)).toBeNull();
+
+    await app.startHttp();
+
+    // Still broken, so it is reported again rather than staying forgotten.
+    await waitForOverlay(page);
+
+    expect(await page.$(`#${OVERLAY_ID}`)).not.toBeNull();
+  });
+
+  // The other half of the same rule. A lost connection says nothing about an
+  // error the page threw on its own, so dropping that along with the build
+  // problems would hide something that is still true.
+  it("keeps a runtime error in the overlay when the connection goes away", async () => {
+    app = await createHotApp({
+      query: "?connect=%7B%22timeout%22%3A500%7D",
+      code: boomApp("v1"),
+      hot: { heartbeat: 200 },
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await waitForRuntimeListeners(page);
+
+    await page.evaluate(() => globalThis.boom("the page's own mistake"));
+    await waitForOverlay(page);
+
+    await app.stopHttp();
+    await console_.waitFor("Disconnected!");
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
+
+    expect(await page.$(`#${OVERLAY_ID}`)).not.toBeNull();
+
+    await app.startHttp();
+  });
+
   it("watchdog-reconnects a silent connection and stays armed afterwards", async () => {
     app = await createHotApp({
       query: "?connect=%7B%22timeout%22%3A1000%7D",
@@ -215,10 +312,12 @@ describe("hot client (browser)", () => {
     // first clearInterval.
     await console_.waitForCount("connected", 3);
 
-    // Nothing but connects: the silent cycles produce no other output. The
-    // watchdog keeps cycling, so only the first three are pinned — a fourth
-    // may already have landed.
-    expect(normalizeConsole(console_.messages).slice(0, 3)).toMatchSnapshot();
+    // Each silent cycle is an outage, so it reads connected → Disconnected! →
+    // connected, and nothing else: no error event, no retry noise. Three
+    // connects have two drops between them, which is five lines. The watchdog
+    // keeps cycling, so only those are pinned — a fourth drop may already have
+    // landed.
+    expect(normalizeConsole(console_.messages).slice(0, 5)).toMatchSnapshot();
 
     // The reconnected connection still delivers updates.
     app.edit(acceptedApp("v2"));
