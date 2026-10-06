@@ -46,7 +46,14 @@ describe("the overlay does not execute what it renders (browser)", () => {
 
     await page.goto(hotApp.url);
     await console_.waitFor("connected");
-    await waitForOverlayText(page, { includes: ["Module parse failed"] });
+    // ansiHTML turns the SGR sequences into markup, so it is the text left
+    // after them that has to be on screen: a diagnostic that dropped the payload
+    // would leave every check below passing for the wrong reason.
+    const visiblePayload = payload.replaceAll(/\u001B\[[0-9;]*m/g, "");
+
+    await waitForOverlayText(page, {
+      includes: ["Module parse failed", visiblePayload],
+    });
 
     const frame = await waitForOverlay(page);
 

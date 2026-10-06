@@ -140,7 +140,8 @@ describe("messages posted to the page (browser)", () => {
       "Invalid Host/Origin header",
     );
 
-    // Posted to the page as well, so tooling watching the stream sees it too.
+    // Posted to the page as well, so tooling watching the stream sees it too —
+    // with the reason, not only the name of the message.
     await page.waitForFunction(
       () =>
         (globalThis.posted || []).some(
@@ -148,6 +149,46 @@ describe("messages posted to the page (browser)", () => {
         ),
       { timeout: 30000 },
     );
+
+    const postedError = await page.evaluate(() =>
+      (globalThis.posted || []).find(
+        (message) => message && message.type === "webpackError",
+      ),
+    );
+
+    expect(postedError.data).toBe("Invalid Host/Origin header");
+  });
+
+  // A server that refuses a client without saying why still gets it told: the
+  // console says so, and the page is posted what the console said rather than
+  // nothing.
+  it("tells the page what it logged when the server gave no reason", async () => {
+    hotApp = await createHotApp({ code: recordingApp("v1") });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    hotApp.instance.publish({ action: "error" });
+
+    await console_.waitFor("The server refused the connection.");
+    await page.waitForFunction(
+      () =>
+        (globalThis.posted || []).some(
+          (message) => message && message.type === "webpackError",
+        ),
+      { timeout: 30000 },
+    );
+
+    const postedError = await page.evaluate(() =>
+      (globalThis.posted || []).find(
+        (message) => message && message.type === "webpackError",
+      ),
+    );
+
+    expect(postedError.data).toBe("The server refused the connection.");
   });
 
   // A package embedding this runtime is the one the developer installed and

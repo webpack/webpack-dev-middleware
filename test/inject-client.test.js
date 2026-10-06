@@ -196,6 +196,16 @@ describe("injectHotClient", () => {
       expect(retries).toBe(Number.MAX_SAFE_INTEGER);
     });
 
+    // A timeout is also the delay handed to `setTimeout`, which wraps above
+    // 2^31 - 1 milliseconds and would fire at once — so turning an infinite one
+    // into a huge number would have the client reconnect in a loop.
+    it("does not turn an infinite timeout into a delay", () => {
+      const query = clientQuery({ connect: { timeout: Infinity } });
+      const { timeout } = JSON.parse(query.connect);
+
+      expect(timeout).toBeNull();
+    });
+
     it("leaves a finite count as it was", () => {
       const query = clientQuery({ connect: { retries: 3, timeout: 1000 } });
 

@@ -335,7 +335,17 @@ const LEGACY_GROUPED = [
  */
 function normalizeOptions(options, logger) {
   /** @type {EXPECTED_ANY} */
-  const cache = { ...options.cache };
+  const cache = {
+    ...options.cache,
+    // An object-form `control` is read on every response, so it is copied: a
+    // caller changing theirs after the middleware exists must not change the
+    // header it sends.
+    ...(options.cache &&
+    typeof options.cache.control === "object" &&
+    options.cache.control !== null
+      ? { control: { ...options.cache.control } }
+      : {}),
+  };
   /** @type {EXPECTED_ANY} */
   const mime = { ...options.mime };
   /** @type {EXPECTED_ANY} */

@@ -496,7 +496,7 @@ Deciding to measure a build is the server's call rather than the middleware's, a
 Type: `Boolean | String | RegExp | (String | RegExp)[] | Function | { origin }`
 Default: `true` for [`'sse'`](#hottransport), the local origins for [`'ws'`](#hottransport)
 
-Which origins may reach the endpoint from a page on another origin, over **either** [transport](#hottransport).
+Which origins may use the endpoint from a page on another origin, over **either** [transport](#hottransport): for `'sse'` that is reading the stream — the request is still answered, and a page not granted by `cors` is the one whose browser refuses to hand it the response — and for `'ws'` it is whether the upgrade is accepted.
 
 A payload carries a build's module paths and, when a build fails, the source frames webpack puts in the error — so a page that can read the stream can read parts of your source.
 
@@ -1236,7 +1236,7 @@ new webpack.ProgressPlugin((percent, message) => {
 app.use(instance);
 ```
 
-That replaces [`hot.progress`](#hotprogress), which applied the plugin for you and is deprecated — a server that applies `ProgressPlugin` already would otherwise have two of them on one compiler. The indicator itself is unaffected: whether a `progress` payload is drawn is [`hot.client.progress`](#client-options), which is the browser's end of this and stays.
+That replaces [`hot.progress`](#hotprogress), which applied the plugin for you and is deprecated — remove it when you add your own, since leaving it on would give one compiler two `ProgressPlugin`s and every tick would be published twice. The indicator itself is unaffected: whether a `progress` payload is drawn is [`hot.client.progress`](#client-options), which is the browser's end of this and stays.
 
 Rounding and de-duplicating are the two things `hot.progress` did that become yours, which is why the example above does both.
 

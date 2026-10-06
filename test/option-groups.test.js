@@ -1,3 +1,6 @@
+import express from "express";
+import request from "supertest";
+
 import middleware from "../src";
 
 import webpackConfig from "./fixtures/webpack.config";
@@ -88,6 +91,48 @@ describe("the cache and mime option groups", () => {
       build({ cache: { etag: "weak" }, mime: { default: "text/plain" } });
 
       expect(warnings).toStrictEqual([]);
+    });
+
+    // `control` can be an object, which every response reads — so the
+    // middleware holds a copy, as it does of everything else it was given.
+    it("is not changed by a caller changing their own `cache.control`", () => {
+      const control = { maxAge: 100 };
+      const instance = build({ cache: { control } });
+
+      control.maxAge = 999;
+
+      expect(instance.context.options.cache.control).toStrictEqual({
+        maxAge: 100,
+      });
+    });
+
+    // What is normalized has to be what a response reads, not only what a test
+    // of the normalized options can see.
+    it("is what a response is sent with", async () => {
+      const compiler = getCompiler({
+        ...webpackConfig,
+        output: { ...webpackConfig.output, filename: "bundle.unknown" },
+      });
+      const instance = middleware(compiler, {
+        cache: { control: "max-age=123456" },
+        mime: { default: "text/x-grouped" },
+      });
+
+      instances.push(instance);
+
+      const app = express();
+
+      app.use(instance);
+
+      await new Promise((resolve) => {
+        instance.waitUntilValid(resolve);
+      });
+
+      const response = await request(app).get("/bundle.unknown");
+
+      expect(response.status).toBe(200);
+      expect(response.headers["cache-control"]).toBe("max-age=123456");
+      expect(response.headers["content-type"]).toContain("text/x-grouped");
     });
 
     it("registers its media types on the instance's own table", () => {

@@ -1512,11 +1512,17 @@ function clientQuery(client) {
     // say it: `JSON.stringify` writes `null`, which the client drops, so a
     // server asking for endless retries would get the default number instead.
     // The largest integer a number holds exactly is as endless as a page lasts.
-    query[key] = isObject
-      ? JSON.stringify(value, (_name, setting) =>
-          setting === Infinity ? Number.MAX_SAFE_INTEGER : setting,
-        )
-      : String(value);
+    //
+    // For `retries` only. A `timeout` is also the delay handed to `setTimeout`,
+    // which wraps above 2^31 - 1 milliseconds and would fire at once — so an
+    // infinite one is left to become `null`, and dropped, rather than turned
+    // into a delay that reconnects in a loop.
+    query[key] =
+      isObject && key === "connect" && value.retries === Infinity
+        ? JSON.stringify({ ...value, retries: Number.MAX_SAFE_INTEGER })
+        : isObject
+          ? JSON.stringify(value)
+          : String(value);
   }
 
   return query;

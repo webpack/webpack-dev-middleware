@@ -743,8 +743,10 @@ function processMessage(obj) {
       // and the page does not, so what it says is logged as it was given —
       // the alternative is a connection that closes with no explanation
       // anywhere the developer is looking.
-      log.error(obj.message || "The server refused the connection.");
-      sendMessage("Error", obj.message);
+      const message = obj.message || "The server refused the connection.";
+
+      log.error(message);
+      sendMessage("Error", message);
       break;
     }
     case "reload": {
