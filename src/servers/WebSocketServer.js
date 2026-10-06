@@ -47,15 +47,22 @@ function requireWsServer() {
  * @param {number} options.heartbeat heartbeat interval in milliseconds
  * @param {CorsOption=} options.cors which origins may connect, the local ones by default
  * @param {(string | false)=} options.token the token the endpoint requires, or false for none
+ * @param {Record<string, EXPECTED_ANY>=} options.ws options for the `ws` server; a `port` or a `server` gives it one of its own
  * @param {Logger} logger logger
  * @returns {ClientStream} client stream
  */
 function createWebSocketStream(
-  { path, heartbeat, cors, token = false },
+  { path, heartbeat, cors, token = false, ws = {} },
   logger,
 ) {
   const WebSocketServerImplementation = requireWsServer();
   const corsGrant = resolveCors(cors ?? HOT_DEFAULT_CORS_WS);
+  // A `port` or a `server` is `ws` listening for itself rather than answering
+  // the upgrades it is handed. The handshake is then never seen here, so the
+  // token and the origins are checked through `verifyClient` instead — before
+  // the handshake completes, as they are on the shared server.
+  const ownsServer =
+    typeof ws.port !== "undefined" || typeof ws.server !== "undefined";
   /** @type {Set<WebSocket>} */
   const clients = new Set();
   /** @type {((client: WebSocket, req: IncomingMessage) => void) | undefined} */
@@ -65,8 +72,61 @@ function createWebSocketStream(
   /** @type {((req: IncomingMessage, socket: Duplex, head: Buffer) => void) | undefined} */
   let upgradeListener;
 
+  /**
+   * Whether a handshake may go ahead, said the same way on either server: a
+   * reason is logged for the developer, and the refusal is a `403`.
+   * @param {IncomingMessage} req the request being upgraded
+   * @returns {boolean} true when it may
+   */
+  const isAllowed = (req) => {
+    if (!isTokenValid(token, req)) {
+      logger.warn(
+        `An upgrade to "${req.url}" was refused: it carried no valid 'token'. The injected client is given one; a client of your own has to pass it, or set 'hot.token' to a value it can use.`,
+      );
+
+      return false;
+    }
+
+    if (!isUpgradeAllowed(corsGrant, req)) {
+      logger.warn(
+        `A client from the origin "${req.headers.origin}" was refused. Add it to the 'hot.cors' option to allow it.`,
+      );
+
+      return false;
+    }
+
+    return true;
+  };
+
+  /**
+   * The check above, ahead of any `verifyClient` of the developer's own.
+   * @param {{ origin: string, secure: boolean, req: IncomingMessage }} info the handshake
+   * @param {(result: boolean, code?: number, message?: string, headers?: Record<string, string>) => void} done called with the decision
+   */
+  const verifyClient = (info, done) => {
+    if (!isAllowed(info.req)) {
+      done(false, 403);
+
+      return;
+    }
+
+    const own = ws.verifyClient;
+
+    if (typeof own !== "function") {
+      done(true);
+    } else if (own.length >= 2) {
+      own(info, done);
+    } else {
+      done(Boolean(own(info)));
+    }
+  };
+
   const implementation = new WebSocketServerImplementation({
-    noServer: true,
+    // Everything else `ws` takes is the developer's to set: compression,
+    // payload limits, subprotocols, a port or a server of its own.
+    ...ws,
+    ...(ownsServer ? { verifyClient } : { noServer: true }),
+    // The endpoint's path is `hot.path`, so the two cannot disagree.
     path,
     // `clients` is tracked here so a client is dropped the moment it closes,
     // which is what `hasClients` reads.
@@ -171,6 +231,12 @@ function createWebSocketStream(
    * @returns {boolean} true when this endpoint answered the upgrade
    */
   const handleUpgrade = (req, socket, head) => {
+    // The endpoint listens on a server of its own, so nothing on this one is
+    // its to answer.
+    if (ownsServer) {
+      return false;
+    }
+
     // Another WebSocket endpoint on the same server owns this path. Said
     // rather than assumed, so a caller holding the server can go on to its own
     // endpoints instead of leaving the socket hanging.
@@ -182,24 +248,7 @@ function createWebSocketStream(
     // attention to what comes back, so the `cors` option can only be honoured
     // on this wire by refusing the upgrade — before it completes, rather than
     // closing the client afterwards, so nothing is ever published to it.
-    if (!isTokenValid(token, req)) {
-      logger.warn(
-        `An upgrade to "${req.url}" was refused: it carried no valid 'token'. The injected client is given one; a client of your own has to pass it, or set 'hot.token' to a value it can use.`,
-      );
-
-      socket.write(
-        "HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n",
-      );
-      socket.destroy();
-
-      return true;
-    }
-
-    if (!isUpgradeAllowed(corsGrant, req)) {
-      logger.warn(
-        `A client from the origin "${req.headers.origin}" was refused. Add it to the 'hot.cors' option to allow it.`,
-      );
-
+    if (!isAllowed(req)) {
       // Answered rather than dropped: a socket destroyed without a response
       // reads to the client as the server going away, and reconnecting
       // forever. The upgrade is still this endpoint's, so `true`.
@@ -220,8 +269,9 @@ function createWebSocketStream(
 
   return {
     attach(server) {
-      // Attaching twice would upgrade every request twice over.
-      if (attachedServer === server) {
+      // Attaching twice would upgrade every request twice over, and an
+      // endpoint on a server of its own answers nothing on this one.
+      if (attachedServer === server || ownsServer) {
         return;
       }
 
@@ -289,3 +339,6 @@ function createWebSocketStream(
 module.exports = createWebSocketStream;
 module.exports.WS_DEFAULT_HEARTBEAT = WS_DEFAULT_HEARTBEAT;
 module.exports.createWebSocketStream = createWebSocketStream;
+
+// eslint-disable-next-line jsdoc/reject-any-type
+/** @typedef {any} EXPECTED_ANY */

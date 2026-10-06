@@ -1,4 +1,22 @@
 /**
+ * Hold a connection open, reconnecting when it drops, and fan each message out
+ * to everyone listening. What "reconnect" costs is the transport's to say: a
+ * dropped WebSocket backs off, whereas Server-Sent Events retries at a steady
+ * interval for as long as the page is open.
+ * @param {CommunicationClientConstructor} Client what speaks the transport
+ * @param {string} url url to connect to
+ * @param {SocketOptions=} options how it reconnects
+ * @returns {{ addMessageListener: (fn: (event: { data: string }) => void) => void, close: () => void }} the socket
+ */
+export default function createSocket(
+  Client: CommunicationClientConstructor,
+  url: string,
+  options?: SocketOptions | undefined,
+): {
+  addMessageListener: (fn: (event: { data: string }) => void) => void;
+  close: () => void;
+};
+/**
  * Called with no argument for open and close, and with the message string for
  * a message.
  * @typedef {(data?: string) => void} ClientHandler
@@ -26,23 +44,14 @@
  * @property {EXPECTED_ANY=} clientOptions passed to the client's constructor
  */
 /**
- * Hold a connection open, reconnecting when it drops, and fan each message out
- * to everyone listening. What "reconnect" costs is the transport's to say: a
- * dropped WebSocket backs off, whereas Server-Sent Events retries at a steady
- * interval for as long as the page is open.
- * @param {CommunicationClientConstructor} Client what speaks the transport
- * @param {string} url url to connect to
- * @param {SocketOptions=} options how it reconnects
- * @returns {{ addMessageListener: (fn: (event: { data: string }) => void) => void, close: () => void }} the socket
+ * The connection the runtime holds right now, or `null` while there is none —
+ * for tooling that listens alongside the runtime rather than through it.
+ * `client.client` is the `WebSocket` or `EventSource` underneath, the shape
+ * webpack-dev-server's `client/socket` has always exported, which is what
+ * `@pmmmwh/react-refresh-webpack-plugin` reads its build messages from.
+ * @type {CommunicationClient | null}
  */
-export default function createSocket(
-  Client: CommunicationClientConstructor,
-  url: string,
-  options?: SocketOptions | undefined,
-): {
-  addMessageListener: (fn: (event: { data: string }) => void) => void;
-  close: () => void;
-};
+export let client: CommunicationClient | null;
 /**
  * Called with no argument for open and close, and with the message string for
  * a message.

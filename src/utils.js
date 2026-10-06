@@ -1547,6 +1547,35 @@ function clientQuery(client, resolvedPath) {
 }
 
 /**
+ * The two transports the bundled client speaks. Anything else given as
+ * `hot.client.transport` names a module of someone else's that speaks for it.
+ * @type {readonly string[]}
+ */
+const BUILT_IN_CLIENT_TRANSPORTS = ["sse", "ws"];
+
+/**
+ * Where a client transport of someone else's lives. Looked up from the
+ * project first, where a bare package name is installed, and then from here,
+ * so an absolute path or a package this one can see works as well.
+ * @param {string} request what `hot.client.transport` named
+ * @param {string} context the compilation's context
+ * @returns {string} the resolved module
+ */
+function resolveClientTransport(request, context) {
+  try {
+    return require.resolve(request, { paths: [context] });
+  } catch {
+    try {
+      return require.resolve(request);
+    } catch {
+      throw new Error(
+        `'hot.client.transport' must be 'sse', 'ws', or a module that exports a client class, but '${request}' could not be resolved from '${context}'.`,
+      );
+    }
+  }
+}
+
+/**
  * Put the hot runtime into the compilation, so enabling `hot` is the whole of
  * what a developer has to do: no entry to add, no `HotModuleReplacementPlugin`
  * to remember, no configuration to change.
@@ -1558,7 +1587,7 @@ function clientQuery(client, resolvedPath) {
 
 /**
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: HotClientOptions, token?: string | false }} options resolved hot options
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: HotClientOptions | false, token?: string | false }} options resolved hot options
  * @param {Logger} logger logger
  */
 function injectHotClient(compilers, options, logger) {
@@ -1566,9 +1595,16 @@ function injectHotClient(compilers, options, logger) {
     return;
   }
 
+  // `client: false` is no runtime in the page while the compilation still
+  // gets everything else — the plugin, for a page that wires a client of its
+  // own and still wants its updates.
+  const addsClient = options.client !== false;
+  /** @type {HotClientOptions | undefined} */
+  const clientOptions = options.client || undefined;
+
   // TODO in the next major release remove this warning and `LEGACY_CLIENT_OPTIONS`
   const deprecated = LEGACY_CLIENT_OPTIONS.filter((name) =>
-    Object.hasOwn(options.client || {}, name),
+    Object.hasOwn(clientOptions || {}, name),
   );
 
   if (deprecated.length > 0) {
@@ -1585,7 +1621,23 @@ function injectHotClient(compilers, options, logger) {
   // What the developer set in node, which wins over everything below it: these
   // are the same options the query carries, so either spelling reaches the
   // runtime and the one written by hand is the one that counts.
-  const client = clientQuery(options.client, options.path);
+  const client = clientQuery(clientOptions, options.path);
+
+  // A client transport of someone else's: a module exporting a class with the
+  // same shape as the built-in two, handed to the runtime through
+  // `__webpack_dev_server_client__`, which it uses in place of its own. What
+  // goes on the query is the wire the endpoint serves, since the runtime still
+  // works out the connection url and how to hold it open from that.
+  /** @type {string | undefined} */
+  const customClientTransport =
+    client.transport && !BUILT_IN_CLIENT_TRANSPORTS.includes(client.transport)
+      ? client.transport
+      : undefined;
+
+  if (customClientTransport) {
+    client.transport =
+      typeof options.transport === "string" ? options.transport : "ws";
+  }
 
   // A transport of your own carries whatever protocol you wrote it to carry,
   // and the built-in client speaks two. When yours speaks one of them,
@@ -1601,9 +1653,11 @@ function injectHotClient(compilers, options, logger) {
   // Overriding the transport is for a client that talks to something else, so
   // it comes with an endpoint of its own. Without one it is pointed straight
   // back at this middleware speaking the wrong protocol, which is a page that
-  // silently never connects.
+  // silently never connects. A client module of someone else's says for
+  // itself what it speaks.
   if (
     typeof options.transport === "string" &&
+    !customClientTransport &&
     client.transport &&
     client.transport !== options.transport &&
     !client.path
@@ -1614,13 +1668,24 @@ function injectHotClient(compilers, options, logger) {
   }
 
   for (const compiler of compilers) {
-    if (!isWebTarget(compiler)) {
-      continue;
+    const { webpack } = compiler;
+    // The client goes only where a browser will run it. The plugin goes
+    // wherever the middleware serves a compilation from, since `module.hot`
+    // is what a server bundle hot-reloads itself with too — through
+    // `webpack/hot/poll` or `webpack/hot/signal` — and a project relying on
+    // `hot` to apply it has no plugin of its own to fall back to.
+    const isWeb = addsClient && isWebTarget(compiler);
+
+    if (isWeb && customClientTransport) {
+      new webpack.ProvidePlugin({
+        __webpack_dev_server_client__: resolveClientTransport(
+          customClientTransport,
+          compiler.context,
+        ),
+      }).apply(compiler);
     }
 
-    const { webpack } = compiler;
-
-    const missing = entriesMissingClient(compiler);
+    const missing = isWeb ? entriesMissingClient(compiler) : [];
 
     if (missing === null || missing.length > 0) {
       if (transport === undefined) {
@@ -1675,8 +1740,8 @@ function injectHotClient(compilers, options, logger) {
     // when `hot.client.apply` says so; a plugin written into the configuration
     // is the developer's and stays.
     const needsHmr =
-      !options.client ||
-      (options.client.apply !== "reload" && options.client.apply !== "nothing");
+      !clientOptions ||
+      (clientOptions.apply !== "reload" && clientOptions.apply !== "nothing");
 
     const hmrPluginExists = compiler.options.plugins.some(
       (plugin) =>

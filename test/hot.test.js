@@ -1926,6 +1926,252 @@ describe("createHot over a WebSocket", () => {
 
     expect(JSON.parse(messages[0]).action).toBe("built");
   });
+
+  // `hot.ws` is handed to the `ws` server, which is how webpack-dev-server's
+  // `webSocketServer.options` keep working now the socket is this package's: a
+  // port or a server of its own, and anything else `ws` takes.
+  describe("with options for the ws server", () => {
+    /**
+     * A port nothing is listening on.
+     * @returns {Promise<number>} the port
+     */
+    async function freePort() {
+      const probe = http.createServer();
+
+      await new Promise((resolve) => {
+        probe.listen(0, "127.0.0.1", resolve);
+      });
+
+      const { port } = probe.address();
+
+      await new Promise((resolve) => {
+        probe.close(resolve);
+      });
+
+      return port;
+    }
+
+    /**
+     * Stand up an endpoint that listens on a port of its own.
+     * @param {EXPECTED_OBJECT} compiler fake compiler
+     * @param {EXPECTED_OBJECT=} options extra hot options
+     * @returns {Promise<{ hot: EXPECTED_OBJECT, url: string, port: number }>} the endpoint
+     */
+    async function serveOnOwnPort(compiler, options = {}) {
+      const port = await freePort();
+      const hot = createHot(compiler, {
+        transport: "ws",
+        ...options,
+        ws: { host: "127.0.0.1", port, ...options.ws },
+      });
+
+      cleanups.push(async () => {
+        hot.close();
+      });
+
+      // `ws` binds as it is constructed, which is not synchronous.
+      await new Promise((resolve) => {
+        setTimeout(resolve, 50);
+      });
+
+      return { hot, url: `ws://127.0.0.1:${port}${hot.path}`, port };
+    }
+
+    it("listens on a port of its own", async () => {
+      const compiler = makeFakeCompiler();
+      const endpoint = await serveOnOwnPort(compiler);
+
+      compiler.emitDone(makeFakeStats({ hash: "own-port" }));
+
+      const { messages } = await connect(endpoint.url);
+
+      await until(() => messages.length > 0);
+
+      expect(JSON.parse(messages[0]).hash).toBe("own-port");
+    });
+
+    it("answers nothing on the server it is handed when it has a port of its own", async () => {
+      const compiler = makeFakeCompiler();
+      const endpoint = await serveOnOwnPort(compiler);
+      const fakeSocket = {
+        write: () => {
+          throw new Error("must not answer");
+        },
+        destroy: () => {
+          throw new Error("must not answer");
+        },
+      };
+
+      expect(
+        endpoint.hot.handleUpgrade(
+          { url: endpoint.hot.path, headers: { upgrade: "websocket" } },
+          fakeSocket,
+          Buffer.alloc(0),
+        ),
+      ).toBe(false);
+    });
+
+    it("listens on a server of its own", async () => {
+      const compiler = makeFakeCompiler();
+      const server = http.createServer();
+
+      await new Promise((resolve) => {
+        server.listen(0, "127.0.0.1", resolve);
+      });
+
+      const hot = createHot(compiler, { transport: "ws", ws: { server } });
+
+      cleanups.push(async () => {
+        hot.close();
+        await new Promise((resolve) => {
+          server.close(resolve);
+        });
+      });
+
+      compiler.emitDone(makeFakeStats({ hash: "own-server" }));
+
+      const { messages } = await connect(
+        `ws://127.0.0.1:${server.address().port}${hot.path}`,
+      );
+
+      await until(() => messages.length > 0);
+
+      expect(JSON.parse(messages[0]).hash).toBe("own-server");
+    });
+
+    it("hands everything else to ws", async () => {
+      const compiler = makeFakeCompiler();
+      const endpoint = await serveOverWs(compiler, {
+        ws: {
+          handleProtocols: (protocols) =>
+            protocols.has("second") ? "second" : false,
+        },
+      });
+
+      const { WebSocket } = require("ws");
+
+      const socket = new WebSocket(endpoint.url, ["first", "second"]);
+
+      cleanups.push(async () => {
+        socket.terminate();
+      });
+
+      await new Promise((resolve, reject) => {
+        socket.on("open", resolve);
+        socket.on("error", reject);
+      });
+
+      expect(socket.protocol).toBe("second");
+    });
+
+    it("keeps the endpoint's path whatever the ws options say", async () => {
+      const compiler = makeFakeCompiler();
+      const endpoint = await serveOnOwnPort(compiler, {
+        path: "/__hmr",
+        ws: { path: "/elsewhere" },
+      });
+
+      compiler.emitDone(makeFakeStats({ hash: "path-kept" }));
+
+      const { messages } = await connect(endpoint.url);
+
+      await until(() => messages.length > 0);
+
+      expect(endpoint.url).toContain("/__hmr");
+      expect(JSON.parse(messages[0]).hash).toBe("path-kept");
+    });
+
+    it("refuses an origin the option does not allow on its own port too", async () => {
+      const compiler = makeFakeCompiler();
+      const endpoint = await serveOnOwnPort(compiler);
+
+      await expect(
+        connect(endpoint.url, { Origin: "https://evil.example" }),
+      ).rejects.toThrow(/Unexpected server response: 403/);
+    });
+
+    it("requires the token on its own port too", async () => {
+      const compiler = makeFakeCompiler();
+      const endpoint = await serveOnOwnPort(compiler, { token: "secret" });
+
+      await expect(connect(endpoint.url)).rejects.toThrow(
+        /Unexpected server response: 403/,
+      );
+
+      const { socket } = await connect(`${endpoint.url}?token=secret`);
+
+      expect(socket.readyState).toBe(socket.OPEN);
+    });
+
+    it("asks a verifyClient of the developer's own after its own checks", async () => {
+      const compiler = makeFakeCompiler();
+      /** @type {string[]} */
+      const asked = [];
+      const endpoint = await serveOnOwnPort(compiler, {
+        ws: {
+          verifyClient: (info) => {
+            asked.push(info.req.url);
+
+            return !info.req.url.includes("deny");
+          },
+        },
+      });
+
+      await expect(connect(`${endpoint.url}?deny=1`)).rejects.toThrow(
+        /Unexpected server response: 401/,
+      );
+
+      const { socket } = await connect(endpoint.url);
+
+      expect(socket.readyState).toBe(socket.OPEN);
+      expect(asked).toHaveLength(2);
+    });
+
+    it("waits for a verifyClient that answers through its callback", async () => {
+      const compiler = makeFakeCompiler();
+      const endpoint = await serveOnOwnPort(compiler, {
+        ws: {
+          verifyClient: (info, done) => {
+            setTimeout(() => done(false, 418), 10);
+          },
+        },
+      });
+
+      await expect(connect(endpoint.url)).rejects.toThrow(
+        /Unexpected server response: 418/,
+      );
+    });
+
+    it("never reaches the developer's verifyClient for a refused origin", async () => {
+      const compiler = makeFakeCompiler();
+      let asked = false;
+      const endpoint = await serveOnOwnPort(compiler, {
+        ws: {
+          verifyClient: () => {
+            asked = true;
+
+            return true;
+          },
+        },
+      });
+
+      await expect(
+        connect(endpoint.url, { Origin: "https://evil.example" }),
+      ).rejects.toThrow(/Unexpected server response: 403/);
+      expect(asked).toBe(false);
+    });
+
+    it("stops listening on its own port once closed", async () => {
+      const compiler = makeFakeCompiler();
+      const endpoint = await serveOnOwnPort(compiler);
+
+      endpoint.hot.close();
+
+      await expect(connect(endpoint.url)).rejects.toThrow(
+        /timed out connecting|ECONNREFUSED|socket hang up/,
+      );
+    });
+  });
 });
 
 describe("createHot over a transport of your own", () => {

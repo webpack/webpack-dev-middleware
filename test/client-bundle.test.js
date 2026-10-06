@@ -1,9 +1,14 @@
+import fs from "node:fs";
 import path from "node:path";
 
+import * as acorn from "acorn";
 import { Volume, createFsFromVolume } from "memfs";
 import webpack from "webpack";
 
 const CLIENT = path.resolve(__dirname, "../client-src/index.js");
+// What is published, which is what a project bundles — `npm run build` writes
+// it, and installing the package's dependencies runs that.
+const BUILT_CLIENT = path.resolve(__dirname, "../client/index.js");
 
 // `"universal"` and the combined `["web", "node"]` target are webpack 5.108+.
 const [major, minor] = webpack.version.split(".").map(Number);
@@ -11,14 +16,15 @@ const hasUniversalTarget = major > 5 || (major === 5 && minor >= 108);
 
 /**
  * @param {string | string[]} target webpack target
+ * @param {string=} entry which copy of the client to build
  * @returns {Promise<{ errors: string[], source: string }>} what building the client for it produced
  */
-function build(target) {
+function build(target, entry = CLIENT) {
   const compiler = webpack({
     mode: "development",
     devtool: false,
     target,
-    entry: CLIENT,
+    entry,
     output: { path: "/", filename: "client.js" },
   });
   const volume = new Volume();
@@ -74,4 +80,19 @@ describe("the client in a bundle for every kind of target", () => {
       expect(source).not.toMatch(/external "/);
     });
   }
+});
+
+// The client is published as ES5, and a project targeting `["web", "es5"]`
+// gets nothing newer from it — including from what it imports, which webpack
+// does not transpile. Parsed as ES5 rather than looked over, so anything newer
+// fails the test whatever it is.
+describe("the published client in an ES5 bundle", () => {
+  it("parses as ES5, logger and all", async () => {
+    expect(fs.existsSync(BUILT_CLIENT)).toBe(true);
+
+    const { errors, source } = await build(["web", "es5"], BUILT_CLIENT);
+
+    expect(errors).toEqual([]);
+    expect(() => acorn.parse(source, { ecmaVersion: 5 })).not.toThrow();
+  });
 });

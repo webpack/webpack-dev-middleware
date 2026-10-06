@@ -771,7 +771,11 @@ describe("what injectHotClient leaves alone", () => {
     expect(hasHmrPlugin(instance)).toBe(false);
   });
 
-  it("skips a compilation a browser does not run", () => {
+  it("gives a compilation a browser does not run the plugin, not the client", () => {
+    // A server bundle hot-reloads itself through `module.hot` too — with
+    // `webpack/hot/poll` or `webpack/hot/signal` — and webpack-dev-server has
+    // always applied the plugin to every compilation it serves, so a project
+    // relying on that has none of its own.
     const instance = compiler({ target: "node" });
     const before = entryCount(instance);
 
@@ -782,7 +786,53 @@ describe("what injectHotClient leaves alone", () => {
     );
 
     expect(entryCount(instance)).toBe(before);
+    expect(hasHmrPlugin(instance)).toBe(true);
+  });
+
+  it("gives that compilation no plugin either in a mode that never applies an update", () => {
+    const instance = compiler({ target: "node" });
+
+    injectHotClient(
+      [instance],
+      {
+        path: "/__webpack_hmr",
+        transport: "sse",
+        client: { apply: "reload" },
+      },
+      logger,
+    );
+
     expect(hasHmrPlugin(instance)).toBe(false);
+  });
+
+  it("adds no client but still the plugin when the client is off", () => {
+    // A page that wires a runtime of its own still wants its updates applied,
+    // which takes the plugin.
+    const instance = compiler();
+    const before = entryCount(instance);
+
+    injectHotClient(
+      [instance],
+      { path: "/__webpack_hmr", transport: "sse", client: false },
+      logger,
+    );
+
+    expect(entryCount(instance)).toBe(before);
+    expect(hasHmrPlugin(instance)).toBe(true);
+  });
+
+  it("does not warn about a token it never had a client to hand to, when the client is off", () => {
+    /** @type {string[]} */
+    const warned = [];
+    const instance = compiler();
+
+    injectHotClient(
+      [instance],
+      { path: "/__webpack_hmr", transport: "sse", client: false },
+      { warn: (message) => warned.push(message), log: () => {} },
+    );
+
+    expect(warned).toStrictEqual([]);
   });
 
   it("treats an entry it cannot read as having no client", () => {
@@ -990,6 +1040,204 @@ describe("the entry query the client is given", () => {
   });
 });
 
+// `hot.client.transport` naming a module rather than a wire: a client class of
+// someone else's, which the runtime uses in place of the built-in one through
+// `__webpack_dev_server_client__`. webpack-dev-server's
+// `client.webSocketTransport` has always worked this way.
+describe("a client transport of someone else's", () => {
+  const CUSTOM = path.resolve(__dirname, "fixtures/custom-client-transport.js");
+
+  /** @type {EXPECTED_OBJECT[]} */
+  let compilers = [];
+  /** @type {string[]} */
+  let warnings = [];
+  /** @type {EXPECTED_OBJECT} */
+  const logger = {
+    warn: (message) => warnings.push(message),
+    log: () => {},
+  };
+
+  afterEach(() => {
+    for (const compiler of compilers) {
+      compiler.close(() => {});
+    }
+
+    compilers = [];
+    warnings = [];
+  });
+
+  /**
+   * Inject with an `EntryPlugin` and a `ProvidePlugin` that record instead of
+   * applying.
+   * @param {EXPECTED_OBJECT} options resolved hot options
+   * @param {EXPECTED_OBJECT=} config extra webpack configuration
+   * @returns {{ queries: Record<string, string>[], provided: Record<string, string>[] }} what was added
+   */
+  function inject(options, config) {
+    const instance = makeCompiler(config);
+
+    compilers.push(instance);
+
+    /** @type {string[]} */
+    const added = [];
+    /** @type {Record<string, string>[]} */
+    const provided = [];
+    const real = instance.webpack;
+
+    class RecordingEntryPlugin {
+      /**
+       * @param {string} _context context
+       * @param {string} entry entry request
+       */
+      constructor(_context, entry) {
+        added.push(entry);
+      }
+
+      apply() {}
+    }
+
+    class RecordingProvidePlugin {
+      /**
+       * @param {Record<string, string>} definitions what is provided
+       */
+      constructor(definitions) {
+        provided.push(definitions);
+      }
+
+      apply() {}
+    }
+
+    instance.webpack = {
+      ...real,
+      EntryPlugin: RecordingEntryPlugin,
+      ProvidePlugin: RecordingProvidePlugin,
+    };
+
+    try {
+      injectHotClient([instance], options, logger);
+    } finally {
+      instance.webpack = real;
+    }
+
+    return {
+      queries: added.map((entry) =>
+        Object.fromEntries(new URLSearchParams(entry.split("?")[1])),
+      ),
+      provided,
+    };
+  }
+
+  it("hands the runtime the module, resolved", () => {
+    const { provided } = inject({
+      path: "/__webpack_hmr",
+      transport: "ws",
+      client: { transport: CUSTOM },
+    });
+
+    expect(provided).toStrictEqual([{ __webpack_dev_server_client__: CUSTOM }]);
+  });
+
+  it("resolves a relative request from the compilation's context", () => {
+    const { provided } = inject(
+      {
+        path: "/__webpack_hmr",
+        transport: "ws",
+        client: { transport: "./custom-client-transport.js" },
+      },
+      { context: path.resolve(__dirname, "fixtures") },
+    );
+
+    expect(provided).toStrictEqual([{ __webpack_dev_server_client__: CUSTOM }]);
+  });
+
+  it("puts the endpoint's wire on the query, not the module", () => {
+    // The runtime still works out the url's scheme and how to hold the
+    // connection open from the wire, and a path there would be neither.
+    const { queries } = inject({
+      path: "/__webpack_hmr",
+      transport: "sse",
+      client: { transport: CUSTOM },
+    });
+
+    expect(queries).toStrictEqual([
+      { path: "/__webpack_hmr", transport: "sse" },
+    ]);
+  });
+
+  it("does not call it a disagreement with the endpoint", () => {
+    inject({
+      path: "/__webpack_hmr",
+      transport: "ws",
+      client: { transport: CUSTOM },
+    });
+
+    expect(warnings).toStrictEqual([]);
+  });
+
+  it("adds a client to a transport of your own on the server as well", () => {
+    // Both ends are someone else's, so the runtime is told a WebSocket — the
+    // wire webpack-dev-server has always built a custom client's url for.
+    const { queries, provided } = inject({
+      path: "/ws",
+      transport: () => ({
+        close: () => {},
+        onConnect: () => {},
+        publish: () => {},
+        publishTo: () => {},
+      }),
+      client: { transport: CUSTOM },
+    });
+
+    expect(queries).toStrictEqual([{ path: "/ws", transport: "ws" }]);
+    expect(provided).toHaveLength(1);
+    expect(warnings).toStrictEqual([]);
+  });
+
+  it("provides nothing for a built-in transport", () => {
+    const { provided } = inject({
+      path: "/__webpack_hmr",
+      transport: "ws",
+      client: { transport: "ws" },
+    });
+
+    expect(provided).toStrictEqual([]);
+  });
+
+  it("provides nothing to a compilation a browser does not run", () => {
+    const { provided } = inject(
+      {
+        path: "/__webpack_hmr",
+        transport: "ws",
+        client: { transport: CUSTOM },
+      },
+      { target: "node" },
+    );
+
+    expect(provided).toStrictEqual([]);
+  });
+
+  it("says which module it could not find", () => {
+    expect(() =>
+      inject({
+        path: "/__webpack_hmr",
+        transport: "ws",
+        client: { transport: "./no-such-client.js" },
+      }),
+    ).toThrow(
+      /'hot\.client\.transport'.*'\.\/no-such-client\.js' could not be resolved/,
+    );
+  });
+
+  it("is accepted by the schema", () => {
+    const client = schema.definitions.HotClient;
+
+    expect(client.properties.transport.anyOf).toStrictEqual([
+      { enum: ["sse", "ws"] },
+      { type: "string", minLength: 1 },
+    ]);
+  });
+});
+
 // Overriding the transport points the client at a different server. Left
 // pointing at this one it would ask for a protocol the endpoint does not
 // serve, and a page that never connects says nothing about why.
@@ -1086,9 +1334,7 @@ describe("node and the query take the same names", () => {
   ];
 
   /** @type {string[]} every name `hot.client` accepts */
-  const takenInNode = Object.keys(
-    schema.properties.hot.anyOf[1].properties.client.properties,
-  );
+  const takenInNode = Object.keys(schema.definitions.HotClient.properties);
 
   it("reads something from the query at all", () => {
     // The extraction above is regex over source; if it ever stops matching it

@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import collectConsole from "../helpers/console-collector";
 import {
   OVERLAY_ID,
@@ -182,6 +184,119 @@ for (const transport of ["sse", "ws"]) {
 
       expect(await frame.evaluate(() => document.body.textContent)).toContain(
         "Module parse failed",
+      );
+    });
+  });
+}
+
+// Someone else's client transport, named by `hot.client.transport`: the
+// runtime has to use it in place of its own, not next to it.
+describe("a client transport of someone else's (browser)", () => {
+  let hotApp;
+  let browser;
+  let page;
+
+  afterEach(async () => {
+    ({ browser, app: hotApp } = await closeE2e(browser, hotApp));
+  });
+
+  it("is the one the page connects with", async () => {
+    hotApp = await createHotApp({
+      transport: "ws",
+      bare: true,
+      hot: {
+        client: {
+          transport: path.resolve(
+            __dirname,
+            "../fixtures/custom-client-transport.js",
+          ),
+        },
+      },
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    expect(
+      await page.evaluate(() => globalThis.__customClientTransportUrl__),
+    ).toContain("/__webpack_hmr");
+
+    await page.evaluate(() => {
+      globalThis.notReloaded = true;
+    });
+
+    hotApp.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    expect(await page.evaluate(() => globalThis.notReloaded)).toBe(true);
+  });
+});
+
+// What `@pmmmwh/react-refresh-webpack-plugin` does through webpack-dev-server's
+// `client/socket`: take the connection the runtime holds and listen to the raw
+// messages on it, alongside the runtime rather than through it.
+for (const transport of ["sse", "ws"]) {
+  describe(`the connection the runtime holds, over ${transport} (browser)`, () => {
+    let hotApp;
+    let browser;
+    let page;
+
+    afterEach(async () => {
+      ({ browser, app: hotApp } = await closeE2e(browser, hotApp));
+    });
+
+    it("can be listened to by tooling next to the runtime", async () => {
+      const socketModule = JSON.stringify(
+        path.resolve(__dirname, "../../client-src/socket.js"),
+      );
+      const listener = `
+        import { client } from ${socketModule};
+
+        globalThis.__rawMessages = [];
+
+        const listen = () => {
+          if (!client) {
+            setTimeout(listen, 10);
+            return;
+          }
+
+          client.client.addEventListener("message", (event) => {
+            if (event.data !== "\u{1F493}") {
+              globalThis.__rawMessages.push(JSON.parse(event.data).action);
+            }
+          });
+        };
+
+        listen();
+      `;
+
+      // The client entry from source, which the listener imports from too —
+      // one copy of the module, as there is in a real bundle.
+      hotApp = await createHotApp({
+        transport,
+        files: { "listener.js": listener },
+        code: `require("./listener.js");\n${acceptedApp("v1")}`,
+      });
+      ({ page, browser } = await runBrowser());
+      const console_ = collectConsole(page);
+
+      await page.goto(hotApp.url);
+      await waitForAppText(page, "v1");
+      await console_.waitFor("connected");
+
+      hotApp.edit(`require("./listener.js");\n${acceptedApp("v2")}`);
+      await waitForAppText(page, "v2");
+
+      await page.waitForFunction(() =>
+        globalThis.__rawMessages.includes("built"),
+      );
+
+      expect(await page.evaluate(() => globalThis.__rawMessages)).toContain(
+        "building",
       );
     });
   });

@@ -45,6 +45,10 @@
       "types": "./types/client/problem.d.ts",
       "default": "./client/problem.js"
     },
+    "./client/socket": {
+      "types": "./types/client/socket.d.ts",
+      "default": "./client/socket.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "dist/index.js",
@@ -68,7 +72,7 @@
     "prebuild": "npm run clean",
     "build:types": "tsc && tsc -p tsconfig.client.build.json && node ./scripts/mark-client-esm.mjs && prettier \"types/**/*.ts\" --write",
     "build:code": "babel src -d dist --copy-files",
-    "build:client": "babel client-src -d client --copy-files",
+    "build:client": "babel client-src -d client --copy-files && node ./scripts/build-client-logger.mjs",
     "build": "npm-run-all -p \"build:**\"",
     "test:only": "node --experimental-vm-modules ./node_modules/jest-cli/bin/jest",
     "test:e2e": "node --experimental-vm-modules ./node_modules/jest-cli/bin/jest test/e2e --runInBand",

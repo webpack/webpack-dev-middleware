@@ -55,6 +55,16 @@ let overlayId = DEFAULT_OVERLAY_ID;
 // attributes.
 
 /**
+ * Whether a key press is Escape. `"Esc"` and the key code are what older
+ * browsers — the ES5 ones this runtime still supports — report for it.
+ * @param {KeyboardEvent} event the key press
+ * @returns {boolean} true for Escape
+ */
+function isEscape(event) {
+  return event.key === "Escape" || event.key === "Esc" || event.keyCode === 27;
+}
+
+/**
  * The iframe acts as the backdrop: it covers the viewport and dims the page.
  * @type {Record<string, string | number>}
  */
@@ -67,7 +77,9 @@ const backdropStyles = {
   width: "100vw",
   height: "100vh",
   border: "none",
-  zIndex: 9999,
+  // The highest a browser allows, as webpack-dev-server's overlay always had:
+  // a page's own modal or toast must not cover the build's errors.
+  zIndex: 2147483647,
   background: theme.backdrop,
 };
 
@@ -547,7 +559,7 @@ function ensureOverlay() {
   if (!state.hostKeydownAttached) {
     state.hostKeydownAttached = true;
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
+      if (isEscape(event)) {
         clear();
       }
     });
@@ -610,7 +622,7 @@ function ensureOverlay() {
   // Dismiss the overlay when pressing Escape while the frame has focus;
   // navigate between problems with the arrow keys when paginating.
   frameDocument.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
+    if (isEscape(event)) {
       clear();
     } else if (paginate && event.key === "ArrowLeft") {
       goToPage(state.pageIndex - 1);
