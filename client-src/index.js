@@ -286,7 +286,37 @@ function urlOverride(setting) {
 function applyMode() {
   const override = urlOverride("apply");
 
-  return (override && readApplyMode(override)) || options.apply;
+  return (override && readApplyMode(override)) || legacyUrlMode(options.apply);
+}
+
+/**
+ * The two parameters that `apply` replaced, which a page's url could already
+ * use to turn one half of a build's response off — `?<prefix>-hot=false` for
+ * hot module replacement, `?<prefix>-live-reload=false` for the reload it
+ * falls back to. They narrow the mode in force rather than replace it, as
+ * they always did, so `hot=false` on a page set to `hmr` leaves the reload.
+ *
+ * TODO in the next major release remove this, and the two names it reads.
+ * @param {ApplyMode} mode the mode in force before the url is asked
+ * @returns {ApplyMode} that mode with whatever the url turned off taken away
+ */
+function legacyUrlMode(mode) {
+  let hmr = mode === "hmr" || mode === "hmr-only";
+  let reload = mode === "hmr" || mode === "reload";
+
+  if (urlOverride("hot") === "false") {
+    hmr = false;
+  }
+
+  if (urlOverride("live-reload") === "false") {
+    reload = false;
+  }
+
+  if (hmr) {
+    return reload ? "hmr" : "hmr-only";
+  }
+
+  return reload ? "reload" : "nothing";
 }
 
 /**

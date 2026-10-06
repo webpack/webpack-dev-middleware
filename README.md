@@ -824,7 +824,9 @@ than to the value in the table, which is what they are when nothing else is
 serving them.
 
 One of them, `apply`, can also be set per page through a url parameter, which
-the rest cannot — see [opting one page out](#opting-one-page-out).
+the rest cannot — see [opting one page out](#opting-one-page-out). The two
+booleans it replaced, `hot` and `live-reload`, still work there for now and
+narrow the mode in force.
 
 |        Name         |                   Type                   |          Default           | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | :-----------------: | :--------------------------------------: | :------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1054,6 +1056,8 @@ http://localhost:3000/?webpack-dev-middleware-apply=false
 `false` is taken as `nothing`, which is what this parameter meant before `apply` replaced the three booleans it covers.
 
 The `webpack-dev-middleware` part is the client's [`urlPrefix`](#client-options), so a server built on this middleware can set `hot.client.urlPrefix` and name the parameter after itself. What follows it is the option, spelled the one way the option is spelled. The name is matched whole and case-insensitively, and a value that is not one of the modes is left alone — a parameter that merely contains the words, or a value such as `nothingness`, changes nothing.
+
+The two parameters `apply` replaced still work, and narrow whatever mode is in force instead of replacing it — `?webpack-dev-middleware-hot=false` takes hot module replacement away and leaves the reload, `?webpack-dev-middleware-live-reload=false` takes the reload away and leaves hot module replacement, and both together do nothing. `apply` in the same url wins over them. They are kept for pages and bookmarks that already use them, and will be removed in the next major release.
 
 ### Reloading the page from the server
 
