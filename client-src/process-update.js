@@ -58,7 +58,7 @@ function upToDate(hash) {
 
 /**
  * @param {string} hash latest hash from the SSE payload
- * @param {{ reload?: boolean }} options client options
+ * @param {{ reload?: boolean, runtimeLeftOut?: boolean }} options client options
  * @param {string=} name compilation name the payload belongs to
  */
 export default function applyUpdate(hash, options, name) {
@@ -87,11 +87,13 @@ export default function applyUpdate(hash, options, name) {
       );
     }
 
+    // The project's own mode leaves the runtime out on purpose, so a page whose
+    // url asks for `"hmr"` anyway has asked for something the bundle cannot do.
     // `"hmr"` falls back to loading the page when an update cannot be applied,
-    // and a bundle without the runtime cannot apply any: a page whose url
-    // asked for it, where the project's own mode left the runtime out, would
-    // otherwise stay on code the build has replaced.
-    if (options.reload && !upToDate(hash)) {
+    // and without this the page would stay on code the build has replaced. A
+    // runtime that is missing from a project that did want one is a mistake,
+    // and is reported above rather than papered over with a reload.
+    if (options.reload && options.runtimeLeftOut && !upToDate(hash)) {
       reloadPage();
     }
 

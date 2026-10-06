@@ -759,7 +759,15 @@ function processMessage(obj) {
           sendMessage.raw(`webpackHotUpdate${obj.hash}`);
           // `"hmr"` falls back to loading the page when an update cannot be
           // applied; `"hmr-only"` says so and stops.
-          applyUpdate(obj.hash, { reload: mode === "hmr" }, obj.name);
+          applyUpdate(
+            obj.hash,
+            {
+              reload: mode === "hmr",
+              runtimeLeftOut:
+                options.apply === "reload" || options.apply === "nothing",
+            },
+            obj.name,
+          );
         } else if (
           // Without Hot Module Replacement the new code can only reach the
           // page by loading it again. `sync` is left alone: it reports what
