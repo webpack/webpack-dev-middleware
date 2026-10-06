@@ -148,6 +148,73 @@ describe("messages posted to the page (browser)", () => {
     );
   });
 
+  // A package embedding this runtime is the one the developer installed and
+  // the one they would report a problem to, so it labels the console with its
+  // own name — the same reason the overlay's element id is settable.
+  it("labels the console with the name it was given", async () => {
+    hotApp = await createHotApp({
+      bare: true,
+      hot: { client: { logging: { level: "info", name: "my-dev-server" } } },
+      code: recordingApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    const said = console_.messages.join("\n");
+
+    expect(said).toContain("[my-dev-server]");
+    expect(said).not.toContain("[webpack-dev-middleware]");
+  });
+
+  // Whitespace before the json, which a query can carry and a check on the
+  // first character would miss — the object would be read as the level, and
+  // the name silently lost.
+  it("reads the name whatever the json is padded with", async () => {
+    hotApp = await createHotApp({
+      query: `?logging=${encodeURIComponent(' {"level":"info","name":"padded-server"} ')}`,
+      code: recordingApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    expect(console_.messages.join("\n")).toContain("[padded-server]");
+  });
+
+  // Both cases above use `"info"`, the default — so neither would notice the
+  // object's `name` being applied while its `level` was dropped. `"warn"`
+  // silences `connected`, which is logged at info, and leaves a warning
+  // through: the level has to be read from inside the object for this to hold.
+  it("applies the level from inside the object too", async () => {
+    hotApp = await createHotApp({
+      bare: true,
+      hot: { client: { logging: { level: "warn", name: "quiet-server" } } },
+      code: recordingApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(hotApp.url);
+    await waitForAppText(page, "v1");
+
+    // Logged at the error level, which `"warn"` lets through.
+    hotApp.instance.publish({ action: "error", message: "a warning level" });
+    await console_.waitFor("a warning level");
+
+    const said = console_.messages.join("\n");
+
+    expect(said).toContain("[quiet-server]");
+    // Logged at info, so `"warn"` has to have come from inside the object.
+    expect(said).not.toContain("connected");
+  });
+
   it("says when the connection went away, once per outage", async () => {
     hotApp = await createHotApp({
       query: "?timeout=1000",

@@ -10,7 +10,7 @@ import createSocket from "./clients/createSocket.js";
 import * as indicator from "./indicator.js";
 import configureOverlay from "./overlay.js";
 import applyUpdate from "./process-update.js";
-import { log, setLogLevel } from "./utils/log.js";
+import { log, setLogLevel, setLogName } from "./utils/log.js";
 import reloadPage from "./utils/reload.js";
 import sendMessage from "./utils/send-message.js";
 import socketOptions from "./utils/socket-options.js";
@@ -63,6 +63,7 @@ import withToken from "./utils/with-token.js";
  * @property {boolean | OverlayOptions} overlay enable the in-page error overlay (same value shape as webpack-dev-server's `client.overlay`)
  * @property {string} urlPrefix prefix of the page-url parameters that override `apply` for one page
  * @property {LogLevel} logging logger level
+ * @property {string=} loggerName what to label messages with in the console
  * @property {string} name limit updates to this compilation name
  * @property {string} token the secret the endpoint requires, when it requires one, put on the connection url — empty when it requires none
  * @property {boolean | "circular" | "linear"} progress show an indicator while a rebuild is in progress — `true` and `"circular"` a small badge, `"linear"` a thin bar across the top of the viewport
@@ -77,6 +78,7 @@ const options = {
   overlay: true,
   urlPrefix: "webpack-dev-middleware",
   logging: "info",
+  loggerName: "",
   name: "",
   // The secret the endpoint requires, when it requires one. Put on the url
   // rather than sent as a header: neither `EventSource` nor `WebSocket` lets a
@@ -351,7 +353,32 @@ function setOverrides(overrides) {
   }
   if (overrides.urlPrefix) options.urlPrefix = overrides.urlPrefix;
   if (overrides.logging) {
-    options.logging = /** @type {LogLevel} */ (overrides.logging);
+    // A level, or a json object carrying the level and the name to label
+    // messages with — the same two shapes the other options take.
+    let logging = overrides.logging;
+    let parsed;
+
+    try {
+      parsed = JSON.parse(logging);
+    } catch {
+      // Not json, so it is the level it looks like.
+    }
+
+    // Only an object is the second shape. `JSON.parse` also accepts a bare
+    // number, boolean or quoted string, and a level is none of those — asking
+    // what came back rather than what the text started with also means
+    // leading whitespace does not hide it.
+    if (parsed && typeof parsed === "object") {
+      logging = parsed.level;
+
+      if (parsed.name) {
+        options.loggerName = parsed.name;
+      }
+    }
+
+    if (logging) {
+      options.logging = /** @type {LogLevel} */ (logging);
+    }
   }
   if (overrides.name) {
     options.name = overrides.name;
@@ -372,6 +399,7 @@ function setOverrides(overrides) {
     options.path = __webpack_public_path__ + options.path.replace(/^\//, "");
   }
 
+  setLogName(options.loggerName);
   setLogLevel(options.logging);
 }
 
