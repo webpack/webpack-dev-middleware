@@ -714,7 +714,7 @@ Only the ones a browser runs, decided by the compilation's [`target`](https://we
 | unset (webpack's default), `web`, `browserslist: …`            | yes              |
 | `webworker`                                                    | yes              |
 | `electron-renderer`, `electron-preload`, `nwjs`, `node-webkit` | yes              |
-| universal — `web` and `node` together, as in `["node", "web"]` | yes              |
+| universal — `"universal"`, or `web` and `node` together        | yes              |
 | `node`, `node14`, `async-node`, `electron-main`                | no               |
 | `deno`                                                         | no               |
 | `false`, or a version with no platform such as `es2020`        | no               |
@@ -722,6 +722,8 @@ Only the ones a browser runs, decided by the compilation's [`target`](https://we
 So in a multi-compiler build the browser half gets a client and the server-rendering half does not, with nothing to configure — both get the plugin.
 
 **Web workers are included.** A worker has no `window` and no document, but it has `EventSource`, `WebSocket` and webpack's runtime, which is all an update needs — so a worker compilation gets a client and applies updates in place, with the overlay and the building indicator left to the page. The one thing a worker cannot do is reload itself, since it has no `location.reload`; when an update cannot be applied the client says so and leaves the page that started the worker to reload it.
+
+**A universal build runs it in Node too.** One bundle serves both, so the runtime is in what Node runs as well, and there it does nothing: it opens no connection, prints nothing and leaves nothing running.
 
 `deno` is a context webpack also counts as `web`, and it stays out until it can be tested there — it has no `window` either, and whether the transports are available is not something this project's test suite can answer.
 
