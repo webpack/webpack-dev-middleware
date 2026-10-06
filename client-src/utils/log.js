@@ -1,7 +1,7 @@
 // @ts-expect-error -- no published types for this entry point
 import logger from "webpack/lib/logging/runtime.js";
 
-const LOGGER_NAME = "webpack-dev-middleware";
+const DEFAULT_NAME = "webpack-dev-middleware";
 const DEFAULT_LEVEL = "info";
 
 /** @typedef {false | true | "none" | "error" | "warn" | "info" | "log" | "verbose"} LogLevel */
@@ -15,7 +15,18 @@ export function setLogLevel(level) {
 
 setLogLevel(DEFAULT_LEVEL);
 
-const rawLog = logger.getLogger(LOGGER_NAME);
+// What every message is labelled with in the console. A package embedding this
+// runtime is the package the developer installed and the one they would report
+// a problem to, so it says its own name rather than this one — the same reason
+// the overlay's element id is settable.
+let rawLog = logger.getLogger(DEFAULT_NAME);
+
+/**
+ * @param {string=} name what to label messages with
+ */
+export function setLogName(name) {
+  rawLog = logger.getLogger(name || DEFAULT_NAME);
+}
 
 /**
  * Guard a logger method: under a `require-trusted-types-for 'script'`

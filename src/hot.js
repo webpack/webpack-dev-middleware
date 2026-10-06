@@ -15,6 +15,8 @@
 /** @typedef {import("webpack").StatsOptions} StatsOptions */
 /** @typedef {import("webpack").Configuration["stats"]} MiddlewareStatsOption */
 
+/** @typedef {("none" | "error" | "warn" | "info" | "log" | "verbose")} LogLevel */
+
 /**
  * Everything the browser runtime reads, as it is set in node. One for one with
  * what the entry query carries, so every option has both spellings: set it
@@ -38,7 +40,7 @@
  * @property {("hmr" | "hmr-only" | "reload" | "nothing")=} apply what a build does to the page — apply the update and reload if it cannot be applied, apply it and stop with a message if it cannot, load the page again on any build that changed something, or leave the page alone
  * @property {(boolean | { retries?: number, timeout?: number })=} connect whether to connect when the entry runs, and how the connection is held open
  * @property {string=} urlPrefix prefix of the page-url parameter that overrides `apply` for a single page
- * @property {("none" | "error" | "warn" | "info" | "log" | "verbose")=} logging how much the runtime logs to the browser console
+ * @property {(LogLevel | { level?: LogLevel, name?: string })=} logging how much the runtime logs to the browser console, and the name every message is labelled with
  * @property {number=} reconnect how many times to reconnect before giving up; unset, Server-Sent Events keep trying for as long as the page is open while a WebSocket gives up after 10
  * @property {number=} timeout how long the runtime tolerates silence before reconnecting, in milliseconds — Server-Sent Events only, since a WebSocket's heartbeat is a protocol ping JavaScript cannot see
  * @property {boolean=} autoConnect connect as soon as the entry runs
