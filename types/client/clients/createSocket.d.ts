@@ -44,14 +44,19 @@ export default function createSocket(
  * @property {EXPECTED_ANY=} clientOptions passed to the client's constructor
  */
 /**
+ * A connection as `client` hands it out. Its own `client` is the `WebSocket`
+ * or `EventSource` underneath, on the built-in transports.
+ * @typedef {CommunicationClient & { client?: WebSocket | EventSource }} LiveClient
+ */
+/**
  * The connection the runtime holds right now, or `null` while there is none —
  * for tooling that listens alongside the runtime rather than through it.
  * `client.client` is the `WebSocket` or `EventSource` underneath, the shape
  * webpack-dev-server's `client/socket` has always exported, which is what
  * `@pmmmwh/react-refresh-webpack-plugin` reads its build messages from.
- * @type {CommunicationClient | null}
+ * @type {LiveClient | null}
  */
-export let client: CommunicationClient | null;
+export let client: LiveClient | null;
 /**
  * Called with no argument for open and close, and with the message string for
  * a message.
@@ -106,4 +111,11 @@ export type SocketOptions = {
    * passed to the client's constructor
    */
   clientOptions?: EXPECTED_ANY | undefined;
+};
+/**
+ * A connection as `client` hands it out. Its own `client` is the `WebSocket`
+ * or `EventSource` underneath, on the built-in transports.
+ */
+export type LiveClient = CommunicationClient & {
+  client?: WebSocket | EventSource;
 };

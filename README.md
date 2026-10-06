@@ -970,11 +970,15 @@ connection it holds:
 ```js
 import { client } from "webpack-dev-middleware/client/socket";
 
-// `client` is live: `null` until the runtime connects and while it reconnects.
-// `client.client` is the `WebSocket` or `EventSource` underneath.
-client.client.addEventListener("message", (event) => {
-  console.log(JSON.parse(event.data));
-});
+// `client` is live: `null` before the runtime starts to connect and while it
+// waits to reconnect. `client.client` is the `WebSocket` or `EventSource`
+// underneath, a new one for each connection, so a listener added to it hears
+// that connection only.
+if (client && client.client) {
+  client.client.addEventListener("message", (event) => {
+    console.log(JSON.parse(event.data));
+  });
+}
 ```
 
 This is the shape webpack-dev-server's `client/socket` has always exported,

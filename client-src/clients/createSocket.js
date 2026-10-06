@@ -34,12 +34,18 @@ import { log } from "../utils/log.js";
  */
 
 /**
+ * A connection as `client` hands it out. Its own `client` is the `WebSocket`
+ * or `EventSource` underneath, on the built-in transports.
+ * @typedef {CommunicationClient & { client?: WebSocket | EventSource }} LiveClient
+ */
+
+/**
  * The connection the runtime holds right now, or `null` while there is none —
  * for tooling that listens alongside the runtime rather than through it.
  * `client.client` is the `WebSocket` or `EventSource` underneath, the shape
  * webpack-dev-server's `client/socket` has always exported, which is what
  * `@pmmmwh/react-refresh-webpack-plugin` reads its build messages from.
- * @type {CommunicationClient | null}
+ * @type {LiveClient | null}
  */
 // eslint-disable-next-line import/no-mutable-exports
 export let client = null;
