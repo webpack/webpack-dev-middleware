@@ -671,6 +671,49 @@ describe("the browser options as a query", () => {
     ).toStrictEqual({ connect: '{"retries":3,"timeout":5000}' });
   });
 
+  // A spec replaces the resolved path in the query outright, so the part it
+  // leaves out has to be carried over. The client's own fallback is the same
+  // path only until someone sets `hot.path`, and then quietly is not.
+  it("carries the resolved path into a spec that names no pathname", () => {
+    expect(clientQuery({ path: { port: 8080 } }, "/custom-hmr")).toStrictEqual({
+      path: '{"port":8080,"pathname":"/custom-hmr"}',
+    });
+  });
+
+  // Empty is not a path, so it means the same as not saying one. Left as it
+  // was, the client would resolve it from its own default rather than from
+  // this server's — the same silent mismatch an absent one would cause.
+  it("carries the resolved path into a spec whose pathname is empty", () => {
+    expect(
+      clientQuery({ path: { port: 8080, pathname: "" } }, "/custom-hmr"),
+    ).toStrictEqual({ path: '{"port":8080,"pathname":"/custom-hmr"}' });
+  });
+
+  it("leaves a pathname the spec named alone", () => {
+    expect(
+      clientQuery({ path: { port: 8080, pathname: "/mine" } }, "/custom-hmr"),
+    ).toStrictEqual({ path: '{"port":8080,"pathname":"/mine"}' });
+  });
+
+  // The client decides which shape it was handed by what the json parses to,
+  // not by the first character — so padding cannot hide the object, and a
+  // bare number or boolean is not mistaken for one. Serialization is what
+  // this file covers; the browser end is in `test/e2e/transport.test.js`.
+  it("serializes a spec as json a parser can find", () => {
+    const query = clientQuery({ path: { port: 8080 } }, "/hmr");
+
+    expect(JSON.parse(query.path)).toStrictEqual({
+      port: 8080,
+      pathname: "/hmr",
+    });
+  });
+
+  it("does not reach into a path given as a string", () => {
+    expect(clientQuery({ path: "/plain" }, "/custom-hmr")).toStrictEqual({
+      path: "/plain",
+    });
+  });
+
   it("keeps a boolean connect a boolean", () => {
     expect(clientQuery({ connect: false })).toStrictEqual({ connect: "false" });
   });

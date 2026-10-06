@@ -653,6 +653,38 @@ describe("hot client (browser)", () => {
     expect(await readReloadMarker(page)).toBe(true);
   });
 
+  // `dynamicPublicPath` prefixes a path with the bundle's public path, which
+  // only makes sense for a path. An endpoint said in full already says where
+  // it is, and prefixing it would name somewhere that does not exist — and
+  // with the parts form resolving to a full url, this combination is now easy
+  // to arrive at by accident.
+  it("leaves an endpoint said in full alone under a dynamic public path", async () => {
+    app = await createHotApp({
+      publicPath: "/assets/",
+      hot: {
+        path: "/assets/__webpack_hmr",
+        client: { path: { hostname: "0.0.0.0" }, dynamicPublicPath: true },
+      },
+      bare: true,
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    // Connected, so the resolved url was used as it stood rather than having
+    // "/assets/" put in front of a scheme.
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    expect(
+      await page.evaluate(() => document.getElementById("app").textContent),
+    ).toBe("v2");
+  });
+
   it("keeps heartbeats away from subscribers and the console", async () => {
     app = await createHotApp({
       hot: { heartbeat: 100 },

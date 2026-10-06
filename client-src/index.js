@@ -14,6 +14,7 @@ import { log, setLogLevel, setLogName } from "./utils/log.js";
 import reloadPage from "./utils/reload.js";
 import sendMessage from "./utils/send-message.js";
 import socketOptions from "./utils/socket-options.js";
+import resolveSocketUrl from "./utils/socket-url.js";
 import stripAnsi from "./utils/strip-ansi.js";
 import withToken from "./utils/with-token.js";
 
@@ -75,10 +76,14 @@ import withToken from "./utils/with-token.js";
 /** @type {ReturnType<typeof createReporter> | undefined} */
 let reporter;
 
+// Where the endpoint is served, when nothing says otherwise. Also the path a
+// url spec falls back to when it names every part but that one.
+const DEFAULT_PATH = "/__webpack_hmr";
+
 /** @type {ClientOptions} */
 const options = {
   transport: "sse",
-  path: "/__webpack_hmr",
+  path: DEFAULT_PATH,
   apply: "hmr",
   connect: true,
   overlay: true,
@@ -335,8 +340,31 @@ function setOverrides(overrides) {
     options.transport = overrides.transport;
   }
   // Where the page connects, which may be an absolute url rather than a path
-  // when the endpoint is on another origin.
-  if (overrides.path) options.path = overrides.path;
+  // when the endpoint is on another origin. A json object says the parts that
+  // differ and leaves the rest to be resolved against the page, which is the
+  // only place the rest is known — behind a proxy, on another host, or on a
+  // socket listening on a port of its own.
+  if (overrides.path) {
+    let parsed;
+
+    try {
+      parsed = JSON.parse(overrides.path);
+    } catch {
+      // Not json, so it is the path it looks like.
+    }
+
+    // Only an object is the parts form. `JSON.parse` also accepts a bare
+    // number, boolean or quoted string, none of which is a path — asking what
+    // came back rather than what the text started with also means leading
+    // whitespace does not hide it.
+    const spec = parsed && typeof parsed === "object" ? parsed : undefined;
+
+    // The transport is read before this, so the url is resolved onto the
+    // scheme the transport it is for actually connects over.
+    options.path = spec
+      ? resolveSocketUrl(spec, DEFAULT_PATH, options.transport)
+      : overrides.path;
+  }
   if (overrides.token) options.token = overrides.token;
   if (overrides.connect) {
     // A boolean or a JSON object, the same two shapes `overlay` takes.
@@ -429,7 +457,15 @@ function setOverrides(overrides) {
         : overrides.progress !== "false";
   }
 
-  if (overrides.dynamicPublicPath && overrides.dynamicPublicPath !== "false") {
+  if (
+    overrides.dynamicPublicPath &&
+    overrides.dynamicPublicPath !== "false" &&
+    // Only a path can be prefixed. An endpoint said in full — as a url, or as
+    // parts resolved into one just above — already says where it is, and
+    // putting the bundle's public path in front of it would name somewhere
+    // that does not exist.
+    !/^[a-z][\w+.-]*:/i.test(options.path)
+  ) {
     // `path` is appended like a filename (no leading slash); the public path
     // itself is not normalized.
     options.path = __webpack_public_path__ + options.path.replace(/^\//, "");

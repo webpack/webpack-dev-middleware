@@ -141,9 +141,13 @@ export function applyCors(
 /**
  * The browser options, as the client reads them from its resource query.
  * @param {EXPECTED_ANY} client the `hot.client` option
+ * @param {string=} resolvedPath the path the endpoint is served at
  * @returns {Record<string, string>} query parameters
  */
-export function clientQuery(client: EXPECTED_ANY): Record<string, string>;
+export function clientQuery(
+  client: EXPECTED_ANY,
+  resolvedPath?: string | undefined,
+): Record<string, string>;
 /**
  * @typedef {object} MimeTypes
  * @property {(file: string) => string | false} lookup the media type an extension, a `.extension`, or a path resolves to

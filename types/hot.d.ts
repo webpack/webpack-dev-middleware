@@ -49,6 +49,7 @@ declare namespace createHot {
     StatsOptions,
     MiddlewareStatsOption,
     LogLevel,
+    PathSpec,
     HotClientOptions,
     HotOptions,
     CorsOrigin,
@@ -169,6 +170,36 @@ type StatsOptions = import("webpack").StatsOptions;
 type MiddlewareStatsOption = import("webpack").Configuration["stats"];
 type LogLevel = "none" | "error" | "warn" | "info" | "log" | "verbose";
 /**
+ * Where the runtime connects, said as the parts that differ. Each is
+ * resolved in the page when it is not given.
+ */
+type PathSpec = {
+  /**
+   * the scheme, or `auto` for the page's
+   */
+  protocol?: string | undefined;
+  /**
+   * the host; every-interface addresses resolve to the page's
+   */
+  hostname?: string | undefined;
+  /**
+   * the port; `0` resolves to the page's
+   */
+  port?: (string | number) | undefined;
+  /**
+   * the path, the resolved `hot.path` by default
+   */
+  pathname?: string | undefined;
+  /**
+   * the username to authenticate with
+   */
+  username?: string | undefined;
+  /**
+   * the password, sent only alongside a username
+   */
+  password?: string | undefined;
+};
+/**
  * Everything the browser runtime reads, as it is set in node. One for one with
  * what the entry query carries, so every option has both spellings: set it
  * here and the injected entry carries it, or write it on the query of a client
@@ -185,9 +216,9 @@ type HotClientOptions = {
    */
   transport?: ("sse" | "ws") | undefined;
   /**
-   * where the runtime connects, `hot.path` by default; may be an absolute url for an endpoint on another origin
+   * where the runtime connects, `hot.path` by default; may be an absolute url for an endpoint on another origin, or the parts that differ with the rest resolved in the page
    */
-  path?: string | undefined;
+  path?: (string | PathSpec) | undefined;
   /**
    * limit the runtime to one compilation's builds, the compilation's own name by default
    */
