@@ -1055,6 +1055,8 @@ http://localhost:3000/?webpack-dev-middleware-apply=false
 
 The `webpack-dev-middleware` part is the client's [`urlPrefix`](#client-options), so a server built on this middleware can set `hot.client.urlPrefix` and name the parameter after itself. What follows it is the option, spelled the one way the option is spelled. The name is matched whole and case-insensitively, and a value that is not one of the modes is left alone — a parameter that merely contains the words, or a value such as `nothingness`, changes nothing.
 
+The two parameters `apply` replaced still work, and narrow whatever mode is in force instead of replacing it — `?webpack-dev-middleware-hot=false` takes hot module replacement away and leaves the reload, `?webpack-dev-middleware-live-reload=false` takes the reload away and leaves hot module replacement, and both together do nothing. `apply` in the same url wins over them. They are kept for pages and bookmarks that already use them, and will be removed in the next major release.
+
 ### Reloading the page from the server
 
 Some changes belong to no compilation — a file served straight from disk, for

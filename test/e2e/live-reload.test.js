@@ -188,6 +188,88 @@ describe("live reload (browser)", () => {
     expect(await readReloadMarker(page)).toBeUndefined();
   });
 
+  // `?<prefix>-hot=false` and `?<prefix>-live-reload=false` are what a page's
+  // url used to say before `apply` replaced the booleans they stood for, and
+  // they still narrow whatever mode the project is in.
+  it("turns hot module replacement off for a page that asks, keeping the reload", async () => {
+    app = await createHotApp({
+      query: "?apply=hmr",
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(`${app.url}?webpack-dev-middleware-hot=false`);
+    await waitForAppText(page, "v1");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    // Not applied in place, which would have left the marker: the page was
+    // reloaded, the half of `hmr` that stays.
+    expect(await readReloadMarker(page)).toBeUndefined();
+  });
+
+  it("turns the reload off for a page that asks", async () => {
+    app = await createHotApp({
+      query: "?apply=reload",
+      hmrPlugin: false,
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(`${app.url}?webpack-dev-middleware-live-reload=false`);
+    await waitForAppText(page, "v1");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await settle();
+
+    // Every other page reloads in this mode; this one asked it not to.
+    expect(await appText(page)).toBe("v1");
+    expect(await readReloadMarker(page)).toBe(true);
+  });
+
+  it("does nothing for a page that turns both off", async () => {
+    app = await createHotApp({
+      query: "?apply=hmr",
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(
+      `${app.url}?webpack-dev-middleware-hot=false&webpack-dev-middleware-live-reload=false`,
+    );
+    await waitForAppText(page, "v1");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await settle();
+
+    expect(await appText(page)).toBe("v1");
+    expect(await readReloadMarker(page)).toBe(true);
+  });
+
+  it("lets `apply` in the url win over the two it replaced", async () => {
+    app = await createHotApp({
+      query: "?apply=reload",
+      hmrPlugin: false,
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(
+      `${app.url}?webpack-dev-middleware-apply=reload&webpack-dev-middleware-live-reload=false`,
+    );
+    await waitForAppText(page, "v1");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    expect(await readReloadMarker(page)).toBeUndefined();
+  });
+
   it("reads the parameter, not the text of the url", async () => {
     app = await createHotApp({
       query: "?apply=reload",
