@@ -574,7 +574,7 @@ function createHot(compiler, userOptions, statsOption) {
   // TODO in the next major release remove `progress` and this warning
   if (options.progress) {
     logger.warn(
-      "The 'hot.progress' option is deprecated and will be removed in the next major release. Measuring a build is the server's call, not the middleware's: a server that applies 'ProgressPlugin' itself — webpack-dev-server does — ends up with two of them on one compiler. Apply it yourself and hand what it reports to the middleware's 'publish' method, rounding the percent and dropping a tick that repeats one as this option did for you — the example is at https://github.com/webpack/webpack-dev-middleware#publishpayload. Until then this keeps working.",
+      "The 'hot.progress' option is deprecated and will be removed in the next major release. Measuring a build is the server's call, not the middleware's: a server that applies 'ProgressPlugin' itself — webpack-dev-server does — ends up with two of them on one compiler. Remove 'hot.progress', apply it yourself and hand what it reports to the middleware's 'publish' method, rounding the percent and dropping a tick that repeats one as this option did for you — the example is at https://github.com/webpack/webpack-dev-middleware#publishpayload. Until then this keeps working.",
     );
 
     const { webpack } =
