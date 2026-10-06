@@ -183,6 +183,10 @@ const LEGACY_OPTIONS = [
   "timeout",
 ];
 
+// The three of them this package's own query offered before `apply` and
+// `connect`, which are the ones a warning is owed for.
+const OWN_LEGACY_OPTIONS = ["reload", "autoConnect", "timeout"];
+
 /**
  * Was it set at all, and if so is it anything but `"false"`? The reading every
  * boolean on this query has always had.
@@ -218,9 +222,19 @@ function foldLegacyOptions(overrides) {
     return;
   }
 
-  log.warn(
-    `${used.join(", ")} ${used.length === 1 ? "is" : "are"} deprecated and will be removed in the next major release. Use 'apply' and 'connect' instead.`,
+  // Said only of the names this client's own query ever offered. `hot`,
+  // `liveReload` and `reconnect` arrive from entries written for
+  // webpack-dev-server's — what webpack's guide shows for wiring that server's
+  // client by hand — and are read as they always were, without a word.
+  const deprecated = used.filter(
+    (name) => OWN_LEGACY_OPTIONS.indexOf(name) !== -1,
   );
+
+  if (deprecated.length > 0) {
+    log.warn(
+      `${deprecated.join(", ")} ${deprecated.length === 1 ? "is" : "are"} deprecated and will be removed in the next major release. Use 'apply' and 'connect' instead.`,
+    );
+  }
 
   if (overrides.apply === undefined) {
     // `hot` decided whether an update was applied in place; `reload` what
