@@ -112,10 +112,18 @@ describe("multi-compiler (browser)", () => {
       globalThis.__notReloaded = true;
     });
 
+    // Wait for the failed build itself, and then for the watcher to go quiet,
+    // so what is asserted below is after its event has had every chance to
+    // arrive rather than after a delay that may be shorter than the build.
+    const failed = app.nextBuild();
+
     app.edit("widget", "this is not valid javascript {{{");
-    await new Promise((resolve) => {
-      setTimeout(resolve, 3000);
-    });
+
+    const stats = await failed;
+
+    expect(stats.hasErrors()).toBe(true);
+
+    await app.settle();
 
     expect(await page.evaluate(() => globalThis.__notReloaded)).toBe(true);
   });
