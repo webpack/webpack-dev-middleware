@@ -46,38 +46,56 @@ async function build(target, hot, entry) {
     path.join(fs.realpathSync.native(os.tmpdir()), "wdm-universal-"),
   );
 
-  fs.writeFileSync(path.join(dir, "app.js"), APP);
-  fs.writeFileSync(path.join(dir, "stand-in.js"), STAND_IN);
+  const remove = () => fs.rmSync(dir, { recursive: true, force: true });
+  /** @type {EXPECTED_ANY} */
+  let instance;
+  // The watcher, closed before the directory it watches can be removed.
+  const closeWatcher = () =>
+    instance
+      ? new Promise((resolve) => {
+          instance.close(resolve);
+        })
+      : Promise.resolve();
 
-  const compiler = webpack({
-    mode: "development",
-    devtool: false,
-    context: dir,
-    entry: entry ? entry(dir) : "./app.js",
-    target,
-    output: { path: path.join(dir, "dist") },
-    infrastructureLogging: { level: "none" },
-    stats: "none",
-  });
-  const instance = middleware(compiler, { hot: hot(dir), writeToDisk: true });
+  try {
+    fs.writeFileSync(path.join(dir, "app.js"), APP);
+    fs.writeFileSync(path.join(dir, "stand-in.js"), STAND_IN);
 
-  await new Promise((resolve) => {
-    instance.waitUntilValid(resolve);
-  });
+    const compiler = webpack({
+      mode: "development",
+      devtool: false,
+      context: dir,
+      entry: entry ? entry(dir) : "./app.js",
+      target,
+      output: { path: path.join(dir, "dist") },
+      infrastructureLogging: { level: "none" },
+      stats: "none",
+    });
 
-  const errors = /** @type {EXPECTED_ANY} */ (instance.context.stats)
-    .toJson({ all: false, errors: true })
-    .errors.map((/** @type {EXPECTED_ANY} */ item) => item.message);
+    instance = middleware(compiler, { hot: hot(dir), writeToDisk: true });
 
-  await new Promise((resolve) => {
-    instance.close(resolve);
-  });
+    await new Promise((resolve) => {
+      instance.waitUntilValid(resolve);
+    });
 
-  return {
-    errors,
-    bundle: path.join(dir, "dist", "main.mjs"),
-    close: () => fs.rmSync(dir, { recursive: true, force: true }),
-  };
+    const errors = /** @type {EXPECTED_ANY} */ (instance.context.stats)
+      .toJson({ all: false, errors: true })
+      .errors.map((/** @type {EXPECTED_ANY} */ item) => item.message);
+
+    await closeWatcher();
+
+    return {
+      errors,
+      bundle: path.join(dir, "dist", "main.mjs"),
+      close: remove,
+    };
+  } catch (error) {
+    // Nothing is handed back to clean up after, so it is done here.
+    await closeWatcher();
+    remove();
+
+    throw error;
+  }
 }
 
 /** @type {[string, (dir: string) => EXPECTED_ANY, ((dir: string) => EXPECTED_ANY) | undefined, RegExp][]} */
