@@ -34,6 +34,23 @@ import { log } from "../utils/log.js";
  */
 
 /**
+ * A connection as `client` hands it out. Its own `client` is the `WebSocket`
+ * or `EventSource` underneath, on the built-in transports.
+ * @typedef {CommunicationClient & { client?: WebSocket | EventSource }} LiveClient
+ */
+
+/**
+ * The connection the runtime holds right now, or `null` while there is none —
+ * for tooling that listens alongside the runtime rather than through it.
+ * `client.client` is the `WebSocket` or `EventSource` underneath, the shape
+ * webpack-dev-server's `client/socket` has always exported, which is what
+ * `@pmmmwh/react-refresh-webpack-plugin` reads its build messages from.
+ * @type {LiveClient | null}
+ */
+// eslint-disable-next-line import/no-mutable-exports
+export let client = null;
+
+/**
  * Hold a connection open, reconnecting when it drops, and fan each message out
  * to everyone listening. What "reconnect" costs is the transport's to say: a
  * dropped WebSocket backs off, whereas Server-Sent Events retries at a steady
@@ -59,24 +76,31 @@ export default function createSocket(Client, url, options = {}) {
   /** @type {((event: { data: string }) => void)[]} */
   const listeners = [];
   /** @type {CommunicationClient | null} */
-  let client = null;
+  let current = null;
   /** @type {ReturnType<typeof setTimeout> | undefined} */
   let timer;
   let attempt = 0;
   let closed = false;
 
   const open = () => {
-    client = new Client(url, options.clientOptions);
+    current = new Client(url, options.clientOptions);
+    client = current;
 
-    client.onOpen(() => {
+    current.onOpen(() => {
       // Said here rather than in a transport, or whichever one did not say it
       // would leave the page with no sign it had connected at all.
       log.info("connected");
       attempt = 0;
     });
 
-    client.onClose(() => {
-      client = null;
+    current.onClose(() => {
+      // Only if it is still the one exported: two endpoints on one page each
+      // hold a connection, and one dropping says nothing about the other.
+      if (client === current) {
+        client = null;
+      }
+
+      current = null;
 
       // Once per outage rather than once per failed attempt: the retries that
       // follow are this module reconnecting, not the connection going away
@@ -104,7 +128,7 @@ export default function createSocket(Client, url, options = {}) {
       timer = setTimeout(open, delay);
     });
 
-    client.onMessage((data) => {
+    current.onMessage((data) => {
       for (const listener of listeners) {
         listener({ data: /** @type {string} */ (data) });
       }
@@ -123,9 +147,14 @@ export default function createSocket(Client, url, options = {}) {
       closed = true;
       clearTimeout(timer);
 
-      if (client) {
-        client.close();
-        client = null;
+      if (current) {
+        current.close();
+
+        if (client === current) {
+          client = null;
+        }
+
+        current = null;
       }
     },
   };

@@ -1,4 +1,5 @@
 import createSocket from "../client-src/clients/createSocket";
+import * as socketModule from "../client-src/socket";
 
 jest.spyOn(globalThis.console, "log").mockImplementation();
 
@@ -279,5 +280,69 @@ describe("createSocket", () => {
     jest.advanceTimersByTime(10000);
 
     expect(instances).toHaveLength(1);
+  });
+});
+
+// Tooling that listens alongside the runtime reads the connection it holds:
+// `@pmmmwh/react-refresh-webpack-plugin` takes `client.client` — the
+// `WebSocket` or `EventSource` underneath — through webpack-dev-server's
+// `client/socket`, which re-exports this.
+describe("the connection the runtime holds", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("is the transport instance while it is connected", () => {
+    const { FakeClient, instances } = createFakeClient();
+    const socket = createSocket(FakeClient, "/hmr");
+
+    expect(socketModule.client).toBe(instances[0]);
+
+    socket.close();
+  });
+
+  it("is nothing once the connection drops, and the new one once it is back", () => {
+    const { FakeClient, instances } = createFakeClient();
+    const socket = createSocket(FakeClient, "/hmr", {
+      retryDelay: () => 100,
+    });
+
+    instances[0].openHandler();
+    instances[0].closeHandler();
+
+    expect(socketModule.client).toBeNull();
+
+    jest.advanceTimersByTime(100);
+
+    expect(socketModule.client).toBe(instances[1]);
+
+    socket.close();
+  });
+
+  it("is nothing once the runtime closes it", () => {
+    const { FakeClient } = createFakeClient();
+    const socket = createSocket(FakeClient, "/hmr");
+
+    socket.close();
+
+    expect(socketModule.client).toBeNull();
+  });
+
+  it("is not cleared by another endpoint's connection dropping", () => {
+    const first = createFakeClient();
+    const second = createFakeClient();
+    const one = createSocket(first.FakeClient, "/one", { retries: 0 });
+    const two = createSocket(second.FakeClient, "/two");
+
+    first.instances[0].closeHandler();
+
+    expect(socketModule.client).toBe(second.instances[0]);
+
+    one.close();
+    two.close();
   });
 });

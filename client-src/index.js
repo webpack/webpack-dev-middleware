@@ -1,4 +1,4 @@
-/* global __resourceQuery, __webpack_dev_server_client__, __webpack_public_path__ */
+/* global __resourceQuery, __webpack_dev_server_client__, __webpack_hash__, __webpack_public_path__ */
 
 // This file is bundled by webpack into a browser bundle, so it is compiled to
 // ES5 (see `babel.config.js`) and sticks to ES5 runtime APIs — `EventSource`
@@ -110,10 +110,22 @@ function parseQuery(query) {
   const parameters = {};
 
   /**
+   * A malformed escape — a page url such as `?discount=50%`, which a browser
+   * leaves as it is — is kept as written rather than thrown: this parses the
+   * page's own url on every build, and one bad parameter must not stop every
+   * update from being applied.
    * @param {string} value raw value
    * @returns {string} decoded value
    */
-  const decode = (value) => decodeURIComponent(value.replace(/\+/g, " "));
+  const decode = (value) => {
+    const spaced = value.replace(/\+/g, " ");
+
+    try {
+      return decodeURIComponent(spaced);
+    } catch {
+      return spaced;
+    }
+  };
 
   for (const pair of query.slice(1).split("&")) {
     if (!pair) {
@@ -171,6 +183,10 @@ const LEGACY_OPTIONS = [
   "timeout",
 ];
 
+// The three of them this package's own query offered before `apply` and
+// `connect`, which are the ones a warning is owed for.
+const OWN_LEGACY_OPTIONS = ["reload", "autoConnect", "timeout"];
+
 /**
  * Was it set at all, and if so is it anything but `"false"`? The reading every
  * boolean on this query has always had.
@@ -190,25 +206,50 @@ function legacyBoolean(value, fallback) {
  * @returns {void}
  */
 function foldLegacyOptions(overrides) {
+  // webpack-dev-server's query spelled it this way, and an entry written by
+  // hand for that server still does.
+  const devServerSpelling =
+    overrides["live-reload"] !== undefined &&
+    overrides.liveReload === undefined;
+
+  if (devServerSpelling) {
+    overrides.liveReload = overrides["live-reload"];
+  }
+
   const used = LEGACY_OPTIONS.filter((name) => overrides[name] !== undefined);
 
   if (used.length === 0) {
     return;
   }
 
-  log.warn(
-    `${used.join(", ")} ${used.length === 1 ? "is" : "are"} deprecated and will be removed in the next major release. Use 'apply' and 'connect' instead.`,
+  // Said only of the names this client's own query ever offered. `hot`,
+  // `liveReload` and `reconnect` arrive from entries written for
+  // webpack-dev-server's — what webpack's guide shows for wiring that server's
+  // client by hand — and are read as they always were, without a word.
+  const deprecated = used.filter(
+    (name) => OWN_LEGACY_OPTIONS.indexOf(name) !== -1,
   );
+
+  if (deprecated.length > 0) {
+    log.warn(
+      `${deprecated.join(", ")} ${deprecated.length === 1 ? "is" : "are"} deprecated and will be removed in the next major release. Use 'apply' and 'connect' instead.`,
+    );
+  }
 
   if (overrides.apply === undefined) {
     // `hot` decided whether an update was applied in place; `reload` what
     // happened when it could not be; `liveReload` what happened instead when
     // `hot` was off. Four of their eight combinations differed, which is what
     // the four modes are.
-    const hot = legacyBoolean(overrides.hot, true);
+    //
+    // webpack-dev-server's client read `hot` as off unless the query said
+    // otherwise, so its spelling is read its way: `?live-reload=true` alone
+    // is live reload.
+    const hot = legacyBoolean(overrides.hot, !devServerSpelling);
 
+    // `hot=only` is webpack-dev-server's own: apply in place, never reload.
     options.apply = hot
-      ? legacyBoolean(overrides.reload, true)
+      ? overrides.hot !== "only" && legacyBoolean(overrides.reload, true)
         ? "hmr"
         : "hmr-only"
       : legacyBoolean(overrides.liveReload, true)
@@ -334,6 +375,38 @@ function legacyUrlMode(mode) {
  * @param {Record<string, string>} overrides parsed query-string overrides
  */
 function setOverrides(overrides) {
+  if (overrides.logging) {
+    // A level, or a json object carrying the level and the name to label
+    // messages with — the same two shapes the other options take.
+    let logging = overrides.logging;
+    let parsed;
+
+    try {
+      parsed = JSON.parse(logging);
+    } catch {
+      // Not json, so it is the level it looks like.
+    }
+
+    // Only an object is the second shape. `JSON.parse` also accepts a bare
+    // number, boolean or quoted string, and a level is none of those — asking
+    // what came back rather than what the text started with also means
+    // leading whitespace does not hide it.
+    if (parsed && typeof parsed === "object") {
+      logging = parsed.level;
+
+      if (parsed.name) {
+        options.loggerName = parsed.name;
+      }
+    }
+
+    if (logging) {
+      options.logging = /** @type {LogLevel} */ (logging);
+    }
+  }
+  // Before anything else is read, so whatever reading the rest has to say —
+  // a deprecated name, say — is labelled and leveled as the entry asked.
+  setLogName(options.loggerName);
+  setLogLevel(options.logging);
   // TODO in the next major release remove this, and the six names it reads.
   foldLegacyOptions(overrides);
   if (overrides.transport === "sse" || overrides.transport === "ws") {
@@ -344,6 +417,32 @@ function setOverrides(overrides) {
   // differ and leaves the rest to be resolved against the page, which is the
   // only place the rest is known — behind a proxy, on another host, or on a
   // socket listening on a port of its own.
+  // The parts of the url as parameters of their own, the way
+  // webpack-dev-server's query has always carried them — so an entry written
+  // by hand for that server still connects where it says. Read as a path in
+  // parts, which resolves what they leave out against the page; a `path` given
+  // as well says it all and wins.
+  if (!overrides.path) {
+    /** @type {Record<string, string>} */
+    const parts = {};
+
+    for (const name of [
+      "protocol",
+      "hostname",
+      "port",
+      "pathname",
+      "username",
+      "password",
+    ]) {
+      if (overrides[name]) {
+        parts[name] = overrides[name];
+      }
+    }
+
+    if (Object.keys(parts).length > 0) {
+      overrides.path = JSON.stringify(parts);
+    }
+  }
   if (overrides.path) {
     let parsed;
 
@@ -416,34 +515,6 @@ function setOverrides(overrides) {
     }
   }
   if (overrides.urlPrefix) options.urlPrefix = overrides.urlPrefix;
-  if (overrides.logging) {
-    // A level, or a json object carrying the level and the name to label
-    // messages with — the same two shapes the other options take.
-    let logging = overrides.logging;
-    let parsed;
-
-    try {
-      parsed = JSON.parse(logging);
-    } catch {
-      // Not json, so it is the level it looks like.
-    }
-
-    // Only an object is the second shape. `JSON.parse` also accepts a bare
-    // number, boolean or quoted string, and a level is none of those — asking
-    // what came back rather than what the text started with also means
-    // leading whitespace does not hide it.
-    if (parsed && typeof parsed === "object") {
-      logging = parsed.level;
-
-      if (parsed.name) {
-        options.loggerName = parsed.name;
-      }
-    }
-
-    if (logging) {
-      options.logging = /** @type {LogLevel} */ (logging);
-    }
-  }
   if (overrides.name) {
     options.name = overrides.name;
   }
@@ -842,17 +913,22 @@ function processMessage(obj) {
       }
 
       let shouldApply = true;
-      if (obj.errors.length > 0) {
-        if (reporter) reporter.problems("errors", obj);
-        shouldApply = false;
-        sendMessage("Errors", obj.errors);
-      } else if (obj.warnings.length > 0) {
-        // Warnings are reported (and possibly shown in the overlay) but do
-        // not block the update, matching webpack-dev-server.
+      // Warnings are reported (and possibly shown in the overlay) but do not
+      // block the update, matching webpack-dev-server. A build with errors as
+      // well still reports its warnings, before the errors, as that client
+      // did: they are as true of a broken build as of a working one.
+      if (obj.warnings.length > 0) {
         if (reporter) {
           reporter.problems("warnings", obj);
         }
-        sendMessage("Warnings", obj.warnings);
+        sendMessage("Warnings", obj.warnings.map(stripAnsi));
+      }
+      if (obj.errors.length > 0) {
+        if (reporter) reporter.problems("errors", obj);
+        shouldApply = false;
+        sendMessage("Errors", obj.errors.map(stripAnsi));
+      } else if (obj.warnings.length > 0) {
+        // Reported above.
       } else {
         if (reporter) {
           reporter.cleanProblemsCache(obj.name || "");
@@ -884,10 +960,13 @@ function processMessage(obj) {
           );
         } else if (
           // Without Hot Module Replacement the new code can only reach the
-          // page by loading it again. `sync` is left alone: it reports what
-          // the page is already running.
-          obj.action === "built" &&
-          mode === "reload"
+          // page by loading it again — whenever what the server built is not
+          // what the page is running. A `sync` counts too: a page that
+          // reconnects after the server restarted is caught up with one, and
+          // left alone it would stay on the old code. One whose hash is the
+          // page's own changes nothing, whichever action carried it.
+          mode === "reload" &&
+          obj.hash !== __webpack_hash__
         ) {
           log.info("App updated. Reloading...");
           reloadPage();

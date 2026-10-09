@@ -1,5 +1,195 @@
 {
   "definitions": {
+    "HotClient": {
+      "description": "Options handed to the browser runtime through its entry query.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "transport": {
+          "description": "Which transport the runtime speaks: `sse` or `ws`, or a module that exports a client class of your own, which is used in place of the built-in one. Defaults to the resolved `hot.transport`.",
+          "anyOf": [
+            {
+              "enum": ["sse", "ws"]
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "path": {
+          "description": "Where the runtime connects. Defaults to the resolved `hot.path`; a string may be an absolute url for an endpoint reached on another origin or through a proxy, and an object says only the parts that differ and leaves the rest to be resolved in the page, which is the only place the rest is known.",
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "protocol": {
+                  "description": "The scheme the runtime connects over. Unset, or `auto`, follows the page — and a page served over TLS then gets a secure connection, because a browser refuses a plaintext one from it. Set explicitly, it is honoured as given; the one exception is a `hostname` naming every interface, which is resolved to the page's host and takes the page's scheme with it. Only whether the scheme is the secure one carries over, since the two transports do not share one.",
+                  "anyOf": [
+                    {
+                      "enum": ["auto"]
+                    },
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  ]
+                },
+                "hostname": {
+                  "description": "The host the runtime connects to. An address a server listens on to mean every interface (`0.0.0.0`, `::`) is not somewhere a page can connect, so it resolves to the page's own host.",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "port": {
+                  "description": "The port the runtime connects to. `0` means a port the server picked, which resolves to the page's own.",
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  ]
+                },
+                "pathname": {
+                  "description": "The path the runtime connects to. Defaults to the resolved `hot.path`.",
+                  "type": "string"
+                },
+                "username": {
+                  "description": "The username the runtime authenticates with.",
+                  "type": "string"
+                },
+                "password": {
+                  "description": "The password the runtime authenticates with. Sent only alongside a username, since basic authentication has no empty one.",
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        },
+        "name": {
+          "description": "Limit the runtime to one compilation's builds. Defaults to the compilation's own name.",
+          "type": "string"
+        },
+        "token": {
+          "description": "The secret the runtime puts on its connection url. The middleware sets this to whatever 'hot.token' resolved to, so it only needs setting for a client pointed at another endpoint that requires a different one.",
+          "type": "string"
+        },
+        "overlay": {
+          "description": "Show build problems and uncaught runtime errors in an overlay.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object"
+            }
+          ]
+        },
+        "progress": {
+          "description": "Show an indicator while a rebuild is in progress.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "enum": ["circular", "linear"]
+            }
+          ]
+        },
+        "apply": {
+          "description": "What a build does to the page: `hmr` applies the update and reloads if it cannot be applied, `hmr-only` applies it and stops with a message if it cannot, `reload` loads the page again on a build that changed something, and `nothing` leaves the page alone until you reload it.",
+          "enum": ["hmr", "hmr-only", "reload", "nothing"]
+        },
+        "connect": {
+          "description": "Whether to connect when the entry runs, and how the connection is held open. `false` does not connect; an object sets `retries` and `timeout`.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "retries": {
+                  "description": "How many times to reconnect before giving up. Server-Sent Events keep trying for as long as the page is open unless this is set, since a dev server is expected to come back.",
+                  "type": "number",
+                  "minimum": 0
+                },
+                "timeout": {
+                  "description": "How long silence is tolerated before reconnecting, in milliseconds. Server-Sent Events only: their heartbeat arrives as data the client can see, whereas a WebSocket's is a protocol ping the browser answers without telling JavaScript.",
+                  "type": "number",
+                  "minimum": 1
+                }
+              }
+            }
+          ]
+        },
+        "urlPrefix": {
+          "description": "Prefix of the page-url parameter that overrides `apply` for a single page.",
+          "type": "string",
+          "minLength": 1
+        },
+        "logging": {
+          "description": "Logger level in the browser, or an object carrying the level and the name every message is labelled with in the console — a package embedding this runtime is the one a developer would report a problem to, so it can say its own name.",
+          "anyOf": [
+            {
+              "enum": ["none", "error", "warn", "info", "log", "verbose"]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "level": {
+                  "enum": ["none", "error", "warn", "info", "log", "verbose"]
+                },
+                "name": {
+                  "description": "What every message is labelled with in the console. Defaults to this package's name.",
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          ]
+        },
+        "dynamicPublicPath": {
+          "description": "Prefix the endpoint path with the bundle's public path at runtime.",
+          "type": "boolean"
+        },
+        "hot": {
+          "description": "Apply a build through Hot Module Replacement. Deprecated, and removed in the next major release: use `apply`.",
+          "type": "boolean"
+        },
+        "liveReload": {
+          "description": "Reload the page on a build that changed something, when `hot` is off. Deprecated, and removed in the next major release: use `apply`.",
+          "type": "boolean"
+        },
+        "reload": {
+          "description": "Reload the page when an update cannot be applied. Deprecated, and removed in the next major release: use `apply`.",
+          "type": "boolean"
+        },
+        "autoConnect": {
+          "description": "Connect as soon as the entry runs. Deprecated, and removed in the next major release: use `connect`.",
+          "type": "boolean"
+        },
+        "reconnect": {
+          "description": "How many times to reconnect before giving up. Unset, Server-Sent Events keep trying for as long as the page is open — a dev server is expected to come back — while a WebSocket gives up after 10. Setting it applies to both. Deprecated, and removed in the next major release: use `connect`.",
+          "type": "number",
+          "minimum": 0
+        },
+        "timeout": {
+          "description": "How long the runtime tolerates silence before reconnecting, in milliseconds. Server-Sent Events only: their heartbeat arrives as data the client can see, whereas a WebSocket's is a protocol ping the browser answers without telling JavaScript — a half-open socket there is terminated by the server instead. Deprecated, and removed in the next major release: use `connect`.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
     "CorsOrigin": {
       "description": "An origin, written as a browser sends it (scheme, host and port, no trailing slash), several of them, a pattern, or a function asked about each.",
       "anyOf": [
@@ -310,12 +500,18 @@
               "type": "object",
               "additionalProperties": true
             },
+            "ws": {
+              "description": "Options for the `ws` server behind the `ws` transport: compression, payload limits, `verifyClient`, or a `port` or a `server` of its own to listen on instead of answering the upgrades it is handed. `path`, `noServer` and `clientTracking` are the middleware's and are ignored here.",
+              "link": "https://github.com/webpack/webpack-dev-middleware#hot",
+              "type": "object",
+              "additionalProperties": true
+            },
             "progress": {
               "description": "Publish compilation progress events to the clients.",
               "type": "boolean"
             },
             "token": {
-              "description": "A secret the injected client carries and the endpoint requires, so reaching the stream takes something a page has to have been given rather than a header the browser may not send. `true` mints one per run, a string uses that one \u2014 for a client of your own that has to build the url itself \u2014 and `false` requires none. Defaults to `false`, because requiring one would refuse a client this middleware did not inject; `true` in the next major release.",
+              "description": "A secret the injected client carries and the endpoint requires, so reaching the stream takes something a page has to have been given rather than a header the browser may not send. `true` mints one per run, a string uses that one — for a client of your own that has to build the url itself — and `false` requires none. Defaults to `false`, because requiring one would refuse a client this middleware did not inject; `true` in the next major release.",
               "link": "https://github.com/webpack/webpack-dev-middleware#hottoken",
               "anyOf": [
                 {
@@ -367,201 +563,16 @@
               "type": "boolean"
             },
             "client": {
-              "description": "Options handed to the browser runtime through its entry query.",
+              "description": "Options handed to the browser runtime through its entry query. `false` adds no runtime to the page while still applying `HotModuleReplacementPlugin`, for a page that wires a client of its own.",
               "link": "https://github.com/webpack/webpack-dev-middleware#hot",
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "transport": {
-                  "description": "Which transport the runtime speaks: `sse` or `ws`. Defaults to the resolved `hot.transport`.",
-                  "enum": ["sse", "ws"]
+              "anyOf": [
+                {
+                  "enum": [false]
                 },
-                "path": {
-                  "description": "Where the runtime connects. Defaults to the resolved `hot.path`; a string may be an absolute url for an endpoint reached on another origin or through a proxy, and an object says only the parts that differ and leaves the rest to be resolved in the page, which is the only place the rest is known.",
-                  "anyOf": [
-                    {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "properties": {
-                        "protocol": {
-                          "description": "The scheme the runtime connects over. Unset, or `auto`, follows the page \u2014 and a page served over TLS then gets a secure connection, because a browser refuses a plaintext one from it. Set explicitly, it is honoured as given; the one exception is a `hostname` naming every interface, which is resolved to the page's host and takes the page's scheme with it. Only whether the scheme is the secure one carries over, since the two transports do not share one.",
-                          "anyOf": [
-                            {
-                              "enum": ["auto"]
-                            },
-                            {
-                              "type": "string",
-                              "minLength": 1
-                            }
-                          ]
-                        },
-                        "hostname": {
-                          "description": "The host the runtime connects to. An address a server listens on to mean every interface (`0.0.0.0`, `::`) is not somewhere a page can connect, so it resolves to the page's own host.",
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "port": {
-                          "description": "The port the runtime connects to. `0` means a port the server picked, which resolves to the page's own.",
-                          "anyOf": [
-                            {
-                              "type": "number"
-                            },
-                            {
-                              "type": "string",
-                              "minLength": 1
-                            }
-                          ]
-                        },
-                        "pathname": {
-                          "description": "The path the runtime connects to. Defaults to the resolved `hot.path`.",
-                          "type": "string"
-                        },
-                        "username": {
-                          "description": "The username the runtime authenticates with.",
-                          "type": "string"
-                        },
-                        "password": {
-                          "description": "The password the runtime authenticates with. Sent only alongside a username, since basic authentication has no empty one.",
-                          "type": "string"
-                        }
-                      }
-                    }
-                  ]
-                },
-                "name": {
-                  "description": "Limit the runtime to one compilation's builds. Defaults to the compilation's own name.",
-                  "type": "string"
-                },
-                "token": {
-                  "description": "The secret the runtime puts on its connection url. The middleware sets this to whatever 'hot.token' resolved to, so it only needs setting for a client pointed at another endpoint that requires a different one.",
-                  "type": "string"
-                },
-                "overlay": {
-                  "description": "Show build problems and uncaught runtime errors in an overlay.",
-                  "anyOf": [
-                    {
-                      "type": "boolean"
-                    },
-                    {
-                      "type": "object"
-                    }
-                  ]
-                },
-                "progress": {
-                  "description": "Show an indicator while a rebuild is in progress.",
-                  "anyOf": [
-                    {
-                      "type": "boolean"
-                    },
-                    {
-                      "enum": ["circular", "linear"]
-                    }
-                  ]
-                },
-                "apply": {
-                  "description": "What a build does to the page: `hmr` applies the update and reloads if it cannot be applied, `hmr-only` applies it and stops with a message if it cannot, `reload` loads the page again on a build that changed something, and `nothing` leaves the page alone until you reload it.",
-                  "enum": ["hmr", "hmr-only", "reload", "nothing"]
-                },
-                "connect": {
-                  "description": "Whether to connect when the entry runs, and how the connection is held open. `false` does not connect; an object sets `retries` and `timeout`.",
-                  "anyOf": [
-                    {
-                      "type": "boolean"
-                    },
-                    {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "properties": {
-                        "retries": {
-                          "description": "How many times to reconnect before giving up. Server-Sent Events keep trying for as long as the page is open unless this is set, since a dev server is expected to come back.",
-                          "type": "number",
-                          "minimum": 0
-                        },
-                        "timeout": {
-                          "description": "How long silence is tolerated before reconnecting, in milliseconds. Server-Sent Events only: their heartbeat arrives as data the client can see, whereas a WebSocket's is a protocol ping the browser answers without telling JavaScript.",
-                          "type": "number",
-                          "minimum": 1
-                        }
-                      }
-                    }
-                  ]
-                },
-                "urlPrefix": {
-                  "description": "Prefix of the page-url parameter that overrides `apply` for a single page.",
-                  "type": "string",
-                  "minLength": 1
-                },
-                "logging": {
-                  "description": "Logger level in the browser, or an object carrying the level and the name every message is labelled with in the console \u2014 a package embedding this runtime is the one a developer would report a problem to, so it can say its own name.",
-                  "anyOf": [
-                    {
-                      "enum": [
-                        "none",
-                        "error",
-                        "warn",
-                        "info",
-                        "log",
-                        "verbose"
-                      ]
-                    },
-                    {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "properties": {
-                        "level": {
-                          "enum": [
-                            "none",
-                            "error",
-                            "warn",
-                            "info",
-                            "log",
-                            "verbose"
-                          ]
-                        },
-                        "name": {
-                          "description": "What every message is labelled with in the console. Defaults to this package's name.",
-                          "type": "string",
-                          "minLength": 1
-                        }
-                      }
-                    }
-                  ]
-                },
-                "dynamicPublicPath": {
-                  "description": "Prefix the endpoint path with the bundle's public path at runtime.",
-                  "type": "boolean"
-                },
-                "hot": {
-                  "description": "Apply a build through Hot Module Replacement. Deprecated, and removed in the next major release: use `apply`.",
-                  "type": "boolean"
-                },
-                "liveReload": {
-                  "description": "Reload the page on a build that changed something, when `hot` is off. Deprecated, and removed in the next major release: use `apply`.",
-                  "type": "boolean"
-                },
-                "reload": {
-                  "description": "Reload the page when an update cannot be applied. Deprecated, and removed in the next major release: use `apply`.",
-                  "type": "boolean"
-                },
-                "autoConnect": {
-                  "description": "Connect as soon as the entry runs. Deprecated, and removed in the next major release: use `connect`.",
-                  "type": "boolean"
-                },
-                "reconnect": {
-                  "description": "How many times to reconnect before giving up. Unset, Server-Sent Events keep trying for as long as the page is open \u2014 a dev server is expected to come back \u2014 while a WebSocket gives up after 10. Setting it applies to both. Deprecated, and removed in the next major release: use `connect`.",
-                  "type": "number",
-                  "minimum": 0
-                },
-                "timeout": {
-                  "description": "How long the runtime tolerates silence before reconnecting, in milliseconds. Server-Sent Events only: their heartbeat arrives as data the client can see, whereas a WebSocket's is a protocol ping the browser answers without telling JavaScript \u2014 a half-open socket there is terminated by the server instead. Deprecated, and removed in the next major release: use `connect`.",
-                  "type": "number",
-                  "exclusiveMinimum": 0
+                {
+                  "$ref": "#/definitions/HotClient"
                 }
-              }
+              ]
             }
           }
         }

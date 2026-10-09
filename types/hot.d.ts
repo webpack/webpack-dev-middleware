@@ -212,9 +212,9 @@ type PathSpec = {
  */
 type HotClientOptions = {
   /**
-   * which transport the runtime speaks, `hot.transport` by default
+   * which transport the runtime speaks, `hot.transport` by default; any other string is a module exporting a client class of your own, used in place of the built-in one
    */
-  transport?: ("sse" | "ws") | undefined;
+  transport?: ("sse" | "ws" | string) | undefined;
   /**
    * where the runtime connects, `hot.path` by default; may be an absolute url for an endpoint on another origin, or the parts that differ with the rest resolved in the page
    */
@@ -314,6 +314,10 @@ type HotOptions = {
    */
   server?: HttpServer | undefined;
   /**
+   * options for the `ws` server behind the `"ws"` transport — compression, payload limits, `verifyClient`, or a `port` or a `server` of its own to listen on; `path`, `noServer` and `clientTracking` are the middleware's
+   */
+  ws?: Record<string, EXPECTED_ANY> | undefined;
+  /**
    * deprecated, removed in the next major release — webpack stats options used when serializing compilation results
    */
   statsOptions?: StatsOptions | undefined;
@@ -334,9 +338,9 @@ type HotOptions = {
    */
   inject?: boolean | undefined;
   /**
-   * options handed to the browser runtime through its entry query
+   * options handed to the browser runtime through its entry query; `false` adds no runtime to the page and still applies `HotModuleReplacementPlugin`
    */
-  client?: HotClientOptions | undefined;
+  client?: (HotClientOptions | false) | undefined;
 };
 /**
  * What an origin is matched against: one origin, several, a pattern, or a

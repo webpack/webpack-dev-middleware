@@ -194,7 +194,7 @@ function applyStyle(element, style) {
 /**
  * Build the linear indicator: a thin bar across the top of the viewport, the
  * shape `progress: "linear"` selects in webpack-dev-server.
- * @param {ShadowRoot} root the host's shadow root
+ * @param {ShadowRoot | HTMLElement} root the host's shadow root, or the host itself where there is no Shadow DOM
  */
 function buildBar(root) {
   applyStyle(/** @type {HTMLElement} */ (state.host), {
@@ -233,8 +233,21 @@ function ensureIndicator() {
 
   state.host = document.createElement("div");
   state.host.id = INDICATOR_ID;
+  // Announced as what it is. `aria-valuenow` is set while there is a percent
+  // to report, and left out while the build cannot be measured — which is
+  // how an indeterminate progress bar is told apart.
+  state.host.setAttribute("role", "progressbar");
+  state.host.setAttribute("aria-label", "Rebuilding");
+  state.host.setAttribute("aria-valuemin", "0");
+  state.host.setAttribute("aria-valuemax", "100");
 
-  const root = state.host.attachShadow({ mode: "open" });
+  // A browser without Shadow DOM gets the indicator in the page itself. Its
+  // styles are inline either way, so only the isolation from page styles is
+  // lost, rather than every rebuild throwing.
+  const root =
+    typeof state.host.attachShadow === "function"
+      ? state.host.attachShadow({ mode: "open" })
+      : state.host;
 
   if (state.type === "linear") {
     buildBar(root);
@@ -397,6 +410,17 @@ export function update(text, percent) {
  */
 function render(text, percent) {
   ensureIndicator();
+
+  if (state.host) {
+    if (typeof percent === "number") {
+      state.host.setAttribute(
+        "aria-valuenow",
+        String(Math.round(Math.min(100, Math.max(0, percent)))),
+      );
+    } else {
+      state.host.removeAttribute("aria-valuenow");
+    }
+  }
 
   if (state.type === "linear") {
     showBar(percent);

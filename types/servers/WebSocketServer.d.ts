@@ -8,6 +8,7 @@ export = createWebSocketStream;
  * @param {number} options.heartbeat heartbeat interval in milliseconds
  * @param {CorsOption=} options.cors which origins may connect, the local ones by default
  * @param {(string | false)=} options.token the token the endpoint requires, or false for none
+ * @param {Record<string, EXPECTED_ANY>=} options.ws options for the `ws` server; a `port` or a `server` gives it one of its own
  * @param {Logger} logger logger
  * @returns {ClientStream} client stream
  */
@@ -17,11 +18,13 @@ declare function createWebSocketStream(
     heartbeat,
     cors,
     token,
+    ws,
   }: {
     path: string;
     heartbeat: number;
     cors?: CorsOption | undefined;
     token?: (string | false) | undefined;
+    ws?: Record<string, EXPECTED_ANY> | undefined;
   },
   logger: Logger,
 ): ClientStream;
@@ -38,6 +41,7 @@ declare namespace createWebSocketStream {
     Payload,
     ClientStream,
     CorsOption,
+    EXPECTED_ANY,
   };
 }
 declare const WS_DEFAULT_HEARTBEAT: number;
@@ -50,3 +54,4 @@ type Logger = import("../hot.js").Logger;
 type Payload = import("../hot.js").Payload;
 type ClientStream = import("../hot.js").ClientStream;
 type CorsOption = import("../hot.js").CorsOption;
+type EXPECTED_ANY = any;

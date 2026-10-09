@@ -478,6 +478,25 @@ Default: `undefined`
 
 HTTP server the [`'ws'`](#hottransport) transport answers upgrades on, when it already exists where the middleware is built. Otherwise hand it over later with the middleware's [`attach`](#attachserver) method. Ignored by `'sse'`, which is answered by the middleware itself.
 
+#### `hot.ws`
+
+Type: `Object`
+Default: `undefined`
+
+Options for the [`ws`](https://github.com/websockets/ws/blob/master/doc/ws.md#new-websocketserveroptions-callback) server behind the [`'ws'`](#hottransport) transport — compression (`perMessageDeflate`), `maxPayload`, `handleProtocols`, `verifyClient`, and so on. Ignored by `'sse'`.
+
+A `port` (with an optional `host`) or a `server` gives the endpoint a server of its own to listen on, rather than the upgrades it is handed through [`hot.server`](#hotserver), [`attach`](#attachserver) or [`handleUpgrade`](#handleupgradereq-socket-head) — which then answer nothing:
+
+```js
+app.use(
+  middleware(compiler, {
+    hot: { transport: "ws", ws: { port: 8081 } },
+  }),
+);
+```
+
+[`hot.cors`](#hotcors) and [`hot.token`](#hottoken) are checked either way, before the handshake completes; a `verifyClient` of your own is asked only about a client they allow. `path`, `noServer` and `clientTracking` are the middleware's, and are ignored here — the endpoint's path is [`hot.path`](#hotpath).
+
 #### `hot.progress`
 
 Type: `Boolean`
@@ -637,7 +656,7 @@ app.get("/my-client-config.json", (_req, res) => {
 Type: `Boolean`
 Default: `true`
 
-Add the client entry and `HotModuleReplacementPlugin` to the compilation. Set it to `false` to wire both yourself — see [Hot Module Replacement client](#hot-module-replacement-client).
+Add the client entry and `HotModuleReplacementPlugin` to the compilation. Set it to `false` to wire both yourself — see [Hot Module Replacement client](#hot-module-replacement-client). To keep the plugin and wire only the client yourself, set [`hot.client`](#client-options) to `false` instead.
 
 Turn it off when you have a client of your own that the middleware will not recognize as one (anything other than `webpack-dev-middleware/client`), or when you do not want the hot runtime in your bundle at all and are using the endpoint through [`subscribe`](#custom-events) instead.
 
@@ -688,21 +707,23 @@ The client is recognized as `webpack-dev-middleware/client` (with or without a q
 
 #### Which compilations get the runtime
 
-Only the ones a browser runs, decided by the compilation's [`target`](https://webpack.js.org/configuration/target/):
+Only the ones a browser runs, decided by the compilation's [`target`](https://webpack.js.org/configuration/target/). `HotModuleReplacementPlugin` goes to every compilation the middleware serves, whatever its target: a server bundle hot-reloads itself through `module.hot` too, with [`webpack/hot/poll`](https://github.com/webpack/webpack/blob/main/hot/poll.js) or [`webpack/hot/signal`](https://github.com/webpack/webpack/blob/main/hot/signal.js). In a multi-compiler build, a compilation whose configuration says `devServer: false` gets neither.
 
 | `target`                                                       | Gets the runtime |
 | :------------------------------------------------------------- | :--------------- |
 | unset (webpack's default), `web`, `browserslist: …`            | yes              |
 | `webworker`                                                    | yes              |
 | `electron-renderer`, `electron-preload`, `nwjs`, `node-webkit` | yes              |
-| universal — `web` and `node` together, as in `["node", "web"]` | yes              |
+| universal — `"universal"`, or `web` and `node` together        | yes              |
 | `node`, `node14`, `async-node`, `electron-main`                | no               |
 | `deno`                                                         | no               |
 | `false`, or a version with no platform such as `es2020`        | no               |
 
-So in a multi-compiler build the browser half gets a client and the server-rendering half does not, with nothing to configure.
+So in a multi-compiler build the browser half gets a client and the server-rendering half does not, with nothing to configure — both get the plugin.
 
 **Web workers are included.** A worker has no `window` and no document, but it has `EventSource`, `WebSocket` and webpack's runtime, which is all an update needs — so a worker compilation gets a client and applies updates in place, with the overlay and the building indicator left to the page. The one thing a worker cannot do is reload itself, since it has no `location.reload`; when an update cannot be applied the client says so and leaves the page that started the worker to reload it.
+
+**A universal build runs it in Node too.** One bundle serves both, so the runtime is in what Node runs as well, and there it does nothing: it opens no connection, prints nothing and leaves nothing running.
 
 `deno` is a context webpack also counts as `web`, and it stays out until it can be tested there — it has no `window` either, and whether the transports are available is not something this project's test suite can answer.
 
@@ -795,6 +816,10 @@ app.use(
 );
 ```
 
+`hot.client: false` adds no runtime to the page and still applies
+`HotModuleReplacementPlugin`, for a page that wires a client of its own and
+still wants its updates applied.
+
 `hot.client` is read only when the client is injected. With `hot.inject: false`,
 or for a client the configuration already has as an entry, the query string on
 the entry path is the only source — and it works either way:
@@ -830,7 +855,7 @@ narrow the mode in force.
 
 |        Name         |                   Type                   |          Default           | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | :-----------------: | :--------------------------------------: | :------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     `transport`     |                 `string`                 |          `"sse"`           | How the events are carried: `"sse"` or `"ws"`. Defaults to the server [`hot.transport`](#hottransport); override it only together with `path`, since a client asking this endpoint for a protocol it does not serve never connects — the middleware warns when it sees that.                                                                                                                                                                                                                                                                                            |
+|     `transport`     |                 `string`                 |          `"sse"`           | How the events are carried: `"sse"` or `"ws"`. Defaults to the server [`hot.transport`](#hottransport); override it only together with `path`, since a client asking this endpoint for a protocol it does not serve never connects — the middleware warns when it sees that. Any other string is a module exporting [a client of your own](#a-client-of-your-own).                                                                                                                                                                                                      |
 |       `path`        |             `string\|Object`             |      `/__webpack_hmr`      | Where the runtime connects. Defaults to the server [`hot.path`](#hotpath); set it to an absolute url (`wss://dev.example.com/__webpack_hmr`) for an endpoint on another origin or behind a proxy, or to an object saying only the parts that differ — see [a path in parts](#a-path-in-parts).                                                                                                                                                                                                                                                                          |
 |       `apply`       | `"hmr"\|"hmr-only"\|"reload"\|"nothing"` |          `"hmr"`           | What a build does to the page. `"hmr"` applies the update and loads the page again if it cannot be applied; `"hmr-only"` applies it and stops with a message if it cannot; `"reload"` skips HMR and loads the page again on any build that changed something; `"nothing"` leaves the page alone until you reload it. One option rather than three booleans, since only four of their eight combinations differed.                                                                                                                                                       |
 |      `connect`      |     `boolean\|{ retries, timeout }`      |           `true`           | Whether to connect when the entry runs, and how the connection is held open. `false` does not connect — call `setOptionsAndConnect()` yourself. `retries` is how many times to reconnect before giving up, and `Infinity` never does; unset, `"sse"` keeps trying for as long as the page is open while `"ws"` gives up after `10`. `timeout` is how long silence is tolerated before reconnecting, in milliseconds, and the interval between reconnections — `"sse"` only, since a `"ws"` heartbeat is a protocol ping the browser answers without telling JavaScript. |
@@ -919,10 +944,47 @@ import EventSourceClient from "webpack-dev-middleware/client/sse";
 import WebSocketClient from "webpack-dev-middleware/client/ws";
 ```
 
-The runtime picks it up from `__webpack_dev_server_client__`, which
-webpack-dev-server sets from its `client.webSocketTransport` option; a module
-exporting the class as `default` is unwrapped. An injected client wins over
-both built-ins, whatever `transport` says.
+Name it in [`hot.client.transport`](#client-options) — a path, or a package
+name resolved from the compilation's context — and the injected runtime uses it
+in place of the built-in one:
+
+```js
+app.use(
+  middleware(compiler, {
+    hot: {
+      transport: "ws",
+      client: { transport: require.resolve("./my-client.js") },
+    },
+  }),
+);
+```
+
+It reaches the runtime as `__webpack_dev_server_client__`, which is how
+webpack-dev-server's `client.webSocketTransport` option has always worked; a
+module exporting the class as `default` is unwrapped. The query carries the
+endpoint's own transport, which the runtime still builds the url's scheme from.
+
+#### Listening alongside the runtime
+
+Tooling that wants the raw messages without replacing the runtime can read the
+connection it holds:
+
+```js
+import { client } from "webpack-dev-middleware/client/socket";
+
+// `client` is live: `null` before the runtime starts to connect and while it
+// waits to reconnect. `client.client` is the `WebSocket` or `EventSource`
+// underneath, a new one for each connection, so a listener added to it hears
+// that connection only.
+if (client && client.client) {
+  client.client.addEventListener("message", (event) => {
+    console.log(JSON.parse(event.data));
+  });
+}
+```
+
+This is the shape webpack-dev-server's `client/socket` has always exported,
+which is what `@pmmmwh/react-refresh-webpack-plugin` reads.
 
 #### Client `overlay` options
 

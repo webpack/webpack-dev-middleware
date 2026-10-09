@@ -430,7 +430,9 @@ describe("the deprecated browser options (browser)", () => {
 
     // Gone, so the page was loaded again rather than updated in place.
     expect(await readReloadMarker(page)).toBeUndefined();
-    expect(console_.messages.join("\n")).toContain("deprecated");
+    // webpack-dev-server's spelling, which this client never offered under
+    // its own name, so there is nothing to warn about.
+    expect(console_.messages.join("\n")).not.toContain("deprecated");
   });
 
   it("takes `hot=false&liveReload=false` as asking for nothing", async () => {
@@ -489,7 +491,7 @@ describe("the deprecated browser options (browser)", () => {
 
   it("says which deprecated names it found", async () => {
     app = await createHotApp({
-      query: "?reconnect=3&timeout=5000",
+      query: "?reload=true&timeout=5000&reconnect=3",
       code: acceptedApp("v1"),
     });
     ({ page, browser } = await runBrowser());
@@ -499,10 +501,32 @@ describe("the deprecated browser options (browser)", () => {
     await waitForAppText(page, "v1");
     await console_.waitFor("deprecated");
 
-    const said = console_.messages.join("\n");
+    const said = console_.messages.find((text) => text.includes("deprecated"));
 
-    expect(said).toContain("reconnect");
-    expect(said).toContain("timeout");
+    expect(said).toContain("reload, timeout are deprecated");
+    // webpack-dev-server's spelling, read as it always was.
+    expect(said).not.toContain("reconnect");
     expect(said).toContain("'apply' and 'connect'");
+  });
+
+  it("reads webpack-dev-server's own spelling without a warning", async () => {
+    // What webpack's guide shows for wiring that server's client by hand.
+    app = await createHotApp({
+      query: "?hot=true&live-reload=true&reconnect=10",
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    expect(await readReloadMarker(page)).toBe(true);
+    expect(console_.messages.join("\n")).not.toContain("deprecated");
   });
 });

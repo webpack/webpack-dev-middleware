@@ -40,7 +40,7 @@
  * and the compilation's name. Setting one here replaces that, which is what a
  * page reaching the endpoint through a proxy or another origin needs.
  * @typedef {object} HotClientOptions
- * @property {("sse" | "ws")=} transport which transport the runtime speaks, `hot.transport` by default
+ * @property {("sse" | "ws" | string)=} transport which transport the runtime speaks, `hot.transport` by default; any other string is a module exporting a client class of your own, used in place of the built-in one
  * @property {(string | PathSpec)=} path where the runtime connects, `hot.path` by default; may be an absolute url for an endpoint on another origin, or the parts that differ with the rest resolved in the page
  * @property {string=} name limit the runtime to one compilation's builds, the compilation's own name by default
  * @property {string=} token the secret the runtime puts on its connection url, `hot.token` by default
@@ -65,12 +65,13 @@
  * @property {string=} path the path the endpoint is served at
  * @property {number=} heartbeat heartbeat interval in milliseconds
  * @property {HttpServer=} server HTTP server the `"ws"` transport answers upgrades on, when it is already built
+ * @property {Record<string, EXPECTED_ANY>=} ws options for the `ws` server behind the `"ws"` transport — compression, payload limits, `verifyClient`, or a `port` or a `server` of its own to listen on; `path`, `noServer` and `clientTracking` are the middleware's
  * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
  * @property {boolean=} progress publish compilation progress events to the clients
  * @property {CorsOption=} cors which origins may reach the endpoint from a page on another one; the local ones by default
  * @property {(boolean | string)=} token a secret the injected client carries and the endpoint requires; `true` mints one per run, a string uses that one, `false` requires none. Defaults to `false` on both transports; `true` in the next major release
  * @property {boolean=} inject add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
- * @property {HotClientOptions=} client options handed to the browser runtime through its entry query
+ * @property {(HotClientOptions | false)=} client options handed to the browser runtime through its entry query; `false` adds no runtime to the page and still applies `HotModuleReplacementPlugin`
  */
 
 /**
@@ -524,7 +525,7 @@ function createHot(compiler, userOptions, statsOption) {
     transportName = "a custom transport";
   } else if (transport === "ws") {
     eventStream = requireServer("WebSocketServer")(
-      { heartbeat, path, cors, token },
+      { heartbeat, path, cors, token, ws: options.ws },
       logger,
     );
     transportName = "a WebSocket";
