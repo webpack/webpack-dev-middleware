@@ -1,5 +1,53 @@
 # Changelog
 
+## 8.4.0
+
+### Minor Changes
+
+- The client posts build events to the page the way webpack-dev-server's does (`webpackOk`, `webpackErrors`, `webpackClose` and the rest), logs `Disconnected!` when the connection drops and clears the build's problems from the overlay until it is back. `progress` accepts `"circular"` or `"linear"`. Reloads skip a page that is already navigating away, use the nearest ancestor with a url of its own inside an `about:blank` iframe, and in `apply: "reload"` follow a sibling compilation's build too. (by [@alexander-akait](https://github.com/alexander-akait) in [#2425](https://github.com/webpack/webpack-dev-middleware/pull/2425))
+
+- `hot.client: false` adds no runtime to the page while still applying `HotModuleReplacementPlugin`, which now goes to every compilation the middleware serves, including server bundles that hot-reload through `webpack/hot/poll`. `hot.client.transport` also accepts a module exporting a client class of your own, and the new `hot.ws` option is passed to the `ws` server (compression, `verifyClient`, or a `port` or `server` of its own), with `hot.cors` and `hot.token` still checked. The connection the runtime holds is exported as `webpack-dev-middleware/client/socket` for tooling that listens alongside it. (by [@alexander-akait](https://github.com/alexander-akait) in [#2472](https://github.com/webpack/webpack-dev-middleware/pull/2472))
+
+- Grouped `etag`, `lastModified`, `cacheControl` and `cacheImmutable` into `cache.*`, and `mimeTypes` and `mimeTypeDefault` into `mime.*`; the old names warn and keep working until the next major release, and the grouped name wins when both are set. Media types now resolve through `mime-db` directly, and `mime.types` belongs to its own middleware instead of being written into the table `mime-types` shares with the whole process. `instance.context.options` is a copy of the options passed, `cache.control` included. (by [@alexander-akait](https://github.com/alexander-akait) in [#2455](https://github.com/webpack/webpack-dev-middleware/pull/2455))
+
+- `hot.client.apply` (`"hmr"`, `"hmr-only"`, `"reload"` or `"nothing"`) says what a build does to the page, so a project without HMR still reloads on a change; a single page can choose its own mode with `?webpack-dev-middleware-apply=`, and publishing `{ action: "reload" }` reloads every page. `hot.client.connect` (`false`, or `{ retries, timeout }`) controls connecting and reconnecting, with `retries` honoured on both transports. The `hot`, `liveReload`, `reload`, `autoConnect`, `reconnect` and `timeout` options they replace still work with a deprecation warning until the next major release. (by [@alexander-akait](https://github.com/alexander-akait) in [#2458](https://github.com/webpack/webpack-dev-middleware/pull/2458))
+
+- Added `hot.client`, which sets the browser runtime's options on the middleware under the same names the entry query takes, so a configuration no longer needs a hand-written query string. `path` accepts a url or its parts (`{ port: 8080 }`) and resolves the rest in the page, and `logging` accepts `{ level, name }` so an embedding package can label the console with its own name. (by [@alexander-akait](https://github.com/alexander-akait) in [#2436](https://github.com/webpack/webpack-dev-middleware/pull/2436))
+
+- Added `hot.cors` to choose which origins may reach the hot endpoint: Server-Sent Events still allow every origin until the next major release, while the new WebSocket transport allows only local origins and refuses others with `403` before the handshake. Added `hot.token`, a secret the injected client carries and the endpoint requires, for the case where a browser sends no `Origin`; it is off by default. (by [@alexander-akait](https://github.com/alexander-akait) in [#2444](https://github.com/webpack/webpack-dev-middleware/pull/2444))
+
+- `hot` now adds the client and `HotModuleReplacementPlugin` to the compilation itself, so enabling it is all a webpack configuration needs; `hot.inject: false` turns this off for anyone wiring it by hand. Web workers get a client too, nothing is injected into a non-browser target, and the HMR plugin is left out when `hot.client.apply` is `reload` or `nothing`. (by [@alexander-akait](https://github.com/alexander-akait) in [#2430](https://github.com/webpack/webpack-dev-middleware/pull/2430))
+
+- The instance gains `attach(server)`, `handleUpgrade(req, socket, head)`, `onConnect(fn)` (now given the request as well as the client), `publish(payload)` and `publishTo(client, payload)`, so a server can own the upgrade, decide who may listen and put payloads of its own on the stream, such as `ProgressPlugin` ticks. The client understands `{ action: "error", message }`, logging the reason a server refused it and posting it to the page as `webpackError`. (by [@alexander-akait](https://github.com/alexander-akait) in [#2431](https://github.com/webpack/webpack-dev-middleware/pull/2431))
+
+- `hot.transport` chooses how events reach the browser: Server-Sent Events (the default), `"ws"` for a WebSocket, or a transport of your own, which only needs `onConnect`, `publish`, `publishTo` and `close`. The client speaks both built-in wires, also exported as `webpack-dev-middleware/client/sse` and `webpack-dev-middleware/client/ws`, and behaves the same on either. (by [@alexander-akait](https://github.com/alexander-akait) in [#2420](https://github.com/webpack/webpack-dev-middleware/pull/2420))
+
+- `overlay.id` names the overlay element, so a package embedding it can keep the id its users already query. The new `webpack-dev-middleware/client/problem` export formats one of webpack's errors or warnings with `formatProblem`, and `showProblems` accepts webpack's objects as well as strings. (by [@alexander-akait](https://github.com/alexander-akait) in [#2438](https://github.com/webpack/webpack-dev-middleware/pull/2438))
+
+### Patch Changes
+
+- Bound the internal url and `Range` header caches, which grew for the life of the process and were never released, even by `close()`. (by [@alexander-akait](https://github.com/alexander-akait) in [#2405](https://github.com/webpack/webpack-dev-middleware/pull/2405))
+
+- The client exports ship type declarations and are marked as the ES modules they are. The client logs through webpack's `Logger` without `webpack/lib/logging/runtime.js`, so `universal` and `["web", "node"]` bundles no longer pull in a node builtin and a page enforcing Trusted Types needs no guard. A module that re-exports the client can hand it its options through `__webpack_dev_middleware_client_query__`, and `?autoConnect` is read like every other boolean. (by [@alexander-akait](https://github.com/alexander-akait) in [#2428](https://github.com/webpack/webpack-dev-middleware/pull/2428))
+
+- Deprecated `hot.progress`, which keeps working until the next major release: a server that applies `ProgressPlugin` itself ended up with two on one compiler. Remove it, apply the plugin yourself and hand its ticks to [`publish`](https://github.com/webpack/webpack-dev-middleware#publishpayload); the browser-side `hot.client.progress` is unaffected. (by [@alexander-akait](https://github.com/alexander-akait) in [#2451](https://github.com/webpack/webpack-dev-middleware/pull/2451))
+
+- The client keeps doing what webpack-dev-server's did: (by [@alexander-akait](https://github.com/alexander-akait) in [#2472](https://github.com/webpack/webpack-dev-middleware/pull/2472))
+  
+  - A page url with a malformed escape no longer stops every update.
+  - `apply: "reload"` reloads a reconnected page whose build is out of date.
+  - A build's warnings are logged and posted along with its errors.
+  - An entry written for that server's query (`hostname`, `port`, `pathname`, `live-reload`, `hot=only`) still connects, with no deprecation warning for that server's own spelling.
+  - The published client is ES5 down to the logger.
+  - The overlay sits at the highest `z-index` and closes on `Esc`.
+  - The building indicator works without Shadow DOM and is announced as a progress bar.
+
+- The overlay takes focus when it opens and gives it back when it closes, keeps an uncaught runtime error through a successful build, passes a rejected value to `runtimeErrors` filters as `error.cause`, and no longer shows an empty card or leaves the building indicator up after a multi-compiler build. File references in absolute, Windows and `file://` stack frames are now clickable. The ANSI-to-HTML conversion is built in, dropping `ansi-html-community` and fixing its handling of combined, short and unbalanced sequences. (by [@alexander-akait](https://github.com/alexander-akait) in [#2437](https://github.com/webpack/webpack-dev-middleware/pull/2437))
+
+- Validate options with a precompiled schema to cut ~155ms from startup. (by [@alexander-akait](https://github.com/alexander-akait) in [#2413](https://github.com/webpack/webpack-dev-middleware/pull/2413))
+
+- Hardened the path-traversal guards in `getFilenameFromUrl`: the remainder left after the `publicPath` prefix is stripped is checked for `..` on its own, before it is joined onto the output root. A `..` that leaves the output root and comes back into it, such as `/assets../dist/file.js`, is now refused rather than served. (by [@alexander-akait](https://github.com/alexander-akait) in [#2445](https://github.com/webpack/webpack-dev-middleware/pull/2445))
+
 ## 8.3.0
 
 ### Minor Changes
