@@ -200,7 +200,7 @@ describe("hot with nothing but the middleware (browser)", () => {
       code: acceptedApp("v1"),
       // What a server built on this middleware sets so the parameters its own
       // users know keep working.
-      hot: { client: { urlPrefix: "my-server" } },
+      hot: { client: { pageParamPrefix: "my-server" } },
     });
     ({ page, browser } = await runBrowser());
 

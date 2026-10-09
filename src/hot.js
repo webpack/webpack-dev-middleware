@@ -35,27 +35,20 @@
  * here and the injected entry carries it, or write it on the query of a client
  * entry of your own.
  *
- * `transport`, `path` and `name` are the exception only in having a default
+ * `transport`, `url` and `name` are the exception only in having a default
  * the middleware knows — the resolved `hot.transport`, the resolved `hot.path`
  * and the compilation's name. Setting one here replaces that, which is what a
  * page reaching the endpoint through a proxy or another origin needs.
  * @typedef {object} HotClientOptions
  * @property {("sse" | "ws" | string)=} transport which transport the runtime speaks, `hot.transport` by default; any other string is a module exporting a client class of your own, used in place of the built-in one
- * @property {(string | PathSpec)=} path where the runtime connects, `hot.path` by default; may be an absolute url for an endpoint on another origin, or the parts that differ with the rest resolved in the page
+ * @property {(string | PathSpec)=} url where the runtime connects, `hot.path` by default: a path, an absolute url for an endpoint on another origin, or the parts that differ with the rest resolved in the page
  * @property {string=} name limit the runtime to one compilation's builds, the compilation's own name by default
- * @property {string=} token the secret the runtime puts on its connection url, `hot.token` by default
  * @property {(boolean | Record<string, EXPECTED_ANY>)=} overlay show build problems and uncaught runtime errors in an overlay
  * @property {(boolean | "circular" | "linear")=} progress show an indicator while a rebuild is in progress
- * @property {boolean=} hot deprecated, removed in the next major release — use `apply`
- * @property {boolean=} liveReload deprecated, removed in the next major release — use `apply`
- * @property {boolean=} reload deprecated, removed in the next major release — use `apply`
  * @property {("hmr" | "hmr-only" | "reload" | "nothing")=} apply what a build does to the page — apply the update and reload if it cannot be applied, apply it and stop with a message if it cannot, load the page again on any build that changed something, or leave the page alone
  * @property {(boolean | { retries?: number, timeout?: number })=} connect whether to connect when the entry runs, and how the connection is held open
- * @property {string=} urlPrefix prefix of the page-url parameter that overrides `apply` for a single page
+ * @property {string=} pageParamPrefix prefix of the page-url parameters that override `apply` for a single page
  * @property {(LogLevel | { level?: LogLevel, name?: string })=} logging how much the runtime logs to the browser console, and the name every message is labelled with
- * @property {number=} reconnect how many times to reconnect before giving up; unset, Server-Sent Events keep trying for as long as the page is open while a WebSocket gives up after 10
- * @property {number=} timeout how long the runtime tolerates silence before reconnecting, in milliseconds — Server-Sent Events only, since a WebSocket's heartbeat is a protocol ping JavaScript cannot see
- * @property {boolean=} autoConnect connect as soon as the entry runs
  * @property {boolean=} dynamicPublicPath prefix the path with the bundle's public path at runtime
  */
 
@@ -64,7 +57,6 @@
  * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)=} transport how events reach the clients, Server-Sent Events by default
  * @property {string=} path the path the endpoint is served at
  * @property {number=} heartbeat heartbeat interval in milliseconds
- * @property {HttpServer=} server HTTP server the `"ws"` transport answers upgrades on, when it is already built
  * @property {Record<string, EXPECTED_ANY>=} ws options for the `ws` server behind the `"ws"` transport — compression, payload limits, `verifyClient`, or a `port` or a `server` of its own to listen on; `path`, `noServer` and `clientTracking` are the middleware's
  * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
  * @property {boolean=} progress publish compilation progress events to the clients
@@ -577,12 +569,6 @@ function createHot(compiler, userOptions, statsOption) {
       eventStream.publishTo(client, bundlePayload(stats, "sync"));
     }
   });
-
-  // A WebSocket is upgraded by the HTTP server rather than answered by the
-  // middleware, so the transport needs the server itself.
-  if (options.server && eventStream.attach) {
-    eventStream.attach(options.server);
-  }
 
   // TODO in the next major release remove `progress` and this warning
   if (options.progress) {

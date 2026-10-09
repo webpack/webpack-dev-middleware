@@ -366,7 +366,6 @@ The object form accepts these options:
 |    **[`transport`](#hottransport)**    |                      `string \| function`                       |      `'sse'`       | How events reach the clients.                                                           |
 |         **[`path`](#hotpath)**         |                            `string`                             | `'/__webpack_hmr'` | Path the endpoint is served at.                                                         |
 |    **[`heartbeat`](#hotheartbeat)**    |                            `number`                             |      `10000`       | Interval (in milliseconds) between keep-alive frames.                                   |
-|       **[`server`](#hotserver)**       |                            `object`                             |    `undefined`     | HTTP server the `'ws'` transport answers upgrades on.                                   |
 |     **[`progress`](#hotprogress)**     |                            `boolean`                            |      `false`       | Publish compilation progress events to the clients.                                     |
 |         **[`cors`](#hotcors)**         | `boolean \| string \| string[] \| RegExp \| function \| object` |     see below      | Which origins may reach the endpoint from a page on another one, over either transport. |
 |        **[`token`](#hottoken)**        |                       `boolean \| string`                       |     see below      | A secret the injected client carries and the endpoint requires, over either transport.  |
@@ -382,7 +381,7 @@ How events reach the clients.
 
 `'sse'` serves them as [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) from the middleware itself, which needs nothing else.
 
-`'ws'` serves them over a WebSocket. It needs the optional [`ws`](https://www.npmjs.com/package/ws) package (`npm install ws`), and an HTTP server to answer upgrades on — a handshake is an upgrade the server answers, which the middleware never sees. Give it [`hot.server`](#hotserver), or hand the server over later with the middleware's [`attach`](#attachserver) method:
+`'ws'` serves them over a WebSocket. It needs the optional [`ws`](https://www.npmjs.com/package/ws) package (`npm install ws`), and an HTTP server to answer upgrades on — a handshake is an upgrade the server answers, which the middleware never sees. Hand the server over with the middleware's [`attach`](#attachserver) method, or answer upgrades yourself through [`handleUpgrade`](#handleupgradereq-socket-head):
 
 ```js
 const server = http.createServer(instance);
@@ -471,13 +470,6 @@ Default: `10000`
 
 Heartbeat interval (in milliseconds) used to keep the connection alive when no compilation events are produced: keep-alive frames for `'sse'`, pings for `'ws'`. Must be `1` or greater.
 
-#### `hot.server`
-
-Type: `Object`
-Default: `undefined`
-
-HTTP server the [`'ws'`](#hottransport) transport answers upgrades on, when it already exists where the middleware is built. Otherwise hand it over later with the middleware's [`attach`](#attachserver) method. Ignored by `'sse'`, which is answered by the middleware itself.
-
 #### `hot.ws`
 
 Type: `Object`
@@ -485,7 +477,7 @@ Default: `undefined`
 
 Options for the [`ws`](https://github.com/websockets/ws/blob/master/doc/ws.md#new-websocketserveroptions-callback) server behind the [`'ws'`](#hottransport) transport — compression (`perMessageDeflate`), `maxPayload`, `handleProtocols`, `verifyClient`, and so on. Ignored by `'sse'`.
 
-A `port` (with an optional `host`) or a `server` gives the endpoint a server of its own to listen on, rather than the upgrades it is handed through [`hot.server`](#hotserver), [`attach`](#attachserver) or [`handleUpgrade`](#handleupgradereq-socket-head) — which then answer nothing:
+A `port` (with an optional `host`) or a `server` gives the endpoint a server of its own to listen on, rather than the upgrades it is handed through [`attach`](#attachserver) or [`handleUpgrade`](#handleupgradereq-socket-head) — which then answer nothing:
 
 ```js
 app.use(
@@ -767,7 +759,7 @@ app.use(
 ```
 
 Every option below can be set either way, and they are the same options: what
-`hot.client` takes is what the query carries. `transport`, `path` and `name`
+`hot.client` takes is what the query carries. `transport`, `url` and `name`
 differ only in having a value the middleware already knows — the resolved
 [`hot.transport`](#hottransport), the resolved [`hot.path`](#hotpath) and the
 compilation's own name — so setting one replaces that default rather than
@@ -777,7 +769,7 @@ another origin needs:
 ```js
 app.use(
   middleware(compiler, {
-    hot: { client: { path: "wss://dev.example.com/__webpack_hmr" } },
+    hot: { client: { url: "wss://dev.example.com/__webpack_hmr" } },
   }),
 );
 ```
@@ -842,9 +834,12 @@ as well.
 
 Each of these is set either on the middleware as `hot.client.<name>` or on the
 entry's query as `<name>=<value>`, with the same effect and the same spelling in
-both. The last six are the names `apply` and `connect` replaced; they still
-work, folded into those two, and go away in the next major release.
-`transport`, `path` and `name` default to what the middleware resolved rather
+both — except `url`, which the query also reads as `path`, the name it had
+there first. The query also still reads the six names `apply` and `connect`
+replaced (`hot`, `liveReload`, `reload`, `autoConnect`, `reconnect`,
+`timeout`), folded into those two, until the next major release; `hot.client`
+does not take them.
+`transport`, `url` and `name` default to what the middleware resolved rather
 than to the value in the table, which is what they are when nothing else is
 serving them.
 
@@ -855,34 +850,28 @@ narrow the mode in force.
 
 |        Name         |                   Type                   |          Default           | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | :-----------------: | :--------------------------------------: | :------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     `transport`     |                 `string`                 |          `"sse"`           | How the events are carried: `"sse"` or `"ws"`. Defaults to the server [`hot.transport`](#hottransport); override it only together with `path`, since a client asking this endpoint for a protocol it does not serve never connects — the middleware warns when it sees that. Any other string is a module exporting [a client of your own](#a-client-of-your-own).                                                                                                                                                                                                      |
-|       `path`        |             `string\|Object`             |      `/__webpack_hmr`      | Where the runtime connects. Defaults to the server [`hot.path`](#hotpath); set it to an absolute url (`wss://dev.example.com/__webpack_hmr`) for an endpoint on another origin or behind a proxy, or to an object saying only the parts that differ — see [a path in parts](#a-path-in-parts).                                                                                                                                                                                                                                                                          |
+|     `transport`     |                 `string`                 |          `"sse"`           | How the events are carried: `"sse"` or `"ws"`. Defaults to the server [`hot.transport`](#hottransport); override it only together with `url`, since a client asking this endpoint for a protocol it does not serve never connects — the middleware warns when it sees that. Any other string is a module exporting [a client of your own](#a-client-of-your-own).                                                                                                                                                                                                       |
+|        `url`        |             `string\|Object`             |      `/__webpack_hmr`      | Where the runtime connects. Defaults to the server [`hot.path`](#hotpath); set it to an absolute url (`wss://dev.example.com/__webpack_hmr`) for an endpoint on another origin or behind a proxy, or to an object saying only the parts that differ — see [a url in parts](#a-url-in-parts).                                                                                                                                                                                                                                                                            |
 |       `apply`       | `"hmr"\|"hmr-only"\|"reload"\|"nothing"` |          `"hmr"`           | What a build does to the page. `"hmr"` applies the update and loads the page again if it cannot be applied; `"hmr-only"` applies it and stops with a message if it cannot; `"reload"` skips HMR and loads the page again on any build that changed something; `"nothing"` leaves the page alone until you reload it. One option rather than three booleans, since only four of their eight combinations differed.                                                                                                                                                       |
 |      `connect`      |     `boolean\|{ retries, timeout }`      |           `true`           | Whether to connect when the entry runs, and how the connection is held open. `false` does not connect — call `setOptionsAndConnect()` yourself. `retries` is how many times to reconnect before giving up, and `Infinity` never does; unset, `"sse"` keeps trying for as long as the page is open while `"ws"` gives up after `10`. `timeout` is how long silence is tolerated before reconnecting, in milliseconds, and the interval between reconnections — `"sse"` only, since a `"ws"` heartbeat is a protocol ping the browser answers without telling JavaScript. |
 |      `overlay`      |            `boolean\|Object`             |           `true`           | In-page overlay for problems: a boolean, or a JSON object — see [overlay options](#client-overlay-options). Same value shape as webpack-dev-server's [`client.overlay`](https://webpack.js.org/configuration/dev-server/#overlay), plus a few webpack-dev-middleware extensions.                                                                                                                                                                                                                                                                                        |
-|     `urlPrefix`     |                 `string`                 | `"webpack-dev-middleware"` | Names the page-url parameter (`<prefix>-apply`) that overrides [`apply`](#client-options) for a single page — see [opting one page out](#opting-one-page-out). Change it if you are building a server of your own and want parameters named after it.                                                                                                                                                                                                                                                                                                                   |
+|  `pageParamPrefix`  |                 `string`                 | `"webpack-dev-middleware"` | Names the page-url parameter (`<prefix>-apply`) that overrides [`apply`](#client-options) for a single page — see [opting one page out](#opting-one-page-out). Change it if you are building a server of your own and want parameters named after it.                                                                                                                                                                                                                                                                                                                   |
 |      `logging`      |             `string\|Object`             |          `"info"`          | Logger level — one of `"none"`, `"error"`, `"warn"`, `"info"`, `"log"`, `"verbose"`. Uses webpack's runtime logger. An object takes the same value as `level` plus a `name`, which is what every message is labelled with in the console: a package embedding this runtime is the one a developer installed and would report a problem to, so it can say its own name — `{ level: "warn", name: "my-dev-server" }` logs `[my-dev-server] …`.                                                                                                                            |
 |       `name`        |                 `string`                 |            `""`            | Restrict updates to a specific compilation name (useful with multi-compiler). In `apply: "reload"` a successful build of any other compilation still loads the page, since a page cannot tell which of the bundles it depends on.                                                                                                                                                                                                                                                                                                                                       |
 |     `progress`      |                `boolean`                 |           `true`           | Show a small badge in the page while a rebuild is in progress (with the compilation percentage when the server enables `hot.progress`). Set to `false` to disable.                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `dynamicPublicPath` |                `boolean`                 |          `false`           | Prefix `path` with `__webpack_public_path__` at runtime. The leading slash of `path` is stripped and no other normalization is applied, so the public path should end with `/`.                                                                                                                                                                                                                                                                                                                                                                                         |
-|        `hot`        |                `boolean`                 |           `true`           | Apply a build through Hot Module Replacement. Set to `false` for a project without `HotModuleReplacementPlugin`, and the page is reloaded instead — see `liveReload`. **Deprecated**, removed in the next major release — use [`apply`](#client-options).                                                                                                                                                                                                                                                                                                               |
-|    `liveReload`     |                `boolean`                 |           `true`           | Reload the page on a build that changed something, when `hot` is off. A build that changed nothing is left alone. Set both this and `hot` to `false` and a build reaches the page only when you reload it yourself. **Deprecated**, removed in the next major release — use [`apply`](#client-options).                                                                                                                                                                                                                                                                 |
-|      `reload`       |                `boolean`                 |           `true`           | Fall back to a full page reload when an update cannot be applied through HMR (e.g. recovering from a broken build). Enabled by default, unlike webpack-hot-middleware; set to `false` to keep HMR-only. Unrelated to `liveReload`: this one is about an update that was tried. **Deprecated**, removed in the next major release — use [`apply`](#client-options).                                                                                                                                                                                                      |
-|    `autoConnect`    |                `boolean`                 |           `true`           | Connect on load; set to `false` and call `setOptionsAndConnect()` manually. **Deprecated**, removed in the next major release — use [`connect`](#client-options).                                                                                                                                                                                                                                                                                                                                                                                                       |
-|     `reconnect`     |                 `number`                 |     `Infinity` / `10`      | How many times to reconnect before giving up. Unset, `"sse"` keeps trying for as long as the page is open — a dev server is expected to come back — while `"ws"` gives up after `10`. Setting it applies to both. **Deprecated**, removed in the next major release — use [`connect`](#client-options).                                                                                                                                                                                                                                                                 |
-|      `timeout`      |                 `number`                 |          `20000`           | How long silence is tolerated before reconnecting, in milliseconds, and the interval between reconnections. `"sse"` only: its heartbeat arrives as data the client can see, while a `"ws"` heartbeat is a protocol ping the browser answers without telling JavaScript — a half-open socket there is terminated by the server instead. **Deprecated**, removed in the next major release — use [`connect`](#client-options).                                                                                                                                            |
+| `dynamicPublicPath` |                `boolean`                 |          `false`           | Prefix `url` with `__webpack_public_path__` at runtime. The leading slash of `url` is stripped and no other normalization is applied, so the public path should end with `/`.                                                                                                                                                                                                                                                                                                                                                                                           |
 
-#### A path in parts
+#### A url in parts
 
 An absolute url says everything, which is more than is usually known: the host
 a page will be opened on, and the scheme it will be served over, are the
-browser's to report. So `path` also takes the parts that differ and leaves the
+browser's to report. So `url` also takes the parts that differ and leaves the
 rest to be resolved in the page:
 
 ```js
 app.use(
   middleware(compiler, {
-    hot: { client: { path: { port: 8080 } } },
+    hot: { client: { url: { port: 8080 } } },
   }),
 );
 ```
@@ -1142,7 +1131,7 @@ http://localhost:3000/?webpack-dev-middleware-apply=false
 
 `false` is taken as `nothing`, which is what this parameter meant before `apply` replaced the three booleans it covers.
 
-The `webpack-dev-middleware` part is the client's [`urlPrefix`](#client-options), so a server built on this middleware can set `hot.client.urlPrefix` and name the parameter after itself. What follows it is the option, spelled the one way the option is spelled. The name is matched whole and case-insensitively, and a value that is not one of the modes is left alone — a parameter that merely contains the words, or a value such as `nothingness`, changes nothing.
+The `webpack-dev-middleware` part is the client's [`pageParamPrefix`](#client-options), so a server built on this middleware can set `hot.client.pageParamPrefix` and name the parameter after itself. What follows it is the option, spelled the one way the option is spelled. The name is matched whole and case-insensitively, and a value that is not one of the modes is left alone — a parameter that merely contains the words, or a value such as `nothingness`, changes nothing.
 
 The two parameters `apply` replaced still work, and narrow whatever mode is in force instead of replacing it — `?webpack-dev-middleware-hot=false` takes hot module replacement away and leaves the reload, `?webpack-dev-middleware-live-reload=false` takes the reload away and leaves hot module replacement, and both together do nothing. `apply` in the same url wins over them. They are kept for pages and bookmarks that already use them, and will be removed in the next major release.
 
@@ -1190,7 +1179,7 @@ interact with the middleware at runtime:
 
 ### `attach(server)`
 
-Gives the [`hot.transport: "ws"`](#hottransport) endpoint the HTTP server to answer WebSocket upgrades on. A handshake is an upgrade the server answers, which the middleware never sees, so it cannot find the server on its own. Use this when the server is built after the middleware; when it already exists, [`hot.server`](#hotserver) does the same thing.
+Gives the [`hot.transport: "ws"`](#hottransport) endpoint the HTTP server to answer WebSocket upgrades on. A handshake is an upgrade the server answers, which the middleware never sees, so it cannot find the server on its own. To decide yourself which upgrades reach the endpoint, use [`handleUpgrade`](#handleupgradereq-socket-head) instead.
 
 Does nothing when `hot` is disabled or the transport is Server-Sent Events, which the middleware answers itself.
 

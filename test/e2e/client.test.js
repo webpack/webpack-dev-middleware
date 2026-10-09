@@ -663,7 +663,7 @@ describe("hot client (browser)", () => {
       publicPath: "/assets/",
       hot: {
         path: "/assets/__webpack_hmr",
-        client: { path: { hostname: "0.0.0.0" }, dynamicPublicPath: true },
+        client: { url: { hostname: "0.0.0.0" }, dynamicPublicPath: true },
       },
       bare: true,
       code: acceptedApp("v1"),
