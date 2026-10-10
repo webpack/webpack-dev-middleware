@@ -3,6 +3,7 @@ const querystring = require("node:querystring");
 const { finished } = require("node:stream");
 
 const {
+  createMultipartBody,
   createReadStreamOrReadFile,
   destroyStream,
   escapeHtml,
@@ -336,6 +337,8 @@ async function getFilenameFromUrl(context, url) {
 }
 
 const CACHE_CONTROL_NO_CACHE_REGEXP = /(?:^|,)\s*?no-cache\s*?(?:,|$)/;
+
+const MAX_MULTIPART_RANGES = 200;
 
 /** @type {Record<number, string>} */
 const statuses = {
@@ -917,7 +920,7 @@ function wrapper(context) {
       /** @type {number} */
       let end;
 
-      /** @type {undefined | Buffer | ReadStream} */
+      /** @type {undefined | Buffer | ReadStream | import("node:stream").Readable} */
       let bufferOrStream;
       /** @type {number | undefined} */
       let byteLength;
@@ -1060,9 +1063,45 @@ function wrapper(context) {
             "A malformed 'Range' header was provided. A regular response will be sent for this request.",
           );
         } else if (parsedRanges.length > 1) {
-          context.logger.error(
-            "A 'Range' header with multiple ranges was provided. Multiple ranges are not supported, so a regular response will be sent for this request.",
+          const ranges = /** @type {import("range-parser").Ranges} */ (
+            parsedRanges
           );
+
+          let shouldUseMultipart = true;
+
+          if (ranges.length > MAX_MULTIPART_RANGES) {
+            shouldUseMultipart = false;
+          } else {
+            let covered = 0;
+            for (const range of ranges) {
+              covered += range.end - range.start + 1;
+            }
+            if (covered >= size) {
+              shouldUseMultipart = false;
+            }
+          }
+
+          if (shouldUseMultipart) {
+            const contentType = context.mimeTypes.contentType(filename);
+            const multipartResult = createMultipartBody({
+              filename,
+              outputFileSystem: extra.outputFileSystem,
+              ranges,
+              size,
+              contentType,
+            });
+            setStatusCode(res, 206);
+            setResponseHeader(
+              res,
+              "Content-Type",
+              `multipart/byteranges; boundary=${multipartResult.boundary}`,
+            );
+            isPartialContent = true;
+            bufferOrStream = /** @type {any} */ (
+              multipartResult.bufferOrStream
+            );
+            byteLength = multipartResult.byteLength;
+          }
         }
 
         if (parsedRanges !== -2 && parsedRanges.length === 1) {
@@ -1106,7 +1145,7 @@ function wrapper(context) {
           context.options.modifyResponseData(
             req,
             res,
-            bufferOrStream,
+            /** @type {any} */ (bufferOrStream),
             /** @type {number} */
             (byteLength),
           ));

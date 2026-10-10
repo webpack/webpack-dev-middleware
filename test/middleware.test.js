@@ -1294,10 +1294,65 @@ describe.each([
           expect(response.statusCode).toBe(200);
         });
 
-        it('should return the "200" code for the "GET" request with multiple range header which is ignored', async () => {
+        it('should return the "206" code for the "GET" request with multiple range header', async () => {
           const response = await req
             .get("/bundle.js")
             .set("Range", "bytes=3000-3100,3200-3300");
+
+          expect(response.statusCode).toBe(206);
+          expect(response.headers["content-type"]).toMatch(
+            /multipart\/byteranges; boundary=/,
+          );
+          expect(response.headers["content-length"]).toBeDefined();
+        });
+
+        it("should return multipart 206 for two separate ranges", async () => {
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", "bytes=0-9,20-29");
+
+          expect(response.statusCode).toBe(206);
+          expect(response.headers["content-type"]).toMatch(
+            /multipart\/byteranges; boundary=/,
+          );
+          expect(response.headers["content-length"]).toBeDefined();
+        });
+
+        it("should return 206 with multipart Content-Type for HEAD with multiple ranges", async () => {
+          const response = await req
+            .head("/bundle.js")
+            .set("Range", "bytes=0-9,20-29");
+
+          expect(response.statusCode).toBe(206);
+          expect(response.headers["content-type"]).toMatch(
+            /multipart\/byteranges; boundary=/,
+          );
+        });
+
+        it("should return 206 with only valid range when one is satisfiable and one is unsatisfiable", async () => {
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", "bytes=0-9,9999999-");
+
+          expect(response.statusCode).toBe(206);
+        });
+
+        it("should return 416 when all ranges are unsatisfiable", async () => {
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", "bytes=9999999-10000000,19999999-20000000");
+
+          expect(response.statusCode).toBe(416);
+        });
+
+        it("should return 200 when more ranges than cap", async () => {
+          const ranges = [];
+          for (let i = 0; i < 201; i++) {
+            ranges.push(`bytes=${i * 2}-${i * 2 + 1}`);
+          }
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", ranges.join(", "));
 
           expect(response.statusCode).toBe(200);
         });

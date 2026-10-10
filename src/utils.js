@@ -11,6 +11,7 @@
 
 const crypto = require("node:crypto");
 const path = require("node:path");
+const { Readable } = require("node:stream");
 
 /** @typedef {import("./index").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index").ServerResponse} ServerResponse */
@@ -546,6 +547,100 @@ function createReadStreamOrReadFile(filename, outputFileSystem, start, end) {
   }
 
   return { bufferOrStream, byteLength };
+}
+
+/**
+ * @param {object} options options
+ * @param {string} options.filename filename
+ * @param {OutputFileSystem} options.outputFileSystem output file system
+ * @param {import("range-parser").Range[]} options.ranges ranges
+ * @param {number} options.size size
+ * @param {string | false} options.contentType content type
+ * @returns {{ boundary: string, byteLength: number, bufferOrStream: Readable }} result
+ */
+function createMultipartBody({
+  filename,
+  outputFileSystem,
+  ranges,
+  size,
+  contentType,
+}) {
+  const boundary = crypto.randomBytes(12).toString("hex");
+
+  /** @type {{ start: number, end: number, head: Buffer }[]} */
+  const parts = ranges.map((r) => ({
+    start: r.start,
+    end: r.end,
+    head: Buffer.from(
+      `\r\n--${boundary}\r\n` +
+        (contentType ? `Content-Type: ${contentType}\r\n` : "") +
+        `Content-Range: bytes ${r.start}-${r.end}/${size}\r\n\r\n`,
+    ),
+  }));
+
+  const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
+
+  const byteLength =
+    parts.reduce((n, p) => n + p.head.length + (p.end - p.start + 1), 0) +
+    tail.length;
+
+  const isFsSupportsStream =
+    typeof outputFileSystem.createReadStream === "function";
+
+  /** @type {Buffer | undefined} */
+  let cachedFullBuffer;
+  if (!isFsSupportsStream) {
+    cachedFullBuffer = /** @type {Buffer} */ (
+      outputFileSystem.readFileSync(filename)
+    );
+  }
+
+  async function* body() {
+    for (const p of parts) {
+      yield p.head;
+
+      if (isFsSupportsStream) {
+        const { bufferOrStream } = createReadStreamOrReadFile(
+          filename,
+          outputFileSystem,
+          p.start,
+          p.end,
+        );
+
+        if (
+          typeof (
+            /** @type {import("fs").ReadStream} */ (bufferOrStream).pipe
+          ) === "function"
+        ) {
+          try {
+            yield* /** @type {import("fs").ReadStream} */ (bufferOrStream);
+          } finally {
+            destroyStream(
+              /** @type {import("fs").ReadStream} */ (bufferOrStream),
+              true,
+            );
+          }
+        } else {
+          yield /** @type {Buffer} */ (bufferOrStream).subarray(
+            p.start,
+            p.end + 1,
+          );
+        }
+      } else {
+        yield /** @type {Buffer} */ (cachedFullBuffer).subarray(
+          p.start,
+          p.end + 1,
+        );
+      }
+    }
+    yield tail;
+  }
+
+  return {
+    boundary,
+    byteLength,
+    bufferOrStream: Readable.from(body()),
+  };
 }
 
 /**
@@ -1781,6 +1876,7 @@ module.exports = {
   applyCors,
   clientQuery,
   createMimeTypes,
+  createMultipartBody,
   createReadStreamOrReadFile,
   destroyStream,
   escapeHtml,
