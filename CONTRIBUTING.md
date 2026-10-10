@@ -131,6 +131,14 @@ Migration: see webpack/webpack#5225
 
 ```
 
+### Releasing version 7
+
+To release version 7, follow these steps:
+
+1. Run `npm run release` to create the release commit and version tag.
+2. Push the commit and tag to the repository.
+3. The tag push triggers the `release.yml` workflow, which publishes to npm.
+
 ## Testing Your Pull Request
 
 You may have the need to test your changes in a real-world project or dependent
