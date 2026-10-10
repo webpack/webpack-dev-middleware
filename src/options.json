@@ -17,8 +17,8 @@
             }
           ]
         },
-        "path": {
-          "description": "Where the runtime connects. Defaults to the resolved `hot.path`; a string may be an absolute url for an endpoint reached on another origin or through a proxy, and an object says only the parts that differ and leaves the rest to be resolved in the page, which is the only place the rest is known.",
+        "url": {
+          "description": "Where the runtime connects: a path, an absolute url for an endpoint reached on another origin or through a proxy, or the parts of one that differ, with the rest resolved in the page, which is the only place the rest is known. Defaults to the resolved `hot.path`.",
           "anyOf": [
             {
               "type": "string",
@@ -77,10 +77,6 @@
           "description": "Limit the runtime to one compilation's builds. Defaults to the compilation's own name.",
           "type": "string"
         },
-        "token": {
-          "description": "The secret the runtime puts on its connection url. The middleware sets this to whatever 'hot.token' resolved to, so it only needs setting for a client pointed at another endpoint that requires a different one.",
-          "type": "string"
-        },
         "overlay": {
           "description": "Show build problems and uncaught runtime errors in an overlay.",
           "anyOf": [
@@ -131,8 +127,8 @@
             }
           ]
         },
-        "urlPrefix": {
-          "description": "Prefix of the page-url parameter that overrides `apply` for a single page.",
+        "pageParamPrefix": {
+          "description": "Prefix of the page-url parameters that override `apply` for a single page, as in `?webpack-dev-middleware-hot=false`.",
           "type": "string",
           "minLength": 1
         },
@@ -161,32 +157,6 @@
         "dynamicPublicPath": {
           "description": "Prefix the endpoint path with the bundle's public path at runtime.",
           "type": "boolean"
-        },
-        "hot": {
-          "description": "Apply a build through Hot Module Replacement. Deprecated, and removed in the next major release: use `apply`.",
-          "type": "boolean"
-        },
-        "liveReload": {
-          "description": "Reload the page on a build that changed something, when `hot` is off. Deprecated, and removed in the next major release: use `apply`.",
-          "type": "boolean"
-        },
-        "reload": {
-          "description": "Reload the page when an update cannot be applied. Deprecated, and removed in the next major release: use `apply`.",
-          "type": "boolean"
-        },
-        "autoConnect": {
-          "description": "Connect as soon as the entry runs. Deprecated, and removed in the next major release: use `connect`.",
-          "type": "boolean"
-        },
-        "reconnect": {
-          "description": "How many times to reconnect before giving up. Unset, Server-Sent Events keep trying for as long as the page is open — a dev server is expected to come back — while a WebSocket gives up after 10. Setting it applies to both. Deprecated, and removed in the next major release: use `connect`.",
-          "type": "number",
-          "minimum": 0
-        },
-        "timeout": {
-          "description": "How long the runtime tolerates silence before reconnecting, in milliseconds. Server-Sent Events only: their heartbeat arrives as data the client can see, whereas a WebSocket's is a protocol ping the browser answers without telling JavaScript — a half-open socket there is terminated by the server instead. Deprecated, and removed in the next major release: use `connect`.",
-          "type": "number",
-          "exclusiveMinimum": 0
         }
       }
     },
@@ -475,7 +445,7 @@
           "additionalProperties": false,
           "properties": {
             "transport": {
-              "description": "How events reach the clients: `sse`, `ws` (needs the optional `ws` dependency and an HTTP server to answer upgrades on, given as `server` or through the middleware's `attach` method), or a function building a transport of your own.",
+              "description": "How events reach the clients: `sse`, `ws` (needs the optional `ws` dependency and an HTTP server to answer upgrades on, handed over through the middleware's `attach` or `handleUpgrade` method), or a function building a transport of your own.",
               "anyOf": [
                 {
                   "enum": ["sse", "ws"]
@@ -494,11 +464,6 @@
               "description": "Heartbeat interval (in milliseconds) used to keep the connection alive.",
               "type": "number",
               "minimum": 1
-            },
-            "server": {
-              "description": "HTTP server the `ws` transport answers upgrades on, when it is already built. Otherwise hand it over later with the middleware's `attach` method.",
-              "type": "object",
-              "additionalProperties": true
             },
             "ws": {
               "description": "Options for the `ws` server behind the `ws` transport: compression, payload limits, `verifyClient`, or a `port` or a `server` of its own to listen on instead of answering the upgrades it is handed. `path`, `noServer` and `clientTracking` are the middleware's and are ignored here.",

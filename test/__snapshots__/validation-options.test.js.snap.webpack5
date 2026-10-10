@@ -75,6 +75,69 @@ exports[`validation should throw an error on the "headers" option with "true" va
     * options.headers should be an instance of function."
 `;
 
+exports[`validation should throw an error on the "hot" option with "{"client":{"autoConnect":false}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'autoConnect'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"hot":false}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'hot'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"liveReload":false}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'liveReload'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"path":"/__hmr"}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'path'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"reconnect":3}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'reconnect'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"reload":false}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'reload'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"timeout":5000}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'timeout'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"token":"a-token"}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'token'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"urlPrefix":"my-server"}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'urlPrefix'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
 exports[`validation should throw an error on the "hot" option with "{"heartbeat":-1}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot.heartbeat should be >= 1.
@@ -111,6 +174,12 @@ exports[`validation should throw an error on the "hot" option with "{"path":"hmr
    -> The path the endpoint is served at. Must start with a slash and carry no query string or fragment."
 `;
 
+exports[`validation should throw an error on the "hot" option with "{"server":{}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot has an unknown property 'server'. These properties are valid:
+   object { transport?, path?, heartbeat?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }"
+`;
+
 exports[`validation should throw an error on the "hot" option with "{"statsOptions":"errors-only"}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot.statsOptions should be an object:
@@ -128,13 +197,13 @@ exports[`validation should throw an error on the "hot" option with "{"statsOptio
 exports[`validation should throw an error on the "hot" option with "{"transport":"websocket"}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot should be one of these:
-   boolean | object { transport?, path?, heartbeat?, server?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }
+   boolean | object { transport?, path?, heartbeat?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }
    -> Enable hot module replacement over a Server-Sent Events or WebSocket endpoint.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
    Details:
     * options.hot.transport should be one of these:
       "sse" | "ws" | function
-      -> How events reach the clients: \`sse\`, \`ws\` (needs the optional \`ws\` dependency and an HTTP server to answer upgrades on, given as \`server\` or through the middleware's \`attach\` method), or a function building a transport of your own.
+      -> How events reach the clients: \`sse\`, \`ws\` (needs the optional \`ws\` dependency and an HTTP server to answer upgrades on, handed over through the middleware's \`attach\` or \`handleUpgrade\` method), or a function building a transport of your own.
       Details:
        * options.hot.transport should be one of these:
          "sse" | "ws"
@@ -144,13 +213,13 @@ exports[`validation should throw an error on the "hot" option with "{"transport"
 exports[`validation should throw an error on the "hot" option with "{"transport":true}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot should be one of these:
-   boolean | object { transport?, path?, heartbeat?, server?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }
+   boolean | object { transport?, path?, heartbeat?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }
    -> Enable hot module replacement over a Server-Sent Events or WebSocket endpoint.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
    Details:
     * options.hot.transport should be one of these:
       "sse" | "ws" | function
-      -> How events reach the clients: \`sse\`, \`ws\` (needs the optional \`ws\` dependency and an HTTP server to answer upgrades on, given as \`server\` or through the middleware's \`attach\` method), or a function building a transport of your own.
+      -> How events reach the clients: \`sse\`, \`ws\` (needs the optional \`ws\` dependency and an HTTP server to answer upgrades on, handed over through the middleware's \`attach\` or \`handleUpgrade\` method), or a function building a transport of your own.
       Details:
        * options.hot.transport should be one of these:
          "sse" | "ws"
@@ -160,31 +229,31 @@ exports[`validation should throw an error on the "hot" option with "{"transport"
 exports[`validation should throw an error on the "hot" option with "{"unknown":true}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot has an unknown property 'unknown'. These properties are valid:
-   object { transport?, path?, heartbeat?, server?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }"
+   object { transport?, path?, heartbeat?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }"
 `;
 
 exports[`validation should throw an error on the "hot" option with "0" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot should be one of these:
-   boolean | object { transport?, path?, heartbeat?, server?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }
+   boolean | object { transport?, path?, heartbeat?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }
    -> Enable hot module replacement over a Server-Sent Events or WebSocket endpoint.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
    Details:
     * options.hot should be a boolean.
     * options.hot should be an object:
-      object { transport?, path?, heartbeat?, server?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }"
+      object { transport?, path?, heartbeat?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }"
 `;
 
 exports[`validation should throw an error on the "hot" option with "foo" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot should be one of these:
-   boolean | object { transport?, path?, heartbeat?, server?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }
+   boolean | object { transport?, path?, heartbeat?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }
    -> Enable hot module replacement over a Server-Sent Events or WebSocket endpoint.
    -> Read more at https://github.com/webpack/webpack-dev-middleware#hot
    Details:
     * options.hot should be a boolean.
     * options.hot should be an object:
-      object { transport?, path?, heartbeat?, server?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }"
+      object { transport?, path?, heartbeat?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }"
 `;
 
 exports[`validation should throw an error on the "index" option with "{}" value 1`] = `

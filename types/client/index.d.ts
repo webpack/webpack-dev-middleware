@@ -122,7 +122,7 @@ export type ClientOptions = {
   /**
    * prefix of the page-url parameters that override `apply` for one page
    */
-  urlPrefix: string;
+  pageParamPrefix: string;
   /**
    * logger level
    */
