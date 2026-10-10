@@ -107,6 +107,12 @@ describe("validation", () => {
           }),
         },
         { statsOptions: { all: false } },
+        { client: false },
+        { client: { url: "/__hmr" } },
+        { client: { url: "wss://dev.example.com/__hmr" } },
+        { client: { url: { port: 8080 } } },
+        { client: { pageParamPrefix: "my-server" } },
+        { client: { apply: "reload", connect: { retries: 3, timeout: 5000 } } },
       ],
       failure: [
         "foo",
@@ -127,6 +133,18 @@ describe("validation", () => {
         // stats options — only the object form is accepted.
         { statsOptions: "errors-only" },
         { statsOptions: true },
+        // Renamed or removed before they were released, so an option written
+        // for a prerelease fails loudly instead of being ignored.
+        { server: {} },
+        { client: { path: "/__hmr" } },
+        { client: { urlPrefix: "my-server" } },
+        { client: { token: "a-token" } },
+        { client: { hot: false } },
+        { client: { liveReload: false } },
+        { client: { reload: false } },
+        { client: { autoConnect: false } },
+        { client: { reconnect: 3 } },
+        { client: { timeout: 5000 } },
       ],
     },
   };

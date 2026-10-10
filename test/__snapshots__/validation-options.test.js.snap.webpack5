@@ -75,6 +75,69 @@ exports[`validation should throw an error on the "headers" option with "true" va
     * options.headers should be an instance of function."
 `;
 
+exports[`validation should throw an error on the "hot" option with "{"client":{"autoConnect":false}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'autoConnect'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"hot":false}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'hot'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"liveReload":false}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'liveReload'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"path":"/__hmr"}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'path'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"reconnect":3}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'reconnect'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"reload":false}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'reload'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"timeout":5000}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'timeout'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"token":"a-token"}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'token'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"client":{"urlPrefix":"my-server"}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot.client has an unknown property 'urlPrefix'. These properties are valid:
+   object { transport?, url?, name?, overlay?, progress?, apply?, connect?, pageParamPrefix?, logging?, dynamicPublicPath? }
+   -> Options handed to the browser runtime through its entry query."
+`;
+
 exports[`validation should throw an error on the "hot" option with "{"heartbeat":-1}" value 1`] = `
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot.heartbeat should be >= 1.
@@ -109,6 +172,12 @@ exports[`validation should throw an error on the "hot" option with "{"path":"hmr
 "Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
  - options.hot.path should match pattern "^/[^?#]*$".
    -> The path the endpoint is served at. Must start with a slash and carry no query string or fragment."
+`;
+
+exports[`validation should throw an error on the "hot" option with "{"server":{}}" value 1`] = `
+"Invalid options object. Dev Middleware has been initialized using an options object that does not match the API schema.
+ - options.hot has an unknown property 'server'. These properties are valid:
+   object { transport?, path?, heartbeat?, ws?, progress?, token?, cors?, statsOptions?, inject?, client? }"
 `;
 
 exports[`validation should throw an error on the "hot" option with "{"statsOptions":"errors-only"}" value 1`] = `
