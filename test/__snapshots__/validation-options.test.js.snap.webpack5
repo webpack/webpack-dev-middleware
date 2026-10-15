@@ -203,7 +203,7 @@ exports[`validation should throw an error on the "hot" option with "{"transport"
    Details:
     * options.hot.transport should be one of these:
       "sse" | "ws" | function
-      -> How events reach the clients: \`sse\`, \`ws\` (needs the optional \`ws\` dependency and an HTTP server to answer upgrades on, handed over through the middleware's \`attach\` or \`handleUpgrade\` method), or a function building a transport of your own.
+      -> How events reach the clients: \`sse\`, \`ws\` (needs the optional \`ws\` dependency and the upgrades of an HTTP server: hand the server to the middleware's \`attach(server)\`, or pass each upgrade to \`handleUpgrade(req, socket, head)\`), or a function building a transport of your own.
       Details:
        * options.hot.transport should be one of these:
          "sse" | "ws"
@@ -219,7 +219,7 @@ exports[`validation should throw an error on the "hot" option with "{"transport"
    Details:
     * options.hot.transport should be one of these:
       "sse" | "ws" | function
-      -> How events reach the clients: \`sse\`, \`ws\` (needs the optional \`ws\` dependency and an HTTP server to answer upgrades on, handed over through the middleware's \`attach\` or \`handleUpgrade\` method), or a function building a transport of your own.
+      -> How events reach the clients: \`sse\`, \`ws\` (needs the optional \`ws\` dependency and the upgrades of an HTTP server: hand the server to the middleware's \`attach(server)\`, or pass each upgrade to \`handleUpgrade(req, socket, head)\`), or a function building a transport of your own.
       Details:
        * options.hot.transport should be one of these:
          "sse" | "ws"
