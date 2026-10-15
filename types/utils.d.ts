@@ -164,6 +164,32 @@ export function createMimeTypes(
   extra?: Record<string, string> | undefined,
 ): MimeTypes;
 /**
+ * @param {object} options options
+ * @param {string} options.filename filename
+ * @param {OutputFileSystem} options.outputFileSystem output file system
+ * @param {import("range-parser").Range[]} options.ranges ranges
+ * @param {number} options.size size
+ * @param {string | false} options.contentType content type
+ * @returns {{ boundary: string, byteLength: number, bufferOrStream: Readable }} result
+ */
+export function createMultipartBody({
+  filename,
+  outputFileSystem,
+  ranges,
+  size,
+  contentType,
+}: {
+  filename: string;
+  outputFileSystem: OutputFileSystem;
+  ranges: import("range-parser").Range[];
+  size: number;
+  contentType: string | false;
+}): {
+  boundary: string;
+  byteLength: number;
+  bufferOrStream: Readable;
+};
+/**
  * @param {string} filename filename
  * @param {OutputFileSystem} outputFileSystem output file system
  * @param {number} start start
@@ -583,3 +609,4 @@ export function setState<
 export function setStatusCode<
   Response extends ServerResponse & ExpectedServerResponse,
 >(res: Response, code: number): void;
+import { Readable } from "node:stream";
