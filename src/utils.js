@@ -1725,7 +1725,8 @@ function injectHotClient(compilers, options, logger) {
     const needsHmr =
       addsPlugin &&
       (!clientOptions ||
-        (clientOptions.apply !== "reload" && clientOptions.apply !== "nothing"));
+        (clientOptions.apply !== "reload" &&
+          clientOptions.apply !== "nothing"));
 
     const hmrPluginExists = compiler.options.plugins.some(
       (plugin) =>
