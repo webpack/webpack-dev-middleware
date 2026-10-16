@@ -6,16 +6,13 @@
       "additionalProperties": false,
       "properties": {
         "transport": {
-          "description": "Which transport the runtime speaks: `sse` or `ws`, or a module that exports a client class of your own, which is used in place of the built-in one. Defaults to the resolved `hot.transport`.",
-          "anyOf": [
-            {
-              "enum": ["sse", "ws"]
-            },
-            {
-              "type": "string",
-              "minLength": 1
-            }
-          ]
+          "description": "Which transport the runtime speaks: `sse` or `ws`. Defaults to the resolved `hot.transport`.",
+          "enum": ["sse", "ws"]
+        },
+        "module": {
+          "description": "A module exporting a client class of your own, used in place of the built-in one: a path, resolved from the compilation's context, or a package name. It is constructed with the url and speaks `transport`.",
+          "type": "string",
+          "minLength": 1
         },
         "url": {
           "description": "Where the runtime connects: a path, an absolute url for an endpoint reached on another origin or through a proxy, or the parts of one that differ, with the rest resolved in the page, which is the only place the rest is known. Defaults to the resolved `hot.path`.",
@@ -523,12 +520,12 @@
               "additionalProperties": true
             },
             "inject": {
-              "description": "Add the hot client entry and HotModuleReplacementPlugin to the compilation. Turn it off to wire them yourself.",
+              "description": "Add HotModuleReplacementPlugin to the compilation. Turn it off to apply it yourself; `client: false` is what keeps the runtime out of the page.",
               "link": "https://github.com/webpack/webpack-dev-middleware#hot",
               "type": "boolean"
             },
             "client": {
-              "description": "Options handed to the browser runtime through its entry query. `false` adds no runtime to the page while still applying `HotModuleReplacementPlugin`, for a page that wires a client of its own.",
+              "description": "Options handed to the browser runtime through its entry query. `false` adds no runtime to the page, for a page that wires a client of its own; `HotModuleReplacementPlugin` is still applied unless `inject` is `false`.",
               "link": "https://github.com/webpack/webpack-dev-middleware#hot",
               "anyOf": [
                 {

@@ -112,6 +112,8 @@ describe("validation", () => {
         { client: { url: "wss://dev.example.com/__hmr" } },
         { client: { url: { port: 8080 } } },
         { client: { pageParamPrefix: "my-server" } },
+        { client: { module: "./custom-client-transport.js", transport: "ws" } },
+        { inject: false, client: false },
         { client: { apply: "reload", connect: { retries: 3, timeout: 5000 } } },
       ],
       failure: [
@@ -145,6 +147,9 @@ describe("validation", () => {
         { client: { autoConnect: false } },
         { client: { reconnect: 3 } },
         { client: { timeout: 5000 } },
+        // A module goes in `module`, not where a wire is asked for.
+        { client: { transport: "./my-client.js" } },
+        { client: { module: "" } },
       ],
     },
   };

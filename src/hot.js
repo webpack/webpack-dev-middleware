@@ -40,7 +40,8 @@
  * and the compilation's name. Setting one here replaces that, which is what a
  * page reaching the endpoint through a proxy or another origin needs.
  * @typedef {object} HotClientOptions
- * @property {("sse" | "ws" | string)=} transport which transport the runtime speaks, `hot.transport` by default; any other string is a module exporting a client class of your own, used in place of the built-in one
+ * @property {("sse" | "ws")=} transport which transport the runtime speaks, `hot.transport` by default
+ * @property {string=} module a module exporting a client class of your own, used in place of the built-in one; it is handed the url and speaks `transport`
  * @property {(string | PathSpec)=} url where the runtime connects, `hot.path` by default: a path, an absolute url for an endpoint on another origin, or the parts that differ with the rest resolved in the page
  * @property {string=} name limit the runtime to one compilation's builds, the compilation's own name by default
  * @property {(boolean | Record<string, EXPECTED_ANY>)=} overlay show build problems and uncaught runtime errors in an overlay
@@ -62,8 +63,8 @@
  * @property {boolean=} progress publish compilation progress events to the clients
  * @property {CorsOption=} cors which origins may reach the endpoint from a page on another one; the local ones by default
  * @property {(boolean | string)=} token a secret the injected client carries and the endpoint requires; `true` mints one per run, a string uses that one, `false` requires none. Defaults to `false` on both transports; `true` in the next major release
- * @property {boolean=} inject add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
- * @property {(HotClientOptions | false)=} client options handed to the browser runtime through its entry query; `false` adds no runtime to the page and still applies `HotModuleReplacementPlugin`
+ * @property {boolean=} inject add `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to apply it yourself
+ * @property {(HotClientOptions | false)=} client options handed to the browser runtime through its entry query; `false` adds no runtime to the page; `HotModuleReplacementPlugin` is still applied unless `inject` is `false`
  */
 
 /**
@@ -489,12 +490,12 @@ function createHot(compiler, userOptions, statsOption) {
   const transport = options.transport || HOT_DEFAULT_TRANSPORT;
   const { cors } = options;
   const { statsOptions } = options;
-  // `inject: false` turns it off: the token reaches the browser through the
-  // entry this middleware adds, so with nothing injected there is no way to
+  // `client: false` turns it off: the token reaches the browser through the
+  // entry this middleware adds, so with no client added there is no way to
   // hand one over, and requiring it would refuse a client the developer wired
   // correctly. Off by default either way — see `HOT_DEFAULT_TOKEN`.
   const token = resolveToken(
-    options.inject === false ? (options.token ?? false) : options.token,
+    options.client === false ? (options.token ?? false) : options.token,
   );
   const logger = compiler.getInfrastructureLogger("webpack-dev-middleware");
 

@@ -206,7 +206,7 @@ describe("a client transport of someone else's (browser)", () => {
       bare: true,
       hot: {
         client: {
-          transport: path.resolve(
+          module: path.resolve(
             __dirname,
             "../fixtures/custom-client-transport.js",
           ),

@@ -212,9 +212,13 @@ type PathSpec = {
  */
 type HotClientOptions = {
   /**
-   * which transport the runtime speaks, `hot.transport` by default; any other string is a module exporting a client class of your own, used in place of the built-in one
+   * which transport the runtime speaks, `hot.transport` by default
    */
-  transport?: ("sse" | "ws" | string) | undefined;
+  transport?: ("sse" | "ws") | undefined;
+  /**
+   * a module exporting a client class of your own, used in place of the built-in one; it is handed the url and speaks `transport`
+   */
+  module?: string | undefined;
   /**
    * where the runtime connects, `hot.path` by default: a path, an absolute url for an endpoint on another origin, or the parts that differ with the rest resolved in the page
    */
@@ -302,11 +306,11 @@ type HotOptions = {
    */
   token?: (boolean | string) | undefined;
   /**
-   * add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
+   * add `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to apply it yourself
    */
   inject?: boolean | undefined;
   /**
-   * options handed to the browser runtime through its entry query; `false` adds no runtime to the page and still applies `HotModuleReplacementPlugin`
+   * options handed to the browser runtime through its entry query; `false` adds no runtime to the page; `HotModuleReplacementPlugin` is still applied unless `inject` is `false`
    */
   client?: (HotClientOptions | false) | undefined;
 };

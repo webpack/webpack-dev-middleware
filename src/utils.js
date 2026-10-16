@@ -1361,7 +1361,7 @@ function isClientRequest(request, context) {
  *
  * Best effort by design: `entry` can be a function, and a request can reach the
  * client through an alias or a loader. Missing one of those costs a duplicate
- * entry, not a broken build, and `hot.inject: false` is the way out.
+ * entry, not a broken build, and `hot.client: false` is the way out.
  * @param {Compiler} compiler compiler
  * @returns {string[] | null} the names that need one, or null when they all do
  */
@@ -1472,6 +1472,11 @@ function clientQuery(client, resolvedPath) {
   }
 
   for (let [key, value] of Object.entries(client)) {
+    // A module is handed to the runtime as code, not as text on its query.
+    if (key === "module") {
+      continue;
+    }
+
     // A url given in parts replaces the resolved path in the query outright,
     // so the part it leaves out has to be carried over rather than left to the
     // client's own default — which is the same path only until someone sets
@@ -1536,17 +1541,10 @@ function clientQuery(client, resolvedPath) {
 }
 
 /**
- * The two transports the bundled client speaks. Anything else given as
- * `hot.client.transport` names a module of someone else's that speaks for it.
- * @type {readonly string[]}
- */
-const BUILT_IN_CLIENT_TRANSPORTS = ["sse", "ws"];
-
-/**
- * Where a client transport of someone else's lives. Looked up from the
+ * Where a client module of someone else's lives. Looked up from the
  * project first, where a bare package name is installed, and then from here,
  * so an absolute path or a package this one can see works as well.
- * @param {string} request what `hot.client.transport` named
+ * @param {string} request what `hot.client.module` named
  * @param {string} context the compilation's context
  * @returns {string} the resolved module
  */
@@ -1558,7 +1556,7 @@ function resolveClientTransport(request, context) {
       return require.resolve(request);
     } catch {
       throw new Error(
-        `'hot.client.transport' must be 'sse', 'ws', or a module that exports a client class, but '${request}' could not be resolved from '${context}'.`,
+        `'hot.client.module' must be a module that exports a client class, but '${request}' could not be resolved from '${context}'.`,
       );
     }
   }
@@ -1580,10 +1578,10 @@ function resolveClientTransport(request, context) {
  * @param {Logger} logger logger
  */
 function injectHotClient(compilers, options, logger) {
-  if (options.inject === false) {
-    return;
-  }
-
+  // The two halves are switched separately: `client: false` keeps the runtime
+  // out of the page, `inject: false` keeps `HotModuleReplacementPlugin` out of
+  // the compilation, and both together add nothing at all.
+  const addsPlugin = options.inject !== false;
   // `client: false` is no runtime in the page while the compilation still
   // gets everything else — the plugin, for a page that wires a client of its
   // own and still wants its updates.
@@ -1601,18 +1599,17 @@ function injectHotClient(compilers, options, logger) {
   // runtime and the one written by hand is the one that counts.
   const client = clientQuery(clientOptions, options.path);
 
-  // A client transport of someone else's: a module exporting a class with the
-  // same shape as the built-in two, handed to the runtime through
+  // A client of someone else's: a module exporting a class with the same
+  // shape as the built-in two, handed to the runtime through
   // `__webpack_dev_server_client__`, which it uses in place of its own. What
-  // goes on the query is the wire the endpoint serves, since the runtime still
-  // works out the connection url and how to hold it open from that.
+  // goes on the query is still a wire, since the runtime works out the
+  // connection url and how to hold it open from that: the one given, else the
+  // endpoint's, else a WebSocket — the wire webpack-dev-server has always
+  // built a custom client's url for.
   /** @type {string | undefined} */
-  const customClientTransport =
-    client.transport && !BUILT_IN_CLIENT_TRANSPORTS.includes(client.transport)
-      ? client.transport
-      : undefined;
+  const clientModule = clientOptions ? clientOptions.module : undefined;
 
-  if (customClientTransport) {
+  if (clientModule && !client.transport) {
     client.transport =
       typeof options.transport === "string" ? options.transport : "ws";
   }
@@ -1635,7 +1632,7 @@ function injectHotClient(compilers, options, logger) {
   // itself what it speaks.
   if (
     typeof options.transport === "string" &&
-    !customClientTransport &&
+    !clientModule &&
     client.transport &&
     client.transport !== options.transport &&
     !client.url
@@ -1654,10 +1651,10 @@ function injectHotClient(compilers, options, logger) {
     // `hot` to apply it has no plugin of its own to fall back to.
     const isWeb = addsClient && isWebTarget(compiler);
 
-    if (isWeb && customClientTransport) {
+    if (isWeb && clientModule) {
       new webpack.ProvidePlugin({
         __webpack_dev_server_client__: resolveClientTransport(
-          customClientTransport,
+          clientModule,
           compiler.context,
         ),
       }).apply(compiler);
@@ -1670,7 +1667,7 @@ function injectHotClient(compilers, options, logger) {
         if (!warned) {
           warned = true;
           logger.warn(
-            "'hot.transport' is a function, so no client was added: the built-in one speaks Server-Sent Events and WebSocket, not a transport of your own. Set 'hot.client.transport' if yours speaks one of them, or add an entry for the client that speaks it — 'HotModuleReplacementPlugin' is still applied for you, and 'hot.inject: false' silences this.",
+            "'hot.transport' is a function, so no client was added: the built-in one speaks Server-Sent Events and WebSocket, not a transport of your own. Set 'hot.client.transport' if yours speaks one of them, or add an entry for the client that speaks it — 'HotModuleReplacementPlugin' is still applied for you, and 'hot.client: false' silences this.",
           );
         }
       } else {
@@ -1715,11 +1712,14 @@ function injectHotClient(compilers, options, logger) {
 
     // Applying a build to the page by reloading it, or not at all, has no use
     // for the HMR runtime, which would only add to the bundle. It is left out
-    // when `hot.client.apply` says so; a plugin written into the configuration
-    // is the developer's and stays.
+    // when `hot.client.apply` says so, and `hot.inject: false` leaves it out
+    // whatever the mode; a plugin written into the configuration is the
+    // developer's and stays.
     const needsHmr =
-      !clientOptions ||
-      (clientOptions.apply !== "reload" && clientOptions.apply !== "nothing");
+      addsPlugin &&
+      (!clientOptions ||
+        (clientOptions.apply !== "reload" &&
+          clientOptions.apply !== "nothing"));
 
     const hmrPluginExists = compiler.options.plugins.some(
       (plugin) =>
