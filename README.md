@@ -615,7 +615,7 @@ client entry was added to hand one over, so every client will be refused.
 >
 > **What a token does not protect.** The client reads it from its entry query, so it is a string in the bundle. Anything that can already read your bundle cross-origin can read the token out of it — and over plain `http` to a non-`localhost` address, nothing stops that unless your server sends `Cross-Origin-Resource-Policy`. The token hardens every case where the bundle is not readable; where it is, your source has already gone and the stream is the smaller loss. Closing that needs the response header and a `Host` allowlist, which are [your server's](#security) to set.
 
-**Wiring the client yourself.** The token travels in the entry this middleware adds, so `hot.inject: "plugin"` or `"none"` turns the requirement off — there would be no way to hand one over, and requiring it would refuse a client you wired correctly.
+**Wiring the client yourself.** The token travels in the entry this middleware adds, so `hot.inject: "plugin"` or `"none"` turns off the default requirement — there would be no way to hand one over, and requiring it would refuse a client you wired correctly. A `hot.token` you set to `true` or a string is still required: hand it to your client yourself, as below, or set `hot.token: false`.
 
 A configuration that already lists the client as an entry is the other half of that: it is built before the middleware exists, so it cannot carry a token minted per run. Give it one of your own instead, which both sides can know in advance:
 

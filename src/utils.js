@@ -1674,7 +1674,7 @@ function injectHotClient(compilers, options, logger) {
         if (!warned) {
           warned = true;
           logger.warn(
-            "'hot.transport' is a function, so no client was added: the built-in one speaks Server-Sent Events and WebSocket, not a transport of your own. Set 'hot.client.transport' if yours speaks one of them, or add an entry for the client that speaks it — 'HotModuleReplacementPlugin' is still applied for you, and 'hot.inject: \"plugin\"' silences this.",
+            `'hot.transport' is a function, so no client was added: the built-in one speaks Server-Sent Events and WebSocket, not a transport of your own. Set 'hot.client.transport' if yours speaks one of them, or add an entry for the client that speaks it${addsPlugin ? " — 'HotModuleReplacementPlugin' is still applied for you" : ""}, and 'hot.inject: "${addsPlugin ? "plugin" : "none"}"' silences this.`,
           );
         }
       } else {
@@ -1722,9 +1722,11 @@ function injectHotClient(compilers, options, logger) {
     // when `hot.client.apply` says so, and whatever the mode when `hot.inject`
     // leaves the plugin to the developer; a plugin written into the
     // configuration is the developer's and stays.
+    // The mode is the injected client's, so it only counts when one is added.
     const needsHmr =
       addsPlugin &&
-      (!clientOptions ||
+      (!addsClient ||
+        !clientOptions ||
         (clientOptions.apply !== "reload" &&
           clientOptions.apply !== "nothing"));
 

@@ -835,6 +835,49 @@ describe("what injectHotClient leaves alone", () => {
     expect(warned).toStrictEqual([]);
   });
 
+  it("adds the plugin with inject plugin whatever the client's mode says", () => {
+    // `apply` is the injected client's, and none is injected.
+    const instance = compiler();
+
+    injectHotClient(
+      [instance],
+      {
+        path: "/__webpack_hmr",
+        transport: "sse",
+        inject: "plugin",
+        client: { apply: "reload" },
+      },
+      logger,
+    );
+
+    expect(hasHmrPlugin(instance)).toBe(true);
+  });
+
+  it("does not say the plugin is applied for a transport of your own when inject is client", () => {
+    /** @type {string[]} */
+    const warned = [];
+    const instance = compiler();
+
+    injectHotClient(
+      [instance],
+      {
+        path: "/__webpack_hmr",
+        transport: () => ({
+          close: () => {},
+          onConnect: () => {},
+          publish: () => {},
+          publishTo: () => {},
+        }),
+        inject: "client",
+      },
+      { warn: (message) => warned.push(message), log: () => {} },
+    );
+
+    expect(hasHmrPlugin(instance)).toBe(false);
+    expect(warned.join("\n")).toContain("no client was added");
+    expect(warned.join("\n")).not.toContain("still applied");
+  });
+
   it("adds the client but not the plugin when inject is client", () => {
     const instance = compiler();
     const before = entryCount(instance);
