@@ -212,13 +212,9 @@ type PathSpec = {
  */
 type HotClientOptions = {
   /**
-   * which transport the runtime speaks, `hot.transport` by default
+   * which transport the runtime speaks, `hot.transport` by default; any other string is a module exporting a client class of your own, used in place of the built-in one
    */
-  transport?: ("sse" | "ws") | undefined;
-  /**
-   * a module exporting a client class of your own, used in place of the built-in one; it is handed the url and speaks `transport`
-   */
-  module?: string | undefined;
+  transport?: ("sse" | "ws" | string) | undefined;
   /**
    * where the runtime connects, `hot.path` by default: a path, an absolute url for an endpoint on another origin, or the parts that differ with the rest resolved in the page
    */
@@ -306,13 +302,13 @@ type HotOptions = {
    */
   token?: (boolean | string) | undefined;
   /**
-   * add `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to apply it yourself
+   * what is added to the compilation: the runtime and `HotModuleReplacementPlugin` (`"all"`, the default), the plugin alone for a page that wires a client of its own, the runtime alone for a configuration that applies the plugin itself, or nothing
    */
-  inject?: boolean | undefined;
+  inject?: ("all" | "plugin" | "client" | "none") | undefined;
   /**
-   * options handed to the browser runtime through its entry query; `false` adds no runtime to the page; `HotModuleReplacementPlugin` is still applied unless `inject` is `false`
+   * options handed to the browser runtime through its entry query
    */
-  client?: (HotClientOptions | false) | undefined;
+  client?: HotClientOptions | undefined;
 };
 /**
  * What an origin is matched against: one origin, several, a pattern, or a

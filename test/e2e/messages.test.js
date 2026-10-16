@@ -322,7 +322,7 @@ describe("a module standing in for the client (browser)", () => {
 
     hotApp = await createHotApp({
       bare: true,
-      hot: { inject: false, client: false, path: "/stand-in-hmr" },
+      hot: { inject: "none", path: "/stand-in-hmr" },
       files: {
         "stand-in.js": `
           globalThis.__webpack_dev_middleware_client_query__ = "?path=/stand-in-hmr";

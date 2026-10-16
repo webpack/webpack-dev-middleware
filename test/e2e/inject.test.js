@@ -62,11 +62,11 @@ describe("hot with nothing but the middleware (browser)", () => {
     );
   });
 
-  it("leaves the compilation alone when injection and the client are off", async () => {
+  it("leaves the compilation alone when inject is none", async () => {
     hotApp = await createHotApp({
       bare: true,
       code: acceptedApp("v1"),
-      hot: { inject: false, client: false },
+      hot: { inject: "none" },
     });
     ({ page, browser } = await runBrowser());
     const console_ = collectConsole(page);
@@ -83,12 +83,12 @@ describe("hot with nothing but the middleware (browser)", () => {
     expect(console_.messages.join("\n")).not.toContain("connected");
   });
 
-  it("adds the client but leaves the plugin to you when injection is off", async () => {
+  it("adds the client and leaves the plugin to you with inject client", async () => {
     hotApp = await createHotApp({
       code: acceptedApp("v1"),
       // The configuration's own plugin and client entry, as a project that
       // applies the plugin itself has them.
-      hot: { inject: false },
+      hot: { inject: "client" },
     });
     ({ page, browser } = await runBrowser());
     const console_ = collectConsole(page);
@@ -108,14 +108,14 @@ describe("hot with nothing but the middleware (browser)", () => {
     expect(await page.evaluate(() => globalThis.notReloaded)).toBe(true);
   });
 
-  it("adds the client with no plugin when injection is off and there is none", async () => {
+  it("adds only the client with inject client and no plugin of your own", async () => {
     hotApp = await createHotApp({
       bare: true,
       code: `
         document.getElementById("app").textContent = "v1";
         globalThis.hasHotRuntime = Boolean(module.hot);
       `,
-      hot: { inject: false },
+      hot: { inject: "client" },
     });
     ({ page, browser } = await runBrowser());
     const console_ = collectConsole(page);
@@ -123,8 +123,8 @@ describe("hot with nothing but the middleware (browser)", () => {
     await page.goto(hotApp.url);
     await waitForAppText(page, "v1");
 
-    // The client is the middleware's half and is still added; the HMR
-    // runtime is not in the bundle.
+    // The runtime is added and connects; webpack's hot logic is not in the
+    // bundle.
     await console_.waitFor("connected");
 
     expect(await page.evaluate(() => globalThis.hasHotRuntime)).toBe(false);

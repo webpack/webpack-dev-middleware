@@ -757,54 +757,18 @@ describe("what injectHotClient leaves alone", () => {
     return created;
   }
 
-  // One switch for each half: `inject` the compiler's, `client` the page's.
-  it("adds the client but not the plugin when inject is off", () => {
+  it("adds nothing at all when inject is none", () => {
     const instance = compiler();
     const before = entryCount(instance);
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse", inject: false },
-      logger,
-    );
-
-    expect(entryCount(instance)).toBe(before + 1);
-    expect(hasHmrPlugin(instance)).toBe(false);
-  });
-
-  it("adds nothing at all when inject and the client are both off", () => {
-    const instance = compiler();
-    const before = entryCount(instance);
-
-    injectHotClient(
-      [instance],
-      {
-        path: "/__webpack_hmr",
-        transport: "sse",
-        inject: false,
-        client: false,
-      },
+      { path: "/__webpack_hmr", transport: "sse", inject: "none" },
       logger,
     );
 
     expect(entryCount(instance)).toBe(before);
     expect(hasHmrPlugin(instance)).toBe(false);
-  });
-
-  it("does not ask for a plugin of your own to be dropped when inject is off", () => {
-    const instance = compiler({
-      plugins: [new webpack.HotModuleReplacementPlugin()],
-    });
-    /** @type {string[]} */
-    const said = [];
-
-    injectHotClient(
-      [instance],
-      { path: "/__webpack_hmr", transport: "sse", inject: false },
-      { warn: (message) => said.push(message), log: () => {} },
-    );
-
-    expect(said).toStrictEqual([]);
   });
 
   it("gives a compilation a browser does not run the plugin, not the client", () => {
@@ -841,7 +805,7 @@ describe("what injectHotClient leaves alone", () => {
     expect(hasHmrPlugin(instance)).toBe(false);
   });
 
-  it("adds no client but still the plugin when the client is off", () => {
+  it("adds no client but still the plugin when inject is plugin", () => {
     // A page that wires a runtime of its own still wants its updates applied,
     // which takes the plugin.
     const instance = compiler();
@@ -849,7 +813,7 @@ describe("what injectHotClient leaves alone", () => {
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse", client: false },
+      { path: "/__webpack_hmr", transport: "sse", inject: "plugin" },
       logger,
     );
 
@@ -857,14 +821,44 @@ describe("what injectHotClient leaves alone", () => {
     expect(hasHmrPlugin(instance)).toBe(true);
   });
 
-  it("does not warn about a token it never had a client to hand to, when the client is off", () => {
+  it("does not warn about a token it never had a client to hand to, when inject is plugin", () => {
     /** @type {string[]} */
     const warned = [];
     const instance = compiler();
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse", client: false },
+      { path: "/__webpack_hmr", transport: "sse", inject: "plugin" },
+      { warn: (message) => warned.push(message), log: () => {} },
+    );
+
+    expect(warned).toStrictEqual([]);
+  });
+
+  it("adds the client but not the plugin when inject is client", () => {
+    const instance = compiler();
+    const before = entryCount(instance);
+
+    injectHotClient(
+      [instance],
+      { path: "/__webpack_hmr", transport: "sse", inject: "client" },
+      logger,
+    );
+
+    expect(entryCount(instance)).toBe(before + 1);
+    expect(hasHmrPlugin(instance)).toBe(false);
+  });
+
+  it("does not ask for a plugin of your own to be dropped when inject is client", () => {
+    /** @type {string[]} */
+    const warned = [];
+    const instance = compiler({
+      plugins: [new webpack.HotModuleReplacementPlugin()],
+    });
+
+    injectHotClient(
+      [instance],
+      { path: "/__webpack_hmr", transport: "sse", inject: "client" },
       { warn: (message) => warned.push(message), log: () => {} },
     );
 
@@ -1068,10 +1062,11 @@ describe("the entry query the client is given", () => {
   });
 });
 
-// `hot.client.module`: a client class of someone else's, which the runtime
-// uses in place of the built-in one through `__webpack_dev_server_client__`.
-// webpack-dev-server's `client.webSocketTransport` has always worked this way.
-describe("a client module of someone else's", () => {
+// `hot.client.transport` naming a module rather than a wire: a client class of
+// someone else's, which the runtime uses in place of the built-in one through
+// `__webpack_dev_server_client__`. webpack-dev-server's
+// `client.webSocketTransport` has always worked this way.
+describe("a client transport of someone else's", () => {
   const CUSTOM = path.resolve(__dirname, "fixtures/custom-client-transport.js");
 
   /** @type {EXPECTED_OBJECT[]} */
@@ -1158,7 +1153,7 @@ describe("a client module of someone else's", () => {
     const { provided } = inject({
       path: "/__webpack_hmr",
       transport: "ws",
-      client: { module: CUSTOM },
+      client: { transport: CUSTOM },
     });
 
     expect(provided).toStrictEqual([{ __webpack_dev_server_client__: CUSTOM }]);
@@ -1169,7 +1164,7 @@ describe("a client module of someone else's", () => {
       {
         path: "/__webpack_hmr",
         transport: "ws",
-        client: { module: "./custom-client-transport.js" },
+        client: { transport: "./custom-client-transport.js" },
       },
       { context: path.resolve(__dirname, "fixtures") },
     );
@@ -1183,7 +1178,7 @@ describe("a client module of someone else's", () => {
     const { queries } = inject({
       path: "/__webpack_hmr",
       transport: "sse",
-      client: { module: CUSTOM },
+      client: { transport: CUSTOM },
     });
 
     expect(queries).toStrictEqual([
@@ -1195,7 +1190,7 @@ describe("a client module of someone else's", () => {
     inject({
       path: "/__webpack_hmr",
       transport: "ws",
-      client: { module: CUSTOM },
+      client: { transport: CUSTOM },
     });
 
     expect(warnings).toStrictEqual([]);
@@ -1212,7 +1207,7 @@ describe("a client module of someone else's", () => {
         publish: () => {},
         publishTo: () => {},
       }),
-      client: { module: CUSTOM },
+      client: { transport: CUSTOM },
     });
 
     expect(queries).toStrictEqual([{ url: "/ws", transport: "ws" }]);
@@ -1235,7 +1230,7 @@ describe("a client module of someone else's", () => {
       {
         path: "/__webpack_hmr",
         transport: "ws",
-        client: { module: CUSTOM },
+        client: { transport: CUSTOM },
       },
       { target: "node" },
     );
@@ -1248,33 +1243,19 @@ describe("a client module of someone else's", () => {
       inject({
         path: "/__webpack_hmr",
         transport: "ws",
-        client: { module: "./no-such-client.js" },
+        client: { transport: "./no-such-client.js" },
       }),
     ).toThrow(
-      /'hot\.client\.module'.*'\.\/no-such-client\.js' could not be resolved/,
+      /'hot\.client\.transport'.*'\.\/no-such-client\.js' could not be resolved/,
     );
   });
 
-  it("is accepted by the schema, apart from the wire", () => {
+  it("is accepted by the schema", () => {
     const client = schema.definitions.HotClient;
 
-    expect(client.properties.module).toMatchObject({
-      type: "string",
-      minLength: 1,
-    });
-    // A module is no longer taken where a wire is asked for.
-    expect(client.properties.transport.enum).toStrictEqual(["sse", "ws"]);
-  });
-
-  it("speaks the wire it is told to, rather than the endpoint's", () => {
-    const { queries } = inject({
-      path: "/__webpack_hmr",
-      transport: "sse",
-      client: { module: CUSTOM, transport: "ws", url: "wss://elsewhere/ws" },
-    });
-
-    expect(queries).toStrictEqual([
-      { url: "wss://elsewhere/ws", transport: "ws" },
+    expect(client.properties.transport.anyOf).toStrictEqual([
+      { enum: ["sse", "ws"] },
+      { type: "string", minLength: 1 },
     ]);
   });
 });
@@ -1374,10 +1355,6 @@ describe("node and the query take the same names", () => {
     ]),
   ];
 
-  // The one name only node has: `module` reaches the runtime as code, through
-  // `__webpack_dev_server_client__`, not as text on its query.
-  const nodeOnly = ["module"];
-
   /** @type {string[]} every name `hot.client` accepts */
   const takenInNode = Object.keys(schema.definitions.HotClient.properties);
 
@@ -1399,9 +1376,7 @@ describe("node and the query take the same names", () => {
   it("is one set of names, with nothing on one side only", () => {
     expect(
       readByClient.filter((name) => !queryOnly.includes(name)).toSorted(),
-    ).toStrictEqual(
-      takenInNode.filter((name) => !nodeOnly.includes(name)).toSorted(),
-    );
+    ).toStrictEqual(takenInNode.toSorted());
     expect(
       takenInNode.filter((name) => queryOnly.includes(name)),
     ).toStrictEqual([]);
