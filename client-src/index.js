@@ -62,7 +62,7 @@ import withToken from "./utils/with-token.js";
  * @property {ApplyMode} apply what a build does to the page
  * @property {boolean | ConnectOptions} connect whether to connect when the entry runs, and how the connection is held open
  * @property {boolean | OverlayOptions} overlay enable the in-page error overlay (same value shape as webpack-dev-server's `client.overlay`)
- * @property {string} urlPrefix prefix of the page-url parameters that override `apply` for one page
+ * @property {string} pageParamPrefix prefix of the page-url parameters that override `apply` for one page
  * @property {LogLevel} logging logger level
  * @property {string=} loggerName what to label messages with in the console
  * @property {string} name limit updates to this compilation name
@@ -87,7 +87,7 @@ const options = {
   apply: "hmr",
   connect: true,
   overlay: true,
-  urlPrefix: "webpack-dev-middleware",
+  pageParamPrefix: "webpack-dev-middleware",
   logging: "info",
   loggerName: "",
   name: "",
@@ -301,8 +301,8 @@ function readApplyMode(value) {
  * tab opts out of what the rest of the project is configured for —
  * `?webpack-dev-middleware-apply=nothing` to stop a page reloading under you
  * while you work in it, for instance, or `=false` for the same thing.
- * `urlPrefix` names them, so a server built on this middleware can name them
- * after itself.
+ * `pageParamPrefix` names them, so a server built on this middleware can name
+ * them after itself.
  *
  * The parameter is the option, spelled the one way the option is spelled.
  * @param {string} setting which option the page may have something to say about
@@ -311,9 +311,9 @@ function readApplyMode(value) {
 function urlOverride(setting) {
   // Parsed rather than searched for as text: `?note=…-apply=false` carries
   // the words without being the parameter. The name is compared
-  // case-insensitively on both sides, so a `urlPrefix` with capitals in it
-  // works as written.
-  const wanted = `${options.urlPrefix}-${setting}`.toLowerCase();
+  // case-insensitively on both sides, so a `pageParamPrefix` with capitals in
+  // it works as written.
+  const wanted = `${options.pageParamPrefix}-${setting}`.toLowerCase();
   // Nowhere this runs is without a url, but nothing here needs one either: an
   // empty query asks for nothing.
   const search =
@@ -417,11 +417,16 @@ function setOverrides(overrides) {
   // differ and leaves the rest to be resolved against the page, which is the
   // only place the rest is known — behind a proxy, on another host, or on a
   // socket listening on a port of its own.
+  // `url` is what the option is called in node, and wins; `path` is what this
+  // query called it first, and still reads.
+  if (overrides.url) {
+    overrides.path = overrides.url;
+  }
   // The parts of the url as parameters of their own, the way
   // webpack-dev-server's query has always carried them — so an entry written
   // by hand for that server still connects where it says. Read as a path in
-  // parts, which resolves what they leave out against the page; a `path` given
-  // as well says it all and wins.
+  // parts, which resolves what they leave out against the page; a `url` or
+  // `path` given as well says it all and wins.
   if (!overrides.path) {
     /** @type {Record<string, string>} */
     const parts = {};
@@ -514,7 +519,9 @@ function setOverrides(overrides) {
       options.apply = mode;
     }
   }
-  if (overrides.urlPrefix) options.urlPrefix = overrides.urlPrefix;
+  if (overrides.pageParamPrefix) {
+    options.pageParamPrefix = overrides.pageParamPrefix;
+  }
   if (overrides.name) {
     options.name = overrides.name;
   }

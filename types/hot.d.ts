@@ -205,7 +205,7 @@ type PathSpec = {
  * here and the injected entry carries it, or write it on the query of a client
  * entry of your own.
  *
- * `transport`, `path` and `name` are the exception only in having a default
+ * `transport`, `url` and `name` are the exception only in having a default
  * the middleware knows — the resolved `hot.transport`, the resolved `hot.path`
  * and the compilation's name. Setting one here replaces that, which is what a
  * page reaching the endpoint through a proxy or another origin needs.
@@ -216,17 +216,13 @@ type HotClientOptions = {
    */
   transport?: ("sse" | "ws" | string) | undefined;
   /**
-   * where the runtime connects, `hot.path` by default; may be an absolute url for an endpoint on another origin, or the parts that differ with the rest resolved in the page
+   * where the runtime connects, `hot.path` by default: a path, an absolute url for an endpoint on another origin, or the parts that differ with the rest resolved in the page
    */
-  path?: (string | PathSpec) | undefined;
+  url?: (string | PathSpec) | undefined;
   /**
    * limit the runtime to one compilation's builds, the compilation's own name by default
    */
   name?: string | undefined;
-  /**
-   * the secret the runtime puts on its connection url, `hot.token` by default
-   */
-  token?: string | undefined;
   /**
    * show build problems and uncaught runtime errors in an overlay
    */
@@ -235,18 +231,6 @@ type HotClientOptions = {
    * show an indicator while a rebuild is in progress
    */
   progress?: (boolean | "circular" | "linear") | undefined;
-  /**
-   * deprecated, removed in the next major release — use `apply`
-   */
-  hot?: boolean | undefined;
-  /**
-   * deprecated, removed in the next major release — use `apply`
-   */
-  liveReload?: boolean | undefined;
-  /**
-   * deprecated, removed in the next major release — use `apply`
-   */
-  reload?: boolean | undefined;
   /**
    * what a build does to the page — apply the update and reload if it cannot be applied, apply it and stop with a message if it cannot, load the page again on any build that changed something, or leave the page alone
    */
@@ -264,9 +248,9 @@ type HotClientOptions = {
       )
     | undefined;
   /**
-   * prefix of the page-url parameter that overrides `apply` for a single page
+   * prefix of the page-url parameters that override `apply` for a single page
    */
-  urlPrefix?: string | undefined;
+  pageParamPrefix?: string | undefined;
   /**
    * how much the runtime logs to the browser console, and the name every message is labelled with
    */
@@ -279,18 +263,6 @@ type HotClientOptions = {
           }
       )
     | undefined;
-  /**
-   * how many times to reconnect before giving up; unset, Server-Sent Events keep trying for as long as the page is open while a WebSocket gives up after 10
-   */
-  reconnect?: number | undefined;
-  /**
-   * how long the runtime tolerates silence before reconnecting, in milliseconds — Server-Sent Events only, since a WebSocket's heartbeat is a protocol ping JavaScript cannot see
-   */
-  timeout?: number | undefined;
-  /**
-   * connect as soon as the entry runs
-   */
-  autoConnect?: boolean | undefined;
   /**
    * prefix the path with the bundle's public path at runtime
    */
@@ -309,10 +281,6 @@ type HotOptions = {
    * heartbeat interval in milliseconds
    */
   heartbeat?: number | undefined;
-  /**
-   * HTTP server the `"ws"` transport answers upgrades on, when it is already built
-   */
-  server?: HttpServer | undefined;
   /**
    * options for the `ws` server behind the `"ws"` transport — compression, payload limits, `verifyClient`, or a `port` or a `server` of its own to listen on; `path`, `noServer` and `clientTracking` are the middleware's
    */

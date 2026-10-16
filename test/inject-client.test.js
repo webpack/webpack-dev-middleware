@@ -614,15 +614,15 @@ describe("serializing an overlay filter", () => {
 // `overlay` as an object whose filters travel as source.
 describe("the browser options as a query", () => {
   it("passes a plain option through as text", () => {
-    expect(clientQuery({ logging: "warn", reconnect: 5 })).toStrictEqual({
+    expect(clientQuery({ logging: "warn", name: "admin" })).toStrictEqual({
       logging: "warn",
-      reconnect: "5",
+      name: "admin",
     });
   });
 
   it("leaves out what was not set", () => {
-    expect(clientQuery({ logging: undefined, reload: false })).toStrictEqual({
-      reload: "false",
+    expect(clientQuery({ logging: undefined, connect: false })).toStrictEqual({
+      connect: "false",
     });
   });
 
@@ -675,8 +675,8 @@ describe("the browser options as a query", () => {
   // leaves out has to be carried over. The client's own fallback is the same
   // path only until someone sets `hot.path`, and then quietly is not.
   it("carries the resolved path into a spec that names no pathname", () => {
-    expect(clientQuery({ path: { port: 8080 } }, "/custom-hmr")).toStrictEqual({
-      path: '{"port":8080,"pathname":"/custom-hmr"}',
+    expect(clientQuery({ url: { port: 8080 } }, "/custom-hmr")).toStrictEqual({
+      url: '{"port":8080,"pathname":"/custom-hmr"}',
     });
   });
 
@@ -685,14 +685,14 @@ describe("the browser options as a query", () => {
   // this server's — the same silent mismatch an absent one would cause.
   it("carries the resolved path into a spec whose pathname is empty", () => {
     expect(
-      clientQuery({ path: { port: 8080, pathname: "" } }, "/custom-hmr"),
-    ).toStrictEqual({ path: '{"port":8080,"pathname":"/custom-hmr"}' });
+      clientQuery({ url: { port: 8080, pathname: "" } }, "/custom-hmr"),
+    ).toStrictEqual({ url: '{"port":8080,"pathname":"/custom-hmr"}' });
   });
 
   it("leaves a pathname the spec named alone", () => {
     expect(
-      clientQuery({ path: { port: 8080, pathname: "/mine" } }, "/custom-hmr"),
-    ).toStrictEqual({ path: '{"port":8080,"pathname":"/mine"}' });
+      clientQuery({ url: { port: 8080, pathname: "/mine" } }, "/custom-hmr"),
+    ).toStrictEqual({ url: '{"port":8080,"pathname":"/mine"}' });
   });
 
   // The client decides which shape it was handed by what the json parses to,
@@ -700,17 +700,17 @@ describe("the browser options as a query", () => {
   // bare number or boolean is not mistaken for one. Serialization is what
   // this file covers; the browser end is in `test/e2e/transport.test.js`.
   it("serializes a spec as json a parser can find", () => {
-    const query = clientQuery({ path: { port: 8080 } }, "/hmr");
+    const query = clientQuery({ url: { port: 8080 } }, "/hmr");
 
-    expect(JSON.parse(query.path)).toStrictEqual({
+    expect(JSON.parse(query.url)).toStrictEqual({
       port: 8080,
       pathname: "/hmr",
     });
   });
 
   it("does not reach into a path given as a string", () => {
-    expect(clientQuery({ path: "/plain" }, "/custom-hmr")).toStrictEqual({
-      path: "/plain",
+    expect(clientQuery({ url: "/plain" }, "/custom-hmr")).toStrictEqual({
+      url: "/plain",
     });
   });
 
@@ -928,7 +928,7 @@ describe("the entry query the client is given", () => {
 
   it("carries the endpoint and the transport the middleware resolved", () => {
     expect(queries({ path: "/__hmr", transport: "ws" })).toStrictEqual([
-      { path: "/__hmr", transport: "ws" },
+      { url: "/__hmr", transport: "ws" },
     ]);
   });
 
@@ -936,7 +936,7 @@ describe("the entry query the client is given", () => {
     expect(
       queries({ path: "/__webpack_hmr", transport: "sse" }, { name: "admin" }),
     ).toStrictEqual([
-      { path: "/__webpack_hmr", transport: "sse", name: "admin" },
+      { url: "/__webpack_hmr", transport: "sse", name: "admin" },
     ]);
   });
 
@@ -945,14 +945,10 @@ describe("the entry query the client is given", () => {
       path: "/__webpack_hmr",
       transport: "sse",
       client: {
-        hot: false,
-        liveReload: false,
-        urlPrefix: "my-server",
-        reload: false,
+        apply: "reload",
+        connect: false,
+        pageParamPrefix: "my-server",
         logging: "warn",
-        reconnect: 3,
-        timeout: 5000,
-        autoConnect: false,
         dynamicPublicPath: true,
         progress: "linear",
         overlay: false,
@@ -960,16 +956,12 @@ describe("the entry query the client is given", () => {
     });
 
     expect(query).toStrictEqual({
-      path: "/__webpack_hmr",
+      url: "/__webpack_hmr",
       transport: "sse",
-      hot: "false",
-      liveReload: "false",
-      urlPrefix: "my-server",
-      reload: "false",
+      apply: "reload",
+      connect: "false",
+      pageParamPrefix: "my-server",
       logging: "warn",
-      reconnect: "3",
-      timeout: "5000",
-      autoConnect: "false",
       dynamicPublicPath: "true",
       progress: "linear",
       overlay: "false",
@@ -985,14 +977,14 @@ describe("the entry query the client is given", () => {
       { name: "admin" },
     );
 
-    expect(query).toMatchObject({ path: "/__webpack_hmr", name: "admin" });
+    expect(query).toMatchObject({ url: "/__webpack_hmr", name: "admin" });
 
     const [overridden] = queries(
       {
         path: "/__webpack_hmr",
         transport: "sse",
         client: {
-          path: "wss://dev.example.com/__hmr",
+          url: "wss://dev.example.com/__hmr",
           transport: "ws",
           name: "",
         },
@@ -1001,7 +993,7 @@ describe("the entry query the client is given", () => {
     );
 
     expect(overridden).toStrictEqual({
-      path: "wss://dev.example.com/__hmr",
+      url: "wss://dev.example.com/__hmr",
       transport: "ws",
       name: "",
     });
@@ -1023,7 +1015,7 @@ describe("the entry query the client is given", () => {
         transport,
         client: { transport: "sse" },
       }),
-    ).toStrictEqual([{ path: "/__webpack_hmr", transport: "sse" }]);
+    ).toStrictEqual([{ url: "/__webpack_hmr", transport: "sse" }]);
     expect(warnings).toStrictEqual([]);
   });
 
@@ -1160,7 +1152,7 @@ describe("a client transport of someone else's", () => {
     });
 
     expect(queries).toStrictEqual([
-      { path: "/__webpack_hmr", transport: "sse" },
+      { url: "/__webpack_hmr", transport: "sse" },
     ]);
   });
 
@@ -1188,7 +1180,7 @@ describe("a client transport of someone else's", () => {
       client: { transport: CUSTOM },
     });
 
-    expect(queries).toStrictEqual([{ path: "/ws", transport: "ws" }]);
+    expect(queries).toStrictEqual([{ url: "/ws", transport: "ws" }]);
     expect(provided).toHaveLength(1);
     expect(warnings).toStrictEqual([]);
   });
@@ -1288,7 +1280,7 @@ describe("a client transport that disagrees with the endpoint", () => {
 
   it("says nothing when the client has an endpoint of its own", () => {
     expect(
-      inject({ transport: "ws", path: "wss://dev.example.com/__hmr" }),
+      inject({ transport: "ws", url: "wss://dev.example.com/__hmr" }),
     ).toStrictEqual([]);
   });
 
@@ -1345,8 +1337,19 @@ describe("node and the query take the same names", () => {
     expect(legacy).toHaveLength(6);
   });
 
+  // The names only the query has: `path`, which is what it called `url` first;
+  // `token`, which the middleware fills in from `hot.token`; and the released
+  // spellings `apply` and `connect` replaced, which an entry written by hand
+  // may still carry.
+  const queryOnly = ["path", "token", ...legacy];
+
   it("is one set of names, with nothing on one side only", () => {
-    expect(readByClient.toSorted()).toStrictEqual(takenInNode.toSorted());
+    expect(
+      readByClient.filter((name) => !queryOnly.includes(name)).toSorted(),
+    ).toStrictEqual(takenInNode.toSorted());
+    expect(
+      takenInNode.filter((name) => queryOnly.includes(name)),
+    ).toStrictEqual([]);
   });
 
   // The third place, and the one that is easiest to forget: the typedef the

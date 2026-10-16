@@ -1457,17 +1457,6 @@ function filterSource(option, filter) {
   );
 }
 
-// The six browser options `apply` and `connect` replaced. Accepted and folded
-// in by the client until the next major release.
-const LEGACY_CLIENT_OPTIONS = [
-  "hot",
-  "liveReload",
-  "reload",
-  "autoConnect",
-  "reconnect",
-  "timeout",
-];
-
 /**
  * The browser options, as the client reads them from its resource query.
  * @param {EXPECTED_ANY} client the `hot.client` option
@@ -1483,12 +1472,12 @@ function clientQuery(client, resolvedPath) {
   }
 
   for (let [key, value] of Object.entries(client)) {
-    // A path given in parts replaces the resolved path in the query outright,
+    // A url given in parts replaces the resolved path in the query outright,
     // so the part it leaves out has to be carried over rather than left to the
     // client's own default — which is the same path only until someone sets
     // `hot.path`, and then quietly is not.
     if (
-      key === "path" &&
+      key === "url" &&
       resolvedPath &&
       typeof value === "object" &&
       value !== null &&
@@ -1602,17 +1591,6 @@ function injectHotClient(compilers, options, logger) {
   /** @type {HotClientOptions | undefined} */
   const clientOptions = options.client || undefined;
 
-  // TODO in the next major release remove this warning and `LEGACY_CLIENT_OPTIONS`
-  const deprecated = LEGACY_CLIENT_OPTIONS.filter((name) =>
-    Object.hasOwn(clientOptions || {}, name),
-  );
-
-  if (deprecated.length > 0) {
-    logger.warn(
-      `${deprecated.map((name) => `'hot.client.${name}'`).join(", ")} ${deprecated.length === 1 ? "is" : "are"} deprecated and will be removed in the next major release. 'hot.client.apply' replaces 'hot', 'liveReload' and 'reload'; 'hot.client.connect' replaces 'autoConnect', 'reconnect' and 'timeout'. Until then these still apply, and the option that replaced them wins when both are set.`,
-    );
-  }
-
   let warned = false;
   // A token only reaches the browser on the entry added below, so a required
   // one with nothing added would refuse every client.
@@ -1660,10 +1638,10 @@ function injectHotClient(compilers, options, logger) {
     !customClientTransport &&
     client.transport &&
     client.transport !== options.transport &&
-    !client.path
+    !client.url
   ) {
     logger.warn(
-      `'hot.client.transport' is '${client.transport}' while the endpoint serves '${options.transport}', so the client will not connect. Set them to the same thing, or give 'hot.client.path' the endpoint that does speak '${client.transport}'.`,
+      `'hot.client.transport' is '${client.transport}' while the endpoint serves '${options.transport}', so the client will not connect. Set them to the same thing, or give 'hot.client.url' the endpoint that does speak '${client.transport}'.`,
     );
   }
 
@@ -1703,7 +1681,7 @@ function injectHotClient(compilers, options, logger) {
         // carries the same options and is spread over them.
         const { name: compilation } = compiler.options;
         /** @type {Record<string, string>} */
-        const query = { path: options.path, transport };
+        const query = { url: options.path, transport };
 
         if (options.token) {
           query.token = options.token;

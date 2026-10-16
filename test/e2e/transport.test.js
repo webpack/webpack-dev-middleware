@@ -147,7 +147,7 @@ for (const transport of ["sse", "ws"]) {
           // Padded on purpose: the spec reaches the client as json in a query,
           // and a check on its first character would miss one with a space in
           // front of it — the object would then be used as the path itself.
-          client: { path: { hostname: "0.0.0.0" } },
+          client: { url: { hostname: "0.0.0.0" } },
         },
         code: acceptedApp("v1"),
       });
