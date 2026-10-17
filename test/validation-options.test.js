@@ -107,7 +107,10 @@ describe("validation", () => {
           }),
         },
         { statsOptions: { all: false } },
-        { client: false },
+        { inject: "all" },
+        { inject: "plugin" },
+        { inject: "client" },
+        { inject: "none" },
         { client: { url: "/__hmr" } },
         { client: { url: "wss://dev.example.com/__hmr" } },
         { client: { url: { port: 8080 } } },
@@ -145,6 +148,10 @@ describe("validation", () => {
         { client: { autoConnect: false } },
         { client: { reconnect: 3 } },
         { client: { timeout: 5000 } },
+        // One enum for what is added, rather than two switches.
+        { inject: false },
+        { inject: true },
+        { client: false },
       ],
     },
   };

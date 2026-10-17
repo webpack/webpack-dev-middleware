@@ -757,13 +757,13 @@ describe("what injectHotClient leaves alone", () => {
     return created;
   }
 
-  it("adds nothing at all when inject is off", () => {
+  it("adds nothing at all when inject is none", () => {
     const instance = compiler();
     const before = entryCount(instance);
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse", inject: false },
+      { path: "/__webpack_hmr", transport: "sse", inject: "none" },
       logger,
     );
 
@@ -805,7 +805,7 @@ describe("what injectHotClient leaves alone", () => {
     expect(hasHmrPlugin(instance)).toBe(false);
   });
 
-  it("adds no client but still the plugin when the client is off", () => {
+  it("adds no client but still the plugin when inject is plugin", () => {
     // A page that wires a runtime of its own still wants its updates applied,
     // which takes the plugin.
     const instance = compiler();
@@ -813,7 +813,7 @@ describe("what injectHotClient leaves alone", () => {
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse", client: false },
+      { path: "/__webpack_hmr", transport: "sse", inject: "plugin" },
       logger,
     );
 
@@ -821,14 +821,87 @@ describe("what injectHotClient leaves alone", () => {
     expect(hasHmrPlugin(instance)).toBe(true);
   });
 
-  it("does not warn about a token it never had a client to hand to, when the client is off", () => {
+  it("does not warn about a token it never had a client to hand to, when inject is plugin", () => {
     /** @type {string[]} */
     const warned = [];
     const instance = compiler();
 
     injectHotClient(
       [instance],
-      { path: "/__webpack_hmr", transport: "sse", client: false },
+      { path: "/__webpack_hmr", transport: "sse", inject: "plugin" },
+      { warn: (message) => warned.push(message), log: () => {} },
+    );
+
+    expect(warned).toStrictEqual([]);
+  });
+
+  it("adds the plugin with inject plugin whatever the client's mode says", () => {
+    // `apply` is the injected client's, and none is injected.
+    const instance = compiler();
+
+    injectHotClient(
+      [instance],
+      {
+        path: "/__webpack_hmr",
+        transport: "sse",
+        inject: "plugin",
+        client: { apply: "reload" },
+      },
+      logger,
+    );
+
+    expect(hasHmrPlugin(instance)).toBe(true);
+  });
+
+  it("does not say the plugin is applied for a transport of your own when inject is client", () => {
+    /** @type {string[]} */
+    const warned = [];
+    const instance = compiler();
+
+    injectHotClient(
+      [instance],
+      {
+        path: "/__webpack_hmr",
+        transport: () => ({
+          close: () => {},
+          onConnect: () => {},
+          publish: () => {},
+          publishTo: () => {},
+        }),
+        inject: "client",
+      },
+      { warn: (message) => warned.push(message), log: () => {} },
+    );
+
+    expect(hasHmrPlugin(instance)).toBe(false);
+    expect(warned.join("\n")).toContain("no client was added");
+    expect(warned.join("\n")).not.toContain("still applied");
+  });
+
+  it("adds the client but not the plugin when inject is client", () => {
+    const instance = compiler();
+    const before = entryCount(instance);
+
+    injectHotClient(
+      [instance],
+      { path: "/__webpack_hmr", transport: "sse", inject: "client" },
+      logger,
+    );
+
+    expect(entryCount(instance)).toBe(before + 1);
+    expect(hasHmrPlugin(instance)).toBe(false);
+  });
+
+  it("does not ask for a plugin of your own to be dropped when inject is client", () => {
+    /** @type {string[]} */
+    const warned = [];
+    const instance = compiler({
+      plugins: [new webpack.HotModuleReplacementPlugin()],
+    });
+
+    injectHotClient(
+      [instance],
+      { path: "/__webpack_hmr", transport: "sse", inject: "client" },
       { warn: (message) => warned.push(message), log: () => {} },
     );
 

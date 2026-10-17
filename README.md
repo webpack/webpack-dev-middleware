@@ -361,16 +361,16 @@ See [Hot Module Replacement client](#hot-module-replacement-client) for which co
 
 The object form accepts these options:
 
-|                  Name                  |                              Type                               |      Default       | Description                                                                             |
-| :------------------------------------: | :-------------------------------------------------------------: | :----------------: | :-------------------------------------------------------------------------------------- |
-|    **[`transport`](#hottransport)**    |                      `string \| function`                       |      `'sse'`       | How events reach the clients.                                                           |
-|         **[`path`](#hotpath)**         |                            `string`                             | `'/__webpack_hmr'` | Path the endpoint is served at.                                                         |
-|    **[`heartbeat`](#hotheartbeat)**    |                            `number`                             |      `10000`       | Interval (in milliseconds) between keep-alive frames.                                   |
-|     **[`progress`](#hotprogress)**     |                            `boolean`                            |      `false`       | Publish compilation progress events to the clients.                                     |
-|         **[`cors`](#hotcors)**         | `boolean \| string \| string[] \| RegExp \| function \| object` |     see below      | Which origins may reach the endpoint from a page on another one, over either transport. |
-|        **[`token`](#hottoken)**        |                       `boolean \| string`                       |     see below      | A secret the injected client carries and the endpoint requires, over either transport.  |
-|       **[`inject`](#hotinject)**       |                            `boolean`                            |       `true`       | Add the client entry and `HotModuleReplacementPlugin`.                                  |
-| **[`statsOptions`](#hotstatsoptions)** |                            `object`                             |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).                                         |
+|                  Name                  |                              Type                               |      Default       | Description                                                                                   |
+| :------------------------------------: | :-------------------------------------------------------------: | :----------------: | :-------------------------------------------------------------------------------------------- |
+|    **[`transport`](#hottransport)**    |                      `string \| function`                       |      `'sse'`       | How events reach the clients.                                                                 |
+|         **[`path`](#hotpath)**         |                            `string`                             | `'/__webpack_hmr'` | Path the endpoint is served at.                                                               |
+|    **[`heartbeat`](#hotheartbeat)**    |                            `number`                             |      `10000`       | Interval (in milliseconds) between keep-alive frames.                                         |
+|     **[`progress`](#hotprogress)**     |                            `boolean`                            |      `false`       | Publish compilation progress events to the clients.                                           |
+|         **[`cors`](#hotcors)**         | `boolean \| string \| string[] \| RegExp \| function \| object` |     see below      | Which origins may reach the endpoint from a page on another one, over either transport.       |
+|        **[`token`](#hottoken)**        |                       `boolean \| string`                       |     see below      | A secret the injected client carries and the endpoint requires, over either transport.        |
+|       **[`inject`](#hotinject)**       |            `"all" \| "plugin" \| "client" \| "none"`            |      `"all"`       | What is added to the compilation: the runtime, `HotModuleReplacementPlugin`, both or neither. |
+| **[`statsOptions`](#hotstatsoptions)** |                            `object`                             |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).                                               |
 
 #### `hot.transport`
 
@@ -615,7 +615,7 @@ client entry was added to hand one over, so every client will be refused.
 >
 > **What a token does not protect.** The client reads it from its entry query, so it is a string in the bundle. Anything that can already read your bundle cross-origin can read the token out of it — and over plain `http` to a non-`localhost` address, nothing stops that unless your server sends `Cross-Origin-Resource-Policy`. The token hardens every case where the bundle is not readable; where it is, your source has already gone and the stream is the smaller loss. Closing that needs the response header and a `Host` allowlist, which are [your server's](#security) to set.
 
-**Wiring the client yourself.** The token travels in the entry this middleware adds, so `hot.inject: false` turns the requirement off — there would be no way to hand one over, and requiring it would refuse a client you wired correctly.
+**Wiring the client yourself.** The token travels in the entry this middleware adds, so `hot.inject: "plugin"` or `"none"` turns off the default requirement — there would be no way to hand one over, and requiring it would refuse a client you wired correctly. A `hot.token` you set to `true` or a string is still required: hand it to your client yourself, as below, or set `hot.token: false`.
 
 A configuration that already lists the client as an entry is the other half of that: it is built before the middleware exists, so it cannot carry a token minted per run. Give it one of your own instead, which both sides can know in advance:
 
@@ -645,12 +645,17 @@ app.get("/my-client-config.json", (_req, res) => {
 
 #### `hot.inject`
 
-Type: `Boolean`
-Default: `true`
+Type: `"all" | "plugin" | "client" | "none"`
+Default: `"all"`
 
-Add the client entry and `HotModuleReplacementPlugin` to the compilation. Set it to `false` to wire both yourself — see [Hot Module Replacement client](#hot-module-replacement-client). To keep the plugin and wire only the client yourself, set [`hot.client`](#client-options) to `false` instead.
+What the middleware adds to the compilation. There are two pieces: the runtime in the page — this package's client, with its overlay and building indicator — and `HotModuleReplacementPlugin`, which is webpack's own hot logic.
 
-Turn it off when you have a client of your own that the middleware will not recognize as one (anything other than `webpack-dev-middleware/client`), or when you do not want the hot runtime in your bundle at all and are using the endpoint through [`subscribe`](#custom-events) instead.
+| Value      | Runtime | Plugin | For                                                                                                              |
+| :--------- | :-----: | :----: | :--------------------------------------------------------------------------------------------------------------- |
+| `"all"`    |    ✓    |   ✓    | the default: nothing to add to the webpack configuration                                                         |
+| `"plugin"` |         |   ✓    | a page that wires a client of its own — one the middleware does not recognize as its own                         |
+| `"client"` |    ✓    |        | a configuration that applies `HotModuleReplacementPlugin` itself, or wants the page reloaded without the runtime |
+| `"none"`   |         |        | wiring both yourself, or using the endpoint only through [`subscribe`](#custom-events)                           |
 
 #### `hot.statsOptions`
 
@@ -682,7 +687,7 @@ app.use(middleware(compiler, { hot: true }));
 
 The runtime is told the endpoint and the transport the middleware resolved, so the two agree without the same value being written in two places.
 
-Set `hot.inject` to `false` to wire it yourself instead — the runtime is published under the `./client` subpath:
+Set `hot.inject` to `"plugin"` to wire it yourself instead (or `"none"` to apply the plugin yourself as well) — the runtime is published under the `./client` subpath:
 
 ```js
 const webpack = require("webpack");
@@ -693,9 +698,9 @@ module.exports = {
 };
 ```
 
-An entry point that already has the client is left alone, so this keeps working without `hot.inject: false`. It is decided per entry point rather than per compilation: in a build with `landing` and `dashboard` where only `landing` has the client, `dashboard` still gets one, because they are separate pages and it would otherwise connect to nothing.
+An entry point that already has the client is left alone, so this keeps working with the default `hot.inject`. It is decided per entry point rather than per compilation: in a build with `landing` and `dashboard` where only `landing` has the client, `dashboard` still gets one, because they are separate pages and it would otherwise connect to nothing.
 
-The client is recognized as `webpack-dev-middleware/client` (with or without a query) or as the path that resolves to, so your own `./src/client/index.js` is your own file. It is a best effort over the `entry` shapes it can read: a function is computed per build and cannot be read, and a request can reach the client through an alias or a loader. Missing one costs a duplicate entry, not a broken build, and `hot.inject: false` is the way out.
+The client is recognized as `webpack-dev-middleware/client` (with or without a query) or as the path that resolves to, so your own `./src/client/index.js` is your own file. It is a best effort over the `entry` shapes it can read: a function is computed per build and cannot be read, and a request can reach the client through an alias or a loader. Missing one costs a duplicate entry, not a broken build, and `hot.inject: "plugin"` is the way out.
 
 #### Which compilations get the runtime
 
@@ -728,10 +733,10 @@ Nothing has to change, and both pieces are recognized rather than duplicated:
 - An entry that is already `webpack-dev-middleware/client` (with or without a query) is left as it is.
 - `HotModuleReplacementPlugin` already in `plugins` is not applied twice. It is now redundant, and the middleware says so once per build so you can drop it.
 
-Two things do change, and `hot.inject: false` turns both off:
+Two things do change:
 
-- **A client the middleware does not recognize** — anything other than `webpack-dev-middleware/client`, such as another package's hot client — is not detected, so a second client is added and both connect.
-- **A project with no `HotModuleReplacementPlugin` on purpose** now gets one, which puts the HMR runtime in the bundle and changes its output. If you only wanted the endpoint to listen to through [`subscribe`](#custom-events), set `hot.inject: false`. A project that sets [`hot.client.apply`](#client-options) to `reload` or `nothing` does not: those modes never use the HMR runtime, so it is left out, and a plugin you wrote into the configuration yourself stays. A page whose url asks for `hmr` or `hmr-only` against such a bundle has no runtime to apply an update with, so `hmr` loads the page instead, and `hmr-only` says so and stops. (A runtime that is missing from a project whose own mode wanted it is a mistake, and is reported once instead of reloading.)
+- **A client the middleware does not recognize** — anything other than `webpack-dev-middleware/client`, such as another package's hot client — is not detected, so a second client is added and both connect. `hot.inject: "plugin"` turns that off.
+- **A project with no `HotModuleReplacementPlugin` on purpose** now gets one, which puts the HMR runtime in the bundle and changes its output. `hot.inject: "client"` turns that off; if you only wanted the endpoint to listen to through [`subscribe`](#custom-events), set `hot.inject: "none"`. A project that sets [`hot.client.apply`](#client-options) to `reload` or `nothing` does not: those modes never use the HMR runtime, so it is left out, and a plugin you wrote into the configuration yourself stays. A page whose url asks for `hmr` or `hmr-only` against such a bundle has no runtime to apply an update with, so `hmr` loads the page instead, and `hmr-only` says so and stops. (A runtime that is missing from a project whose own mode wanted it is a mistake, and is reported once instead of reloading.)
 
 A package of your own can stand in for the client by re-exporting it. A query written on that module belongs to it rather than to the client, so leave it where the client looks, before requiring the client:
 
@@ -744,7 +749,7 @@ module.exports = require("webpack-dev-middleware/client");
 
 One caveat: if the compiler was already watching before the middleware was created, the runtime appears from the next build onwards rather than the first one. Create the middleware before starting the watch to avoid it.
 
-No client is added when [`hot.transport`](#hottransport) is a function either — the built-in one speaks Server-Sent Events and WebSocket, and a transport of your own carries whatever protocol you wrote it to carry, so the client that speaks it is yours to add unless [`hot.client.transport`](#client-options) says which of the two yours speaks. `HotModuleReplacementPlugin` is still applied for you. `hot.inject: false` silences the reminder, and turns that off as well — apply the plugin yourself if you use it.
+No client is added when [`hot.transport`](#hottransport) is a function either — the built-in one speaks Server-Sent Events and WebSocket, and a transport of your own carries whatever protocol you wrote it to carry, so the client that speaks it is yours to add unless [`hot.client.transport`](#client-options) says which of the two yours speaks. `HotModuleReplacementPlugin` is still applied for you. `hot.inject: "plugin"` silences the reminder.
 
 The [client options](#client-options) below are set on the middleware, next to
 the rest of the hot configuration, and the injected entry carries them to the
@@ -808,12 +813,8 @@ app.use(
 );
 ```
 
-`hot.client: false` adds no runtime to the page and still applies
-`HotModuleReplacementPlugin`, for a page that wires a client of its own and
-still wants its updates applied.
-
-`hot.client` is read only when the client is injected. With `hot.inject: false`,
-or for a client the configuration already has as an entry, the query string on
+`hot.client` is read only when the client is injected. With
+[`hot.inject`](#hotinject) set to `"plugin"` or `"none"`, or for a client the configuration already has as an entry, the query string on
 the entry path is the only source — and it works either way:
 
 ```js

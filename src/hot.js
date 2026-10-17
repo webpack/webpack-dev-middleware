@@ -62,8 +62,8 @@
  * @property {boolean=} progress publish compilation progress events to the clients
  * @property {CorsOption=} cors which origins may reach the endpoint from a page on another one; the local ones by default
  * @property {(boolean | string)=} token a secret the injected client carries and the endpoint requires; `true` mints one per run, a string uses that one, `false` requires none. Defaults to `false` on both transports; `true` in the next major release
- * @property {boolean=} inject add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
- * @property {(HotClientOptions | false)=} client options handed to the browser runtime through its entry query; `false` adds no runtime to the page and still applies `HotModuleReplacementPlugin`
+ * @property {("all" | "plugin" | "client" | "none")=} inject what is added to the compilation: the runtime and `HotModuleReplacementPlugin` (`"all"`, the default), the plugin alone for a page that wires a client of its own, the runtime alone for a configuration that applies the plugin itself, or nothing
+ * @property {HotClientOptions=} client options handed to the browser runtime through its entry query
  */
 
 /**
@@ -489,12 +489,14 @@ function createHot(compiler, userOptions, statsOption) {
   const transport = options.transport || HOT_DEFAULT_TRANSPORT;
   const { cors } = options;
   const { statsOptions } = options;
-  // `inject: false` turns it off: the token reaches the browser through the
-  // entry this middleware adds, so with nothing injected there is no way to
-  // hand one over, and requiring it would refuse a client the developer wired
+  // Off when no client is injected: the token reaches the browser through the
+  // entry this middleware adds, so with none added there is no way to hand one
+  // over, and requiring it would refuse a client the developer wired
   // correctly. Off by default either way — see `HOT_DEFAULT_TOKEN`.
+  const injectsClient =
+    !options.inject || options.inject === "all" || options.inject === "client";
   const token = resolveToken(
-    options.inject === false ? (options.token ?? false) : options.token,
+    injectsClient ? options.token : (options.token ?? false),
   );
   const logger = compiler.getInfrastructureLogger("webpack-dev-middleware");
 

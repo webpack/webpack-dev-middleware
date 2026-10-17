@@ -302,13 +302,13 @@ type HotOptions = {
    */
   token?: (boolean | string) | undefined;
   /**
-   * add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
+   * what is added to the compilation: the runtime and `HotModuleReplacementPlugin` (`"all"`, the default), the plugin alone for a page that wires a client of its own, the runtime alone for a configuration that applies the plugin itself, or nothing
    */
-  inject?: boolean | undefined;
+  inject?: ("all" | "plugin" | "client" | "none") | undefined;
   /**
-   * options handed to the browser runtime through its entry query; `false` adds no runtime to the page and still applies `HotModuleReplacementPlugin`
+   * options handed to the browser runtime through its entry query
    */
-  client?: (HotClientOptions | false) | undefined;
+  client?: HotClientOptions | undefined;
 };
 /**
  * What an origin is matched against: one origin, several, a pattern, or a

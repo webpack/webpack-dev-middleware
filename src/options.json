@@ -523,21 +523,14 @@
               "additionalProperties": true
             },
             "inject": {
-              "description": "Add the hot client entry and HotModuleReplacementPlugin to the compilation. Turn it off to wire them yourself.",
-              "link": "https://github.com/webpack/webpack-dev-middleware#hot",
-              "type": "boolean"
+              "description": "What is added to the compilation: `all` (the default) adds the runtime — this package's client and overlay — and HotModuleReplacementPlugin; `plugin` adds only the plugin, for a page that wires a client of its own; `client` adds only the runtime, for a configuration that applies the plugin itself; `none` adds nothing.",
+              "link": "https://github.com/webpack/webpack-dev-middleware#hotinject",
+              "enum": ["all", "plugin", "client", "none"]
             },
             "client": {
-              "description": "Options handed to the browser runtime through its entry query. `false` adds no runtime to the page while still applying `HotModuleReplacementPlugin`, for a page that wires a client of its own.",
+              "description": "Options handed to the browser runtime through its entry query.",
               "link": "https://github.com/webpack/webpack-dev-middleware#hot",
-              "anyOf": [
-                {
-                  "enum": [false]
-                },
-                {
-                  "$ref": "#/definitions/HotClient"
-                }
-              ]
+              "$ref": "#/definitions/HotClient"
             }
           }
         }

@@ -1361,7 +1361,7 @@ function isClientRequest(request, context) {
  *
  * Best effort by design: `entry` can be a function, and a request can reach the
  * client through an alias or a loader. Missing one of those costs a duplicate
- * entry, not a broken build, and `hot.inject: false` is the way out.
+ * entry, not a broken build, and `hot.inject: "plugin"` is the way out.
  * @param {Compiler} compiler compiler
  * @returns {string[] | null} the names that need one, or null when they all do
  */
@@ -1576,20 +1576,24 @@ function resolveClientTransport(request, context) {
 
 /**
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: HotClientOptions | false, token?: string | false }} options resolved hot options
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: HotOptions["inject"], client?: HotClientOptions, token?: string | false }} options resolved hot options
  * @param {Logger} logger logger
  */
 function injectHotClient(compilers, options, logger) {
-  if (options.inject === false) {
+  // What goes into the compilation: the runtime in the page, which is this
+  // package's client and its overlay, and `HotModuleReplacementPlugin`, which
+  // is webpack's hot logic. Both by default; either one, for a page that wires
+  // the other itself; or nothing.
+  const inject = options.inject || "all";
+
+  if (inject === "none") {
     return;
   }
 
-  // `client: false` is no runtime in the page while the compilation still
-  // gets everything else — the plugin, for a page that wires a client of its
-  // own and still wants its updates.
-  const addsClient = options.client !== false;
+  const addsClient = inject === "all" || inject === "client";
+  const addsPlugin = inject === "all" || inject === "plugin";
   /** @type {HotClientOptions | undefined} */
-  const clientOptions = options.client || undefined;
+  const clientOptions = options.client;
 
   let warned = false;
   // A token only reaches the browser on the entry added below, so a required
@@ -1670,7 +1674,7 @@ function injectHotClient(compilers, options, logger) {
         if (!warned) {
           warned = true;
           logger.warn(
-            "'hot.transport' is a function, so no client was added: the built-in one speaks Server-Sent Events and WebSocket, not a transport of your own. Set 'hot.client.transport' if yours speaks one of them, or add an entry for the client that speaks it — 'HotModuleReplacementPlugin' is still applied for you, and 'hot.inject: false' silences this.",
+            `'hot.transport' is a function, so no client was added: the built-in one speaks Server-Sent Events and WebSocket, not a transport of your own. Set 'hot.client.transport' if yours speaks one of them, or add an entry for the client that speaks it${addsPlugin ? " — 'HotModuleReplacementPlugin' is still applied for you" : ""}, and 'hot.inject: "${addsPlugin ? "plugin" : "none"}"' silences this.`,
           );
         }
       } else {
@@ -1715,11 +1719,16 @@ function injectHotClient(compilers, options, logger) {
 
     // Applying a build to the page by reloading it, or not at all, has no use
     // for the HMR runtime, which would only add to the bundle. It is left out
-    // when `hot.client.apply` says so; a plugin written into the configuration
-    // is the developer's and stays.
+    // when `hot.client.apply` says so, and whatever the mode when `hot.inject`
+    // leaves the plugin to the developer; a plugin written into the
+    // configuration is the developer's and stays.
+    // The mode is the injected client's, so it only counts when one is added.
     const needsHmr =
-      !clientOptions ||
-      (clientOptions.apply !== "reload" && clientOptions.apply !== "nothing");
+      addsPlugin &&
+      (!addsClient ||
+        !clientOptions ||
+        (clientOptions.apply !== "reload" &&
+          clientOptions.apply !== "nothing"));
 
     const hmrPluginExists = compiler.options.plugins.some(
       (plugin) =>
