@@ -419,6 +419,8 @@ function setOverrides(overrides) {
   // socket listening on a port of its own.
   // `url` is what the option is called in node, and wins; `path` is what this
   // query called it first, and still reads.
+  // TODO in the next major release read only `url` from the query, and drop
+  // `path` from it; `setOptionsAndConnect({ path })` is the runtime's own API.
   if (overrides.url) {
     overrides.path = overrides.url;
   }
