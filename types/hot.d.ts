@@ -3,7 +3,8 @@ export = createHot;
  * @typedef {object} HotInstance
  * @property {string} path path the endpoint is served at
  * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)} transport how events reach the clients
- * @property {string | false} token the secret the endpoint requires, or false when it requires none; the injected client is given it
+ * @property {string | false} token the secret the injected client is given, or false when there is none
+ * @property {boolean} tokenRequired whether the endpoint refuses a client without the token; false when there is none, or `hot.token.required` is `false`
  * @property {(server: HttpServer) => void} attach answer WebSocket upgrades on this server, a no-op for Server-Sent Events
  * @property {(req: IncomingMessage, socket: Duplex, head: Buffer) => boolean} handleUpgrade answer one WebSocket upgrade, for a caller that owns the server's `upgrade` event and wants to decide each one; returns false when the request is not the endpoint's, or the transport does not answer upgrades
  * @property {(fn: (client: EXPECTED_ANY, req: IncomingMessage) => void) => void} onConnect called with each client once it has joined, and the request it joined with, before anything is published to it
@@ -51,6 +52,7 @@ declare namespace createHot {
     LogLevel,
     PathSpec,
     HotClientOptions,
+    HotTokenOptions,
     HotOptions,
     CorsOrigin,
     CorsOption,
@@ -119,9 +121,13 @@ type HotInstance = {
    */
   transport: "sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>;
   /**
-   * the secret the endpoint requires, or false when it requires none; the injected client is given it
+   * the secret the injected client is given, or false when there is none
    */
   token: string | false;
+  /**
+   * whether the endpoint refuses a client without the token; false when there is none, or `hot.token.required` is `false`
+   */
+  tokenRequired: boolean;
   /**
    * answer WebSocket upgrades on this server, a no-op for Server-Sent Events
    */
@@ -268,6 +274,16 @@ type HotClientOptions = {
    */
   dynamicPublicPath?: boolean | undefined;
 };
+type HotTokenOptions = {
+  /**
+   * the token: `true` (the default) mints one per run, a string uses that one
+   */
+  value?: (boolean | string) | undefined;
+  /**
+   * whether the endpoint refuses a client without it (default `true`); `false` still hands it to the injected client, for a server that checks it itself through `onConnect` alongside policy of its own
+   */
+  required?: boolean | undefined;
+};
 type HotOptions = {
   /**
    * how events reach the clients, Server-Sent Events by default
@@ -298,9 +314,9 @@ type HotOptions = {
    */
   cors?: CorsOption | undefined;
   /**
-   * a secret the injected client carries and the endpoint requires; `true` mints one per run, a string uses that one, `false` requires none. Defaults to `false` on both transports; `true` in the next major release
+   * a secret the injected client carries and the endpoint requires; `true` mints one per run, a string uses that one, `false` requires none, and `{ required: false }` hands one to the client without requiring it. Defaults to `false` on both transports; `true` in the next major release
    */
-  token?: (boolean | string) | undefined;
+  token?: (boolean | string | HotTokenOptions) | undefined;
   /**
    * what is added to the compilation: the runtime and `HotModuleReplacementPlugin` (`"all"`, the default), the plugin alone for a page that wires a client of its own, the runtime alone for a configuration that applies the plugin itself, or nothing
    */

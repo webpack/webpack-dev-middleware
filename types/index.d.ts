@@ -470,7 +470,7 @@ type AdditionalMethods<
    */
   publishTo: PublishTo;
   /**
-   * the secret the hot endpoint requires, for a client of your own to put on the url; false when it requires none, undefined when `hot` is off
+   * the secret the hot endpoint's client is given, for a client of your own to put on the url; false when there is none, undefined when `hot` is off
    */
   token?: (string | false | undefined) | undefined;
   /**

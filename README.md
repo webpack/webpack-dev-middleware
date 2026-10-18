@@ -368,7 +368,7 @@ The object form accepts these options:
 |    **[`heartbeat`](#hotheartbeat)**    |                            `number`                             |      `10000`       | Interval (in milliseconds) between keep-alive frames.                                         |
 |     **[`progress`](#hotprogress)**     |                            `boolean`                            |      `false`       | Publish compilation progress events to the clients.                                           |
 |         **[`cors`](#hotcors)**         | `boolean \| string \| string[] \| RegExp \| function \| object` |     see below      | Which origins may reach the endpoint from a page on another one, over either transport.       |
-|        **[`token`](#hottoken)**        |                       `boolean \| string`                       |     see below      | A secret the injected client carries and the endpoint requires, over either transport.        |
+|        **[`token`](#hottoken)**        |                  `boolean \| string \| object`                  |     see below      | A secret the injected client carries and the endpoint requires, over either transport.        |
 |       **[`inject`](#hotinject)**       |            `"all" \| "plugin" \| "client" \| "none"`            |      `"all"`       | What is added to the compilation: the runtime, `HotModuleReplacementPlugin`, both or neither. |
 | **[`statsOptions`](#hotstatsoptions)** |                            `object`                             |    `undefined`     | Deprecated — do not use; see [`stats`](#stats).                                               |
 
@@ -589,7 +589,7 @@ A **function** [transport](#hottransport) of your own is handed the option as it
 
 #### `hot.token`
 
-Type: `Boolean | String`
+Type: `Boolean | String | { value?: Boolean | String, required?: Boolean }`
 Default: `false`
 
 A secret the injected client carries and the endpoint requires. Reaching the stream then takes something a page has to have been **given**, rather than a header a browser may or may not send.
@@ -627,6 +627,22 @@ entry: [`webpack-dev-middleware/client?token=${token}`, "./src/index.js"];
 
 // and the middleware
 app.use(middleware(compiler, { hot: { transport: "ws", token } }));
+```
+
+**Checking it yourself.** `{ required: false }` mints a token and hands it to the injected client as `true` does, but the endpoint lets a client without it through. That is for a server with policy of its own: it reads the token off the instance and compares it in [`onConnect`](#onconnectfn), alongside whatever else it knows — an origin it already allows, say — and closes a client that has neither. `value` takes the same `true` or string as `hot.token` itself.
+
+```js
+const instance = middleware(compiler, {
+  hot: { transport: "ws", token: { required: false } },
+});
+
+instance.onConnect((client, req) => {
+  const given = new URL(req.url, "http://localhost").searchParams.get("token");
+
+  if (given !== instance.token && !isOriginAllowed(req.headers.origin)) {
+    client.close();
+  }
+});
 ```
 
 Or read the minted one off the instance, for a client you serve yourself:
