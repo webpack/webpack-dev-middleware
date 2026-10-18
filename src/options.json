@@ -476,7 +476,7 @@
               "type": "boolean"
             },
             "token": {
-              "description": "A secret the injected client carries and the endpoint requires, so reaching the stream takes something a page has to have been given rather than a header the browser may not send. `true` mints one per run, a string uses that one — for a client of your own that has to build the url itself — `false` requires none, and `{ required: false }` hands one to the injected client without requiring it. Defaults to `false`, because requiring one would refuse a client this middleware did not inject; `true` in the next major release.",
+              "description": "A secret the injected client carries and, unless `required` is `false`, the endpoint requires, so reaching the stream takes something a page has to have been given rather than a header the browser may not send. `true` mints one per run, a string uses that one — for a client of your own that has to build the url itself — `false` requires none, and `{ required: false }` hands one to the injected client without requiring it. Defaults to `false`, because requiring one would refuse a client this middleware did not inject; `true` in the next major release.",
               "link": "https://github.com/webpack/webpack-dev-middleware#hottoken",
               "anyOf": [
                 {
