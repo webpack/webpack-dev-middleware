@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.5.0
+
+### Minor Changes
+
+- `hot.token` also takes `{ value, required }`. With `required: false` a token is minted (or `value` used) and handed to the injected client as usual, but the endpoint does not refuse a client without it, so a server with policy of its own can compare it in `onConnect` alongside, say, the origins it already allows. The instance's new `hot.tokenRequired` says which applies. (by [@alexander-akait](https://github.com/alexander-akait) in [#2486](https://github.com/webpack/webpack-dev-middleware/pull/2486))
+
 ## 8.4.0
 
 ### Minor Changes
