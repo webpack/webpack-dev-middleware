@@ -226,7 +226,7 @@ const noop = () => {};
  * @property {OnConnect} onConnect called with each client that joins, and the request it joined with
  * @property {Publish} publish put a payload of your own on the hot stream, for what a server measures itself — a no-op when `hot` is off
  * @property {PublishTo} publishTo put a payload on the hot stream for one client, for answering a single connection — whichever transport is carrying it, and a no-op when `hot` is off
- * @property {(string | false | undefined)=} token the secret the hot endpoint requires, for a client of your own to put on the url; false when it requires none, undefined when `hot` is off
+ * @property {(string | false | undefined)=} token the secret the hot endpoint's client is given, for a client of your own to put on the url; false when there is none, undefined when `hot` is off
  * @property {Close} close close
  * @property {Context<RequestInternal, ResponseInternal>} context context
  */
@@ -688,6 +688,7 @@ function wdm(compiler, options = {}, isPlugin = false) {
         // The one `createHot` minted just above, so the client it injects and
         // the endpoint it serves agree.
         token: context.hot?.token,
+        tokenRequired: context.hot?.tokenRequired,
       },
       /** @type {Logger} */ (context.logger),
     );

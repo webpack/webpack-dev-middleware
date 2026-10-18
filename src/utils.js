@@ -1576,7 +1576,7 @@ function resolveClientTransport(request, context) {
 
 /**
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: HotOptions["inject"], client?: HotClientOptions, token?: string | false }} options resolved hot options
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: HotOptions["inject"], client?: HotClientOptions, token?: string | false, tokenRequired?: boolean }} options resolved hot options
  * @param {Logger} logger logger
  */
 function injectHotClient(compilers, options, logger) {
@@ -1755,7 +1755,7 @@ function injectHotClient(compilers, options, logger) {
   // printing it would invite exactly the wrong fix — pasting a value that is
   // already stale — and infrastructure warnings travel into CI output, where
   // a secret has no business being.
-  if (options.token && !injected) {
+  if (options.token && options.tokenRequired !== false && !injected) {
     logger.warn(
       "'hot.token' requires a token on the endpoint, but no client entry was added to hand one over, so every client will be refused. Put 'token=<the token>' on the query of the client you added yourself, reading it from the middleware's 'token' property, or set a fixed 'hot.token' both sides know — or 'hot.token: false' to require none.",
     );

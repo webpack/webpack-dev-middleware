@@ -1116,6 +1116,24 @@ describe("createHot", () => {
     hot.close();
   });
 
+  it("lets a stream without the token through when it is not required", () => {
+    const compiler = makeFakeCompiler();
+    const hot = createHot(compiler, { token: { required: false } });
+    /** @type {EXPECTED_OBJECT[]} */
+    const joined = [];
+
+    hot.onConnect((client, req) => {
+      joined.push(req);
+    });
+
+    attachClient({ handler: hot.handle });
+
+    expect(typeof hot.token).toBe("string");
+    expect(joined).toHaveLength(1);
+
+    hot.close();
+  });
+
   it("publishes nothing to a client a subscriber closed", () => {
     const compiler = makeFakeCompiler();
     const hot = createHot(compiler, {});
@@ -1787,6 +1805,71 @@ describe("createHot over a WebSocket", () => {
       const { socket } = await connect(endpoint.url);
 
       expect(socket.readyState).toBe(socket.OPEN);
+    });
+
+    // `required: false` is for a server that weighs the token itself, in
+    // `onConnect`, against policy of its own: the token is minted and handed
+    // over as usual, and the endpoint lets the handshake through either way.
+    it("is handed over but not required with `required: false`", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler(), {
+        token: { required: false },
+      });
+
+      expect(typeof endpoint.hot.token).toBe("string");
+      expect(endpoint.hot.tokenRequired).toBe(false);
+
+      /** @type {EXPECTED_ANY[]} */
+      const joined = [];
+
+      endpoint.hot.onConnect((client, req) => {
+        joined.push(req);
+      });
+
+      const withoutToken = endpoint.url.replace(/\?token=.*$/, "");
+      const { socket } = await connect(withoutToken);
+
+      expect(socket.readyState).toBe(socket.OPEN);
+
+      await connect(endpoint.url);
+      await until(() => joined.length > 1);
+
+      // What `onConnect` gets to compare: the token the client carried.
+      const carried = joined.map((req) =>
+        new URL(req.url, "http://localhost").searchParams.get("token"),
+      );
+
+      expect(carried).toEqual([null, endpoint.hot.token]);
+    });
+
+    it("takes a value of your own that is not required", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler(), {
+        token: { value: "a-token-of-my-own", required: false },
+      });
+
+      expect(endpoint.hot.token).toBe("a-token-of-my-own");
+      expect(endpoint.hot.tokenRequired).toBe(false);
+    });
+
+    it("is required with the object form by default", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler(), { token: {} });
+
+      expect(typeof endpoint.hot.token).toBe("string");
+      expect(endpoint.hot.tokenRequired).toBe(true);
+
+      const withoutToken = endpoint.url.replace(/\?token=.*$/, "");
+
+      await expect(connect(withoutToken)).rejects.toThrow(
+        "Unexpected server response: 403",
+      );
+    });
+
+    it("is required of nobody with `value: false`", async () => {
+      const endpoint = await serveOverWs(makeFakeCompiler(), {
+        token: { value: false },
+      });
+
+      expect(endpoint.hot.token).toBe(false);
+      expect(endpoint.hot.tokenRequired).toBe(false);
     });
 
     // The token is checked before the origin, so a caller without one learns

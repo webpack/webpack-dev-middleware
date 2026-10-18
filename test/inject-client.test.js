@@ -335,6 +335,22 @@ describe("injectHotClient", () => {
       expect(warnings.join("\n")).toContain("token=<the token>");
     });
 
+    // Nothing is refused for want of it, so there is nothing to warn about.
+    it("says nothing about a token that is not required", () => {
+      injectHotClient(
+        [documentedSetup()],
+        {
+          path: "/__webpack_hmr",
+          transport: "sse",
+          token: "a-token-nobody-gets",
+          tokenRequired: false,
+        },
+        logger,
+      );
+
+      expect(warnings.join("\n")).not.toContain("no client entry was added");
+    });
+
     it("says nothing about a token when the client was injected", () => {
       injectHotClient(
         [compiler({ entry: "./app.js" })],
