@@ -1464,7 +1464,7 @@ function isClientRequest(request, context) {
  *
  * Best effort by design: `entry` can be a function, and a request can reach the
  * client through an alias or a loader. Missing one of those costs a duplicate
- * entry, not a broken build, and `hot.inject: false` is the way out.
+ * entry, not a broken build, and `hot.inject: "plugin"` is the way out.
  * @param {Compiler} compiler compiler
  * @returns {string[] | null} the names that need one, or null when they all do
  */
@@ -1560,17 +1560,6 @@ function filterSource(option, filter) {
   );
 }
 
-// The six browser options `apply` and `connect` replaced. Accepted and folded
-// in by the client until the next major release.
-const LEGACY_CLIENT_OPTIONS = [
-  "hot",
-  "liveReload",
-  "reload",
-  "autoConnect",
-  "reconnect",
-  "timeout",
-];
-
 /**
  * The browser options, as the client reads them from its resource query.
  * @param {EXPECTED_ANY} client the `hot.client` option
@@ -1586,12 +1575,12 @@ function clientQuery(client, resolvedPath) {
   }
 
   for (let [key, value] of Object.entries(client)) {
-    // A path given in parts replaces the resolved path in the query outright,
+    // A url given in parts replaces the resolved path in the query outright,
     // so the part it leaves out has to be carried over rather than left to the
     // client's own default — which is the same path only until someone sets
     // `hot.path`, and then quietly is not.
     if (
-      key === "path" &&
+      key === "url" &&
       resolvedPath &&
       typeof value === "object" &&
       value !== null &&
@@ -1690,31 +1679,24 @@ function resolveClientTransport(request, context) {
 
 /**
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: HotClientOptions | false, token?: string | false }} options resolved hot options
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: HotOptions["inject"], client?: HotClientOptions, token?: string | false, tokenRequired?: boolean }} options resolved hot options
  * @param {Logger} logger logger
  */
 function injectHotClient(compilers, options, logger) {
-  if (options.inject === false) {
+  // What goes into the compilation: the runtime in the page, which is this
+  // package's client and its overlay, and `HotModuleReplacementPlugin`, which
+  // is webpack's hot logic. Both by default; either one, for a page that wires
+  // the other itself; or nothing.
+  const inject = options.inject || "all";
+
+  if (inject === "none") {
     return;
   }
 
-  // `client: false` is no runtime in the page while the compilation still
-  // gets everything else — the plugin, for a page that wires a client of its
-  // own and still wants its updates.
-  const addsClient = options.client !== false;
+  const addsClient = inject === "all" || inject === "client";
+  const addsPlugin = inject === "all" || inject === "plugin";
   /** @type {HotClientOptions | undefined} */
-  const clientOptions = options.client || undefined;
-
-  // TODO in the next major release remove this warning and `LEGACY_CLIENT_OPTIONS`
-  const deprecated = LEGACY_CLIENT_OPTIONS.filter((name) =>
-    Object.hasOwn(clientOptions || {}, name),
-  );
-
-  if (deprecated.length > 0) {
-    logger.warn(
-      `${deprecated.map((name) => `'hot.client.${name}'`).join(", ")} ${deprecated.length === 1 ? "is" : "are"} deprecated and will be removed in the next major release. 'hot.client.apply' replaces 'hot', 'liveReload' and 'reload'; 'hot.client.connect' replaces 'autoConnect', 'reconnect' and 'timeout'. Until then these still apply, and the option that replaced them wins when both are set.`,
-    );
-  }
+  const clientOptions = options.client;
 
   let warned = false;
   // A token only reaches the browser on the entry added below, so a required
@@ -1763,10 +1745,10 @@ function injectHotClient(compilers, options, logger) {
     !customClientTransport &&
     client.transport &&
     client.transport !== options.transport &&
-    !client.path
+    !client.url
   ) {
     logger.warn(
-      `'hot.client.transport' is '${client.transport}' while the endpoint serves '${options.transport}', so the client will not connect. Set them to the same thing, or give 'hot.client.path' the endpoint that does speak '${client.transport}'.`,
+      `'hot.client.transport' is '${client.transport}' while the endpoint serves '${options.transport}', so the client will not connect. Set them to the same thing, or give 'hot.client.url' the endpoint that does speak '${client.transport}'.`,
     );
   }
 
@@ -1795,7 +1777,7 @@ function injectHotClient(compilers, options, logger) {
         if (!warned) {
           warned = true;
           logger.warn(
-            "'hot.transport' is a function, so no client was added: the built-in one speaks Server-Sent Events and WebSocket, not a transport of your own. Set 'hot.client.transport' if yours speaks one of them, or add an entry for the client that speaks it — 'HotModuleReplacementPlugin' is still applied for you, and 'hot.inject: false' silences this.",
+            `'hot.transport' is a function, so no client was added: the built-in one speaks Server-Sent Events and WebSocket, not a transport of your own. Set 'hot.client.transport' if yours speaks one of them, or add an entry for the client that speaks it${addsPlugin ? " — 'HotModuleReplacementPlugin' is still applied for you" : ""}, and 'hot.inject: "${addsPlugin ? "plugin" : "none"}"' silences this.`,
           );
         }
       } else {
@@ -1806,7 +1788,7 @@ function injectHotClient(compilers, options, logger) {
         // carries the same options and is spread over them.
         const { name: compilation } = compiler.options;
         /** @type {Record<string, string>} */
-        const query = { path: options.path, transport };
+        const query = { url: options.path, transport };
 
         if (options.token) {
           query.token = options.token;
@@ -1840,11 +1822,16 @@ function injectHotClient(compilers, options, logger) {
 
     // Applying a build to the page by reloading it, or not at all, has no use
     // for the HMR runtime, which would only add to the bundle. It is left out
-    // when `hot.client.apply` says so; a plugin written into the configuration
-    // is the developer's and stays.
+    // when `hot.client.apply` says so, and whatever the mode when `hot.inject`
+    // leaves the plugin to the developer; a plugin written into the
+    // configuration is the developer's and stays.
+    // The mode is the injected client's, so it only counts when one is added.
     const needsHmr =
-      !clientOptions ||
-      (clientOptions.apply !== "reload" && clientOptions.apply !== "nothing");
+      addsPlugin &&
+      (!addsClient ||
+        !clientOptions ||
+        (clientOptions.apply !== "reload" &&
+          clientOptions.apply !== "nothing"));
 
     const hmrPluginExists = compiler.options.plugins.some(
       (plugin) =>
@@ -1871,7 +1858,7 @@ function injectHotClient(compilers, options, logger) {
   // printing it would invite exactly the wrong fix — pasting a value that is
   // already stale — and infrastructure warnings travel into CI output, where
   // a secret has no business being.
-  if (options.token && !injected) {
+  if (options.token && options.tokenRequired !== false && !injected) {
     logger.warn(
       "'hot.token' requires a token on the endpoint, but no client entry was added to hand one over, so every client will be refused. Put 'token=<the token>' on the query of the client you added yourself, reading it from the middleware's 'token' property, or set a fixed 'hot.token' both sides know — or 'hot.token: false' to require none.",
     );

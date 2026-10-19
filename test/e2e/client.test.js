@@ -399,6 +399,63 @@ describe("hot client (browser)", () => {
     expect(normalizeConsole(console_.messages)).toMatchSnapshot();
   });
 
+  // `setOptionsAndConnect({ path })` shipped in 8.3.0, before the node option
+  // was renamed `url`; it still names the endpoint to connect to.
+  it("connects to the path setOptionsAndConnect() is given", async () => {
+    app = await createHotApp({
+      query: "?connect=false",
+      hot: { path: "/__elsewhere" },
+      code: `
+        globalThis.hotClient = require(${JSON.stringify(CLIENT_ENTRY)});
+        document.getElementById("app").textContent = "v1";
+        if (module.hot) {
+          module.hot.accept();
+        }
+      `,
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+
+    await page.evaluate(() => {
+      globalThis.hotClient.setOptionsAndConnect({ path: "/__elsewhere" });
+    });
+    await console_.waitFor("connected");
+
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    expect(
+      await page.evaluate(() => document.getElementById("app").textContent),
+    ).toBe("v2");
+  });
+
+  // The query called the endpoint `path` in 8.3.0 and `url` since, as the
+  // node option does. An entry carrying both is one a server rewrote, and
+  // the newer name is the one it meant.
+  it("connects where url says when the query has path as well", async () => {
+    app = await createHotApp({
+      query: "?path=/__nowhere&url=/__elsewhere",
+      hot: { path: "/__elsewhere" },
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+    const console_ = collectConsole(page);
+
+    await page.goto(app.url);
+    await waitForAppText(page, "v1");
+    await console_.waitFor("connected");
+
+    app.edit(acceptedApp("v2"));
+    await waitForAppText(page, "v2");
+
+    expect(
+      await page.evaluate(() => document.getElementById("app").textContent),
+    ).toBe("v2");
+  });
+
   it("connects once for a path already subscribed to", async () => {
     app = await createHotApp({
       code: `
@@ -663,7 +720,7 @@ describe("hot client (browser)", () => {
       publicPath: "/assets/",
       hot: {
         path: "/assets/__webpack_hmr",
-        client: { path: { hostname: "0.0.0.0" }, dynamicPublicPath: true },
+        client: { url: { hostname: "0.0.0.0" }, dynamicPublicPath: true },
       },
       bare: true,
       code: acceptedApp("v1"),

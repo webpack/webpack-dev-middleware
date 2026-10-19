@@ -1,6 +1,6 @@
 {
   "name": "webpack-dev-middleware",
-  "version": "8.3.0",
+  "version": "8.5.0",
   "description": "A development middleware for webpack",
   "keywords": [
     "webpack",
@@ -117,7 +117,7 @@
     "connect": "^3.7.0",
     "cspell": "^10.2.0",
     "deepmerge": "^4.3.1",
-    "del-cli": "^7.0.0",
+    "del-cli": "^8.0.1",
     "eslint": "^9.39.5",
     "eslint-config-webpack": "^4.9.6",
     "execa": "^9.6.1",

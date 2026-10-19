@@ -372,7 +372,7 @@ export function initState<
  */
 /**
  * @param {Compiler[]} compilers compilers to modify
- * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: boolean, client?: HotClientOptions | false, token?: string | false }} options resolved hot options
+ * @param {{ path: string, transport: NonNullable<HotOptions["transport"]>, inject?: HotOptions["inject"], client?: HotClientOptions, token?: string | false, tokenRequired?: boolean }} options resolved hot options
  * @param {Logger} logger logger
  */
 export function injectHotClient(
@@ -380,9 +380,10 @@ export function injectHotClient(
   options: {
     path: string;
     transport: NonNullable<HotOptions["transport"]>;
-    inject?: boolean;
-    client?: HotClientOptions | false;
+    inject?: HotOptions["inject"];
+    client?: HotClientOptions;
     token?: string | false;
+    tokenRequired?: boolean;
   },
   logger: Logger,
 ): void;

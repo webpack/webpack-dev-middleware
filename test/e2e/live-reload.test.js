@@ -317,7 +317,7 @@ describe("live reload (browser)", () => {
 
   it("matches a prefix with capitals in it", async () => {
     app = await createHotApp({
-      query: "?apply=reload&urlPrefix=MyServer",
+      query: "?apply=reload&pageParamPrefix=MyServer",
       hmrPlugin: false,
       code: acceptedApp("v1"),
     });
@@ -352,7 +352,7 @@ describe("live reload (browser)", () => {
 
   it("names those url parameters after whoever is serving", async () => {
     app = await createHotApp({
-      query: "?apply=reload&urlPrefix=my-server",
+      query: "?apply=reload&pageParamPrefix=my-server",
       hmrPlugin: false,
       code: acceptedApp("v1"),
     });

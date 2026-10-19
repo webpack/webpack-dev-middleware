@@ -304,7 +304,7 @@ describe("update processing (browser)", () => {
       hmrPlugin: false,
       // `hot` applies the plugin itself now, so the only way to reach a
       // compilation without a hot runtime is to turn that off.
-      hot: { inject: false },
+      hot: { inject: "none" },
     });
     ({ page, browser } = await runBrowser());
     const console_ = collectConsole(page);

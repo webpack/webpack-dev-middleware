@@ -35,28 +35,27 @@
  * here and the injected entry carries it, or write it on the query of a client
  * entry of your own.
  *
- * `transport`, `path` and `name` are the exception only in having a default
+ * `transport`, `url` and `name` are the exception only in having a default
  * the middleware knows — the resolved `hot.transport`, the resolved `hot.path`
  * and the compilation's name. Setting one here replaces that, which is what a
  * page reaching the endpoint through a proxy or another origin needs.
  * @typedef {object} HotClientOptions
  * @property {("sse" | "ws" | string)=} transport which transport the runtime speaks, `hot.transport` by default; any other string is a module exporting a client class of your own, used in place of the built-in one
- * @property {(string | PathSpec)=} path where the runtime connects, `hot.path` by default; may be an absolute url for an endpoint on another origin, or the parts that differ with the rest resolved in the page
+ * @property {(string | PathSpec)=} url where the runtime connects, `hot.path` by default: a path, an absolute url for an endpoint on another origin, or the parts that differ with the rest resolved in the page
  * @property {string=} name limit the runtime to one compilation's builds, the compilation's own name by default
- * @property {string=} token the secret the runtime puts on its connection url, `hot.token` by default
  * @property {(boolean | Record<string, EXPECTED_ANY>)=} overlay show build problems and uncaught runtime errors in an overlay
  * @property {(boolean | "circular" | "linear")=} progress show an indicator while a rebuild is in progress
- * @property {boolean=} hot deprecated, removed in the next major release — use `apply`
- * @property {boolean=} liveReload deprecated, removed in the next major release — use `apply`
- * @property {boolean=} reload deprecated, removed in the next major release — use `apply`
  * @property {("hmr" | "hmr-only" | "reload" | "nothing")=} apply what a build does to the page — apply the update and reload if it cannot be applied, apply it and stop with a message if it cannot, load the page again on any build that changed something, or leave the page alone
  * @property {(boolean | { retries?: number, timeout?: number })=} connect whether to connect when the entry runs, and how the connection is held open
- * @property {string=} urlPrefix prefix of the page-url parameter that overrides `apply` for a single page
+ * @property {string=} pageParamPrefix prefix of the page-url parameters that override `apply` for a single page
  * @property {(LogLevel | { level?: LogLevel, name?: string })=} logging how much the runtime logs to the browser console, and the name every message is labelled with
- * @property {number=} reconnect how many times to reconnect before giving up; unset, Server-Sent Events keep trying for as long as the page is open while a WebSocket gives up after 10
- * @property {number=} timeout how long the runtime tolerates silence before reconnecting, in milliseconds — Server-Sent Events only, since a WebSocket's heartbeat is a protocol ping JavaScript cannot see
- * @property {boolean=} autoConnect connect as soon as the entry runs
  * @property {boolean=} dynamicPublicPath prefix the path with the bundle's public path at runtime
+ */
+
+/**
+ * @typedef {object} HotTokenOptions
+ * @property {(boolean | string)=} value the token: `true` (the default) mints one per run, a string uses that one
+ * @property {boolean=} required whether the endpoint refuses a client without it (default `true`); `false` still hands it to the injected client, for a server that checks it itself through `onConnect` alongside policy of its own
  */
 
 /**
@@ -64,14 +63,13 @@
  * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)=} transport how events reach the clients, Server-Sent Events by default
  * @property {string=} path the path the endpoint is served at
  * @property {number=} heartbeat heartbeat interval in milliseconds
- * @property {HttpServer=} server HTTP server the `"ws"` transport answers upgrades on, when it is already built
  * @property {Record<string, EXPECTED_ANY>=} ws options for the `ws` server behind the `"ws"` transport — compression, payload limits, `verifyClient`, or a `port` or a `server` of its own to listen on; `path`, `noServer` and `clientTracking` are the middleware's
  * @property {StatsOptions=} statsOptions deprecated, removed in the next major release — webpack stats options used when serializing compilation results
  * @property {boolean=} progress publish compilation progress events to the clients
  * @property {CorsOption=} cors which origins may reach the endpoint from a page on another one; the local ones by default
- * @property {(boolean | string)=} token a secret the injected client carries and the endpoint requires; `true` mints one per run, a string uses that one, `false` requires none. Defaults to `false` on both transports; `true` in the next major release
- * @property {boolean=} inject add the hot client entry and `HotModuleReplacementPlugin` to the compilation (default `true`); turn it off to wire them yourself
- * @property {(HotClientOptions | false)=} client options handed to the browser runtime through its entry query; `false` adds no runtime to the page and still applies `HotModuleReplacementPlugin`
+ * @property {(boolean | string | HotTokenOptions)=} token a secret the injected client carries and the endpoint requires; `true` mints one per run, a string uses that one, `false` requires none, and `{ required: false }` hands one to the client without requiring it. Defaults to `false` on both transports; `true` in the next major release
+ * @property {("all" | "plugin" | "client" | "none")=} inject what is added to the compilation: the runtime and `HotModuleReplacementPlugin` (`"all"`, the default), the plugin alone for a page that wires a client of its own, the runtime alone for a configuration that applies the plugin itself, or nothing
+ * @property {HotClientOptions=} client options handed to the browser runtime through its entry query
  */
 
 /**
@@ -474,7 +472,8 @@ function publishBundles(bundles, previousBundles, eventStream) {
  * @typedef {object} HotInstance
  * @property {string} path path the endpoint is served at
  * @property {("sse" | "ws" | ClientStreamFactory<EXPECTED_ANY>)} transport how events reach the clients
- * @property {string | false} token the secret the endpoint requires, or false when it requires none; the injected client is given it
+ * @property {string | false} token the secret the injected client is given, or false when there is none
+ * @property {boolean} tokenRequired whether the endpoint refuses a client without the token; false when there is none, or `hot.token.required` is `false`
  * @property {(server: HttpServer) => void} attach answer WebSocket upgrades on this server, a no-op for Server-Sent Events
  * @property {(req: IncomingMessage, socket: Duplex, head: Buffer) => boolean} handleUpgrade answer one WebSocket upgrade, for a caller that owns the server's `upgrade` event and wants to decide each one; returns false when the request is not the endpoint's, or the transport does not answer upgrades
  * @property {(fn: (client: EXPECTED_ANY, req: IncomingMessage) => void) => void} onConnect called with each client once it has joined, and the request it joined with, before anything is published to it
@@ -497,13 +496,25 @@ function createHot(compiler, userOptions, statsOption) {
   const transport = options.transport || HOT_DEFAULT_TRANSPORT;
   const { cors } = options;
   const { statsOptions } = options;
-  // `inject: false` turns it off: the token reaches the browser through the
-  // entry this middleware adds, so with nothing injected there is no way to
-  // hand one over, and requiring it would refuse a client the developer wired
+  // Off when no client is injected: the token reaches the browser through the
+  // entry this middleware adds, so with none added there is no way to hand one
+  // over, and requiring it would refuse a client the developer wired
   // correctly. Off by default either way — see `HOT_DEFAULT_TOKEN`.
+  const injectsClient =
+    !options.inject || options.inject === "all" || options.inject === "client";
+  const tokenOption = injectsClient ? options.token : (options.token ?? false);
+  // `{ required: false }` mints and hands one over all the same, and leaves
+  // the deciding to whoever owns the server: it reads `token` off the instance
+  // and compares it in `onConnect`, where it can weigh it against policy of
+  // its own — an origin it already allows, say — rather than refuse outright.
+  const isTokenObject = typeof tokenOption === "object" && tokenOption !== null;
   const token = resolveToken(
-    options.inject === false ? (options.token ?? false) : options.token,
+    isTokenObject ? (tokenOption.value ?? true) : tokenOption,
   );
+  const tokenRequired =
+    token !== false && !(isTokenObject && tokenOption.required === false);
+  // What the endpoint itself enforces.
+  const requiredToken = tokenRequired ? token : false;
   const logger = compiler.getInfrastructureLogger("webpack-dev-middleware");
 
   // TODO in the next major release remove `statsOptions` and this warning
@@ -520,12 +531,12 @@ function createHot(compiler, userOptions, statsOption) {
 
   if (typeof transport === "function") {
     eventStream = checkClientStream(
-      transport({ heartbeat, path, cors, token }, logger),
+      transport({ heartbeat, path, cors, token: requiredToken }, logger),
     );
     transportName = "a custom transport";
   } else if (transport === "ws") {
     eventStream = requireServer("WebSocketServer")(
-      { heartbeat, path, cors, token, ws: options.ws },
+      { heartbeat, path, cors, token: requiredToken, ws: options.ws },
       logger,
     );
     transportName = "a WebSocket";
@@ -534,7 +545,7 @@ function createHot(compiler, userOptions, statsOption) {
       heartbeat,
       logger,
       cors,
-      token,
+      requiredToken,
     );
     transportName = "Server-Sent Events";
   }
@@ -577,12 +588,6 @@ function createHot(compiler, userOptions, statsOption) {
       eventStream.publishTo(client, bundlePayload(stats, "sync"));
     }
   });
-
-  // A WebSocket is upgraded by the HTTP server rather than answered by the
-  // middleware, so the transport needs the server itself.
-  if (options.server && eventStream.attach) {
-    eventStream.attach(options.server);
-  }
 
   // TODO in the next major release remove `progress` and this warning
   if (options.progress) {
@@ -668,6 +673,7 @@ function createHot(compiler, userOptions, statsOption) {
     path,
     transport,
     token,
+    tokenRequired,
     attach(server) {
       if (closed || !eventStream.attach) {
         return;

@@ -114,7 +114,7 @@ const CLIENTS = [
   ],
   [
     "the client through a re-export of it",
-    () => ({ inject: false }),
+    () => ({ inject: "none" }),
     (dir) => [`${path.join(dir, "stand-in.js")}?path=/hmr`, "./app.js"],
     /stand-in\.js\?/,
   ],
