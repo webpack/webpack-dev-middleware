@@ -18,6 +18,7 @@ describe("the overlay's open-editor url", () => {
     for (const endpoint of [
       "https://elsewhere.example/open",
       "//elsewhere.example/open",
+      "/\\elsewhere.example/open",
       "open-editor",
     ]) {
       expect(openEditorUrl(endpoint, "./app.js:1:7", "abc")).not.toContain(
