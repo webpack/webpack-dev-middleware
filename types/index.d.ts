@@ -105,7 +105,7 @@ declare function hapiWrapper<
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
  * @param {boolean=} usePlugin whether to use as webpack plugin
- * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow wrapper
+ * @returns {((ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void) & { devMiddleware: API<RequestInternal, ResponseInternal> }} koa wrapper
  */
 declare function koaWrapper<
   RequestInternal extends IncomingMessage = import("node:http").IncomingMessage,
@@ -114,14 +114,16 @@ declare function koaWrapper<
   compiler: Compiler | MultiCompiler,
   options?: Options<RequestInternal, ResponseInternal> | undefined,
   usePlugin?: boolean | undefined,
-): (ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void;
+): ((ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void) & {
+  devMiddleware: API<RequestInternal, ResponseInternal>;
+};
 /**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
  * @param {boolean=} usePlugin true when need to use as a plugin, otherwise false
- * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono wrapper
+ * @returns {((ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void) & { devMiddleware: API<RequestInternal, ResponseInternal> }} hono wrapper
  */
 declare function honoWrapper<
   RequestInternal extends IncomingMessage = import("node:http").IncomingMessage,
@@ -130,7 +132,9 @@ declare function honoWrapper<
   compiler: Compiler | MultiCompiler,
   options?: Options<RequestInternal, ResponseInternal> | undefined,
   usePlugin?: boolean | undefined,
-): (ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void;
+): ((ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void) & {
+  devMiddleware: API<RequestInternal, ResponseInternal>;
+};
 type Schema = import("schema-utils/declarations/validate").Schema;
 type Compiler = import("webpack").Compiler;
 type MultiCompiler = import("webpack").MultiCompiler;
