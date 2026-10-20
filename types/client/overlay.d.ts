@@ -21,7 +21,7 @@ export function showProblems(
   source?: string | undefined,
 ): void;
 /**
- * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number>, trustedTypesPolicyName?: string, catchRuntimeError?: boolean | ((error: Error) => boolean), openEditorEndpoint?: string, paginate?: boolean, id?: string }} options options
+ * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number>, trustedTypesPolicyName?: string, catchRuntimeError?: boolean | ((error: Error) => boolean), openEditorEndpoint?: string, openEditorToken?: string, paginate?: boolean, id?: string }} options options
  * @returns {{ showProblems: typeof showProblems, clear: typeof clear }} overlay api
  */
 export default function configureOverlay(options: {
@@ -30,6 +30,7 @@ export default function configureOverlay(options: {
   trustedTypesPolicyName?: string;
   catchRuntimeError?: boolean | ((error: Error) => boolean);
   openEditorEndpoint?: string;
+  openEditorToken?: string;
   paginate?: boolean;
   id?: string;
 }): {

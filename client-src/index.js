@@ -654,6 +654,7 @@ function createReporter() {
             ansiColors: options.overlay.ansiColors,
             overlayStyles: options.overlay.styles,
             openEditorEndpoint: options.overlay.openEditorEndpoint,
+            openEditorToken: options.token,
             paginate: options.overlay.paginate,
             id: options.overlay.id,
           }

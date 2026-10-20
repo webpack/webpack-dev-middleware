@@ -1,6 +1,7 @@
 import { problemLine } from "./problem.js";
 import theme from "./theme.js";
 import ansiHTML, { setColors } from "./utils/ansi-html.js";
+import openEditorUrl from "./utils/open-editor-url.js";
 
 // Re-exported so a consumer that shows problems in the console as well as in
 // the overlay has one import for both. `./client/problem` is the same thing
@@ -231,6 +232,9 @@ let paginate = true;
 // like webpack-dev-server's `/webpack-dev-server/open-editor`).
 /** @type {string} */
 let openEditorEndpoint = "";
+// The token the client was given, sent along to an endpoint on this server so
+// it can tell the overlay's request from one another page made.
+let openEditorToken = "";
 
 // Trusted Types support (same pattern as webpack-dev-server): when the page
 // runs under `require-trusted-types-for 'script'`, every `innerHTML` write
@@ -676,7 +680,7 @@ function ensureOverlay() {
         );
       };
 
-      fetch(`${openEditorEndpoint}?fileName=${encodeURIComponent(reference)}`)
+      fetch(openEditorUrl(openEditorEndpoint, reference, openEditorToken))
         .then((response) => {
           if (!response.ok) {
             failed(`the endpoint answered ${response.status}`);
@@ -1040,12 +1044,16 @@ function attachRuntimeErrorListeners() {
 }
 
 /**
- * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number>, trustedTypesPolicyName?: string, catchRuntimeError?: boolean | ((error: Error) => boolean), openEditorEndpoint?: string, paginate?: boolean, id?: string }} options options
+ * @param {{ ansiColors?: Record<string, string | string[]>, overlayStyles?: Record<string, string | number>, trustedTypesPolicyName?: string, catchRuntimeError?: boolean | ((error: Error) => boolean), openEditorEndpoint?: string, openEditorToken?: string, paginate?: boolean, id?: string }} options options
  * @returns {{ showProblems: typeof showProblems, clear: typeof clear }} overlay api
  */
 export default function configureOverlay(options) {
   if (options.trustedTypesPolicyName) {
     trustedTypesPolicyName = options.trustedTypesPolicyName;
+  }
+
+  if (options.openEditorToken !== undefined) {
+    openEditorToken = options.openEditorToken;
   }
 
   if (options.openEditorEndpoint !== undefined) {

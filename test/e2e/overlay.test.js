@@ -928,6 +928,45 @@ describe("error overlay (browser)", () => {
     expect(opened).toEqual(["./app.js:1:7"]);
   });
 
+  // So the server can tell the overlay's request from one another page made.
+  it("sends the client's token along to the endpoint", async () => {
+    /** @type {string[]} */
+    const tokens = [];
+
+    // Over the WebSocket transport, where the fixtures require a token.
+    hotApp = await createHotApp({
+      query: '?overlay={"openEditorEndpoint":"/__open-editor"}',
+      code: acceptedApp("v1"),
+      transport: "ws",
+      setup: (server) => {
+        server.get("/__open-editor", (req, res) => {
+          tokens.push(String(req.query.token));
+          res.end();
+        });
+      },
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(hotApp.url);
+
+    hotApp.edit("broken for a token {{{");
+    const frame = await waitForOverlay(page);
+    const chip = await frame.waitForSelector("[data-open-file]", {
+      timeout: 30000,
+    });
+
+    await chip.click();
+    const start = Date.now();
+    while (tokens.length === 0 && Date.now() - start < 30000) {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 50);
+      });
+    }
+
+    expect(typeof hotApp.instance.token).toBe("string");
+    expect(tokens).toEqual([hotApp.instance.token]);
+  });
+
   it("does not mark file chips when no endpoint is configured", async () => {
     hotApp = await createHotApp({ code: acceptedApp("v1") });
     ({ page, browser } = await runBrowser());
