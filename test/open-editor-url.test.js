@@ -13,6 +13,12 @@ describe("the overlay's open-editor url", () => {
     );
   });
 
+  it("puts the reference into a query the endpoint already has", () => {
+    expect(
+      openEditorUrl("/__open-editor?editor=code#x", "./a b.js", "abc"),
+    ).toBe("/__open-editor?editor=code&fileName=.%2Fa%20b.js&token=abc#x");
+  });
+
   // Any server can be named by an absolute url, and the token is not theirs.
   it("keeps it from an endpoint that could be another server", () => {
     for (const endpoint of [

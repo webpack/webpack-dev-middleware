@@ -1,5 +1,3 @@
-import withToken from "./with-token.js";
-
 /**
  * The url the overlay asks to open a file reference.
  *
@@ -13,8 +11,18 @@ import withToken from "./with-token.js";
  * @returns {string} the url to fetch
  */
 export default function openEditorUrl(endpoint, reference, token) {
-  const url = `${endpoint}?fileName=${encodeURIComponent(reference)}`;
   const isOwnServer = /^\/(?![/\\])/.test(endpoint);
+  // Added by hand, into the query the endpoint may already have and before any
+  // fragment, rather than through `URLSearchParams`, so a space is still sent
+  // as `%20`, for a route that decodes it with `decodeURIComponent`.
+  const hashAt = endpoint.indexOf("#");
+  const hash = hashAt === -1 ? "" : endpoint.slice(hashAt);
+  const path = hashAt === -1 ? endpoint : endpoint.slice(0, hashAt);
+  let query = `fileName=${encodeURIComponent(reference)}`;
 
-  return isOwnServer ? withToken(url, token) : url;
+  if (isOwnServer && token) {
+    query += `&token=${encodeURIComponent(token)}`;
+  }
+
+  return `${path}${path.includes("?") ? "&" : "?"}${query}${hash}`;
 }
