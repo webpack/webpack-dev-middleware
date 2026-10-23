@@ -1006,7 +1006,7 @@ wdm.hapiWrapper = hapiWrapper;
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
  * @param {boolean=} usePlugin whether to use as webpack plugin
- * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} kow wrapper
+ * @returns {((ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void) & { devMiddleware: API<RequestInternal, ResponseInternal> }} koa wrapper
  */
 function koaWrapper(compiler, options = {}, usePlugin = false) {
   const devMiddleware = wdm(compiler, options, usePlugin);
@@ -1149,7 +1149,7 @@ wdm.koaWrapper = koaWrapper;
  * @param {Compiler | MultiCompiler} compiler compiler
  * @param {Options<RequestInternal, ResponseInternal>=} options options
  * @param {boolean=} usePlugin true when need to use as a plugin, otherwise false
- * @returns {(ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void} hono wrapper
+ * @returns {((ctx: EXPECTED_ANY, next: EXPECTED_FUNCTION) => Promise<void> | void) & { devMiddleware: API<RequestInternal, ResponseInternal> }} hono wrapper
  */
 function honoWrapper(compiler, options = {}, usePlugin = false) {
   const devMiddleware = wdm(compiler, options, usePlugin);
