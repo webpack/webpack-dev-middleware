@@ -262,6 +262,53 @@ function getContentTypeHeader(name, ext = "js") {
   return mime.contentType(ext);
 }
 
+/**
+ * Read a response's body as bytes, whatever its type: superagent would take a
+ * `multipart/*` one for a form.
+ * @param {import("supertest").Test} request request
+ * @returns {import("supertest").Test} the request, buffering its body
+ */
+function rawBody(request) {
+  return request.buffer(true).parse((res, callback) => {
+    const chunks = [];
+
+    res.on("data", (chunk) => chunks.push(chunk));
+    res.on("end", () => callback(null, Buffer.concat(chunks)));
+  });
+}
+
+/**
+ * Split a `multipart/byteranges` body into its parts.
+ * @param {Buffer} body body
+ * @param {string} contentType the response's `Content-Type`
+ * @returns {{ headers: Record<string, string>, body: string }[]} its parts
+ */
+function parseByteranges(body, contentType) {
+  const [, boundary] = /boundary=([^;]+)/.exec(contentType);
+  const text = body.toString("latin1");
+
+  expect(text.endsWith(`\r\n--${boundary}--\r\n`)).toBe(true);
+
+  return text
+    .slice(0, text.lastIndexOf(`\r\n--${boundary}--`))
+    .split(new RegExp(`(?:^|\r\n)--${boundary}\r\n`))
+    .slice(1)
+    .map((part) => {
+      const separator = part.indexOf("\r\n\r\n");
+      const headers = {};
+
+      for (const line of part.slice(0, separator).split("\r\n")) {
+        const colon = line.indexOf(":");
+
+        headers[line.slice(0, colon).toLowerCase()] = line
+          .slice(colon + 1)
+          .trim();
+      }
+
+      return { headers, body: part.slice(separator + 4) };
+    });
+}
+
 function applyTestMiddleware(name, middlewares) {
   if (name === "hapi") {
     middlewares.push({
@@ -1294,12 +1341,55 @@ describe.each([
           expect(response.statusCode).toBe(200);
         });
 
-        it('should return the "200" code for the "GET" request with multiple range header which is ignored', async () => {
-          const response = await req
-            .get("/bundle.js")
-            .set("Range", "bytes=3000-3100,3200-3300");
+        it('should return the "206" code and a "multipart/byteranges" body for the "GET" request with multiple ranges', async () => {
+          const size = Buffer.byteLength(codeContent);
+          const response = await rawBody(
+            req.get("/bundle.js").set("Range", "bytes=3200-3300, 3000-3100"),
+          );
 
-          expect(response.statusCode).toBe(200);
+          expect(response.statusCode).toBe(206);
+          expect(response.headers["content-type"]).toMatch(
+            /^multipart\/byteranges; boundary=[0-9a-f]+$/,
+          );
+          expect(response.headers["content-range"]).toBeUndefined();
+          expect(response.headers["content-length"]).toBe(
+            String(response.body.byteLength),
+          );
+
+          // In the order asked for, each under the file's own type.
+          expect(
+            parseByteranges(response.body, response.headers["content-type"]),
+          ).toEqual([
+            {
+              headers: {
+                "content-type": getContentTypeHeader(),
+                "content-range": `bytes 3200-3300/${size}`,
+              },
+              body: codeContent.slice(3200, 3301),
+            },
+            {
+              headers: {
+                "content-type": getContentTypeHeader(),
+                "content-range": `bytes 3000-3100/${size}`,
+              },
+              body: codeContent.slice(3000, 3101),
+            },
+          ]);
+        });
+
+        it('should return the "206" code and the "multipart/byteranges" headers for the "HEAD" request with multiple ranges', async () => {
+          const response = await req
+            .head("/bundle.js")
+            .set("Range", "bytes=0-9,20-29");
+
+          expect(response.statusCode).toBe(206);
+          expect(response.headers["content-type"]).toMatch(
+            /^multipart\/byteranges; boundary=[0-9a-f]+$/,
+          );
+          expect(Number(response.headers["content-length"])).toBeGreaterThan(
+            20,
+          );
+          expect(response.text).toBeUndefined();
         });
 
         it('should return the "404" code for the "GET" request with to the non-public path', async () => {
@@ -6249,6 +6339,41 @@ describe.each([
 
           expect(response1.statusCode).toBe(200);
         });
+
+        it('should return the "200" code for the "GET" request with multiple ranges and a stale "If-Range" header', async () => {
+          const response = await req
+            .get("/bundle.js")
+            .set("If-Range", '"stale"')
+            .set("Range", "bytes=0-9,20-29");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["content-type"]).toEqual(
+            getContentTypeHeader(),
+          );
+        });
+
+        it('should return the "206" code and a "multipart/byteranges" body cut from the file read for the etag', async () => {
+          const response = await rawBody(
+            req.get("/bundle.js").set("Range", "bytes=0-9,20-29"),
+          );
+
+          expect(response.statusCode).toBe(206);
+          expect(response.headers.etag).toBeDefined();
+          expect(response.headers["content-length"]).toBe(
+            String(response.body.byteLength),
+          );
+
+          const parts = parseByteranges(
+            response.body,
+            response.headers["content-type"],
+          );
+
+          expect(parts.map((part) => part.headers["content-range"])).toEqual([
+            expect.stringMatching(/^bytes 0-9\/\d+$/),
+            expect.stringMatching(/^bytes 20-29\/\d+$/),
+          ]);
+          expect(parts.map((part) => part.body.length)).toEqual([10, 10]);
+        });
       });
 
       describe("should work and generate strong etag without createReadStream", () => {
@@ -6279,6 +6404,23 @@ describe.each([
           expect(
             /[0-9a-f]{1,}-[0-9a-z+/=]{27}/i.test(response.headers.etag),
           ).toBe(true);
+        });
+
+        it('should return the "206" code and a "multipart/byteranges" body read without a stream', async () => {
+          const response = await rawBody(
+            req.get("/bundle.js").set("Range", "bytes=0-9,20-29"),
+          );
+
+          expect(response.statusCode).toBe(206);
+          expect(response.headers["content-length"]).toBe(
+            String(response.body.byteLength),
+          );
+          expect(
+            parseByteranges(
+              response.body,
+              response.headers["content-type"],
+            ).map((part) => part.body.length),
+          ).toEqual([10, 10]);
         });
       });
 

@@ -549,6 +549,82 @@ function createReadStreamOrReadFile(filename, outputFileSystem, start, end) {
 }
 
 /**
+ * The body of a `206` answer to a request for more than one range: a
+ * `multipart/byteranges` message, each part the bytes of one range under its
+ * own `Content-Type` and `Content-Range` (RFC 9110, section 14.6).
+ *
+ * Streamed one range after another when the file system can stream, so a
+ * request for a few slices of a large asset reads only those; a buffer when it
+ * cannot, or when the whole file was already read for a strong `ETag`.
+ * @param {string} filename filename
+ * @param {OutputFileSystem} outputFileSystem output file system
+ * @param {{ start: number, end: number }[]} ranges the ranges, in the order asked for
+ * @param {number} size the size of the whole file
+ * @param {string | undefined} contentType the file's own `Content-Type`
+ * @param {Buffer=} buffer the whole file, when it was already read
+ * @returns {{ bufferOrStream: (Buffer | import("stream").Readable), byteLength: number, boundary: string }} the body, its length and the boundary between its parts
+ */
+function createMultipartByteranges(
+  filename,
+  outputFileSystem,
+  ranges,
+  size,
+  contentType,
+  buffer,
+) {
+  const boundary = crypto.randomBytes(12).toString("hex");
+  const heads = ranges.map((range, index) =>
+    Buffer.from(
+      `${index === 0 ? "" : "\r\n"}--${boundary}\r\n${
+        contentType ? `Content-Type: ${contentType}\r\n` : ""
+      }Content-Range: ${getValueContentRangeHeader("bytes", size, range)}\r\n\r\n`,
+    ),
+  );
+  const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
+  let { byteLength } = tail;
+
+  for (const [index, range] of ranges.entries()) {
+    byteLength += heads[index].byteLength + (range.end - range.start + 1);
+  }
+
+  const canStream = typeof outputFileSystem.createReadStream === "function";
+
+  if (buffer || !canStream) {
+    const whole = buffer || outputFileSystem.readFileSync(filename);
+    /** @type {Buffer[]} */
+    const chunks = [];
+
+    for (const [index, range] of ranges.entries()) {
+      chunks.push(heads[index], whole.subarray(range.start, range.end + 1));
+    }
+
+    chunks.push(tail);
+
+    return { bufferOrStream: Buffer.concat(chunks), byteLength, boundary };
+  }
+
+  const { Readable } = require("node:stream");
+
+  /**
+   * @returns {AsyncGenerator<Buffer>} the parts, one range at a time
+   */
+  async function* parts() {
+    for (const [index, range] of ranges.entries()) {
+      yield heads[index];
+
+      // Opened as it is reached, so only one is open at a time.
+      yield* /** @type {import("fs").createReadStream} */ (
+        outputFileSystem.createReadStream
+      )(filename, { start: range.start, end: range.end });
+    }
+
+    yield tail;
+  }
+
+  return { bufferOrStream: Readable.from(parts()), byteLength, boundary };
+}
+
+/**
  * @param {import("fs").ReadStream} stream stream
  * @param {boolean} suppress do need suppress?
  * @returns {void}
@@ -1768,6 +1844,7 @@ module.exports = {
   applyCors,
   clientQuery,
   createMimeTypes,
+  createMultipartByteranges,
   createReadStreamOrReadFile,
   destroyStream,
   escapeHtml,

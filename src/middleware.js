@@ -3,6 +3,7 @@ const querystring = require("node:querystring");
 const { finished } = require("node:stream");
 
 const {
+  createMultipartByteranges,
   createReadStreamOrReadFile,
   destroyStream,
   escapeHtml,
@@ -917,7 +918,7 @@ function wrapper(context) {
       /** @type {number} */
       let end;
 
-      /** @type {undefined | Buffer | ReadStream} */
+      /** @type {undefined | Buffer | ReadStream | import("stream").Readable} */
       let bufferOrStream;
       /** @type {number | undefined} */
       let byteLength;
@@ -1060,9 +1061,48 @@ function wrapper(context) {
             "A malformed 'Range' header was provided. A regular response will be sent for this request.",
           );
         } else if (parsedRanges.length > 1) {
-          context.logger.error(
-            "A 'Range' header with multiple ranges was provided. Multiple ranges are not supported, so a regular response will be sent for this request.",
+          // Still more than one once overlapping and adjacent ranges are
+          // merged: the parts of a `multipart/byteranges` body.
+          setStatusCode(res, 206);
+          removeResponseHeader(res, "Content-Range");
+
+          // Whole when a strong `ETag` read it already, so each part can be
+          // cut from it rather than read again.
+          const whole = Buffer.isBuffer(bufferOrStream)
+            ? bufferOrStream
+            : undefined;
+
+          if (bufferOrStream && !whole) {
+            destroyStream(/** @type {ReadStream} */ (bufferOrStream), true);
+          }
+
+          let boundary;
+
+          try {
+            ({ bufferOrStream, byteLength, boundary } =
+              createMultipartByteranges(
+                filename,
+                extra.outputFileSystem,
+                /** @type {import("range-parser").Ranges} */ (parsedRanges),
+                size,
+                /** @type {string | undefined} */
+                (getResponseHeader(res, "Content-Type")),
+                whole,
+              ));
+          } catch (error) {
+            await errorHandler(/** @type {NodeJS.ErrnoException} */ (error));
+            return;
+          }
+
+          // Removed first: on some frameworks setting a header adds a value.
+          removeResponseHeader(res, "Content-Type");
+          setResponseHeader(
+            res,
+            "Content-Type",
+            `multipart/byteranges; boundary=${boundary}`,
           );
+
+          isPartialContent = true;
         }
 
         if (parsedRanges !== -2 && parsedRanges.length === 1) {
@@ -1106,7 +1146,9 @@ function wrapper(context) {
           context.options.modifyResponseData(
             req,
             res,
-            bufferOrStream,
+            // A multipart body is a plain `Readable`: the same stream to read
+            // or pipe, without a `ReadStream`'s file fields.
+            /** @type {Buffer | ReadStream} */ (bufferOrStream),
             /** @type {number} */
             (byteLength),
           ));
