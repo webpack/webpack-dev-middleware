@@ -47,7 +47,8 @@
     "valuemin",
     "valuenow",
     "webworker",
-    "wildcarded"
+    "wildcarded",
+    "Fapp"
   ],
   "ignorePaths": [
     "CHANGELOG.md",
