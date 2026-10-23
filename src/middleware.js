@@ -361,6 +361,45 @@ const parseRangeHeaders = memorize(
   },
 );
 
+const parseRequestedRanges = memorize(
+  /**
+   * The ranges as they were asked for, before any are merged.
+   * @param {string} value value
+   * @returns {import("range-parser").Result | import("range-parser").Ranges} ranges
+   */
+  (value) => {
+    const [len, rangeHeader] = value.split("|");
+
+    return require("range-parser")(Number(len), rangeHeader);
+  },
+);
+
+/**
+ * Merged ranges in the order they were asked for: each by the first requested
+ * range it holds. `range-parser` gives a merged range the place of the last
+ * one merged into it, so `bytes=100-200,400-500,0-300` would put `400-500`
+ * before the `0-300` that holds the first range asked for.
+ * @param {import("range-parser").Range[]} merged the merged ranges
+ * @param {import("range-parser").Range[]} requested the ranges as asked for
+ * @returns {import("range-parser").Range[]} the merged ranges, ordered
+ */
+function orderAsRequested(merged, requested) {
+  const firstRequested = new Map();
+
+  for (const range of merged) {
+    firstRequested.set(
+      range,
+      requested.findIndex(
+        (wanted) => wanted.start >= range.start && wanted.end <= range.end,
+      ),
+    );
+  }
+
+  return merged.toSorted(
+    (a, b) => firstRequested.get(a) - firstRequested.get(b),
+  );
+}
+
 const MAX_MAX_AGE = 31536000000;
 
 // The most ranges a `multipart/byteranges` answer is built for, as Apache's
@@ -765,11 +804,21 @@ function wrapper(context) {
     function getRangeHeader() {
       const range = /** @type {string} */ (getRequestHeader(req, "range"));
 
-      if (range && BYTES_RANGE_REGEXP.test(range)) {
-        return range;
+      if (!range || !BYTES_RANGE_REGEXP.test(range)) {
+        return undefined;
       }
 
-      return undefined;
+      // Counted as written, before any are merged: 201 copies of one range
+      // are still 201 asked for.
+      if (range.split(",").length > MAX_RANGES) {
+        context.logger.warn(
+          `A 'Range' header with more than ${MAX_RANGES} ranges was provided. A regular response will be sent for this request.`,
+        );
+
+        return undefined;
+      }
+
+      return range;
     }
 
     /**
@@ -1074,10 +1123,6 @@ function wrapper(context) {
           context.logger.error(
             "A malformed 'Range' header was provided. A regular response will be sent for this request.",
           );
-        } else if (parsedRanges.length > MAX_RANGES) {
-          context.logger.warn(
-            `A 'Range' header with more than ${MAX_RANGES} ranges was provided. A regular response will be sent for this request.`,
-          );
         } else if (parsedRanges.length > 1) {
           // Still more than one once overlapping and adjacent ranges are
           // merged: the parts of a `multipart/byteranges` body.
@@ -1097,7 +1142,11 @@ function wrapper(context) {
               createMultipartByteranges(
                 filename,
                 extra.outputFileSystem,
-                /** @type {import("range-parser").Ranges} */ (parsedRanges),
+                orderAsRequested(
+                  /** @type {import("range-parser").Ranges} */ (parsedRanges),
+                  /** @type {import("range-parser").Ranges} */
+                  (parseRequestedRanges(`${size}|${rangeHeader}`)),
+                ),
                 size,
                 /** @type {string | undefined} */
                 (getResponseHeader(res, "Content-Type")),

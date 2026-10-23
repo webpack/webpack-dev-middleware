@@ -1411,6 +1411,35 @@ describe.each([
           }
         });
 
+        it('should return the "200" code and the whole file for the "GET" request with more than 200 copies of one range', async () => {
+          // One range once merged, but still 201 asked for.
+          const response = await req
+            .get("/bundle.js")
+            .set(
+              "Range",
+              `bytes=${Array.from({ length: 201 }).fill("0-9").join(",")}`,
+            );
+
+          expect(response.statusCode).toBe(200);
+          expect(response.text).toBe(codeContent);
+        });
+
+        it('should order the "multipart/byteranges" parts by the first range each one holds', async () => {
+          const size = Buffer.byteLength(codeContent);
+          const response = await rawBody(
+            req.get("/bundle.js").set("Range", "bytes=100-200,400-500,0-300"),
+          );
+
+          expect(response.statusCode).toBe(206);
+          // `0-300` holds `100-200`, the first range asked for.
+          expect(
+            parseByteranges(
+              response.body,
+              response.headers["content-type"],
+            ).map((part) => part.headers["content-range"]),
+          ).toEqual([`bytes 0-300/${size}`, `bytes 400-500/${size}`]);
+        });
+
         it('should return the "200" code and the whole file for the "GET" request with more than 200 ranges', async () => {
           // Apart, so none of them merge.
           const ranges = [];
@@ -6449,6 +6478,24 @@ describe.each([
           expect(response.headers["content-type"]).toEqual(
             getContentTypeHeader(),
           );
+        });
+
+        it('should return the "200" code and the whole file for more than 200 copies of one range with a strong etag', async () => {
+          // The etag reads what the response is going to send: the range, were
+          // the cap applied after it, and that range would go out as the file.
+          const whole = await req.get("/bundle.js");
+          const response = await req
+            .get("/bundle.js")
+            .set(
+              "Range",
+              `bytes=${Array.from({ length: 201 }).fill("0-9").join(",")}`,
+            );
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["content-length"]).toBe(
+            whole.headers["content-length"],
+          );
+          expect(response.headers.etag).toBe(whole.headers.etag);
         });
 
         it('should return the "206" code and a "multipart/byteranges" body cut from the file read for the etag', async () => {
