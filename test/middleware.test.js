@@ -1377,6 +1377,47 @@ describe.each([
           ]);
         });
 
+        it('should abort a "multipart/byteranges" response whose later range fails to read, and keep serving', async () => {
+          const { outputFileSystem } = instance.context;
+          const { createReadStream } = outputFileSystem;
+          let calls = 0;
+
+          // The second range fails, after the first part is already sent.
+          outputFileSystem.createReadStream = (...args) => {
+            calls += 1;
+
+            const stream = createReadStream.apply(outputFileSystem, args);
+
+            if (calls === 2) {
+              process.nextTick(() =>
+                stream.destroy(new Error("the file went away")),
+              );
+            }
+
+            return stream;
+          };
+
+          try {
+            // Cut off: the client sees the connection end mid-body.
+            const outcome = await rawBody(
+              req.get("/bundle.js").set("Range", "bytes=0-9,5000-5099"),
+            ).then(
+              () => "completed",
+              () => "aborted",
+            );
+
+            expect(outcome).toBe("aborted");
+          } finally {
+            outputFileSystem.createReadStream = createReadStream;
+          }
+
+          expect(calls).toBe(2);
+
+          const response = await req.get("/bundle.js");
+
+          expect(response.statusCode).toBe(200);
+        });
+
         it('should return the "206" code and the "multipart/byteranges" headers for the "HEAD" request with multiple ranges', async () => {
           const response = await req
             .head("/bundle.js")

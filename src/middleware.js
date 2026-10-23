@@ -475,6 +475,15 @@ function wrapper(context) {
         return;
       }
 
+      // Too late for an error page: the status and part of the body are out
+      // already — a `multipart/byteranges` body whose later range fails to
+      // read, say. Cut the response off, so the client sees it incomplete
+      // rather than waiting on it.
+      if (getHeadersSent(res)) {
+        getOutgoing(res).destroy();
+        return;
+      }
+
       const content = statuses[status] || String(status);
       let document = Buffer.from(
         `<!DOCTYPE html>
@@ -1193,7 +1202,15 @@ function wrapper(context) {
           /** @type {import("fs").ReadStream} */ (bufferOrStream),
           true,
         );
-        errorHandler(error);
+
+        // A stream can fail part way — a `multipart/byteranges` body whose
+        // later range cannot be read — when there is no error page left to
+        // send. `sendError` cuts such a response off; where a framework does
+        // not report the headers as sent, sending the page throws, and the
+        // response is cut off here instead of the error going unhandled.
+        errorHandler(error).catch(() => {
+          getOutgoing(res).destroy();
+        });
       });
 
       pipe(res, /** @type {ReadStream} */ (bufferOrStream));
