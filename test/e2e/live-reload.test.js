@@ -315,6 +315,49 @@ describe("live reload (browser)", () => {
     expect(await readReloadMarker(page)).toBeUndefined();
   });
 
+  it("reads a page url without writing a property named by it", async () => {
+    app = await createHotApp({
+      query: "?apply=reload",
+      hmrPlugin: false,
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    // A setter on `Object.prototype`, in place before the client runs, sees a
+    // property written on any plain object under a name nothing has: had the
+    // client written one named after each of the page's parameters, the
+    // `probe` parameter would land here.
+    await page.evaluateOnNewDocument(() => {
+      /** @type {string[]} */
+      const written = [];
+
+      Object.defineProperty(globalThis, "probeWrites", { value: written });
+      // eslint-disable-next-line no-extend-native
+      Object.defineProperty(Object.prototype, "webpackDevMiddlewareProbe", {
+        get() {
+          return undefined;
+        },
+        set(value) {
+          written.push(value);
+        },
+        configurable: true,
+      });
+    });
+    await page.goto(
+      `${app.url}?__proto__=x&constructor=y&webpackDevMiddlewareProbe=z&webpack-dev-middleware-apply=nothing`,
+    );
+    await waitForAppText(page, "v1");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await settle();
+
+    expect(await page.evaluate(() => globalThis.probeWrites)).toEqual([]);
+    // And the opt-out among them is still read.
+    expect(await appText(page)).toBe("v1");
+    expect(await readReloadMarker(page)).toBe(true);
+  });
+
   it("matches a prefix with capitals in it", async () => {
     app = await createHotApp({
       query: "?apply=reload&pageParamPrefix=MyServer",
