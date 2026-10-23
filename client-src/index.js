@@ -99,15 +99,15 @@ const options = {
 };
 
 /**
- * Parse the entry's resource query. Hand-rolled (rather than through
- * `URLSearchParams`, which an ES5 browser does not have) with the same
- * decoding: `+` is a space and values are percent-decoded.
- * @param {string} query resource query, starting with `?`
- * @returns {Record<string, string>} query parameters
+ * Split a query into its parameters, as name and value. Hand-rolled (rather
+ * than through `URLSearchParams`, which an ES5 browser does not have) with the
+ * same decoding: `+` is a space and values are percent-decoded.
+ * @param {string} query query, starting with `?`
+ * @returns {[string, string][]} its parameters, in order
  */
-function parseQuery(query) {
-  /** @type {Record<string, string>} */
-  const parameters = {};
+function queryPairs(query) {
+  /** @type {[string, string][]} */
+  const pairs = [];
 
   /**
    * A malformed escape — a page url such as `?discount=50%`, which a browser
@@ -134,8 +134,26 @@ function parseQuery(query) {
 
     const separator = pair.indexOf("=");
 
-    parameters[decode(separator === -1 ? pair : pair.slice(0, separator))] =
-      separator === -1 ? "" : decode(pair.slice(separator + 1));
+    pairs.push([
+      decode(separator === -1 ? pair : pair.slice(0, separator)),
+      separator === -1 ? "" : decode(pair.slice(separator + 1)),
+    ]);
+  }
+
+  return pairs;
+}
+
+/**
+ * Parse the entry's resource query, which the build wrote.
+ * @param {string} query resource query, starting with `?`
+ * @returns {Record<string, string>} query parameters
+ */
+function parseQuery(query) {
+  /** @type {Record<string, string>} */
+  const parameters = {};
+
+  for (const [name, value] of queryPairs(query)) {
+    parameters[name] = value;
   }
 
   return parameters;
@@ -318,16 +336,18 @@ function urlOverride(setting) {
   // empty query asks for nothing.
   const search =
     typeof self === "undefined" || !self.location ? "" : self.location.search;
-  const parameters = parseQuery(search);
-  const names = Object.keys(parameters);
+  // Looked through rather than collected into an object: the names are the
+  // page's, any page's, and one such as `__proto__` must not become a property
+  // written. A name given twice takes its last value.
+  let value;
 
-  for (let index = 0; index < names.length; index++) {
-    if (names[index].toLowerCase() === wanted) {
-      return parameters[names[index]].toLowerCase();
+  for (const [name, given] of queryPairs(search)) {
+    if (name.toLowerCase() === wanted) {
+      value = given.toLowerCase();
     }
   }
 
-  return undefined;
+  return value;
 }
 
 /**

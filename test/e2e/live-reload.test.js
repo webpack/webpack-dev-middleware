@@ -315,6 +315,31 @@ describe("live reload (browser)", () => {
     expect(await readReloadMarker(page)).toBeUndefined();
   });
 
+  it("reads a page url that names `__proto__` or `constructor` like any other", async () => {
+    app = await createHotApp({
+      query: "?apply=reload",
+      hmrPlugin: false,
+      code: acceptedApp("v1"),
+    });
+    ({ page, browser } = await runBrowser());
+
+    await page.goto(
+      `${app.url}?__proto__=x&constructor=y&webpack-dev-middleware-apply=nothing`,
+    );
+    await waitForAppText(page, "v1");
+    await plantReloadMarker(page);
+
+    app.edit(acceptedApp("v2"));
+    await settle();
+
+    // The opt-out is still read, and nothing on `Object.prototype` changed.
+    expect(await appText(page)).toBe("v1");
+    expect(await readReloadMarker(page)).toBe(true);
+    expect(await page.evaluate(() => Object.keys(Object.prototype))).toEqual(
+      [],
+    );
+  });
+
   it("matches a prefix with capitals in it", async () => {
     app = await createHotApp({
       query: "?apply=reload&pageParamPrefix=MyServer",
