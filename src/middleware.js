@@ -1075,15 +1075,11 @@ function wrapper(context) {
           setStatusCode(res, 206);
           removeResponseHeader(res, "Content-Range");
 
-          // Whole when a strong `ETag` read it already, so each part can be
-          // cut from it rather than read again.
+          // Whole when a strong `ETag` read it already (it buffers what it
+          // reads), so each part can be cut from it rather than read again.
           const whole = Buffer.isBuffer(bufferOrStream)
             ? bufferOrStream
             : undefined;
-
-          if (bufferOrStream && !whole) {
-            destroyStream(/** @type {ReadStream} */ (bufferOrStream), true);
-          }
 
           let boundary;
 

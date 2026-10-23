@@ -1377,6 +1377,31 @@ describe.each([
           ]);
         });
 
+        it('should return the "500" code for the "GET" request with multiple ranges to a file that cannot be read', async () => {
+          const { outputFileSystem } = instance.context;
+          const { createReadStream } = outputFileSystem;
+          const spy = jest
+            .spyOn(outputFileSystem, "readFileSync")
+            .mockImplementation(() => {
+              throw new Error("error");
+            });
+
+          // Read whole, without a stream, so the read happens where the
+          // multipart body is built.
+          outputFileSystem.createReadStream = null;
+
+          try {
+            const response = await req
+              .get("/bundle.js")
+              .set("Range", "bytes=0-9,20-29");
+
+            expect(response.statusCode).toBe(500);
+          } finally {
+            outputFileSystem.createReadStream = createReadStream;
+            spy.mockRestore();
+          }
+        });
+
         it('should abort a "multipart/byteranges" response whose later range fails to read, and keep serving', async () => {
           const { outputFileSystem } = instance.context;
           const { createReadStream } = outputFileSystem;
