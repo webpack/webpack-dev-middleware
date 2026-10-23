@@ -1,5 +1,17 @@
 # Changelog
 
+## 8.6.0
+
+### Minor Changes
+
+- The overlay sends the client's token along when it asks `openEditorEndpoint` to open a file, so a server can tell the overlay's request from one another page made. Only to an endpoint on the page's own server (a rooted path), never to an absolute url, and only when the client was given a token. (by [@alexander-akait](https://github.com/alexander-akait) in [#2488](https://github.com/webpack/webpack-dev-middleware/pull/2488))
+
+### Patch Changes
+
+- Read the page's own url parameters without writing a property named after each one. A parameter such as `__proto__` or `constructor` is now looked through like any other instead of becoming a property name to write; behavior is otherwise unchanged. (by [@alexander-akait](https://github.com/alexander-akait) in [#2494](https://github.com/webpack/webpack-dev-middleware/pull/2494))
+
+- Expose the existing `devMiddleware` property in the Koa and Hono wrapper return types, preserving custom request and response types. (by [@MehdiZare](https://github.com/MehdiZare) in [#2489](https://github.com/webpack/webpack-dev-middleware/pull/2489))
+
 ## 8.5.0
 
 ### Minor Changes
