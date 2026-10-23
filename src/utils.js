@@ -11,6 +11,7 @@
 
 const crypto = require("node:crypto");
 const path = require("node:path");
+const { Readable } = require("node:stream");
 
 /** @typedef {import("./index").IncomingMessage} IncomingMessage */
 /** @typedef {import("./index").ServerResponse} ServerResponse */
@@ -564,6 +565,108 @@ function destroyStream(stream, suppress) {
     stream.removeAllListeners("error");
     stream.addListener("error", () => {});
   }
+}
+
+// A `Range` header with several ranges is answered with one part per range
+// rather than with the whole file. Whether that applies is the caller's
+// decision: ranges that cover the whole file, and more ranges than a cache or
+// a client can use, stay a regular response instead.
+
+/**
+ * @param {object} options options
+ * @param {string} options.filename filename
+ * @param {OutputFileSystem} options.outputFileSystem output file system
+ * @param {import("range-parser").Range[]} options.ranges ranges
+ * @param {number} options.size size
+ * @param {string | false} options.contentType content type
+ * @returns {{ boundary: string, byteLength: number, bufferOrStream: Readable }} result
+ */
+function createMultipartBody({
+  filename,
+  outputFileSystem,
+  ranges,
+  size,
+  contentType,
+}) {
+  const boundary = crypto.randomBytes(12).toString("hex");
+
+  /** @type {{ start: number, end: number, head: Buffer }[]} */
+  const parts = ranges.map((range) => ({
+    start: range.start,
+    end: range.end,
+    head: Buffer.from(
+      `\r\n--${boundary}\r\n${contentType ? `Content-Type: ${contentType}\r\n` : ""}Content-Range: bytes ${range.start}-${range.end}/${size}\r\n\r\n`,
+    ),
+  }));
+
+  const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
+
+  const byteLength =
+    parts.reduce(
+      (total, part) => total + part.head.length + (part.end - part.start + 1),
+      0,
+    ) + tail.length;
+
+  const isFsSupportsStream =
+    typeof outputFileSystem.createReadStream === "function";
+
+  /** @type {Buffer | undefined} */
+  let cachedFullBuffer;
+  if (!isFsSupportsStream) {
+    cachedFullBuffer = /** @type {Buffer} */ (
+      outputFileSystem.readFileSync(filename)
+    );
+  }
+
+  /**
+   * Each part head, each part body, then the closing boundary.
+   */
+  async function* body() {
+    for (const part of parts) {
+      yield part.head;
+
+      if (isFsSupportsStream) {
+        const { bufferOrStream } = createReadStreamOrReadFile(
+          filename,
+          outputFileSystem,
+          part.start,
+          part.end,
+        );
+
+        if (
+          typeof (
+            /** @type {import("fs").ReadStream} */ (bufferOrStream).pipe
+          ) === "function"
+        ) {
+          try {
+            yield* /** @type {import("fs").ReadStream} */ (bufferOrStream);
+          } finally {
+            destroyStream(
+              /** @type {import("fs").ReadStream} */ (bufferOrStream),
+              true,
+            );
+          }
+        } else {
+          yield /** @type {Buffer} */ (bufferOrStream).subarray(
+            part.start,
+            part.end + 1,
+          );
+        }
+      } else {
+        yield /** @type {Buffer} */ (cachedFullBuffer).subarray(
+          part.start,
+          part.end + 1,
+        );
+      }
+    }
+    yield tail;
+  }
+
+  return {
+    boundary,
+    byteLength,
+    bufferOrStream: Readable.from(body()),
+  };
 }
 
 /**
@@ -1768,6 +1871,7 @@ module.exports = {
   applyCors,
   clientQuery,
   createMimeTypes,
+  createMultipartBody,
   createReadStreamOrReadFile,
   destroyStream,
   escapeHtml,
