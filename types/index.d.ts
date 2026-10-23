@@ -27,6 +27,7 @@ declare namespace wdm {
     Stats,
     MultiStats,
     ReadStream,
+    Readable,
     FilenameWithExtra,
     HotOptions,
     HotInstance,
@@ -142,6 +143,7 @@ type Configuration = import("webpack").Configuration;
 type Stats = import("webpack").Stats;
 type MultiStats = import("webpack").MultiStats;
 type ReadStream = import("fs").ReadStream;
+type Readable = import("stream").Readable;
 type FilenameWithExtra = import("./middleware").FilenameWithExtra;
 type HotOptions = import("./hot").HotOptions;
 type HotInstance = import("./hot").HotInstance;
@@ -177,7 +179,7 @@ type ResponseData = {
   /**
    * data
    */
-  data: Buffer | ReadStream;
+  data: Buffer | Readable;
   /**
    * byte length
    */
@@ -189,7 +191,7 @@ type ModifyResponseData<
 > = (
   req: RequestInternal,
   res: ResponseInternal,
-  data: Buffer | ReadStream,
+  data: Buffer | Readable,
   byteLength: number,
 ) => ResponseData;
 type Context<

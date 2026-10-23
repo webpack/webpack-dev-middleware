@@ -25,6 +25,7 @@ const noop = () => {};
 /** @typedef {import("webpack").Stats} Stats */
 /** @typedef {import("webpack").MultiStats} MultiStats */
 /** @typedef {import("fs").ReadStream} ReadStream */
+/** @typedef {import("stream").Readable} Readable */
 /** @typedef {import("./middleware").FilenameWithExtra} FilenameWithExtra */
 /** @typedef {import("./hot").HotOptions} HotOptions */
 /** @typedef {import("./hot").HotInstance} HotInstance */
@@ -62,7 +63,7 @@ const noop = () => {};
 
 /**
  * @typedef {object} ResponseData
- * @property {Buffer | ReadStream} data data
+ * @property {Buffer | Readable} data data
  * @property {number} byteLength byte length
  */
 
@@ -72,7 +73,7 @@ const noop = () => {};
  * @callback ModifyResponseData
  * @param {RequestInternal} req req
  * @param {ResponseInternal} res res
- * @param {Buffer | ReadStream} data data
+ * @param {Buffer | Readable} data the body: a `Buffer`, a `ReadStream` of the file or of one range of it, or for more than one range a `Readable` of the `multipart/byteranges` body
  * @param {number} byteLength byte length
  * @returns {ResponseData}
  */

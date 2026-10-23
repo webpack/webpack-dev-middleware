@@ -1160,9 +1160,7 @@ function wrapper(context) {
           context.options.modifyResponseData(
             req,
             res,
-            // A multipart body is a plain `Readable`: the same stream to read
-            // or pipe, without a `ReadStream`'s file fields.
-            /** @type {Buffer | ReadStream} */ (bufferOrStream),
+            /** @type {Buffer | import("stream").Readable} */ (bufferOrStream),
             /** @type {number} */
             (byteLength),
           ));

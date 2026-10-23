@@ -331,7 +331,8 @@ const compiler = webpack(configuration);
 
 middleware(compiler, {
   // Note - if you send the `Range` header you will have `ReadStream`,
-  // and for more than one range a stream of the `multipart/byteranges` body
+  // and for more than one range a `Readable` (not a `ReadStream`: it has no `path`)
+  // of the `multipart/byteranges` body
   // Also `data` can be `string` or `Buffer`
   modifyResponseData: (req, res, data, byteLength) =>
     // Your logic

@@ -295,24 +295,27 @@ function parseByteranges(body, contentType) {
 
   expect(text.endsWith(`\r\n--${boundary}--\r\n`)).toBe(true);
 
-  return text
+  const parts = [];
+
+  for (const part of text
     .slice(0, text.lastIndexOf(`\r\n--${boundary}--`))
     .split(new RegExp(`(?:^|\r\n)--${boundary}\r\n`))
-    .slice(1)
-    .map((part) => {
-      const separator = part.indexOf("\r\n\r\n");
-      const headers = {};
+    .slice(1)) {
+    const separator = part.indexOf("\r\n\r\n");
+    const headers = {};
 
-      for (const line of part.slice(0, separator).split("\r\n")) {
-        const colon = line.indexOf(":");
+    for (const line of part.slice(0, separator).split("\r\n")) {
+      const colon = line.indexOf(":");
 
-        headers[line.slice(0, colon).toLowerCase()] = line
-          .slice(colon + 1)
-          .trim();
-      }
+      headers[line.slice(0, colon).toLowerCase()] = line
+        .slice(colon + 1)
+        .trim();
+    }
 
-      return { headers, body: part.slice(separator + 4) };
-    });
+    parts.push({ headers, body: part.slice(separator + 4) });
+  }
+
+  return parts;
 }
 
 function applyTestMiddleware(name, middlewares) {
@@ -1409,10 +1412,13 @@ describe.each([
         });
 
         it('should return the "200" code and the whole file for the "GET" request with more than 200 ranges', async () => {
-          const ranges = Array.from(
-            { length: 201 },
-            (_, index) => `${index * 2}-${index * 2}`,
-          );
+          // Apart, so none of them merge.
+          const ranges = [];
+
+          for (let index = 0; index < 201; index++) {
+            ranges.push(`${index * 2}-${index * 2}`);
+          }
+
           const response = await req
             .get("/bundle.js")
             .set("Range", `bytes=${ranges.join(",")}`);
