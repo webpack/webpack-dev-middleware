@@ -269,12 +269,18 @@ function getContentTypeHeader(name, ext = "js") {
  * @returns {import("supertest").Test} the request, buffering its body
  */
 function rawBody(request) {
-  return request.buffer(true).parse((res, callback) => {
-    const chunks = [];
+  return request.buffer(true).parse(
+    /**
+     * @param {import("node:http").IncomingMessage} res response
+     * @param {(error: Error | null, body: Buffer) => void} callback receives the body
+     */
+    (res, callback) => {
+      const chunks = [];
 
-    res.on("data", (chunk) => chunks.push(chunk));
-    res.on("end", () => callback(null, Buffer.concat(chunks)));
-  });
+      res.on("data", (chunk) => chunks.push(chunk));
+      res.on("end", () => callback(null, Buffer.concat(chunks)));
+    },
+  );
 }
 
 /**
@@ -1402,12 +1408,33 @@ describe.each([
           }
         });
 
+        it('should return the "200" code and the whole file for the "GET" request with more than 200 ranges', async () => {
+          const ranges = Array.from(
+            { length: 201 },
+            (_, index) => `${index * 2}-${index * 2}`,
+          );
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", `bytes=${ranges.join(",")}`);
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["content-type"]).toEqual(
+            getContentTypeHeader(),
+          );
+          expect(response.text).toBe(codeContent);
+        });
+
         it('should abort a "multipart/byteranges" response whose later range fails to read, and keep serving', async () => {
           const { outputFileSystem } = instance.context;
           const { createReadStream } = outputFileSystem;
           let calls = 0;
 
-          // The second range fails, after the first part is already sent.
+          /**
+           * The real stream, except that the second one opened — the second
+           * range's, after the first part is already sent — fails.
+           * @param {...unknown} args what `createReadStream` is called with
+           * @returns {import("fs").ReadStream} the stream
+           */
           outputFileSystem.createReadStream = (...args) => {
             calls += 1;
 

@@ -363,6 +363,11 @@ const parseRangeHeaders = memorize(
 
 const MAX_MAX_AGE = 31536000000;
 
+// The most ranges a `multipart/byteranges` answer is built for, as Apache's
+// `MaxRanges` default: each one costs a read and a part header, and a request
+// for more is answered with the whole file instead.
+const MAX_RANGES = 200;
+
 /**
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
@@ -1068,6 +1073,10 @@ function wrapper(context) {
         } else if (parsedRanges === -2) {
           context.logger.error(
             "A malformed 'Range' header was provided. A regular response will be sent for this request.",
+          );
+        } else if (parsedRanges.length > MAX_RANGES) {
+          context.logger.warn(
+            `A 'Range' header with more than ${MAX_RANGES} ranges was provided. A regular response will be sent for this request.`,
           );
         } else if (parsedRanges.length > 1) {
           // Still more than one once overlapping and adjacent ranges are
