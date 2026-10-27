@@ -262,6 +262,62 @@ function getContentTypeHeader(name, ext = "js") {
   return mime.contentType(ext);
 }
 
+/**
+ * Read a response's body as bytes, whatever its type: superagent would take a
+ * `multipart/*` one for a form.
+ * @param {import("supertest").Test} request request
+ * @returns {import("supertest").Test} the request, buffering its body
+ */
+function rawBody(request) {
+  return request.buffer(true).parse(
+    /**
+     * @param {import("node:http").IncomingMessage} res response
+     * @param {(error: Error | null, body: Buffer) => void} callback receives the body
+     */
+    (res, callback) => {
+      const chunks = [];
+
+      res.on("data", (chunk) => chunks.push(chunk));
+      res.on("end", () => callback(null, Buffer.concat(chunks)));
+    },
+  );
+}
+
+/**
+ * Split a `multipart/byteranges` body into its parts.
+ * @param {Buffer} body body
+ * @param {string} contentType the response's `Content-Type`
+ * @returns {{ headers: Record<string, string>, body: string }[]} its parts
+ */
+function parseByteranges(body, contentType) {
+  const [, boundary] = /boundary=([^;]+)/.exec(contentType);
+  const text = body.toString("latin1");
+
+  expect(text.endsWith(`\r\n--${boundary}--\r\n`)).toBe(true);
+
+  const parts = [];
+
+  for (const part of text
+    .slice(0, text.lastIndexOf(`\r\n--${boundary}--`))
+    .split(new RegExp(`(?:^|\r\n)--${boundary}\r\n`))
+    .slice(1)) {
+    const separator = part.indexOf("\r\n\r\n");
+    const headers = {};
+
+    for (const line of part.slice(0, separator).split("\r\n")) {
+      const colon = line.indexOf(":");
+
+      headers[line.slice(0, colon).toLowerCase()] = line
+        .slice(colon + 1)
+        .trim();
+    }
+
+    parts.push({ headers, body: part.slice(separator + 4) });
+  }
+
+  return parts;
+}
+
 function applyTestMiddleware(name, middlewares) {
   if (name === "hapi") {
     middlewares.push({
@@ -1294,12 +1350,174 @@ describe.each([
           expect(response.statusCode).toBe(200);
         });
 
-        it('should return the "200" code for the "GET" request with multiple range header which is ignored', async () => {
+        it('should return the "206" code and a "multipart/byteranges" body for the "GET" request with multiple ranges', async () => {
+          const size = Buffer.byteLength(codeContent);
+          const response = await rawBody(
+            req.get("/bundle.js").set("Range", "bytes=3200-3300, 3000-3100"),
+          );
+
+          expect(response.statusCode).toBe(206);
+          expect(response.headers["content-type"]).toMatch(
+            /^multipart\/byteranges; boundary=[0-9a-f]+$/,
+          );
+          expect(response.headers["content-range"]).toBeUndefined();
+          expect(response.headers["content-length"]).toBe(
+            String(response.body.byteLength),
+          );
+
+          // In the order asked for, each under the file's own type.
+          expect(
+            parseByteranges(response.body, response.headers["content-type"]),
+          ).toEqual([
+            {
+              headers: {
+                "content-type": getContentTypeHeader(),
+                "content-range": `bytes 3200-3300/${size}`,
+              },
+              body: codeContent.slice(3200, 3301),
+            },
+            {
+              headers: {
+                "content-type": getContentTypeHeader(),
+                "content-range": `bytes 3000-3100/${size}`,
+              },
+              body: codeContent.slice(3000, 3101),
+            },
+          ]);
+        });
+
+        it('should return the "500" code for the "GET" request with multiple ranges to a file that cannot be read', async () => {
+          const { outputFileSystem } = instance.context;
+          const { createReadStream } = outputFileSystem;
+          const spy = jest
+            .spyOn(outputFileSystem, "readFileSync")
+            .mockImplementation(() => {
+              throw new Error("error");
+            });
+
+          // Read whole, without a stream, so the read happens where the
+          // multipart body is built.
+          outputFileSystem.createReadStream = null;
+
+          try {
+            const response = await req
+              .get("/bundle.js")
+              .set("Range", "bytes=0-9,20-29");
+
+            expect(response.statusCode).toBe(500);
+          } finally {
+            outputFileSystem.createReadStream = createReadStream;
+            spy.mockRestore();
+          }
+        });
+
+        it('should return the "200" code and the whole file for the "GET" request with more than 200 copies of one range', async () => {
+          // One range once merged, but still 201 asked for.
           const response = await req
             .get("/bundle.js")
-            .set("Range", "bytes=3000-3100,3200-3300");
+            .set(
+              "Range",
+              `bytes=${Array.from({ length: 201 }).fill("0-9").join(",")}`,
+            );
 
           expect(response.statusCode).toBe(200);
+          expect(response.text).toBe(codeContent);
+        });
+
+        it('should order the "multipart/byteranges" parts by the first range each one holds', async () => {
+          const size = Buffer.byteLength(codeContent);
+          const response = await rawBody(
+            req.get("/bundle.js").set("Range", "bytes=100-200,400-500,0-300"),
+          );
+
+          expect(response.statusCode).toBe(206);
+          // `0-300` holds `100-200`, the first range asked for.
+          expect(
+            parseByteranges(
+              response.body,
+              response.headers["content-type"],
+            ).map((part) => part.headers["content-range"]),
+          ).toEqual([`bytes 0-300/${size}`, `bytes 400-500/${size}`]);
+        });
+
+        it('should return the "200" code and the whole file for the "GET" request with more than 200 ranges', async () => {
+          // Apart, so none of them merge.
+          const ranges = [];
+
+          for (let index = 0; index < 201; index++) {
+            ranges.push(`${index * 2}-${index * 2}`);
+          }
+
+          const response = await req
+            .get("/bundle.js")
+            .set("Range", `bytes=${ranges.join(",")}`);
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["content-type"]).toEqual(
+            getContentTypeHeader(),
+          );
+          expect(response.text).toBe(codeContent);
+        });
+
+        it('should abort a "multipart/byteranges" response whose later range fails to read, and keep serving', async () => {
+          const { outputFileSystem } = instance.context;
+          const { createReadStream } = outputFileSystem;
+          let calls = 0;
+
+          /**
+           * The real stream, except that the second one opened — the second
+           * range's, after the first part is already sent — fails.
+           * @param {...unknown} args what `createReadStream` is called with
+           * @returns {import("fs").ReadStream} the stream
+           */
+          outputFileSystem.createReadStream = (...args) => {
+            calls += 1;
+
+            const stream = createReadStream.apply(outputFileSystem, args);
+
+            if (calls === 2) {
+              process.nextTick(() =>
+                stream.destroy(new Error("the file went away")),
+              );
+            }
+
+            return stream;
+          };
+
+          try {
+            // Cut off: the client sees the connection end mid-body.
+            const outcome = await rawBody(
+              req.get("/bundle.js").set("Range", "bytes=0-9,5000-5099"),
+            ).then(
+              () => "completed",
+              () => "aborted",
+            );
+
+            expect(outcome).toBe("aborted");
+          } finally {
+            outputFileSystem.createReadStream = createReadStream;
+          }
+
+          expect(calls).toBe(2);
+
+          const response = await req.get("/bundle.js");
+
+          expect(response.statusCode).toBe(200);
+        });
+
+        it('should return the "206" code and the "multipart/byteranges" headers for the "HEAD" request with multiple ranges', async () => {
+          const response = await req
+            .head("/bundle.js")
+            .set("Range", "bytes=0-9,20-29");
+
+          expect(response.statusCode).toBe(206);
+          expect(response.headers["content-type"]).toMatch(
+            /^multipart\/byteranges; boundary=[0-9a-f]+$/,
+          );
+          expect(Number(response.headers["content-length"])).toBeGreaterThan(
+            20,
+          );
+          expect(response.text).toBeUndefined();
         });
 
         it('should return the "404" code for the "GET" request with to the non-public path', async () => {
@@ -6249,6 +6467,59 @@ describe.each([
 
           expect(response1.statusCode).toBe(200);
         });
+
+        it('should return the "200" code for the "GET" request with multiple ranges and a stale "If-Range" header', async () => {
+          const response = await req
+            .get("/bundle.js")
+            .set("If-Range", '"stale"')
+            .set("Range", "bytes=0-9,20-29");
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["content-type"]).toEqual(
+            getContentTypeHeader(),
+          );
+        });
+
+        it('should return the "200" code and the whole file for more than 200 copies of one range with a strong etag', async () => {
+          // The etag reads what the response is going to send: the range, were
+          // the cap applied after it, and that range would go out as the file.
+          const whole = await req.get("/bundle.js");
+          const response = await req
+            .get("/bundle.js")
+            .set(
+              "Range",
+              `bytes=${Array.from({ length: 201 }).fill("0-9").join(",")}`,
+            );
+
+          expect(response.statusCode).toBe(200);
+          expect(response.headers["content-length"]).toBe(
+            whole.headers["content-length"],
+          );
+          expect(response.headers.etag).toBe(whole.headers.etag);
+        });
+
+        it('should return the "206" code and a "multipart/byteranges" body cut from the file read for the etag', async () => {
+          const response = await rawBody(
+            req.get("/bundle.js").set("Range", "bytes=0-9,20-29"),
+          );
+
+          expect(response.statusCode).toBe(206);
+          expect(response.headers.etag).toBeDefined();
+          expect(response.headers["content-length"]).toBe(
+            String(response.body.byteLength),
+          );
+
+          const parts = parseByteranges(
+            response.body,
+            response.headers["content-type"],
+          );
+
+          expect(parts.map((part) => part.headers["content-range"])).toEqual([
+            expect.stringMatching(/^bytes 0-9\/\d+$/),
+            expect.stringMatching(/^bytes 20-29\/\d+$/),
+          ]);
+          expect(parts.map((part) => part.body.length)).toEqual([10, 10]);
+        });
       });
 
       describe("should work and generate strong etag without createReadStream", () => {
@@ -6279,6 +6550,23 @@ describe.each([
           expect(
             /[0-9a-f]{1,}-[0-9a-z+/=]{27}/i.test(response.headers.etag),
           ).toBe(true);
+        });
+
+        it('should return the "206" code and a "multipart/byteranges" body read without a stream', async () => {
+          const response = await rawBody(
+            req.get("/bundle.js").set("Range", "bytes=0-9,20-29"),
+          );
+
+          expect(response.statusCode).toBe(206);
+          expect(response.headers["content-length"]).toBe(
+            String(response.body.byteLength),
+          );
+          expect(
+            parseByteranges(
+              response.body,
+              response.headers["content-type"],
+            ).map((part) => part.body.length),
+          ).toEqual([10, 10]);
         });
       });
 

@@ -164,6 +164,37 @@ export function createMimeTypes(
   extra?: Record<string, string> | undefined,
 ): MimeTypes;
 /**
+ * The body of a `206` answer to a request for more than one range: a
+ * `multipart/byteranges` message, each part the bytes of one range under its
+ * own `Content-Type` and `Content-Range` (RFC 9110, section 14.6).
+ *
+ * Streamed one range after another when the file system can stream, so a
+ * request for a few slices of a large asset reads only those; a buffer when it
+ * cannot, or when the whole file was already read for a strong `ETag`.
+ * @param {string} filename filename
+ * @param {OutputFileSystem} outputFileSystem output file system
+ * @param {{ start: number, end: number }[]} ranges the ranges, in the order asked for
+ * @param {number} size the size of the whole file
+ * @param {string | undefined} contentType the file's own `Content-Type`
+ * @param {Buffer=} buffer the whole file, when it was already read
+ * @returns {{ bufferOrStream: (Buffer | import("stream").Readable), byteLength: number, boundary: string }} the body, its length and the boundary between its parts
+ */
+export function createMultipartByteranges(
+  filename: string,
+  outputFileSystem: OutputFileSystem,
+  ranges: {
+    start: number;
+    end: number;
+  }[],
+  size: number,
+  contentType: string | undefined,
+  buffer?: Buffer | undefined,
+): {
+  bufferOrStream: Buffer | import("stream").Readable;
+  byteLength: number;
+  boundary: string;
+};
+/**
  * @param {string} filename filename
  * @param {OutputFileSystem} outputFileSystem output file system
  * @param {number} start start
