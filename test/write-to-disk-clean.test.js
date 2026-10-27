@@ -145,6 +145,14 @@ describe("output.clean with writeToDisk", () => {
   }
 
   /**
+   * @param {string} file a source file
+   * @param {string} content its content
+   */
+  function writeSource(file, content) {
+    fs.writeFileSync(path.join(directory, file), content);
+  }
+
+  /**
    * @param {string} file a file in `public`
    * @param {string=} content its new content, or none to remove it
    */
@@ -285,6 +293,42 @@ describe("output.clean with writeToDisk", () => {
 
           // Both builds' bundles, and the earlier session's files.
           expect(listDist()).toHaveLength(4);
+        } finally {
+          await close();
+        }
+      });
+
+      it("cleans from disk a chunk named with a query string once it is gone", async () => {
+        writeSource(
+          "index.js",
+          'import(/* webpackChunkName: "lazy" */ "./lazy.js");',
+        );
+        writeSource("lazy.js", "console.log(1);");
+
+        const compiler = createCompiler({
+          clean: true,
+          chunkFilename: "[name].js?[contenthash]",
+        });
+        const { instance, close } = start(
+          compiler,
+          { writeToDisk: (targetPath) => targetPath.endsWith(".js") },
+          isPlugin,
+        );
+
+        try {
+          await built(instance);
+
+          expect(listDist()).toEqual([
+            "lazy.js",
+            expect.stringMatching(/^main\.[0-9a-f]+\.js$/),
+          ]);
+
+          // The entry no longer imports it, so the chunk is gone.
+          await rebuild(compiler);
+
+          expect(listDist()).toEqual([
+            expect.stringMatching(/^main\.[0-9a-f]+\.js$/),
+          ]);
         } finally {
           await close();
         }

@@ -639,14 +639,30 @@ function cleanDiskForWriteToDisk(compiler, context) {
     const outputPath = compilation.getPath(compiler.outputPath, {});
     /** @type {import("webpack").Compilation["assets"]} */
     const assets = {};
+    /** @type {import("webpack").Compilation["assetsInfo"]} */
+    const assetsInfo = new Map();
 
     for (const [name, source] of Object.entries(compilation.assets)) {
-      if (filter(path.join(outputPath, name))) {
-        assets[name] = source;
+      // As webpack writes it: `main.js?[contenthash]` is `main.js` on disk.
+      const queryOrHashIndex = name.search(/[?#]/);
+      const file =
+        queryOrHashIndex >= 0 ? name.slice(0, queryOrHashIndex) : name;
+
+      if (filter(path.join(outputPath, file))) {
+        assets[file] = source;
+
+        const info = compilation.assetsInfo.get(name);
+
+        if (info) {
+          assetsInfo.set(file, info);
+        }
       }
     }
 
-    const view = Object.create(compilation, { assets: { value: assets } });
+    const view = Object.create(compilation, {
+      assets: { value: assets },
+      assetsInfo: { value: assetsInfo },
+    });
 
     // What other plugins keep through the `keep` hook is kept on disk too.
     CleanPlugin.getCompilationHooks(view).keep.tap(PLUGIN_NAME, (file) =>
