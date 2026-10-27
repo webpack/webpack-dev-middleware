@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { Volume, createFsFromVolume } from "memfs";
 import webpack from "webpack";
 
 import middleware from "../src";
@@ -160,6 +161,29 @@ describe("output.clean with writeToDisk", () => {
           }
         });
       }
+
+      it('writes to disk, and cleans it, with "writeToDisk" true and an "outputFileSystem" of your own', async () => {
+        const compiler = createCompiler({ clean: true });
+        const { instance, close } = start(
+          compiler,
+          {
+            writeToDisk: true,
+            outputFileSystem: createFsFromVolume(new Volume()),
+          },
+          isPlugin,
+        );
+
+        try {
+          await built(instance);
+
+          // Before, nothing reached the disk at all: only the stale files.
+          expect(listDist()).toEqual([
+            expect.stringMatching(/^main\.[0-9a-f]+\.js$/),
+          ]);
+        } finally {
+          await close();
+        }
+      });
 
       it("keeps what `clean.keep` keeps on disk", async () => {
         const compiler = createCompiler({ clean: { keep: /\.css$/ } });

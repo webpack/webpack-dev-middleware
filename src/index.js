@@ -593,8 +593,8 @@ function hookForWriteToDisk(compiler, context) {
  * the same rules as webpack's output: the whole directory on the first build,
  * what the last build left behind after that, `clean.keep`, `clean.dry`, the
  * `keep` hook other plugins tap, and hot update files kept a little while.
- * `writeToDisk: true` needs none of this: the real file system is the output
- * file system then, and webpack cleans it itself.
+ * `writeToDisk: true` on its own needs none of this: the real file system is
+ * the output file system then, and webpack cleans it itself.
  * @param {Compiler} compiler compiler
  */
 function cleanDiskForWriteToDisk(compiler) {
@@ -736,7 +736,16 @@ function wdm(compiler, options = {}, isPlugin = false) {
     );
   }
 
-  if (typeof options.writeToDisk === "function") {
+  // Copied to disk whenever webpack does not write there itself: always for a
+  // function, which filters what is copied, and for `true` when an
+  // `outputFileSystem` of your own is webpack's, as it then stays — before,
+  // `writeToDisk: true` with one wrote nothing to disk at all.
+  if (
+    typeof options.writeToDisk === "function" ||
+    (options.writeToDisk === true &&
+      options.outputFileSystem &&
+      options.outputFileSystem !== fs)
+  ) {
     for (const compiler of compilersToModify) {
       hookForWriteToDisk(compiler, context);
       cleanDiskForWriteToDisk(compiler);

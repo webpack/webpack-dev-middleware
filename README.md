@@ -301,7 +301,7 @@ Type: `Object`
 Default: [memfs](https://github.com/streamich/memfs)
 
 Set the default file system which will be used by webpack as primary destination of generated files.
-This option isn't affected by the [writeToDisk](#writeToDisk) option.
+This option isn't affected by the [writeToDisk](#writeToDisk) option. With `writeToDisk` set, files are written to it as before and also copied to disk — with `true` as with a function.
 
 You have to provide `.join()` and `mkdirp` method to the `outputFileSystem` instance manually for compatibility with `webpack@4`.
 
