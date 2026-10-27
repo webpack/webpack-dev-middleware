@@ -583,6 +583,47 @@ function hookForWriteToDisk(compiler, context) {
 }
 
 /**
+ * `output.clean` for the files `writeToDisk` copies to the real disk. With a
+ * function, webpack writes to the in-memory file system and cleans that, while
+ * the copies on disk were never cleaned: every rebuild left another
+ * `main.[contenthash].js` behind, and the previous session's files stayed.
+ *
+ * webpack's own `CleanPlugin` is applied a second time, to a view of the
+ * compiler whose `outputFileSystem` is the real one, so the disk is cleaned by
+ * the same rules as webpack's output: the whole directory on the first build,
+ * what the last build left behind after that, `clean.keep`, `clean.dry`, the
+ * `keep` hook other plugins tap, and hot update files kept a little while.
+ * `writeToDisk: true` needs none of this: the real file system is the output
+ * file system then, and webpack cleans it itself.
+ * @param {Compiler} compiler compiler
+ */
+function cleanDiskForWriteToDisk(compiler) {
+  const { clean } = compiler.options.output;
+
+  // @ts-expect-error
+  if (!clean || compiler.hasWebpackDevMiddlewareDiskClean) {
+    return;
+  }
+
+  const diskCompiler = Object.create(compiler, {
+    outputFileSystem: { value: fs },
+  });
+
+  new compiler.webpack.CleanPlugin(clean === true ? {} : clean).apply(
+    diskCompiler,
+  );
+
+  // @ts-expect-error
+  compiler.hasWebpackDevMiddlewareDiskClean = true;
+}
+
+/**
+ * TODO in the next major release remove the standalone mode, where the
+ * middleware starts `compiler.watch()` and prints stats itself, and keep only
+ * the plugin one, where the host (webpack-cli, webpack-dev-server) owns
+ * watching and stats, as webpack-dev-server uses it: drop `isPlugin` here and
+ * `usePlugin` from the framework wrappers, with the watching, `close()` and
+ * `printStats` paths that exist only for standalone use.
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
@@ -698,6 +739,7 @@ function wdm(compiler, options = {}, isPlugin = false) {
   if (typeof options.writeToDisk === "function") {
     for (const compiler of compilersToModify) {
       hookForWriteToDisk(compiler, context);
+      cleanDiskForWriteToDisk(compiler);
     }
   }
 
@@ -733,6 +775,7 @@ function wdm(compiler, options = {}, isPlugin = false) {
   }
 
   // Start watching, but only for standalone usage, for plugin usage stats will be printed by external code, for example - webpack-cli
+  // TODO in the next major release remove, with the standalone mode (see `wdm`).
   if (!isPlugin) {
     /**
      * @param {Error | null} err err

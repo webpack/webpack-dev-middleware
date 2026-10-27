@@ -293,6 +293,8 @@ middleware(compiler, {
 });
 ```
 
+With either value, [`output.clean`](https://webpack.js.org/configuration/output/#outputclean) cleans the files on disk as it cleans webpack's output: the directory on the first build, the files a rebuild no longer emits after that, with `clean.keep` and `clean.dry` honored.
+
 ### outputFileSystem
 
 Type: `Object`  

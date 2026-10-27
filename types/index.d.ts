@@ -1,5 +1,11 @@
 export = wdm;
 /**
+ * TODO in the next major release remove the standalone mode, where the
+ * middleware starts `compiler.watch()` and prints stats itself, and keep only
+ * the plugin one, where the host (webpack-cli, webpack-dev-server) owns
+ * watching and stats, as webpack-dev-server uses it: drop `isPlugin` here and
+ * `usePlugin` from the framework wrappers, with the watching, `close()` and
+ * `printStats` paths that exist only for standalone use.
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
