@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import CopyPlugin from "copy-webpack-plugin";
 import { Volume, createFsFromVolume } from "memfs";
 import webpack from "webpack";
 
@@ -36,15 +37,17 @@ describe("output.clean with writeToDisk", () => {
 
   /**
    * @param {import("webpack").Configuration["output"]} output output options
+   * @param {import("webpack").Configuration["plugins"]=} plugins plugins
    * @returns {import("webpack").Compiler} compiler
    */
-  function createCompiler(output) {
+  function createCompiler(output, plugins = []) {
     return webpack({
       mode: "development",
       devtool: false,
       context: directory,
       entry: "./index.js",
       output: { path: dist, filename: "main.[contenthash].js", ...output },
+      plugins,
       infrastructureLogging: { level: "error" },
       stats: "none",
     });
@@ -100,9 +103,14 @@ describe("output.clean with writeToDisk", () => {
   /**
    * Change the source and wait for the build the watcher starts for it.
    * @param {import("webpack").Compiler} compiler compiler
+   * @param {() => void=} change the change, the entry's source by default
    * @returns {Promise<void>} once rebuilt
    */
-  async function rebuild(compiler) {
+  async function rebuild(
+    compiler,
+    change = () =>
+      fs.writeFileSync(path.join(directory, "index.js"), "console.log(2);"),
+  ) {
     const done = new Promise((resolve) => {
       compiler.hooks.done.tap("test", () => resolve());
     });
@@ -111,13 +119,52 @@ describe("output.clean with writeToDisk", () => {
     await new Promise((resolve) => {
       setTimeout(resolve, 500);
     });
-    fs.writeFileSync(path.join(directory, "index.js"), "console.log(2);");
+    change();
 
     await done;
     // The middleware writes to disk as the build emits; let it finish.
     await new Promise((resolve) => {
       setTimeout(resolve, 100);
     });
+  }
+
+  /**
+   * @param {string} file a file in `dist`
+   * @returns {string} its path
+   */
+  function inDist(file) {
+    return path.join(dist, file);
+  }
+
+  /**
+   * @param {string} file a file in `dist`
+   * @returns {string} its content
+   */
+  function readDist(file) {
+    return fs.readFileSync(inDist(file), "utf8");
+  }
+
+  /**
+   * @param {string} file a file in `public`
+   * @param {string=} content its new content, or none to remove it
+   */
+  function changePublic(file, content) {
+    const target = path.join(directory, "public", file);
+
+    if (typeof content === "string") {
+      fs.writeFileSync(target, content);
+    } else {
+      fs.rmSync(target);
+    }
+  }
+
+  /**
+   * Create `public`, for copy-webpack-plugin to copy to the output.
+   */
+  function createPublic() {
+    fs.mkdirSync(path.join(directory, "public", "images"), { recursive: true });
+    changePublic("robots.txt", "v1");
+    changePublic("images/logo.svg", "<svg/>");
   }
 
   const writeToDiskValues = [
@@ -241,6 +288,91 @@ describe("output.clean with writeToDisk", () => {
         } finally {
           await close();
         }
+      });
+
+      describe("with copy-webpack-plugin", () => {
+        beforeEach(createPublic);
+
+        /**
+         * @returns {import("webpack").Compiler} compiler copying `public` to the output
+         */
+        function createCopyingCompiler() {
+          return createCompiler({ clean: true }, [
+            new CopyPlugin({ patterns: [{ from: "public" }] }),
+          ]);
+        }
+
+        for (const [label, writeToDisk] of writeToDiskValues) {
+          it(`writes the copied files to disk and keeps them clean with "writeToDisk" ${label}`, async () => {
+            const compiler = createCopyingCompiler();
+            const { instance, close } = start(
+              compiler,
+              { writeToDisk },
+              isPlugin,
+            );
+            const bundle = expect.stringMatching(/^main\.[0-9a-f]+\.js$/);
+
+            try {
+              await built(instance);
+
+              // The copied files beside the bundle, the stale ones gone.
+              expect(listDist()).toEqual([
+                "images/logo.svg",
+                bundle,
+                "robots.txt",
+              ]);
+
+              // A rebuild of the bundle leaves what is still copied.
+              const [, firstBundle] = listDist();
+
+              await rebuild(compiler);
+
+              expect(listDist()).toEqual([
+                "images/logo.svg",
+                bundle,
+                "robots.txt",
+              ]);
+              expect(listDist()[1]).not.toBe(firstBundle);
+
+              // A changed file is copied again.
+              await rebuild(compiler, () => changePublic("robots.txt", "v2"));
+
+              expect(readDist("robots.txt")).toBe("v2");
+
+              // One no longer copied is cleaned.
+              await rebuild(compiler, () => changePublic("images/logo.svg"));
+
+              expect(listDist()).toEqual([bundle, "robots.txt"]);
+            } finally {
+              await close();
+            }
+          });
+        }
+
+        it("leaves the copied files off disk when the function does not write them", async () => {
+          const compiler = createCopyingCompiler();
+          const { instance, close } = start(
+            compiler,
+            { writeToDisk: (targetPath) => targetPath.endsWith(".js") },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            // Served from memory, never written, and the stale files cleaned.
+            expect(listDist()).toEqual([
+              expect.stringMatching(/^main\.[0-9a-f]+\.js$/),
+            ]);
+            expect(
+              instance.context.outputFileSystem
+                .readFileSync(inDist("robots.txt"))
+                .toString(),
+            ).toBe("v1");
+          } finally {
+            await close();
+          }
+        });
       });
     });
   }
