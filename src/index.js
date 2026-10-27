@@ -596,11 +596,19 @@ function hookForWriteToDisk(compiler, context) {
  * `writeToDisk: true` on its own needs none of this: the real file system is
  * the output file system then, and webpack cleans it itself.
  *
+ * The disk cleaner sees only the assets the `writeToDisk` function writes, so
+ * a file it skips is cleaned from disk like any other the build no longer
+ * writes there, rather than kept from an earlier session; webpack's own
+ * cleaner still sees them all.
+ *
  * Rspack cleans natively and has no such plugin to apply again, so there the
  * copies on disk are left as before rather than failing to start.
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
  * @param {Compiler} compiler compiler
+ * @param {WithOptional<Context<Request, Response>, "watching" | "outputFileSystem">} context context
  */
-function cleanDiskForWriteToDisk(compiler) {
+function cleanDiskForWriteToDisk(compiler, context) {
   const { clean } = compiler.options.output;
 
   // @ts-expect-error
@@ -615,13 +623,61 @@ function cleanDiskForWriteToDisk(compiler) {
     return;
   }
 
+  const { CleanPlugin } = compiler.webpack;
+
+  /**
+   * @param {import("webpack").Compilation} compilation compilation
+   * @returns {import("webpack").Compilation} a view of it with only the assets written to disk
+   */
+  const writtenToDisk = (compilation) => {
+    const { writeToDisk: filter } = context.options;
+
+    if (typeof filter !== "function") {
+      return compilation;
+    }
+
+    const outputPath = compilation.getPath(compiler.outputPath, {});
+    /** @type {import("webpack").Compilation["assets"]} */
+    const assets = {};
+
+    for (const [name, source] of Object.entries(compilation.assets)) {
+      if (filter(path.join(outputPath, name))) {
+        assets[name] = source;
+      }
+    }
+
+    const view = Object.create(compilation, { assets: { value: assets } });
+
+    // What other plugins keep through the `keep` hook is kept on disk too.
+    CleanPlugin.getCompilationHooks(view).keep.tap(PLUGIN_NAME, (file) =>
+      CleanPlugin.getCompilationHooks(compilation).keep.call(file),
+    );
+
+    return view;
+  };
+
   const diskCompiler = Object.create(compiler, {
     outputFileSystem: { value: fs },
+    hooks: {
+      value: Object.create(compiler.hooks, {
+        emit: {
+          value: {
+            /**
+             * @param {Parameters<Compiler["hooks"]["emit"]["tapAsync"]>[0]} options options
+             * @param {(compilation: import("webpack").Compilation, callback: (err?: Error | null) => void) => void} fn fn
+             * @returns {void}
+             */
+            tapAsync: (options, fn) =>
+              compiler.hooks.emit.tapAsync(options, (compilation, callback) =>
+                fn(writtenToDisk(compilation), callback),
+              ),
+          },
+        },
+      }),
+    },
   });
 
-  new compiler.webpack.CleanPlugin(clean === true ? {} : clean).apply(
-    diskCompiler,
-  );
+  new CleanPlugin(clean === true ? {} : clean).apply(diskCompiler);
 
   // @ts-expect-error
   compiler.hasWebpackDevMiddlewareDiskClean = true;
@@ -758,7 +814,7 @@ function wdm(compiler, options = {}, isPlugin = false) {
   ) {
     for (const compiler of compilersToModify) {
       hookForWriteToDisk(compiler, context);
-      cleanDiskForWriteToDisk(compiler);
+      cleanDiskForWriteToDisk(compiler, context);
     }
   }
 

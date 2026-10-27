@@ -374,6 +374,9 @@ describe("output.clean with writeToDisk", () => {
         }
 
         it("leaves the copied files off disk when the function does not write them", async () => {
+          // One of them on disk from an earlier session, to be cleaned.
+          fs.writeFileSync(inDist("robots.txt"), "old");
+
           const compiler = createCopyingCompiler();
           const { instance, close } = start(
             compiler,
@@ -384,7 +387,8 @@ describe("output.clean with writeToDisk", () => {
           try {
             await built(instance);
 
-            // Served from memory, never written, and the stale files cleaned.
+            // Served from memory, never written, and the stale files cleaned, the
+            // earlier copy of one the function skips too.
             expect(listDist()).toEqual([
               expect.stringMatching(/^main\.[0-9a-f]+\.js$/),
             ]);
