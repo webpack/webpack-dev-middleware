@@ -568,3 +568,96 @@ describe("output.clean with writeToDisk", () => {
     });
   }
 });
+
+// What `writeToDisk` adds to a webpack with `additionalOutputs`, checked on any
+// webpack by giving the compiler that hook.
+describe("writeToDisk with an additionalOutputs hook", () => {
+  /**
+   * @returns {import("webpack").Compiler & { hooks: { additionalOutputs: import("tapable").SyncHook<[Set<{ outputFileSystem: unknown, test?: (targetPath: string) => boolean }>]> } }} a compiler having the hook
+   */
+  function createCompilerWithHook() {
+    const compiler = webpack({
+      mode: "development",
+      entry: "./index.js",
+      infrastructureLogging: { level: "error" },
+      stats: "none",
+    });
+    // A `SyncHook` as webpack has, from the class its own hooks use.
+    const SyncHook = compiler.hooks.compilation.constructor;
+
+    return Object.create(compiler, {
+      hooks: {
+        value: {
+          ...compiler.hooks,
+          additionalOutputs: new SyncHook(["outputs"]),
+        },
+      },
+    });
+  }
+
+  /**
+   * @param {ReturnType<typeof createCompilerWithHook>} compiler compiler
+   * @returns {{ outputFileSystem: unknown, test?: (targetPath: string) => boolean }[]} the outputs added
+   */
+  function collect(compiler) {
+    const outputs = new Set();
+
+    compiler.hooks.additionalOutputs.call(outputs);
+
+    return [...outputs];
+  }
+
+  it("adds the disk as an additional output, taking what the function takes", async () => {
+    const compiler = createCompilerWithHook();
+    const instance = middleware(
+      compiler,
+      { writeToDisk: (targetPath) => targetPath.endsWith(".js") },
+      true,
+    );
+
+    try {
+      const [output, ...rest] = collect(compiler);
+
+      expect(rest).toHaveLength(0);
+      expect(output.outputFileSystem).toBe(fs);
+      expect(output.test("/dist/main.js")).toBe(true);
+      expect(output.test("/dist/robots.txt")).toBe(false);
+      // webpack writes there, so the middleware copies nothing itself.
+      expect(
+        compiler.hooks.assetEmitted.taps.filter(
+          (tap) => tap.name === "DevMiddleware",
+        ),
+      ).toHaveLength(0);
+    } finally {
+      await new Promise((resolve) => {
+        instance.close(resolve);
+      });
+    }
+  });
+
+  it('adds the disk taking every asset with "writeToDisk" true and an "outputFileSystem" of your own, once for the compiler', async () => {
+    const compiler = createCompilerWithHook();
+    const options = {
+      writeToDisk: true,
+      outputFileSystem: createFsFromVolume(new Volume()),
+    };
+    const first = middleware(compiler, options, true);
+    const second = middleware(compiler, options, true);
+
+    try {
+      const outputs = collect(compiler);
+
+      expect(outputs).toHaveLength(1);
+      expect(outputs[0].test("/dist/robots.txt")).toBe(true);
+    } finally {
+      await Promise.all(
+        [first, second].map(
+          (instance) =>
+            new Promise((resolve) => {
+              instance.close(resolve);
+            }),
+        ),
+      );
+    }
+  });
+});
