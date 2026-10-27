@@ -54,14 +54,12 @@ describe("output.clean with writeToDisk", () => {
    * @returns {string[]} the files in `dist`, relative to it
    */
   function listDist() {
+    // Paths as strings rather than `Dirent`s: `Dirent#parentPath` is newer
+    // than the oldest Node.js this package supports.
     return fs
-      .readdirSync(dist, { recursive: true, withFileTypes: true })
-      .filter((entry) => entry.isFile())
-      .map((entry) =>
-        path
-          .relative(dist, path.join(entry.parentPath, entry.name))
-          .replaceAll("\\", "/"),
-      )
+      .readdirSync(dist, { recursive: true, encoding: "utf8" })
+      .filter((file) => fs.statSync(path.join(dist, file)).isFile())
+      .map((file) => file.replaceAll("\\", "/"))
       .toSorted();
   }
 
