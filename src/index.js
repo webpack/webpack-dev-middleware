@@ -595,6 +595,9 @@ function hookForWriteToDisk(compiler, context) {
  * `keep` hook other plugins tap, and hot update files kept a little while.
  * `writeToDisk: true` on its own needs none of this: the real file system is
  * the output file system then, and webpack cleans it itself.
+ *
+ * Rspack cleans natively and has no such plugin to apply again, so there the
+ * copies on disk are left as before rather than failing to start.
  * @param {Compiler} compiler compiler
  */
 function cleanDiskForWriteToDisk(compiler) {
@@ -602,6 +605,13 @@ function cleanDiskForWriteToDisk(compiler) {
 
   // @ts-expect-error
   if (!clean || compiler.hasWebpackDevMiddlewareDiskClean) {
+    return;
+  }
+
+  if (
+    "rspack" in compiler ||
+    typeof compiler.webpack?.CleanPlugin !== "function"
+  ) {
     return;
   }
 

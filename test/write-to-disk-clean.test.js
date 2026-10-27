@@ -290,6 +290,30 @@ describe("output.clean with writeToDisk", () => {
         }
       });
 
+      it("writes to disk without cleaning it when the compiler has no `CleanPlugin`, as with Rspack", async () => {
+        const compiler = createCompiler({ clean: true });
+
+        compiler.webpack = { ...compiler.webpack, CleanPlugin: undefined };
+
+        const { instance, close } = start(
+          compiler,
+          { writeToDisk: () => true },
+          isPlugin,
+        );
+
+        try {
+          await built(instance);
+
+          expect(listDist()).toEqual([
+            expect.stringMatching(/^main\.[0-9a-f]+\.js$/),
+            "nested/stale.css",
+            "stale.js",
+          ]);
+        } finally {
+          await close();
+        }
+      });
+
       describe("with copy-webpack-plugin", () => {
         beforeEach(createPublic);
 
