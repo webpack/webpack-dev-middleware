@@ -583,120 +583,55 @@ function hookForWriteToDisk(compiler, context) {
 }
 
 /**
- * `output.clean` for the files `writeToDisk` copies to the real disk. With a
- * function, webpack writes to the in-memory file system and cleans that, while
- * the copies on disk were never cleaned: every rebuild left another
- * `main.[contenthash].js` behind, and the previous session's files stayed.
- *
- * webpack's own `CleanPlugin` is applied a second time, to a view of the
- * compiler whose `outputFileSystem` is the real one, so the disk is cleaned by
- * the same rules as webpack's output: the whole directory on the first build,
- * what the last build left behind after that, `clean.keep`, `clean.dry`, the
- * `keep` hook other plugins tap, and hot update files kept a little while.
- * `writeToDisk: true` on its own needs none of this: the real file system is
- * the output file system then, and webpack cleans it itself.
- *
- * The disk cleaner sees only the assets the `writeToDisk` function writes, so
- * a file it skips is cleaned from disk like any other the build no longer
- * writes there, rather than kept from an earlier session; webpack's own
- * cleaner still sees them all.
- *
- * Rspack cleans natively and has no such plugin to apply again, so there the
- * copies on disk are left as before rather than failing to start.
+ * Has webpack write to the real disk what `writeToDisk` takes, besides its
+ * own output file system, where webpack supports more outputs: it then writes
+ * links, permissions and times there as it does to its own, and `output.clean`
+ * cleans the disk too. Rspack and webpack before 5.113.0 have no such hook, so
+ * there the middleware copies to disk itself, which is never cleaned.
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
  * @param {Compiler} compiler compiler
  * @param {WithOptional<Context<Request, Response>, "watching" | "outputFileSystem">} context context
+ * @returns {boolean} true when webpack writes to disk, otherwise false
  */
-function cleanDiskForWriteToDisk(compiler, context) {
-  const { clean } = compiler.options.output;
-
-  // @ts-expect-error
-  if (!clean || compiler.hasWebpackDevMiddlewareDiskClean) {
-    return;
-  }
-
-  if (
-    "rspack" in compiler ||
-    typeof compiler.webpack?.CleanPlugin !== "function"
-  ) {
-    return;
-  }
-
-  const { CleanPlugin } = compiler.webpack;
-
-  /**
-   * @param {import("webpack").Compilation} compilation compilation
-   * @returns {import("webpack").Compilation} a view of it with only the assets written to disk
-   */
-  const writtenToDisk = (compilation) => {
-    const { writeToDisk: filter } = context.options;
-
-    if (typeof filter !== "function") {
-      return compilation;
-    }
-
-    const outputPath = compilation.getPath(compiler.outputPath, {});
-    /** @type {import("webpack").Compilation["assets"]} */
-    const assets = {};
-    /** @type {import("webpack").Compilation["assetsInfo"]} */
-    const assetsInfo = new Map();
-
-    for (const [name, source] of Object.entries(compilation.assets)) {
-      // As webpack writes it: `main.js?[contenthash]` is `main.js` on disk.
-      const queryOrHashIndex = name.search(/[?#]/);
-      const file =
-        queryOrHashIndex >= 0 ? name.slice(0, queryOrHashIndex) : name;
-
-      if (filter(path.join(outputPath, file))) {
-        assets[file] = source;
-
-        const info = compilation.assetsInfo.get(name);
-
-        if (info) {
-          assetsInfo.set(file, info);
-        }
-      }
-    }
-
-    const view = Object.create(compilation, {
-      assets: { value: assets },
-      assetsInfo: { value: assetsInfo },
-    });
-
-    // What other plugins keep through the `keep` hook is kept on disk too.
-    CleanPlugin.getCompilationHooks(view).keep.tap(PLUGIN_NAME, (file) =>
-      CleanPlugin.getCompilationHooks(compilation).keep.call(file),
+function addDiskOutput(compiler, context) {
+  const { additionalOutputs } =
+    /** @type {Compiler["hooks"] & { additionalOutputs?: import("tapable").SyncHook<[Set<{ outputFileSystem: OutputFileSystem, test?: (targetPath: string) => boolean }>]> }} */ (
+      compiler.hooks
     );
 
-    return view;
-  };
-
-  const diskCompiler = Object.create(compiler, {
-    outputFileSystem: { value: fs },
-    hooks: {
-      value: Object.create(compiler.hooks, {
-        emit: {
-          value: {
-            /**
-             * @param {Parameters<Compiler["hooks"]["emit"]["tapAsync"]>[0]} options options
-             * @param {(compilation: import("webpack").Compilation, callback: (err?: Error | null) => void) => void} fn fn
-             * @returns {void}
-             */
-            tapAsync: (options, fn) =>
-              compiler.hooks.emit.tapAsync(options, (compilation, callback) =>
-                fn(writtenToDisk(compilation), callback),
-              ),
-          },
-        },
-      }),
-    },
-  });
-
-  new CleanPlugin(clean === true ? {} : clean).apply(diskCompiler);
+  if (!additionalOutputs) {
+    return false;
+  }
 
   // @ts-expect-error
-  compiler.hasWebpackDevMiddlewareDiskClean = true;
+  if (compiler.hasWebpackDevMiddlewareDiskOutput) {
+    return true;
+  }
+
+  const output = {
+    outputFileSystem: /** @type {OutputFileSystem} */ (
+      /** @type {unknown} */ (fs)
+    ),
+    /**
+     * @param {string} targetPath absolute path of the asset
+     * @returns {boolean} true when the asset is written to disk
+     */
+    test: (targetPath) => {
+      const { writeToDisk: filter } = context.options;
+
+      return typeof filter === "function" ? filter(targetPath) : true;
+    },
+  };
+
+  additionalOutputs.tap(PLUGIN_NAME, (outputs) => {
+    outputs.add(output);
+  });
+
+  // @ts-expect-error
+  compiler.hasWebpackDevMiddlewareDiskOutput = true;
+
+  return true;
 }
 
 // TODO in the next major release remove the standalone mode, where the
@@ -818,10 +753,12 @@ function wdm(compiler, options = {}, isPlugin = false) {
     );
   }
 
-  // Copied to disk whenever webpack does not write there itself: always for a
-  // function, which filters what is copied, and for `true` when an
+  // Written to disk besides webpack's own output file system: always for a
+  // function, which filters what is written, and for `true` when an
   // `outputFileSystem` of your own is webpack's, as it then stays — before,
   // `writeToDisk: true` with one wrote nothing to disk at all.
+  // TODO in the next major release require a webpack with `additionalOutputs`
+  // and drop `hookForWriteToDisk`, the copy to disk for those without it.
   if (
     typeof options.writeToDisk === "function" ||
     (options.writeToDisk === true &&
@@ -829,8 +766,9 @@ function wdm(compiler, options = {}, isPlugin = false) {
       options.outputFileSystem !== fs)
   ) {
     for (const compiler of compilersToModify) {
-      hookForWriteToDisk(compiler, context);
-      cleanDiskForWriteToDisk(compiler, context);
+      if (!addDiskOutput(compiler, context)) {
+        hookForWriteToDisk(compiler, context);
+      }
     }
   }
 
