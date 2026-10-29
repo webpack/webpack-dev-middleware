@@ -1,5 +1,21 @@
 # Changelog
 
+## 8.6.0
+
+### Minor Changes
+
+- Answer a `Range` header with more than one range with `206 Partial Content` and a `multipart/byteranges` body, instead of the whole file. Each part carries its own `Content-Type` and `Content-Range`; ranges that overlap or touch are merged first, and the parts come in the order the ranges were asked for. When the output file system can stream, each range is read on its own, so asking for a few slices of a large asset reads only those; without `createReadStream`, or when a strong `ETag` has already read the file, the parts are cut from the whole file. A request for more than 200 ranges gets the whole file, as before. `modifyResponseData` receives that body as a `Readable`, so its `data` (and the `data` it returns) is typed `Buffer | Readable`, which still includes a `ReadStream`. (by [@alexander-akait](https://github.com/alexander-akait) in [#2496](https://github.com/webpack/webpack-dev-middleware/pull/2496))
+
+- The overlay sends the client's token along when it asks `openEditorEndpoint` to open a file, so a server can tell the overlay's request from one another page made. Only to an endpoint on the page's own server (a rooted path), never to an absolute url, and only when the client was given a token. (by [@alexander-akait](https://github.com/alexander-akait) in [#2488](https://github.com/webpack/webpack-dev-middleware/pull/2488))
+
+### Patch Changes
+
+- Read the page's own url parameters without writing a property named after each one. A parameter such as `__proto__` or `constructor` is now looked through like any other instead of becoming a property name to write; behavior is otherwise unchanged. (by [@alexander-akait](https://github.com/alexander-akait) in [#2494](https://github.com/webpack/webpack-dev-middleware/pull/2494))
+
+- Fix initialization with rspack, whose `compiler.hooks` throws when reading the `validate` hook it doesn't implement. (by [@Cherry](https://github.com/Cherry) in [#2503](https://github.com/webpack/webpack-dev-middleware/pull/2503))
+
+- Expose the existing `devMiddleware` property in the Koa and Hono wrapper return types, preserving custom request and response types. (by [@MehdiZare](https://github.com/MehdiZare) in [#2489](https://github.com/webpack/webpack-dev-middleware/pull/2489))
+
 ## 8.5.0
 
 ### Minor Changes
