@@ -275,8 +275,9 @@ const internalValidate = (compiler, options) => {
 
   // `compiler.hooks.validate` and `compiler.validate`'s lazy-schema and
   // precompiled-check parameters landed together in webpack 5.106, so the hook
-  // doubles as the feature probe for them.
-  if (firstCompiler.hooks.validate) {
+  // doubles as the feature probe for them. Probed with `in` because rspack's
+  // `compiler.hooks` throws on reading a hook it doesn't implement.
+  if ("validate" in firstCompiler.hooks) {
     firstCompiler.validate(
       () => require("./options.json"),
       options,

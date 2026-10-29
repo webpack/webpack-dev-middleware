@@ -90,4 +90,34 @@ describe("validation without the validate hook", () => {
       /Dev Middleware/,
     );
   });
+
+  // rspack's `compiler.hooks` is a Proxy that throws on reading any hook it
+  // doesn't implement, `validate` included, rather than returning undefined.
+  it("should not read a missing validate hook", (done) => {
+    const compiler = getCompiler(webpackConfig);
+    const supportedHooks = { ...compiler.hooks };
+
+    delete supportedHooks.validate;
+
+    const hooks = new Proxy(supportedHooks, {
+      get(target, prop, receiver) {
+        if (typeof prop === "string" && !(prop in target)) {
+          throw new Error(`Compiler.hooks.${prop} is not supported`);
+        }
+
+        return Reflect.get(target, prop, receiver);
+      },
+    });
+
+    Object.defineProperty(compiler, "hooks", { value: hooks });
+
+    const validateSpy = jest.spyOn(compiler, "validate");
+    const instance = middleware(compiler, {});
+
+    expect(validateSpy).not.toHaveBeenCalled();
+
+    instance.waitUntilValid(() => {
+      instance.close(done);
+    });
+  });
 });
