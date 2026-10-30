@@ -293,13 +293,15 @@ middleware(compiler, {
 });
 ```
 
+With either value, [`output.clean`](https://webpack.js.org/configuration/output/#outputclean) cleans the files on disk as it cleans webpack's output: the directory on the first build, the files a rebuild no longer emits after that, with `clean.keep` and `clean.dry` honored. With a function, webpack writes the files it takes to disk as it writes its own output, links, permissions and times included, which needs webpack 5.113.0 or later; with an older webpack or Rspack the middleware copies them to disk itself, and they are not cleaned.
+
 ### outputFileSystem
 
 Type: `Object`  
 Default: [memfs](https://github.com/streamich/memfs)
 
 Set the default file system which will be used by webpack as primary destination of generated files.
-This option isn't affected by the [writeToDisk](#writeToDisk) option.
+This option isn't affected by the [writeToDisk](#writetodisk) option. With `writeToDisk` set, files are written to it as before and also to disk — with `true` as with a function.
 
 You have to provide `.join()` and `mkdirp` method to the `outputFileSystem` instance manually for compatibility with `webpack@4`.
 

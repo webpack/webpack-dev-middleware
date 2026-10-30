@@ -584,6 +584,64 @@ function hookForWriteToDisk(compiler, context) {
 }
 
 /**
+ * Has webpack write to the real disk what `writeToDisk` takes, besides its
+ * own output file system, where webpack supports more outputs: it then writes
+ * links, permissions and times there as it does to its own, and `output.clean`
+ * cleans the disk too. Rspack and webpack before 5.113.0 have no such hook, so
+ * there the middleware copies to disk itself, which is never cleaned.
+ * @template {IncomingMessage} Request
+ * @template {ServerResponse} Response
+ * @param {Compiler} compiler compiler
+ * @param {WithOptional<Context<Request, Response>, "watching" | "outputFileSystem">} context context
+ * @returns {boolean} true when webpack writes to disk, otherwise false
+ */
+function addDiskOutput(compiler, context) {
+  const { additionalOutputs } =
+    /** @type {Compiler["hooks"] & { additionalOutputs?: import("tapable").SyncHook<[Set<{ outputFileSystem: OutputFileSystem, test?: (targetPath: string) => boolean }>]> }} */ (
+      compiler.hooks
+    );
+
+  if (!additionalOutputs) {
+    return false;
+  }
+
+  // @ts-expect-error
+  if (compiler.hasWebpackDevMiddlewareDiskOutput) {
+    return true;
+  }
+
+  const output = {
+    outputFileSystem: /** @type {OutputFileSystem} */ (
+      /** @type {unknown} */ (fs)
+    ),
+    /**
+     * @param {string} targetPath absolute path of the asset
+     * @returns {boolean} true when the asset is written to disk
+     */
+    test: (targetPath) => {
+      const { writeToDisk: filter } = context.options;
+
+      return typeof filter === "function" ? filter(targetPath) : true;
+    },
+  };
+
+  additionalOutputs.tap(PLUGIN_NAME, (outputs) => {
+    outputs.add(output);
+  });
+
+  // @ts-expect-error
+  compiler.hasWebpackDevMiddlewareDiskOutput = true;
+
+  return true;
+}
+
+// TODO in the next major release remove the standalone mode, where the
+// middleware starts `compiler.watch()` and prints stats itself, and keep only
+// the plugin one, where the host (webpack-cli, webpack-dev-server) owns
+// watching and stats, as webpack-dev-server uses it: drop `isPlugin` here and
+// `usePlugin` from the framework wrappers, with the watching, `close()` and
+// `printStats` paths that exist only for standalone use.
+/**
  * @template {IncomingMessage} [RequestInternal=IncomingMessage]
  * @template {ServerResponse} [ResponseInternal=ServerResponse]
  * @param {Compiler | MultiCompiler} compiler compiler
@@ -696,9 +754,22 @@ function wdm(compiler, options = {}, isPlugin = false) {
     );
   }
 
-  if (typeof options.writeToDisk === "function") {
+  // Written to disk besides webpack's own output file system: always for a
+  // function, which filters what is written, and for `true` when an
+  // `outputFileSystem` of your own is webpack's, as it then stays — before,
+  // `writeToDisk: true` with one wrote nothing to disk at all.
+  // TODO in the next major release require a webpack with `additionalOutputs`
+  // and drop `hookForWriteToDisk`, the copy to disk for those without it.
+  if (
+    typeof options.writeToDisk === "function" ||
+    (options.writeToDisk === true &&
+      options.outputFileSystem &&
+      options.outputFileSystem !== fs)
+  ) {
     for (const compiler of compilersToModify) {
-      hookForWriteToDisk(compiler, context);
+      if (!addDiskOutput(compiler, context)) {
+        hookForWriteToDisk(compiler, context);
+      }
     }
   }
 
@@ -734,6 +805,7 @@ function wdm(compiler, options = {}, isPlugin = false) {
   }
 
   // Start watching, but only for standalone usage, for plugin usage stats will be printed by external code, for example - webpack-cli
+  // TODO in the next major release remove, with the standalone mode (see `wdm`).
   if (!isPlugin) {
     /**
      * @param {Error | null} err err
