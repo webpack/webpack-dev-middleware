@@ -671,6 +671,30 @@ function wdm(compiler, options = {}, isPlugin = false) {
       options.hot === true ? {} : options.hot,
       options.stats,
     );
+
+    // The hot transport ends with the compiler: in plugin mode the host owns
+    // watching, so `compiler.close()` may be its only shutdown call and
+    // `close()` never comes. Closing twice is a no-op.
+    const closeHot = () => {
+      if (context.hot) {
+        context.hot.close();
+        context.hot = undefined;
+      }
+    };
+    // TODO in the next major release, once the webpack peer dependency has
+    // `MultiCompiler.hooks.shutdown`, tap `compiler.hooks.shutdown` alone.
+    const shutdownCompilers =
+      /** @type {Compiler} */ (compiler).hooks.shutdown ||
+      !isMultipleCompiler(compiler)
+        ? [compiler]
+        : compiler.compilers;
+
+    for (const shutdownCompiler of shutdownCompilers) {
+      /** @type {Compiler} */ (shutdownCompiler).hooks.shutdown.tap(
+        PLUGIN_NAME,
+        closeHot,
+      );
+    }
   }
 
   const compilersToModify = isMultipleCompiler(compiler)
