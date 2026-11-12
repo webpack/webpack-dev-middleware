@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.6.1
+
+### Patch Changes
+
+- Close the built-in hot transport when the compiler shuts down, so in plugin mode `compiler.close()` no longer leaves a WebSocket endpoint and its heartbeat running. (by [@alexander-akait](https://github.com/alexander-akait) in [#2507](https://github.com/webpack/webpack-dev-middleware/pull/2507))
+
 ## 8.6.0
 
 ### Minor Changes
