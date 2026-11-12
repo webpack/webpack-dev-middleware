@@ -171,5 +171,27 @@ describe("plugin mode", () => {
         });
       });
     });
+
+    it("should close its own hot transport without a warning", (done) => {
+      const compiler = getCompiler(webpackConfig);
+      const watching = compiler.watch({}, () => {});
+      const instance = middleware(compiler, { hot: true }, true);
+      const hotCloseSpy = jest.spyOn(instance.context.hot, "close");
+      const warnSpy = jest
+        .spyOn(instance.context.logger, "warn")
+        .mockImplementation();
+
+      instance.waitUntilValid(() => {
+        instance.close((error) => {
+          expect(error).toBeNull();
+          expect(hotCloseSpy).toHaveBeenCalledTimes(1);
+          expect(instance.context.hot).toBeUndefined();
+          expect(watching.closed).toBe(false);
+          expect(warnSpy).not.toHaveBeenCalled();
+
+          watching.close(done);
+        });
+      });
+    });
   });
 });

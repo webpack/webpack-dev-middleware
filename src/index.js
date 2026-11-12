@@ -886,8 +886,10 @@ function wdm(compiler, options = {}, isPlugin = false) {
   };
 
   instance.close = (callback = noop) => {
-    if (filledContext.hot) {
-      filledContext.hot.close();
+    const { hot } = filledContext;
+
+    if (hot) {
+      hot.close();
       // Also detach the SSE intercept so later requests fall through to the
       // regular middleware instead of reaching the closed hot instance.
       filledContext.hot = undefined;
@@ -896,9 +898,13 @@ function wdm(compiler, options = {}, isPlugin = false) {
     // For plugin usage the host (webpack-cli, webpack-dev-server, etc.) owns `compiler.watch()`,
     // so there is no `watching` of our own to close (`compiler.close()` on the host handles it)
     if (!filledContext.watching) {
-      filledContext.logger.warn(
-        "The `close` method was called, but there is no own `watching` instance to close. When using the middleware as a plugin, the host owns watching, so use `compiler.close()` instead.",
-      );
+      // Closing its own hot transport is a host's reason to call `close` in
+      // plugin mode, so only a call that closed nothing is warned about.
+      if (!hot) {
+        filledContext.logger.warn(
+          "The `close` method was called, but there is no own `watching` instance to close. When using the middleware as a plugin, the host owns watching, so use `compiler.close()` instead.",
+        );
+      }
       callback(null);
       return;
     }
