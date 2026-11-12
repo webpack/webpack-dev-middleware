@@ -671,6 +671,30 @@ function wdm(compiler, options = {}, isPlugin = false) {
       options.hot === true ? {} : options.hot,
       options.stats,
     );
+
+    // The hot transport ends with the compiler: in plugin mode the host owns
+    // watching, so `compiler.close()` may be its only shutdown call and
+    // `close()` never comes. Closing twice is a no-op.
+    const closeHot = () => {
+      if (context.hot) {
+        context.hot.close();
+        context.hot = undefined;
+      }
+    };
+    // TODO in the next major release, once the webpack peer dependency has
+    // `MultiCompiler.hooks.shutdown`, tap `compiler.hooks.shutdown` alone.
+    const shutdownCompilers =
+      /** @type {Compiler} */ (compiler).hooks.shutdown ||
+      !isMultipleCompiler(compiler)
+        ? [compiler]
+        : compiler.compilers;
+
+    for (const shutdownCompiler of shutdownCompilers) {
+      /** @type {Compiler} */ (shutdownCompiler).hooks.shutdown.tap(
+        PLUGIN_NAME,
+        closeHot,
+      );
+    }
   }
 
   const compilersToModify = isMultipleCompiler(compiler)
@@ -886,10 +910,8 @@ function wdm(compiler, options = {}, isPlugin = false) {
   };
 
   instance.close = (callback = noop) => {
-    const { hot } = filledContext;
-
-    if (hot) {
-      hot.close();
+    if (filledContext.hot) {
+      filledContext.hot.close();
       // Also detach the SSE intercept so later requests fall through to the
       // regular middleware instead of reaching the closed hot instance.
       filledContext.hot = undefined;
@@ -898,13 +920,9 @@ function wdm(compiler, options = {}, isPlugin = false) {
     // For plugin usage the host (webpack-cli, webpack-dev-server, etc.) owns `compiler.watch()`,
     // so there is no `watching` of our own to close (`compiler.close()` on the host handles it)
     if (!filledContext.watching) {
-      // Closing its own hot transport is a host's reason to call `close` in
-      // plugin mode, so only a call that closed nothing is warned about.
-      if (!hot) {
-        filledContext.logger.warn(
-          "The `close` method was called, but there is no own `watching` instance to close. When using the middleware as a plugin, the host owns watching, so use `compiler.close()` instead.",
-        );
-      }
+      filledContext.logger.warn(
+        "The `close` method was called, but there is no own `watching` instance to close. When using the middleware as a plugin, the host owns watching, so use `compiler.close()` instead.",
+      );
       callback(null);
       return;
     }

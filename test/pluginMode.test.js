@@ -171,25 +171,62 @@ describe("plugin mode", () => {
         });
       });
     });
+  });
 
-    it("should close its own hot transport without a warning", (done) => {
+  describe("compiler shutdown", () => {
+    it("should close its own hot transport when the host closes the compiler", (done) => {
       const compiler = getCompiler(webpackConfig);
-      const watching = compiler.watch({}, () => {});
+      compiler.watch({}, () => {});
       const instance = middleware(compiler, { hot: true }, true);
       const hotCloseSpy = jest.spyOn(instance.context.hot, "close");
-      const warnSpy = jest
-        .spyOn(instance.context.logger, "warn")
-        .mockImplementation();
 
       instance.waitUntilValid(() => {
-        instance.close((error) => {
+        compiler.close((error) => {
           expect(error).toBeNull();
           expect(hotCloseSpy).toHaveBeenCalledTimes(1);
           expect(instance.context.hot).toBeUndefined();
-          expect(watching.closed).toBe(false);
-          expect(warnSpy).not.toHaveBeenCalled();
 
-          watching.close(done);
+          done();
+        });
+      });
+    });
+
+    it("should close its own hot transport when the host closes a multi compiler", (done) => {
+      const compiler = getCompiler(webpackArrayConfig);
+      compiler.watch({}, () => {});
+      const instance = middleware(compiler, { hot: true }, true);
+      const hotCloseSpy = jest.spyOn(instance.context.hot, "close");
+
+      instance.waitUntilValid(() => {
+        compiler.close((error) => {
+          expect(error).toBeNull();
+          expect(hotCloseSpy).toHaveBeenCalledTimes(1);
+          expect(instance.context.hot).toBeUndefined();
+
+          done();
+        });
+      });
+    });
+
+    it("should close its own hot transport through the children on webpack without `MultiCompiler.hooks.shutdown`", (done) => {
+      const compiler = getCompiler(webpackArrayConfig);
+      // An older webpack: the same compiler, minus the hook.
+      const { shutdown, ...hooks } = compiler.hooks;
+      const olderCompiler = Object.create(compiler, {
+        hooks: { value: hooks },
+      });
+      compiler.watch({}, () => {});
+      const instance = middleware(olderCompiler, { hot: true }, true);
+      const hotCloseSpy = jest.spyOn(instance.context.hot, "close");
+
+      instance.waitUntilValid(() => {
+        compiler.close((error) => {
+          expect(error).toBeNull();
+          expect(shutdown).toBeDefined();
+          expect(hotCloseSpy).toHaveBeenCalledTimes(1);
+          expect(instance.context.hot).toBeUndefined();
+
+          done();
         });
       });
     });

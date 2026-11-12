@@ -2,4 +2,4 @@
 "webpack-dev-middleware": patch
 ---
 
-In plugin mode, `close()` no longer warns when it closed its own hot transport, so a host can call it to close that transport on shutdown.
+Close the built-in hot transport when the compiler shuts down, so in plugin mode `compiler.close()` no longer leaves a WebSocket endpoint and its heartbeat running.
