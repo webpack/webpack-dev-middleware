@@ -293,7 +293,7 @@ middleware(compiler, {
 });
 ```
 
-With either value, [`output.clean`](https://webpack.js.org/configuration/output/#outputclean) cleans the files on disk as it cleans webpack's output: the directory on the first build, the files a rebuild no longer emits after that, with `clean.keep` and `clean.dry` honored. The files the function leaves out stay off disk, and a copy of one left there by an earlier session is removed. Links, permissions and times are written to disk as webpack writes them. This works with every webpack 5 version and with Rspack. An asset named with a query string, such as `[name].js?[contenthash]`, is left on disk once it is gone, as it is without the middleware, until webpack's `output.clean` matches such a name to its file.
+With either value, [`output.clean`](https://webpack.js.org/configuration/output/#outputclean) cleans the files on disk as it cleans webpack's output: the directory on the first build, the files a rebuild no longer emits after that, with `clean.keep` and `clean.dry` honored. The files the function leaves out stay off disk, and a copy of one left there by an earlier session is removed. Links, permissions and times are written to disk as webpack writes them. With a file system of your own, given in `outputFileSystem` or set on the compiler, the files are written to it and to disk, and both are cleaned; one lacking methods webpack does without, such as `symlink`, works too. This works with every webpack 5 version and with Rspack. An asset named with a query string, such as `[name].js?[contenthash]`, is left on disk once it is gone, as it is without the middleware, until webpack's `output.clean` matches such a name to its file.
 
 ### outputFileSystem
 

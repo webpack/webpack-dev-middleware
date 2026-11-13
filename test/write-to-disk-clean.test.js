@@ -4,6 +4,7 @@ import path from "node:path";
 
 import CopyPlugin from "copy-webpack-plugin";
 import { Volume, createFsFromVolume } from "memfs";
+import request from "supertest";
 import webpack from "webpack";
 
 import middleware from "../src";
@@ -523,6 +524,528 @@ describe("output.clean with writeToDisk", () => {
             });
           },
         );
+      });
+    });
+  }
+
+  /**
+   * @returns {import("memfs").IFs} a file system in memory
+   */
+  function createMemoryFileSystem() {
+    return createFsFromVolume(new Volume());
+  }
+
+  /**
+   * @param {import("memfs").IFs} memory a file system in memory
+   * @returns {string[]} the files in `dist` on it, relative to it
+   */
+  function listMemory(memory) {
+    if (!memory.existsSync(dist)) {
+      return [];
+    }
+
+    return /** @type {string[]} */ (
+      memory.readdirSync(dist, { recursive: true, encoding: "utf8" })
+    )
+      .filter((file) => memory.statSync(path.join(dist, file)).isFile())
+      .map((file) => file.replaceAll("\\", "/"))
+      .toSorted();
+  }
+
+  /**
+   * A file system of your own, with only the methods named, as webpack can be
+   * given one lacking those it does without.
+   * @param {import("memfs").IFs} memory the file system in memory behind it
+   * @param {string[]} names the methods it has
+   * @returns {import("../src").OutputFileSystem} the file system
+   */
+  function withMethods(memory, names) {
+    /** @type {Record<string, EXPECTED_ANY>} */
+    const fileSystem = { join: path.join, dirname: path.dirname };
+
+    for (const name of names) {
+      fileSystem[name] = memory[name].bind(memory);
+    }
+
+    return /** @type {import("../src").OutputFileSystem} */ (fileSystem);
+  }
+
+  /**
+   * @param {import("../src").API} instance middleware
+   * @returns {import("supertest").Agent} requests to it
+   */
+  function requestTo(instance) {
+    return request((req, res) => {
+      instance(req, res, () => {
+        res.statusCode = 404;
+        res.end();
+      });
+    });
+  }
+
+  const bundle = expect.stringMatching(/^main\.[0-9a-f]+\.js$/);
+
+  /**
+   * @param {string[]} names the names of the compilers, each writing to its own directory in `dist`
+   * @returns {import("webpack").MultiCompiler} a multi-compiler
+   */
+  function createMultiCompiler(names) {
+    return webpack(
+      names.map((name) => ({
+        name,
+        mode: "development",
+        devtool: false,
+        context: directory,
+        entry: "./index.js",
+        output: {
+          path: path.join(dist, name),
+          filename: "main.[contenthash].js",
+          clean: true,
+        },
+        infrastructureLogging: { level: "error" },
+        stats: "none",
+      })),
+    );
+  }
+
+  for (const [mode, isPlugin] of [
+    ["standalone", false],
+    ["plugin", true],
+  ]) {
+    describe(`with a file system of your own, in ${mode} mode`, () => {
+      describe("on the compiler", () => {
+        it('writes to disk and to it, and cleans both, with "writeToDisk" true', async () => {
+          const memory = createMemoryFileSystem();
+
+          memory.mkdirSync(inDist("."), { recursive: true });
+          memory.writeFileSync(inDist("stale-in-memory.js"), "old");
+
+          const compiler = createCompiler({ clean: true });
+
+          compiler.outputFileSystem = memory;
+
+          const { instance, close } = start(
+            compiler,
+            { writeToDisk: true },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            // Served from it, and the disk written too: before, nothing was.
+            expect(instance.context.outputFileSystem).toBe(memory);
+            expect(listDist()).toEqual([bundle]);
+            expect(listMemory(memory)).toEqual(listDist());
+
+            const [first] = listDist();
+
+            await rebuild(compiler);
+
+            expect(listDist()).toEqual([bundle]);
+            expect(listDist()[0]).not.toBe(first);
+            expect(listMemory(memory)).toEqual(listDist());
+          } finally {
+            await close();
+          }
+        });
+
+        it("does not write what was in it alone to disk", async () => {
+          const memory = createMemoryFileSystem();
+
+          memory.mkdirSync(inDist("only"), { recursive: true });
+          memory.writeFileSync(inDist("only/in-memory.js"), "old");
+
+          const compiler = createCompiler({ clean: { keep: /in-memory/ } });
+
+          compiler.outputFileSystem = memory;
+
+          const { instance, close } = start(
+            compiler,
+            { writeToDisk: true },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            expect(listMemory(memory)).toEqual([bundle, "only/in-memory.js"]);
+            // Kept where it was, not copied to disk; what was on disk is cleaned.
+            expect(listDist()).toEqual([bundle]);
+          } finally {
+            await close();
+          }
+        });
+
+        it("writes the disk once when it is Node.js `fs`, as Rspack's", async () => {
+          const compiler = createCompiler({ clean: true });
+
+          compiler.outputFileSystem = fs;
+
+          const { instance, close } = start(
+            compiler,
+            { writeToDisk: true },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            expect(compiler.outputFileSystem).toBe(fs);
+            expect(listDist()).toEqual([bundle]);
+
+            const [first] = listDist();
+
+            await rebuild(compiler);
+
+            expect(listDist()).toEqual([bundle]);
+            expect(listDist()[0]).not.toBe(first);
+          } finally {
+            await close();
+          }
+        });
+
+        it('keeps the file system of webpack, which is the disk, with "writeToDisk" true', async () => {
+          const compiler = createCompiler({ clean: true });
+          const { outputFileSystem } = compiler;
+          const { instance, close } = start(
+            compiler,
+            { writeToDisk: true },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            expect(compiler.outputFileSystem).toBe(outputFileSystem);
+            expect(instance.context.outputFileSystem).toBe(outputFileSystem);
+            expect(listDist()).toEqual([bundle]);
+          } finally {
+            await close();
+          }
+        });
+      });
+
+      describe('in "outputFileSystem"', () => {
+        for (const [label, writeToDisk] of writeToDiskValues) {
+          it(`writes to disk and to it, and cleans both, with "writeToDisk" ${label}`, async () => {
+            const memory = createMemoryFileSystem();
+            const compiler = createCompiler({ clean: true });
+            const { instance, close } = start(
+              compiler,
+              { writeToDisk, outputFileSystem: memory },
+              isPlugin,
+            );
+
+            try {
+              await built(instance);
+
+              expect(instance.context.outputFileSystem).toBe(memory);
+              expect(listDist()).toEqual([bundle]);
+              expect(listMemory(memory)).toEqual([bundle]);
+
+              const [first] = listDist();
+
+              // What is on disk is what is served.
+              expect(readDist(first)).toBe(
+                memory.readFileSync(inDist(first), "utf8"),
+              );
+
+              await rebuild(compiler);
+
+              expect(listDist()).toEqual([bundle]);
+              expect(listDist()[0]).not.toBe(first);
+              expect(listMemory(memory)).toEqual(listDist());
+            } finally {
+              await close();
+            }
+          });
+        }
+
+        it("cleans what was left in it and what was left on disk, without writing the one to the other", async () => {
+          const memory = createMemoryFileSystem();
+
+          memory.mkdirSync(inDist("old"), { recursive: true });
+          memory.writeFileSync(inDist("old/stale-in-memory.js"), "old");
+
+          const compiler = createCompiler({ clean: true });
+          const { instance, close } = start(
+            compiler,
+            { writeToDisk: () => true, outputFileSystem: memory },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            expect(listMemory(memory)).toEqual([bundle]);
+            expect(listDist()).toEqual([bundle]);
+            // The directories emptied are removed too.
+            expect(fs.existsSync(inDist("nested"))).toBe(false);
+            expect(memory.existsSync(inDist("old"))).toBe(false);
+          } finally {
+            await close();
+          }
+        });
+
+        it("writes to disk only what the function takes, and serves the rest from it", async () => {
+          createPublic();
+
+          const memory = createMemoryFileSystem();
+          const compiler = createCompiler({
+            clean: true,
+            copy: [{ from: "public" }],
+          });
+          const { instance, close } = start(
+            compiler,
+            {
+              writeToDisk: (targetPath) => !targetPath.endsWith(".svg"),
+              outputFileSystem: memory,
+            },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            expect(listDist()).toEqual([bundle, "robots.txt"]);
+            expect(listMemory(memory)).toEqual([
+              "images/logo.svg",
+              bundle,
+              "robots.txt",
+            ]);
+
+            const response = await requestTo(instance).get("/images/logo.svg");
+
+            expect(response.statusCode).toBe(200);
+            expect(response.body.toString()).toBe("<svg/>");
+
+            await rebuild(compiler, () => changePublic("images/logo.svg"));
+
+            expect(listMemory(memory)).toEqual([bundle, "robots.txt"]);
+            expect(listDist()).toEqual([bundle, "robots.txt"]);
+            expect(
+              (await requestTo(instance).get("/images/logo.svg")).statusCode,
+            ).toBe(404);
+          } finally {
+            await close();
+          }
+        });
+
+        it("keeps on disk and in it what `clean.keep` keeps", async () => {
+          const memory = createMemoryFileSystem();
+
+          memory.mkdirSync(inDist("."), { recursive: true });
+          memory.writeFileSync(inDist("kept.css"), "old");
+          memory.writeFileSync(inDist("removed.js"), "old");
+
+          const compiler = createCompiler({ clean: { keep: /\.css$/ } });
+          const { instance, close } = start(
+            compiler,
+            { writeToDisk: true, outputFileSystem: memory },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            expect(listDist()).toEqual([bundle, "nested/stale.css"]);
+            expect(listMemory(memory)).toEqual(["kept.css", bundle]);
+          } finally {
+            await close();
+          }
+        });
+
+        it("removes nothing from disk or from it with `clean.dry`", async () => {
+          const memory = createMemoryFileSystem();
+
+          memory.mkdirSync(inDist("."), { recursive: true });
+          memory.writeFileSync(inDist("stale-in-memory.js"), "old");
+
+          const compiler = createCompiler({ clean: { dry: true } });
+          const { instance, close } = start(
+            compiler,
+            { writeToDisk: () => true, outputFileSystem: memory },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            expect(listDist()).toEqual([
+              bundle,
+              "nested/stale.css",
+              "stale.js",
+            ]);
+            expect(listMemory(memory)).toEqual([bundle, "stale-in-memory.js"]);
+          } finally {
+            await close();
+          }
+        });
+
+        it("serves and writes to disk the same content after a rebuild", async () => {
+          const memory = createMemoryFileSystem();
+          const compiler = createCompiler({ clean: true });
+          const { instance, close } = start(
+            compiler,
+            { writeToDisk: () => true, outputFileSystem: memory },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+            await rebuild(compiler);
+
+            const [file] = listDist();
+            const response = await requestTo(instance).get(`/${file}`);
+
+            expect(response.statusCode).toBe(200);
+            expect(response.text).toContain("console.log(2)");
+            expect(readDist(file)).toBe(response.text);
+          } finally {
+            await close();
+          }
+        });
+
+        for (const [label, getFileSystem] of [
+          ["Node.js `fs`", () => fs],
+          [
+            "the file system of webpack",
+            (compiler) => compiler.outputFileSystem,
+          ],
+        ]) {
+          it(`writes the disk once when it is ${label}`, async () => {
+            const compiler = createCompiler({ clean: true });
+            const outputFileSystem = getFileSystem(compiler);
+            const { instance, close } = start(
+              compiler,
+              { writeToDisk: () => true, outputFileSystem },
+              isPlugin,
+            );
+
+            try {
+              await built(instance);
+
+              // Given as it is, so nothing is written or removed twice.
+              expect(compiler.outputFileSystem).toBe(outputFileSystem);
+              expect(listDist()).toEqual([bundle]);
+
+              const [first] = listDist();
+
+              await rebuild(compiler);
+
+              expect(listDist()).toEqual([bundle]);
+              expect(listDist()[0]).not.toBe(first);
+            } finally {
+              await close();
+            }
+          });
+        }
+
+        it("writes to disk, and cleans it, with one lacking what webpack does without", async () => {
+          const memory = createMemoryFileSystem();
+          // No `lstat`, `readlink`, `symlink`, `chmod` or `utimes`.
+          const outputFileSystem = withMethods(memory, [
+            "mkdir",
+            "writeFile",
+            "stat",
+            "readFile",
+            "readdir",
+            "unlink",
+            "rmdir",
+            "statSync",
+            "readFileSync",
+            "createReadStream",
+          ]);
+          const compiler = createCompiler({ clean: true });
+          const { instance, close } = start(
+            compiler,
+            { writeToDisk: () => true, outputFileSystem },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            expect(listDist()).toEqual([bundle]);
+            expect(listMemory(memory)).toEqual([bundle]);
+
+            const [first] = listDist();
+
+            await rebuild(compiler);
+
+            expect(listDist()).toEqual([bundle]);
+            expect(listDist()[0]).not.toBe(first);
+            expect(listMemory(memory)).toEqual(listDist());
+          } finally {
+            await close();
+          }
+        });
+
+        it("cleans the disk with one that cannot list or remove files", async () => {
+          const memory = createMemoryFileSystem();
+          const outputFileSystem = withMethods(memory, [
+            "mkdir",
+            "writeFile",
+            "stat",
+            "readFile",
+          ]);
+          const compiler = createCompiler({ clean: true });
+          const { instance, close } = start(
+            compiler,
+            { writeToDisk: () => true, outputFileSystem },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            expect(listDist()).toEqual([bundle]);
+
+            const [first] = listDist();
+
+            await rebuild(compiler);
+
+            expect(listDist()).toEqual([bundle]);
+            expect(listDist()[0]).not.toBe(first);
+          } finally {
+            await close();
+          }
+        });
+
+        it("cleans the disk of each compiler of a multi-compiler", async () => {
+          const memory = createMemoryFileSystem();
+
+          for (const name of ["a", "b"]) {
+            fs.mkdirSync(inDist(name), { recursive: true });
+            fs.writeFileSync(inDist(`${name}/stale.js`), "old");
+          }
+
+          const compiler = createMultiCompiler(["a", "b"]);
+          const { instance, close } = start(
+            compiler,
+            { writeToDisk: () => true, outputFileSystem: memory },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            const inA = expect.stringMatching(/^a\/main\.[0-9a-f]+\.js$/);
+            const inB = expect.stringMatching(/^b\/main\.[0-9a-f]+\.js$/);
+
+            // The earlier session's files in `dist` itself are no compiler's.
+            expect(listDist()).toEqual([
+              inA,
+              inB,
+              "nested/stale.css",
+              "stale.js",
+            ]);
+            expect(listMemory(memory)).toEqual([inA, inB]);
+          } finally {
+            await close();
+          }
+        });
       });
     });
   }

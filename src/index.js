@@ -522,6 +522,19 @@ function printStats(stats, context) {
 const PLUGIN_NAME = "DevMiddleware";
 
 /**
+ * Whether a file system is the disk: Node.js `fs`, as Rspack's output file
+ * system, or `graceful-fs` wrapping it, as webpack's.
+ * @param {OutputFileSystem} fileSystem a file system
+ * @returns {boolean} true when it writes to disk
+ */
+function isDiskFileSystem(fileSystem) {
+  return (
+    /** @type {unknown} */ (fileSystem) === fs ||
+    typeof (/** @type {EXPECTED_ANY} */ (fileSystem).gracefulify) === "function"
+  );
+}
+
+/**
  * The output file system webpack is given when `writeToDisk` writes to disk
  * besides the file system files are served from. It writes to that one, and
  * to disk the files `writeToDisk` takes, links, permissions and times
@@ -639,6 +652,9 @@ function createDiskWritingFileSystem(outputFileSystem, context, compilers) {
     });
   };
 
+  /** @type {EXPECTED_ANY} */
+  const served = outputFileSystem;
+
   /**
    * Remove from both, done once removed from either.
    * @param {"unlink" | "rmdir"} method the removal
@@ -667,145 +683,165 @@ function createDiskWritingFileSystem(outputFileSystem, context, compilers) {
       }
     };
 
-    /** @type {EXPECTED_ANY} */ (outputFileSystem)[method](targetPath, done);
+    if (served[method]) {
+      served[method](targetPath, done);
+    } else {
+      pending -= 1;
+    }
+
     fs[method](targetPath, done);
   };
 
-  /** @type {EXPECTED_ANY} */
-  const served = outputFileSystem;
+  // What is not written here, such as `readFile`, `stat` and `mkdir`, reaches
+  // the served file system alone. A method webpack can do without, such as
+  // `symlink`, is kept only where the served file system has it.
+  /** @type {PropertyDescriptorMap} */
+  const methods = {
+    writeFile: {
+      value: (
+        /** @type {string} */ targetPath,
+        /** @type {Buffer} */ content,
+        /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
+      ) =>
+        served.writeFile(
+          targetPath,
+          content,
+          thenOnDisk(
+            targetPath,
+            (done) => fs.writeFile(targetPath, content, done),
+            callback,
+          ),
+        ),
+    },
+    unlink: {
+      value: (
+        /** @type {string} */ targetPath,
+        /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
+      ) => removeFromBoth("unlink", targetPath, callback),
+    },
+    rmdir: {
+      value: (
+        /** @type {string} */ targetPath,
+        /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
+      ) => removeFromBoth("rmdir", targetPath, callback),
+    },
+    // How `output.clean` finds what is on disk alone, left from an earlier session.
+    lstat: {
+      value: (
+        /** @type {string} */ targetPath,
+        /** @type {(err: NodeJS.ErrnoException | null, stats?: import("fs").Stats) => void} */ callback,
+      ) =>
+        (served.lstat || served.stat).call(
+          served,
+          targetPath,
+          (
+            /** @type {NodeJS.ErrnoException | null} */ err,
+            /** @type {import("fs").Stats} */ stats,
+          ) => {
+            if (err && err.code === "ENOENT") {
+              return fs.lstat(targetPath, callback);
+            }
 
-  // What is not written here, such as `readFile`, `stat` and `mkdir`, reaches the served file system alone.
+            callback(err, stats);
+          },
+        ),
+    },
+    readdir: {
+      value: (
+        /** @type {string} */ targetPath,
+        /** @type {(err: NodeJS.ErrnoException | null, entries?: string[]) => void} */ callback,
+      ) => {
+        /**
+         * @param {NodeJS.ErrnoException | null} servedError error from the served file system
+         * @param {string[]=} servedEntries entries on the served file system
+         * @returns {void}
+         */
+        const withDisk = (servedError, servedEntries) =>
+          fs.readdir(targetPath, (diskError, diskEntries) => {
+            if (servedError && diskError) {
+              return callback(servedError);
+            }
+
+            callback(null, [
+              ...new Set([...(servedEntries || []), ...(diskEntries || [])]),
+            ]);
+          });
+
+        if (!served.readdir) {
+          return withDisk(null, []);
+        }
+
+        served.readdir(targetPath, withDisk);
+      },
+    },
+  };
+
+  if (served.symlink) {
+    methods.symlink = {
+      value: (
+        /** @type {string} */ target,
+        /** @type {string} */ targetPath,
+        /** @type {"file" | "dir" | "junction"} */ type,
+        /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
+      ) =>
+        served.symlink(
+          target,
+          targetPath,
+          type,
+          thenOnDisk(
+            targetPath,
+            (done) =>
+              fs.unlink(targetPath, () =>
+                fs.symlink(target, targetPath, type, done),
+              ),
+            callback,
+          ),
+        ),
+    };
+  }
+
+  if (served.chmod) {
+    methods.chmod = {
+      value: (
+        /** @type {string} */ targetPath,
+        /** @type {number} */ mode,
+        /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
+      ) =>
+        served.chmod(
+          targetPath,
+          mode,
+          thenOnDisk(
+            targetPath,
+            (done) => fs.chmod(targetPath, mode, done),
+            callback,
+          ),
+        ),
+    };
+  }
+
+  if (served.utimes) {
+    methods.utimes = {
+      value: (
+        /** @type {string} */ targetPath,
+        /** @type {Date} */ atime,
+        /** @type {Date} */ mtime,
+        /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
+      ) =>
+        served.utimes(
+          targetPath,
+          atime,
+          mtime,
+          thenOnDisk(
+            targetPath,
+            (done) => fs.utimes(targetPath, atime, mtime, done),
+            callback,
+          ),
+        ),
+    };
+  }
+
   return /** @type {OutputFileSystem} */ (
-    Object.create(outputFileSystem, {
-      writeFile: {
-        value: (
-          /** @type {string} */ targetPath,
-          /** @type {Buffer} */ content,
-          /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
-        ) =>
-          served.writeFile(
-            targetPath,
-            content,
-            thenOnDisk(
-              targetPath,
-              (done) => fs.writeFile(targetPath, content, done),
-              callback,
-            ),
-          ),
-      },
-      symlink: {
-        value: (
-          /** @type {string} */ target,
-          /** @type {string} */ targetPath,
-          /** @type {"file" | "dir" | "junction"} */ type,
-          /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
-        ) =>
-          served.symlink(
-            target,
-            targetPath,
-            type,
-            thenOnDisk(
-              targetPath,
-              (done) =>
-                fs.unlink(targetPath, () =>
-                  fs.symlink(target, targetPath, type, done),
-                ),
-              callback,
-            ),
-          ),
-      },
-      chmod: {
-        value: (
-          /** @type {string} */ targetPath,
-          /** @type {number} */ mode,
-          /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
-        ) =>
-          served.chmod(
-            targetPath,
-            mode,
-            thenOnDisk(
-              targetPath,
-              (done) => fs.chmod(targetPath, mode, done),
-              callback,
-            ),
-          ),
-      },
-      utimes: {
-        value: (
-          /** @type {string} */ targetPath,
-          /** @type {Date} */ atime,
-          /** @type {Date} */ mtime,
-          /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
-        ) =>
-          served.utimes(
-            targetPath,
-            atime,
-            mtime,
-            thenOnDisk(
-              targetPath,
-              (done) => fs.utimes(targetPath, atime, mtime, done),
-              callback,
-            ),
-          ),
-      },
-      unlink: {
-        value: (
-          /** @type {string} */ targetPath,
-          /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
-        ) => removeFromBoth("unlink", targetPath, callback),
-      },
-      rmdir: {
-        value: (
-          /** @type {string} */ targetPath,
-          /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
-        ) => removeFromBoth("rmdir", targetPath, callback),
-      },
-      // How `output.clean` finds what is on disk alone, left from an earlier session.
-      lstat: {
-        value: (
-          /** @type {string} */ targetPath,
-          /** @type {(err: NodeJS.ErrnoException | null, stats?: import("fs").Stats) => void} */ callback,
-        ) =>
-          served.lstat(
-            targetPath,
-            (
-              /** @type {NodeJS.ErrnoException | null} */ err,
-              /** @type {import("fs").Stats} */ stats,
-            ) => {
-              if (err && err.code === "ENOENT") {
-                return fs.lstat(targetPath, callback);
-              }
-
-              callback(err, stats);
-            },
-          ),
-      },
-      readdir: {
-        value: (
-          /** @type {string} */ targetPath,
-          /** @type {(err: NodeJS.ErrnoException | null, entries?: string[]) => void} */ callback,
-        ) =>
-          served.readdir(
-            targetPath,
-            (
-              /** @type {NodeJS.ErrnoException | null} */ servedError,
-              /** @type {string[] | undefined} */ servedEntries,
-            ) =>
-              fs.readdir(targetPath, (diskError, diskEntries) => {
-                if (servedError && diskError) {
-                  return callback(servedError);
-                }
-
-                callback(null, [
-                  ...new Set([
-                    ...(servedEntries || []),
-                    ...(diskEntries || []),
-                  ]),
-                ]);
-              }),
-          ),
-      },
-    })
+    Object.create(outputFileSystem, methods)
   );
 }
 
@@ -955,14 +991,11 @@ function wdm(compiler, options = {}, isPlugin = false) {
 
   context.outputFileSystem = outputFileSystem;
 
-  // Written to disk besides the served file system: always for a function,
-  // which filters what is written, and for `true` when an `outputFileSystem`
-  // of your own stays webpack's — before, `true` with one wrote nothing there.
+  // Written to disk besides the served file system unless that is the disk
+  // itself: with `true` and a file system of your own, on the compiler or in
+  // `outputFileSystem`, nothing was written to disk before.
   const compilerOutputFileSystem =
-    typeof options.writeToDisk === "function" ||
-    (options.writeToDisk === true &&
-      options.outputFileSystem &&
-      options.outputFileSystem !== fs)
+    options.writeToDisk && !isDiskFileSystem(outputFileSystem)
       ? createDiskWritingFileSystem(
           outputFileSystem,
           context,
