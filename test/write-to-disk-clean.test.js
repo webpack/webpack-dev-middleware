@@ -600,13 +600,24 @@ describe("output.clean with writeToDisk", () => {
     });
   }
 
+  /**
+   * @param {import("webpack").Compiler} compiler compiler
+   * @returns {Promise<Error>} the error a build fails with, as a failed emit does
+   */
+  function failure(compiler) {
+    return new Promise((resolve) => {
+      compiler.hooks.failed.tap("test", resolve);
+    });
+  }
+
   const bundle = expect.stringMatching(/^main\.[0-9a-f]+\.js$/);
 
   /**
    * @param {string[]} names the names of the compilers, each writing to its own directory in `dist`
+   * @param {import("webpack").Configuration["output"]=} output output options
    * @returns {import("webpack").MultiCompiler} a multi-compiler
    */
-  function createMultiCompiler(names) {
+  function createMultiCompiler(names, output = {}) {
     return webpack(
       names.map((name) => ({
         name,
@@ -618,6 +629,7 @@ describe("output.clean with writeToDisk", () => {
           path: path.join(dist, name),
           filename: "main.[contenthash].js",
           clean: true,
+          ...output,
         },
         infrastructureLogging: { level: "error" },
         stats: "none",
@@ -1025,6 +1037,172 @@ describe("output.clean with writeToDisk", () => {
 
             expect(listDist()).toEqual([bundle]);
             expect(listDist()[0]).not.toBe(first);
+          } finally {
+            await close();
+          }
+        });
+
+        for (const [label, clean] of [
+          ["`clean.keep` a string", { keep: "robots" }],
+          ["`clean.keep` a RegExp", { keep: /^robots/ }],
+          [
+            "`clean.keep` a function",
+            { keep: (file) => file === "robots.txt" },
+          ],
+          ["`clean.keep` a glob", { keep: { glob: "robots.*" } }],
+          ["`clean.dry`", { dry: true }],
+        ]) {
+          it(`keeps the copy on disk of a file the function leaves out with ${label}`, async () => {
+            createPublic();
+            fs.writeFileSync(inDist("robots.txt"), "old");
+
+            const memory = createMemoryFileSystem();
+            const compiler = createCompiler({
+              clean,
+              copy: [{ from: "public" }],
+            });
+            const { instance, close } = start(
+              compiler,
+              {
+                writeToDisk: (targetPath) => targetPath.endsWith(".js"),
+                outputFileSystem: memory,
+              },
+              isPlugin,
+            );
+
+            try {
+              await built(instance);
+
+              expect(readDist("robots.txt")).toBe("old");
+              expect(memory.readFileSync(inDist("robots.txt"), "utf8")).toBe(
+                "v1",
+              );
+            } finally {
+              await close();
+            }
+          });
+        }
+
+        it("removes from disk the copies of what the function leaves out, for each compiler of a multi-compiler", async () => {
+          for (const name of ["a", "b"]) {
+            fs.mkdirSync(inDist(name), { recursive: true });
+            fs.writeFileSync(inDist(`${name}/main.js`), "old");
+          }
+
+          const memory = createMemoryFileSystem();
+          const compiler = createMultiCompiler(["a", "b"], {
+            filename: "main.js",
+          });
+          const { instance, close } = start(
+            compiler,
+            { writeToDisk: () => false, outputFileSystem: memory },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            expect(listDist()).toEqual(["nested/stale.css", "stale.js"]);
+            expect(listMemory(memory)).toEqual(["a/main.js", "b/main.js"]);
+          } finally {
+            await close();
+          }
+        });
+
+        it("keeps the times of a copied file on disk", async () => {
+          createPublic();
+
+          const time = new Date("2020-01-01T00:00:00Z");
+
+          fs.utimesSync(inPublic("robots.txt"), time, time);
+
+          const memory = createMemoryFileSystem();
+          const compiler = createCompiler({
+            clean: true,
+            copy: [{ from: "public", preserveTimestamps: true }],
+          });
+          const { instance, close } = start(
+            compiler,
+            { writeToDisk: () => true, outputFileSystem: memory },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            expect(fs.statSync(inDist("robots.txt")).mtime).toEqual(time);
+            expect(memory.statSync(inDist("robots.txt")).mtime).toEqual(time);
+          } finally {
+            await close();
+          }
+        });
+
+        it("fails the build, writing nothing to disk, when it cannot write a file", async () => {
+          const memory = createMemoryFileSystem();
+          const outputFileSystem = Object.create(memory, {
+            writeFile: {
+              value: (file, content, callback) =>
+                callback(new Error(`Unable to write "${file}"`)),
+            },
+          });
+          const compiler = createCompiler({ clean: true });
+          const failed = failure(compiler);
+          const { close } = start(
+            compiler,
+            { writeToDisk: () => true, outputFileSystem },
+            isPlugin,
+          );
+
+          try {
+            expect((await failed).message).toMatch(/Unable to write ".+main\./);
+            expect(listDist()).toEqual([]);
+          } finally {
+            await close();
+          }
+        });
+
+        it("fails the build when it cannot create a directory on disk", async () => {
+          fs.writeFileSync(inDist("blocked"), "a file");
+
+          const memory = createMemoryFileSystem();
+          const compiler = createCompiler({
+            clean: true,
+            path: inDist("blocked/out"),
+          });
+          const failed = failure(compiler);
+          const { close } = start(
+            compiler,
+            { writeToDisk: () => true, outputFileSystem: memory },
+            isPlugin,
+          );
+
+          try {
+            expect((await failed).code).toMatch(/^E/);
+            expect(readDist("blocked")).toBe("a file");
+          } finally {
+            await close();
+          }
+        });
+
+        it("fails the build when it cannot write a file to disk", async () => {
+          // A directory where the bundle goes.
+          fs.mkdirSync(inDist("main.js"));
+
+          const memory = createMemoryFileSystem();
+          const compiler = createCompiler({
+            clean: { keep: "main.js" },
+            filename: "main.js",
+          });
+          const failed = failure(compiler);
+          const { close } = start(
+            compiler,
+            { writeToDisk: () => true, outputFileSystem: memory },
+            isPlugin,
+          );
+
+          try {
+            expect((await failed).code).toMatch(/^E/);
+            expect(fs.statSync(inDist("main.js")).isDirectory()).toBe(true);
           } finally {
             await close();
           }

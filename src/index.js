@@ -601,6 +601,7 @@ function createDiskWritingFileSystem(outputFileSystem, context, compilers) {
         return !keep(file);
       }
 
+      // A glob condition is not matched here, so what it might keep is kept.
       return false;
     });
 
