@@ -115,13 +115,17 @@ describe("output.clean with writeToDisk", () => {
     change = () =>
       fs.writeFileSync(path.join(directory, "index.js"), "console.log(2);"),
   ) {
-    /** @type {number} */
-    let changedAt = Infinity;
-    // The build that started after the change: the watcher may run one more
-    // for the files the test wrote before it started, as on macOS.
+    let changed = false;
+    let rebuilding = false;
+    // The build run after the change: the watcher may run one more for the files
+    // the test wrote before it started, as on macOS. `watchRun` is called again
+    // when a build is restarted, which keeps its `startTime`, so that is not used.
+    compiler.hooks.watchRun.tap("test", () => {
+      rebuilding = changed;
+    });
     const done = new Promise((resolve) => {
-      compiler.hooks.done.tap("test", (stats) => {
-        if (stats.startTime >= changedAt) {
+      compiler.hooks.done.tap("test", () => {
+        if (rebuilding) {
           resolve();
         }
       });
@@ -132,7 +136,7 @@ describe("output.clean with writeToDisk", () => {
       setTimeout(resolve, 500);
     });
     change();
-    changedAt = Date.now();
+    changed = true;
 
     await done;
     // The middleware writes to disk as the build emits; let it finish.
