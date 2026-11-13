@@ -522,116 +522,291 @@ function printStats(stats, context) {
 const PLUGIN_NAME = "DevMiddleware";
 
 /**
+ * The output file system webpack is given when `writeToDisk` writes to disk
+ * besides the file system files are served from. It writes to that one, and
+ * to disk the files `writeToDisk` takes, links, permissions and times
+ * included. Deletes reach both, and listings and `lstat` see the disk too,
+ * so webpack's own `output.clean` cleans the disk as it cleans its output:
+ * stale files from an earlier session, files a rebuild no longer emits,
+ * `clean.keep` and `clean.dry`. What webpack reads to decide whether to
+ * write a file comes from the served file system alone. A file `writeToDisk`
+ * leaves out is removed from disk when written, as `output.clean` would.
  * @template {IncomingMessage} Request
  * @template {ServerResponse} Response
- * @param {Compiler} compiler compiler
+ * @param {OutputFileSystem} outputFileSystem the file system files are served from
  * @param {WithOptional<Context<Request, Response>, "watching" | "outputFileSystem">} context context
+ * @param {Compiler[]} compilers the compilers given this file system
+ * @returns {OutputFileSystem} the file system writing to both
  */
-function hookForWriteToDisk(compiler, context) {
-  compiler.hooks.emit.tap(PLUGIN_NAME, () => {
-    // @ts-expect-error
-    if (compiler.hasWebpackDevMiddlewareAssetEmittedCallback) {
-      return;
-    }
+function createDiskWritingFileSystem(outputFileSystem, context, compilers) {
+  /**
+   * @param {string} targetPath absolute path of a file
+   * @returns {boolean} true when it is written to disk
+   */
+  const takes = (targetPath) => {
+    const { writeToDisk } = context.options;
 
-    compiler.hooks.assetEmitted.tapAsync(
-      PLUGIN_NAME,
-      (file, info, callback) => {
-        const { targetPath, content } = info;
-        const { writeToDisk: filter } = context.options;
-        const allowWrite =
-          filter && typeof filter === "function" ? filter(targetPath) : true;
-
-        if (!allowWrite) {
-          return callback();
-        }
-
-        const dir = path.dirname(targetPath);
-        const name = compiler.options.name
-          ? `Child "${compiler.options.name}": `
-          : "";
-
-        return fs.mkdir(dir, { recursive: true }, (mkdirError) => {
-          if (mkdirError) {
-            context.logger.error(
-              `${name}Unable to write "${dir}" directory to disk:\n${mkdirError}`,
-            );
-
-            return callback(mkdirError);
-          }
-
-          return fs.writeFile(targetPath, content, (writeFileError) => {
-            if (writeFileError) {
-              context.logger.error(
-                `${name}Unable to write "${targetPath}" asset to disk:\n${writeFileError}`,
-              );
-
-              return callback(writeFileError);
-            }
-
-            context.logger.log(`${name}Asset written to disk: "${targetPath}"`);
-
-            return callback();
-          });
-        });
-      },
-    );
-
-    // @ts-expect-error
-    compiler.hasWebpackDevMiddlewareAssetEmittedCallback = true;
-  });
-}
-
-/**
- * Has webpack write to the real disk what `writeToDisk` takes, besides its
- * own output file system, where webpack supports more outputs: it then writes
- * links, permissions and times there as it does to its own, and `output.clean`
- * cleans the disk too. Rspack and webpack before 5.113.0 have no such hook, so
- * there the middleware copies to disk itself, which is never cleaned.
- * @template {IncomingMessage} Request
- * @template {ServerResponse} Response
- * @param {Compiler} compiler compiler
- * @param {WithOptional<Context<Request, Response>, "watching" | "outputFileSystem">} context context
- * @returns {boolean} true when webpack writes to disk, otherwise false
- */
-function addDiskOutput(compiler, context) {
-  const { additionalOutputs } =
-    /** @type {Compiler["hooks"] & { additionalOutputs?: import("tapable").SyncHook<[Set<{ outputFileSystem: OutputFileSystem, test?: (targetPath: string) => boolean }>]> }} */ (
-      compiler.hooks
-    );
-
-  if (!additionalOutputs) {
-    return false;
-  }
-
-  // @ts-expect-error
-  if (compiler.hasWebpackDevMiddlewareDiskOutput) {
-    return true;
-  }
-
-  const output = {
-    outputFileSystem: /** @type {OutputFileSystem} */ (
-      /** @type {unknown} */ (fs)
-    ),
-    /**
-     * @param {string} targetPath absolute path of the asset
-     * @returns {boolean} true when the asset is written to disk
-     */
-    test: (targetPath) => {
-      const { writeToDisk: filter } = context.options;
-
-      return typeof filter === "function" ? filter(targetPath) : true;
-    },
+    return typeof writeToDisk === "function" ? writeToDisk(targetPath) : true;
   };
 
-  additionalOutputs.tap(PLUGIN_NAME, (outputs) => {
-    outputs.add(output);
-  });
+  /**
+   * Whether `output.clean` would remove a file at this path, left on disk by an
+   * earlier session. The `keep` hook of `CleanPlugin` is not consulted here.
+   * @param {string} targetPath absolute path of a file
+   * @returns {boolean} true when it is cleaned
+   */
+  const isCleaned = (targetPath) =>
+    compilers.some(({ options, outputPath }) => {
+      const { clean } = options.output;
 
-  // @ts-expect-error
-  compiler.hasWebpackDevMiddlewareDiskOutput = true;
+      if (!clean || (typeof clean === "object" && clean.dry)) {
+        return false;
+      }
 
-  return true;
+      const relativePath = path.relative(outputPath, targetPath);
+
+      if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+        return false;
+      }
+
+      const keep = typeof clean === "object" ? clean.keep : undefined;
+      const file = relativePath.replaceAll("\\", "/");
+
+      if (keep === undefined) {
+        return true;
+      }
+
+      if (typeof keep === "string") {
+        return !file.startsWith(keep);
+      }
+
+      if (keep instanceof RegExp) {
+        return !keep.test(file);
+      }
+
+      if (typeof keep === "function") {
+        return !keep(file);
+      }
+
+      return false;
+    });
+
+  /**
+   * Run a write on disk once it succeeded on the served file system.
+   * @param {string} targetPath absolute path of the file
+   * @param {(callback: (err?: NodeJS.ErrnoException | null) => void) => void} write the write on disk
+   * @param {(err?: NodeJS.ErrnoException | null) => void} callback callback
+   * @returns {(err?: NodeJS.ErrnoException | null) => void} the callback of the write on the served file system
+   */
+  const thenOnDisk = (targetPath, write, callback) => (err) => {
+    if (err) {
+      return callback(err);
+    }
+
+    if (!takes(targetPath)) {
+      // A copy an earlier session wrote, which `output.clean` counts as current.
+      if (isCleaned(targetPath)) {
+        return fs.unlink(targetPath, () => callback());
+      }
+
+      return callback();
+    }
+
+    const dir = path.dirname(targetPath);
+
+    fs.mkdir(dir, { recursive: true }, (mkdirError) => {
+      if (mkdirError) {
+        context.logger.error(
+          `Unable to write "${dir}" directory to disk:\n${mkdirError}`,
+        );
+
+        return callback(mkdirError);
+      }
+
+      write((writeError) => {
+        if (writeError) {
+          context.logger.error(
+            `Unable to write "${targetPath}" asset to disk:\n${writeError}`,
+          );
+
+          return callback(writeError);
+        }
+
+        context.logger.log(`Asset written to disk: "${targetPath}"`);
+
+        return callback();
+      });
+    });
+  };
+
+  /**
+   * Remove from both, done once removed from either.
+   * @param {"unlink" | "rmdir"} method the removal
+   * @param {string} targetPath absolute path
+   * @param {(err?: NodeJS.ErrnoException | null) => void} callback callback
+   */
+  const removeFromBoth = (method, targetPath, callback) => {
+    let pending = 2;
+    let removed = false;
+    /** @type {NodeJS.ErrnoException | null | undefined} */
+    let firstError;
+    /**
+     * @param {NodeJS.ErrnoException | null=} err err
+     */
+    const done = (err) => {
+      if (!err) {
+        removed = true;
+      } else if (!firstError) {
+        firstError = err;
+      }
+
+      pending -= 1;
+
+      if (pending === 0) {
+        callback(removed ? null : firstError);
+      }
+    };
+
+    /** @type {EXPECTED_ANY} */ (outputFileSystem)[method](targetPath, done);
+    fs[method](targetPath, done);
+  };
+
+  /** @type {EXPECTED_ANY} */
+  const served = outputFileSystem;
+
+  // What is not written here, such as `readFile`, `stat` and `mkdir`, reaches the served file system alone.
+  return /** @type {OutputFileSystem} */ (
+    Object.create(outputFileSystem, {
+      writeFile: {
+        value: (
+          /** @type {string} */ targetPath,
+          /** @type {Buffer} */ content,
+          /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
+        ) =>
+          served.writeFile(
+            targetPath,
+            content,
+            thenOnDisk(
+              targetPath,
+              (done) => fs.writeFile(targetPath, content, done),
+              callback,
+            ),
+          ),
+      },
+      symlink: {
+        value: (
+          /** @type {string} */ target,
+          /** @type {string} */ targetPath,
+          /** @type {"file" | "dir" | "junction"} */ type,
+          /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
+        ) =>
+          served.symlink(
+            target,
+            targetPath,
+            type,
+            thenOnDisk(
+              targetPath,
+              (done) =>
+                fs.unlink(targetPath, () =>
+                  fs.symlink(target, targetPath, type, done),
+                ),
+              callback,
+            ),
+          ),
+      },
+      chmod: {
+        value: (
+          /** @type {string} */ targetPath,
+          /** @type {number} */ mode,
+          /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
+        ) =>
+          served.chmod(
+            targetPath,
+            mode,
+            thenOnDisk(
+              targetPath,
+              (done) => fs.chmod(targetPath, mode, done),
+              callback,
+            ),
+          ),
+      },
+      utimes: {
+        value: (
+          /** @type {string} */ targetPath,
+          /** @type {Date} */ atime,
+          /** @type {Date} */ mtime,
+          /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
+        ) =>
+          served.utimes(
+            targetPath,
+            atime,
+            mtime,
+            thenOnDisk(
+              targetPath,
+              (done) => fs.utimes(targetPath, atime, mtime, done),
+              callback,
+            ),
+          ),
+      },
+      unlink: {
+        value: (
+          /** @type {string} */ targetPath,
+          /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
+        ) => removeFromBoth("unlink", targetPath, callback),
+      },
+      rmdir: {
+        value: (
+          /** @type {string} */ targetPath,
+          /** @type {(err?: NodeJS.ErrnoException | null) => void} */ callback,
+        ) => removeFromBoth("rmdir", targetPath, callback),
+      },
+      // How `output.clean` finds what is on disk alone, left from an earlier session.
+      lstat: {
+        value: (
+          /** @type {string} */ targetPath,
+          /** @type {(err: NodeJS.ErrnoException | null, stats?: import("fs").Stats) => void} */ callback,
+        ) =>
+          served.lstat(
+            targetPath,
+            (
+              /** @type {NodeJS.ErrnoException | null} */ err,
+              /** @type {import("fs").Stats} */ stats,
+            ) => {
+              if (err && err.code === "ENOENT") {
+                return fs.lstat(targetPath, callback);
+              }
+
+              callback(err, stats);
+            },
+          ),
+      },
+      readdir: {
+        value: (
+          /** @type {string} */ targetPath,
+          /** @type {(err: NodeJS.ErrnoException | null, entries?: string[]) => void} */ callback,
+        ) =>
+          served.readdir(
+            targetPath,
+            (
+              /** @type {NodeJS.ErrnoException | null} */ servedError,
+              /** @type {string[] | undefined} */ servedEntries,
+            ) =>
+              fs.readdir(targetPath, (diskError, diskEntries) => {
+                if (servedError && diskError) {
+                  return callback(servedError);
+                }
+
+                callback(null, [
+                  ...new Set([
+                    ...(servedEntries || []),
+                    ...(diskEntries || []),
+                  ]),
+                ]);
+              }),
+          ),
+      },
+    })
+  );
 }
 
 // TODO in the next major release remove the standalone mode, where the
@@ -753,25 +928,6 @@ function wdm(compiler, options = {}, isPlugin = false) {
     );
   }
 
-  // Written to disk besides webpack's own output file system: always for a
-  // function, which filters what is written, and for `true` when an
-  // `outputFileSystem` of your own is webpack's, as it then stays — before,
-  // `writeToDisk: true` with one wrote nothing to disk at all.
-  // TODO in the next major release require a webpack with `additionalOutputs`
-  // and drop `hookForWriteToDisk`, the copy to disk for those without it.
-  if (
-    typeof options.writeToDisk === "function" ||
-    (options.writeToDisk === true &&
-      options.outputFileSystem &&
-      options.outputFileSystem !== fs)
-  ) {
-    for (const compiler of compilersToModify) {
-      if (!addDiskOutput(compiler, context)) {
-        hookForWriteToDisk(compiler, context);
-      }
-    }
-  }
-
   // Modify output file system
   /** @type {OutputFileSystem} */
   let outputFileSystem;
@@ -799,8 +955,23 @@ function wdm(compiler, options = {}, isPlugin = false) {
 
   context.outputFileSystem = outputFileSystem;
 
+  // Written to disk besides the served file system: always for a function,
+  // which filters what is written, and for `true` when an `outputFileSystem`
+  // of your own stays webpack's — before, `true` with one wrote nothing there.
+  const compilerOutputFileSystem =
+    typeof options.writeToDisk === "function" ||
+    (options.writeToDisk === true &&
+      options.outputFileSystem &&
+      options.outputFileSystem !== fs)
+      ? createDiskWritingFileSystem(
+          outputFileSystem,
+          context,
+          compilersToModify,
+        )
+      : outputFileSystem;
+
   for (const compiler of compilersToModify) {
-    compiler.outputFileSystem = outputFileSystem;
+    compiler.outputFileSystem = compilerOutputFileSystem;
   }
 
   // Start watching, but only for standalone usage, for plugin usage stats will be printed by external code, for example - webpack-cli
