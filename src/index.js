@@ -535,6 +535,12 @@ function isDiskFileSystem(fileSystem) {
   );
 }
 
+// TODO in the next major release replace this file system with one of:
+// - a webpack hook for additional outputs, where the middleware adds the disk
+//   with `writeToDisk` as its filter and webpack writes and cleans both itself;
+// - a file system helper webpack exports, mirroring one file system to another;
+// - `writeToDisk: true` only, with the disk as webpack's only output and files
+//   served from it; deprecate the function form first, as it needs this layer.
 /**
  * The output file system webpack is given when `writeToDisk` writes to disk
  * besides the file system files are served from. Writes go to that one and,
