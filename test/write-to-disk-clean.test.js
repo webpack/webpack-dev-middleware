@@ -1083,6 +1083,80 @@ describe("output.clean with writeToDisk", () => {
           });
         }
 
+        it("keeps the copy on disk of a file the function leaves out when a plugin keeps it through the `keep` hook", async () => {
+          createPublic();
+          fs.writeFileSync(inDist("robots.txt"), "old");
+
+          const memory = createMemoryFileSystem();
+          const keeper = {
+            apply(compiler) {
+              compiler.hooks.thisCompilation.tap("test", (compilation) => {
+                webpack.CleanPlugin.getCompilationHooks(compilation).keep.tap(
+                  "test",
+                  (file) => (file === "robots.txt" ? true : undefined),
+                );
+              });
+            },
+          };
+          const compiler = createCompiler(
+            { clean: true, copy: [{ from: "public" }] },
+            [keeper],
+          );
+          const { instance, close } = start(
+            compiler,
+            {
+              writeToDisk: (targetPath) => targetPath.endsWith(".js"),
+              outputFileSystem: memory,
+            },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            expect(readDist("robots.txt")).toBe("old");
+            expect(memory.readFileSync(inDist("robots.txt"), "utf8")).toBe(
+              "v1",
+            );
+          } finally {
+            await close();
+          }
+        });
+
+        it("keeps the copy on disk of a file the function leaves out by `clean.keep` alone where `CleanPlugin` has no hooks", async () => {
+          createPublic();
+          fs.writeFileSync(inDist("robots.txt"), "old");
+          fs.writeFileSync(inDist("humans.txt"), "old");
+          changePublic("humans.txt", "v1");
+
+          const memory = createMemoryFileSystem();
+          const compiler = createCompiler({
+            clean: { keep: /^robots/ },
+            copy: [{ from: "public" }],
+          });
+
+          // As a compiler whose `CleanPlugin` offers no `keep` hook to ask.
+          compiler.webpack = { ...compiler.webpack, CleanPlugin: undefined };
+
+          const { instance, close } = start(
+            compiler,
+            {
+              writeToDisk: (targetPath) => targetPath.endsWith(".js"),
+              outputFileSystem: memory,
+            },
+            isPlugin,
+          );
+
+          try {
+            await built(instance);
+
+            expect(readDist("robots.txt")).toBe("old");
+            expect(fs.existsSync(inDist("humans.txt"))).toBe(false);
+          } finally {
+            await close();
+          }
+        });
+
         it("removes from disk the copies of what the function leaves out, for each compiler of a multi-compiler", async () => {
           for (const name of ["a", "b"]) {
             fs.mkdirSync(inDist(name), { recursive: true });
