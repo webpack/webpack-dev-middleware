@@ -1,6 +1,6 @@
-export = validate10;
-declare function validate10(
-  data: any,
+export = t;
+declare function t(
+  l: any,
   {
     instancePath,
     parentData,
@@ -11,6 +11,6 @@ declare function validate10(
     rootData?: any;
   },
 ): boolean;
-declare namespace validate10 {
-  export { validate10 as default };
+declare namespace t {
+  export { t as default };
 }
