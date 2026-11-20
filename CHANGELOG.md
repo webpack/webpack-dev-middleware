@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.6.2
+
+### Patch Changes
+
+- Generate the precompiled options check with `schema-utils precompile --minify`, which makes it about a third of the size, so it loads faster. (by [@alexander-akait](https://github.com/alexander-akait) in [#2511](https://github.com/webpack/webpack-dev-middleware/pull/2511))
+
 ## 8.6.1
 
 ### Patch Changes
