@@ -49,7 +49,8 @@
     "valuenow",
     "webworker",
     "wildcarded",
-    "Fapp"
+    "Fapp",
+    "gracefulify"
   ],
   "ignorePaths": [
     "CHANGELOG.md",

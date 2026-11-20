@@ -23,6 +23,7 @@ declare namespace wdm {
     Schema,
     Compiler,
     MultiCompiler,
+    Compilation,
     Configuration,
     Stats,
     MultiStats,
@@ -139,6 +140,7 @@ declare function honoWrapper<
 type Schema = import("schema-utils/declarations/validate").Schema;
 type Compiler = import("webpack").Compiler;
 type MultiCompiler = import("webpack").MultiCompiler;
+type Compilation = import("webpack").Compilation;
 type Configuration = import("webpack").Configuration;
 type Stats = import("webpack").Stats;
 type MultiStats = import("webpack").MultiStats;
